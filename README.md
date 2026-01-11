@@ -55,7 +55,41 @@ graph TD
 - **Caching**: Multi-level caching (Frontend React Query + Backend LRU Cache) to minimize database load.
 - **Build**: Vite build optimization with **Code Splitting** to ensure fast load times (<1s).
 
-## 🚀 Getting Started
+## 👨‍💻 Development
+
+This project demonstrates expertise in:
+- **Full-Stack Development**: From database schema design to responsive UI implementation.
+- **System Architecture**: Designing for efficiency and reliability.
+- **DevOps**: Docker containerization, CI/CD pipelines, and automated health monitoring.
+- **AI-Orchestrated Development**: Modern workflow leveraging AI assistance for implementation.
+
+### Development Approach
+
+This project showcases a **modern AI-orchestrated development workflow**, where the developer acts as an **architect and product owner**, defining requirements, making architectural decisions, and ensuring code quality, while leveraging AI assistants for implementation.
+
+**Workflow Benefits**:
+- ✅ **Clear Requirements**: Precise specification of features, constraints, and technical requirements
+- ✅ **Rapid Iteration**: Faster implementation cycles with AI-assisted code generation
+- ✅ **Consistent Quality**: Human oversight ensures adherence to best practices and architectural patterns
+- ✅ **Focus on Problem-Solving**: More time spent on architecture and business logic, less on boilerplate
+
+**Human Responsibilities** (Product Owner / Architect):
+- Defining product vision and feature requirements
+- Making architectural and technology stack decisions
+- Reviewing and approving all implementations
+- Ensuring code quality, security, and maintainability
+- Writing comprehensive specifications and acceptance criteria
+
+**AI Assistant Responsibilities** (Implementation Partner):
+- Implementing features based on detailed specifications
+- Generating boilerplate and repetitive code structures
+- Suggesting best practices and patterns
+- Creating tests and documentation
+- Refactoring and optimization under human guidance
+
+This approach represents the future of software development—combining **human creativity, strategic thinking, and domain expertise** with **AI-powered implementation efficiency**.
+
+## Getting Started
 
 ### Prerequisites
 - Docker & Docker Compose
@@ -119,40 +153,6 @@ Contributions are welcome! Please see [CONTRIBUTING.md](CONTRIBUTING.md) for gui
 3. Commit your changes (`git commit -m 'Add amazing feature'`)
 4. Push to the branch (`git push origin feature/amazing-feature`)
 5. Open a Pull Request
-
-## 👨‍💻 Development
-
-This project demonstrates expertise in:
-- **Full-Stack Development**: From database schema design to responsive UI implementation.
-- **System Architecture**: Designing for efficiency and reliability.
-- **DevOps**: Docker containerization, CI/CD pipelines, and automated health monitoring.
-- **AI-Orchestrated Development**: Modern workflow leveraging AI assistance for implementation.
-
-### Development Approach
-
-This project showcases a **modern AI-orchestrated development workflow**, where the developer acts as an **architect and product owner**, defining requirements, making architectural decisions, and ensuring code quality, while leveraging AI assistants for implementation.
-
-**Workflow Benefits**:
-- ✅ **Clear Requirements**: Precise specification of features, constraints, and technical requirements
-- ✅ **Rapid Iteration**: Faster implementation cycles with AI-assisted code generation
-- ✅ **Consistent Quality**: Human oversight ensures adherence to best practices and architectural patterns
-- ✅ **Focus on Problem-Solving**: More time spent on architecture and business logic, less on boilerplate
-
-**Human Responsibilities** (Product Owner / Architect):
-- Defining product vision and feature requirements
-- Making architectural and technology stack decisions
-- Reviewing and approving all implementations
-- Ensuring code quality, security, and maintainability
-- Writing comprehensive specifications and acceptance criteria
-
-**AI Assistant Responsibilities** (Implementation Partner):
-- Implementing features based on detailed specifications
-- Generating boilerplate and repetitive code structures
-- Suggesting best practices and patterns
-- Creating tests and documentation
-- Refactoring and optimization under human guidance
-
-This approach represents the future of software development—combining **human creativity, strategic thinking, and domain expertise** with **AI-powered implementation efficiency**.
 
 ## 📄 License
 
