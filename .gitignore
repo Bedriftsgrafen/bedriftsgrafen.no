@@ -1,0 +1,196 @@
+# =============================================================================
+# Bedriftsgrafen.no - .gitignore
+# =============================================================================
+
+# -----------------------------------------------------------------------------
+# Python
+# -----------------------------------------------------------------------------
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+*.egg
+*.egg-info/
+.eggs/
+.installed.cfg
+MANIFEST
+
+# Virtual environments
+.env
+.venv
+env/
+venv/
+ENV/
+env.bak/
+venv.bak/
+
+# Type checkers & linters
+.mypy_cache/
+.dmypy.json
+dmypy.json
+.pyre/
+.pytype/
+.ruff_cache/
+.pyrefly_cache/
+cython_debug/
+
+# Testing
+.tox/
+.nox/
+.coverage
+.coverage.*
+.cache
+.pytest_cache/
+htmlcov/
+coverage.xml
+nosetests.xml
+*.cover
+*.py,cover
+.hypothesis/
+
+# Build artifacts
+build/
+dist/
+develop-eggs/
+downloads/
+eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+share/python-wheels/
+
+# -----------------------------------------------------------------------------
+# Node.js / Frontend
+# -----------------------------------------------------------------------------
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.pnpm-debug.log*
+
+# Build output
+frontend/dist/
+stats.html
+
+# -----------------------------------------------------------------------------
+# IDE & Editors
+# -----------------------------------------------------------------------------
+.vscode/*
+!.vscode/tasks.json
+!.vscode/launch.json
+.idea/
+*.swp
+*.swo
+*~
+
+# -----------------------------------------------------------------------------
+# OS Files
+# -----------------------------------------------------------------------------
+.DS_Store
+.AppleDouble
+.LSOverride
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+$RECYCLE.BIN/
+
+# -----------------------------------------------------------------------------
+# Database
+# -----------------------------------------------------------------------------
+*.db
+*.sqlite
+*.sqlite3
+*.sql
+*.dump
+*.sql.gz
+pgdata/
+postgres_data/
+pg_data/
+
+# -----------------------------------------------------------------------------
+# Logs
+# -----------------------------------------------------------------------------
+logs/
+*.log
+
+# -----------------------------------------------------------------------------
+# Environment & Secrets
+# -----------------------------------------------------------------------------
+.env
+.env.local
+.env.development
+.env.test
+.env.production
+
+# Streamlit secrets
+.streamlit/secrets.toml
+.streamlit/config.toml
+
+# -----------------------------------------------------------------------------
+# Temporary & Backup Files
+# -----------------------------------------------------------------------------
+tmp/
+temp/
+*.tmp
+*.bak
+*.backup
+backups/
+
+# -----------------------------------------------------------------------------
+# Project-Specific Data
+# -----------------------------------------------------------------------------
+# Data downloads and imports
+database/lastned
+enheter_alle.json
+backend/enheter_alle.json
+backend/klass-version-*.csv
+backend/import.log
+backend/docs/
+backend/migration_*.sql
+backend/migrations/
+
+# Frontend build artifacts
+frontend/stats.html
+frontend/*.log
+
+
+bashrc_adapted
+
+# Legacy files (not needed in repo)
+docker-compose.legacy.yml
+docker-compose.dev-local.yml
+.git.backup/
+.git.backup2/
+
+# -----------------------------------------------------------------------------
+# Runtime output
+# -----------------------------------------------------------------------------
+nanobanana-output/
+uploads/
+media/
+static/uploads/
+
+# -----------------------------------------------------------------------------
+# AI Context & Development Tools (local only)
+# -----------------------------------------------------------------------------
+.gemini/
+.claude/
+.agent/
+CLAUDE.md
+GEMINI.md
+project-setup-rules.md
+.cursorrules
+.github/copilot-instructions.md
+
+# Internal documentation
+docs/
+!docs/README.md
+
+# Personal configs & additional safety
+**/.env
+.env.*
+!.env.example

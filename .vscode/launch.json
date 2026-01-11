@@ -1,0 +1,49 @@
+{
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": "Python: Backend - (Docker Attach)",
+            "type": "debugpy",
+            "request": "attach",
+            "connect": {
+                "host": "localhost",
+                "port": 5678
+            },
+            "pathMappings": [
+                {
+                    "localRoot": "${workspaceFolder}/backend",
+                    "remoteRoot": "/app"
+                }
+            ],
+            "justMyCode": true
+        },
+        {
+            "name": "Chrome: Frontend",
+            "type": "chrome",
+            "request": "launch",
+            "url": "http://localhost:5173",
+            "webRoot": "${workspaceFolder}/frontend",
+            "sourceMapPathOverrides": {
+                "webpack:///./src/*": "${webRoot}/src/*"
+            }
+        },
+        {
+            "name": "Chrome: Production",
+            "type": "chrome",
+            "request": "launch",
+            "url": "https://bedriftsgrafen.no",
+            "webRoot": "${workspaceFolder}/frontend",
+            "preLaunchTask": "Docker: Up (Prod - Fast)"
+        }
+    ],
+    "compounds": [
+        {
+            "name": "Full Stack Debug",
+            "configurations": [
+                "Python: Backend - (Docker Attach)",
+                "Chrome: Frontend"
+            ],
+            "preLaunchTask": "Docker: Up (Dev)"
+        }
+    ]
+}

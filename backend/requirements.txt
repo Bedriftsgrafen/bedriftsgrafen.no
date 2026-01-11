@@ -1,0 +1,30 @@
+fastapi>=0.104.0
+uvicorn[standard]>=0.24.0
+sqlalchemy[asyncio]>=2.0.0
+asyncpg>=0.29.0
+pydantic>=2.0.0
+python-dotenv>=1.0.0
+requests>=2.31.0
+ijson>=3.2.3
+pandas>=2.0.3
+alembic>=1.13.0
+slowapi>=0.1.8
+
+httpx>=0.25.0
+aiolimiter>=1.1.0
+
+# Testing
+pytest>=8.0.0
+pytest-asyncio>=0.23.0
+pytest-cov>=4.1.0
+pytest-mock>=3.12.0
+polyfactory>=2.14.0
+faker>=22.0.0
+freezegun>=1.4.0
+
+# Linting & Type Checking
+ruff>=0.8.0
+mypy>=1.13.0
+sqlalchemy[mypy]>=2.0.0
+types-requests>=2.31.0
+APScheduler>=3.10.4

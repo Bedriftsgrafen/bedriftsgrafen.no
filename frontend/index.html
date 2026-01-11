@@ -1,0 +1,85 @@
+<!doctype html>
+<html lang="no">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Bedriftsgrafen.no</title>
+
+  <!-- Preload critical fonts -->
+  <link rel="preload" href="/fonts/Inter-Regular.woff2" as="font" type="font/woff2" crossorigin>
+  <link rel="preload" href="/fonts/Inter-Bold.woff2" as="font" type="font/woff2" crossorigin>
+
+  <!-- Favicon and icons -->
+  <link rel="icon" type="image/webp" href="/favicon.webp?v=2" />
+  <link rel="apple-touch-icon" href="/favicon.webp?v=2" />
+
+  <!-- SEO Meta -->
+  <meta name="description"
+    content="Gratis søk og analyse av norske bedrifter. Utforsk regnskapsdata, nøkkeltall og finansiell utvikling basert på åpne data fra Brønnøysundregistrene." />
+  <meta name="keywords"
+    content="bedriftsanalyse, regnskapsdata, norske bedrifter, nøkkeltall, EBITDA, likviditetsgrad, Brønnøysund" />
+  <meta name="author" content="Bedriftsgrafen.no (Ken Solbakken Remen)">
+
+  <!-- Open Graph -->
+  <meta property="og:title" content="Bedriftsgrafen.no - Analyse av norske bedrifter" />
+  <meta property="og:description"
+    content="Hobbyprosjekt med gratis søk og analyse av norske bedrifter med regnskapsdata fra Brønnøysundregistrene." />
+  <meta property="og:image" content="https://bedriftsgrafen.no/og-image.png" />
+  <meta property="og:image:width" content="1200" />
+  <meta property="og:image:height" content="630" />
+  <meta property="og:image:alt" content="Bedriftsgrafen.no - Analyse av norske bedrifter" />
+  <meta property="og:url" content="https://bedriftsgrafen.no" />
+  <meta property="og:type" content="website" />
+  <meta property="og:locale" content="nb_NO" />
+
+  <!-- Twitter Card -->
+  <meta name="twitter:card" content="summary_large_image" />
+  <meta name="twitter:title" content="Bedriftsgrafen.no - Analyse av norske bedrifter" />
+  <meta name="twitter:description"
+    content="Hobbyprosjekt med gratis søk og analyse av norske bedrifter med regnskapsdata fra Brønnøysundregistrene." />
+  <meta name="twitter:image" content="https://bedriftsgrafen.no/og-image.png" />
+</head>
+
+<body>
+  <div id="root">
+    <div class="min-h-screen bg-gray-50 text-gray-900 font-sans"
+      style="min-height: 100vh; display: flex; flex-direction: column;">
+      <header style="height: 72px; border-bottom: 1px solid #e5e7eb; background: #1e3a8a"></header>
+      <main style="flex-grow: 1; padding: 2rem 1rem; margin: 0 auto; max-width: 1280px; width: 100%;">
+        <div
+          style="margin-bottom: 2rem; border-radius: 1rem; overflow: hidden; position: relative; min-height: 200px; box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1);">
+          <div
+            style="position: absolute; inset: 0; background: radial-gradient(ellipse at center top, #4a6fc7 0%, #2952a3 30%, #1e3a8a 60%, #152a66 100%); z-index: 0;">
+          </div>
+          <div style="position: relative; z-index: 10; padding: 2rem; text-align: center;">
+            <h2 style="color: white; font-size: 1.5rem; font-weight: 700; margin-bottom: 1.5rem;">Søk i norske
+              virksomheter</h2>
+            <div style="max-width: 42rem; margin: 0 auto; background: white; height: 48px; border-radius: 0.5rem;">
+            </div>
+          </div>
+        </div>
+      </main>
+    </div>
+  </div>
+  <script type="module" src="/src/main.tsx"></script>
+
+  <!-- Google Analytics - deferred to not block rendering -->
+  <script>
+    window.addEventListener('load', function () {
+      var script = document.createElement('script');
+      script.src = 'https://www.googletagmanager.com/gtag/js?id=G-8GYNJE4Z3Q';
+      script.async = true;
+      document.head.appendChild(script);
+
+      script.onload = function () {
+        window.dataLayer = window.dataLayer || [];
+        function gtag() { dataLayer.push(arguments); }
+        gtag('js', new Date());
+        gtag('config', 'G-8GYNJE4Z3Q');
+      };
+    });
+  </script>
+</body>
+
+</html>

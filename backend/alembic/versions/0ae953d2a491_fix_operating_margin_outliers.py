@@ -1,0 +1,90 @@
+"""fix_operating_margin_outliers
+
+Revision ID: 0ae953d2a491
+Revises: 537c623d71c5
+Create Date: 2025-12-31 21:40:25.528284
+
+"""
+from collections.abc import Sequence
+
+from alembic import op
+
+
+# revision identifiers, used by Alembic.
+revision: str = '0ae953d2a491'
+down_revision: str | Sequence[str] | None = '537c623d71c5'
+branch_labels: str | Sequence[str] | None = None
+depends_on: str | Sequence[str] | None = None
+
+
+def upgrade() -> None:
+    """Fix operating margin calculation by filtering extreme outliers.
+
+    Problem: avg_operating_margin includes extreme outliers (559% instead of ~10%)
+    Solution: Filter to include only margins between -100% and +100%
+    """
+    # Drop and recreate industry_subclass_stats with outlier filtering
+    op.execute("DROP MATERIALIZED VIEW IF EXISTS industry_subclass_stats CASCADE;")
+
+    # Recreate with fixed calculation (matches original structure from f3ead7bea13d)
+    op.execute("""
+        CREATE MATERIALIZED VIEW industry_subclass_stats AS
+        WITH latest_financials AS (
+            SELECT DISTINCT ON (orgnr)
+                orgnr, aar, salgsinntekter, aarsresultat, driftsresultat
+            FROM regnskap
+            ORDER BY orgnr, aar DESC
+        ),
+        bankruptcy_counts AS (
+            SELECT
+                naeringskode,
+                COUNT(*) as bankruptcies_last_year
+            FROM bedrifter
+            WHERE konkurs = true
+              AND konkursdato >= CURRENT_DATE - INTERVAL '1 year'
+              AND naeringskode IS NOT NULL
+              AND organisasjonsform != 'KBO'
+            GROUP BY naeringskode
+        )
+        SELECT
+            b.naeringskode as nace_code,
+            COUNT(*) as company_count,
+            COUNT(*) FILTER (WHERE b.konkurs = true) as bankrupt_count,
+            COUNT(*) FILTER (
+                WHERE b.stiftelsesdato >= CURRENT_DATE - INTERVAL '1 year'
+                AND b.organisasjonsform != 'KBO'
+            ) as new_last_year,
+            COALESCE(bc.bankruptcies_last_year, 0) as bankruptcies_last_year,
+            SUM(b.antall_ansatte) FILTER (WHERE b.antall_ansatte IS NOT NULL) as total_employees,
+            AVG(b.antall_ansatte) FILTER (WHERE b.antall_ansatte > 0) as avg_employees,
+            SUM(lf.salgsinntekter) as total_revenue,
+            AVG(lf.salgsinntekter) FILTER (WHERE lf.salgsinntekter > 0) as avg_revenue,
+            SUM(lf.aarsresultat) as total_profit,
+            AVG(lf.aarsresultat) as avg_profit,
+            PERCENTILE_CONT(0.5) WITHIN GROUP (ORDER BY lf.salgsinntekter)
+                FILTER (WHERE lf.salgsinntekter > 0) as median_revenue,
+            COUNT(*) FILTER (WHERE lf.aarsresultat > 0) as profitable_count,
+            -- FIXED: Filter outliers - only include reasonable margins (-100% to +100%)
+            -- and exclude tiny companies (< 50k revenue) that skew the average
+            AVG(CASE
+                WHEN lf.salgsinntekter > 50000
+                    AND lf.driftsresultat / lf.salgsinntekter BETWEEN -1.0 AND 1.0
+                THEN lf.driftsresultat / lf.salgsinntekter * 100
+            END) as avg_operating_margin
+        FROM bedrifter b
+        LEFT JOIN latest_financials lf ON b.orgnr = lf.orgnr
+        LEFT JOIN bankruptcy_counts bc ON b.naeringskode = bc.naeringskode
+        WHERE b.naeringskode IS NOT NULL
+          AND b.organisasjonsform != 'KBO'
+        GROUP BY b.naeringskode, bc.bankruptcies_last_year
+        HAVING COUNT(*) >= 5
+        ORDER BY company_count DESC;
+    """)
+
+    # Recreate index
+    op.execute("CREATE UNIQUE INDEX idx_industry_subclass_stats_nace ON industry_subclass_stats (nace_code);")
+
+
+def downgrade() -> None:
+    """Restore original view without outlier filtering."""
+    op.execute("DROP MATERIALIZED VIEW IF EXISTS industry_subclass_stats CASCADE;")

@@ -1,0 +1,66 @@
+# =============================================================================
+# DEV STACK - Kjører parallelt med prod
+# =============================================================================
+#
+# Denne filen definerer dev-containere som:
+# - Bruker prod's database (ingen egen db)
+# - Kobler til prod's nettverk
+# - Har hot-reload og debugging
+#
+# KRAV: Prod må kjøre først (for nettverk og database)
+#
+# Start:  docker compose -f docker-compose.dev.yml up -d
+# Stopp:  docker compose -f docker-compose.dev.yml down
+# Logs:   docker compose -f docker-compose.dev.yml logs -f
+#
+# =============================================================================
+
+services:
+  backend-dev:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: bedriftsgrafen-backend-dev
+    restart: unless-stopped
+    init: true # Enable tini for zombie reaping and signal handling
+    env_file:
+      - .env
+    volumes:
+      - ./backend:/app
+      - ./scripts:/app/ops_scripts
+    ports:
+      - "8001:8000" # API tilgjengelig på localhost:8001
+      - "5678:5678" # Debugger
+    networks:
+      - prod-internal
+    environment:
+      - DATABASE_HOST=bedriftsgrafen-db
+    command: >
+      sh -c "pip install debugpy && 
+             python -m debugpy --listen 0.0.0.0:5678 
+             -m uvicorn main:app --host 0.0.0.0 --port 8000 --reload"
+
+  frontend-dev:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+      target: build
+    container_name: bedriftsgrafen-frontend-dev
+    restart: unless-stopped
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules
+    ports:
+      - "5173:5173"
+    networks:
+      - prod-internal
+    environment:
+      - VITE_API_URL=http://localhost:8001
+    command: sh -c "npm install && npm run dev -- --host"
+    depends_on:
+      - backend-dev
+
+networks:
+  prod-internal:
+    external: true
+    name: bedriftsgrafenno_internal-net

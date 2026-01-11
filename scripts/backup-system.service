@@ -1,0 +1,19 @@
+# Installation Instructions:
+# 1. Replace ${PROJECT_ROOT} with your installation path (e.g., /opt/bedriftsgrafen.no)
+# 2. Copy to /etc/systemd/system/
+# 3. Copy backup-system.timer to /etc/systemd/system/
+# 4. Run: sudo systemctl daemon-reload
+# 5. Enable timer: sudo systemctl enable backup-system.timer
+# 6. Start timer: sudo systemctl start backup-system.timer
+
+[Unit]
+Description=Bedriftsgrafen.no System Backup
+After=docker.service
+Wants=docker.service
+
+[Service]
+Type=oneshot
+ExecStart=/home/k1sso/bedriftsgrafen.no/scripts/backup-system.sh
+User=root
+StandardOutput=journal
+StandardError=journal

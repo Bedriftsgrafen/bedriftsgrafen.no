@@ -1,0 +1,45 @@
+[Unit]
+Description=Bedriftsgrafen Geocoding Service - Continuous address geocoding
+Documentation=https://github.com/bedriftsgrafen/bedriftsgrafen.no
+After=docker.service
+Requires=docker.service
+
+StartLimitIntervalSec=300
+StartLimitBurst=5
+
+[Service]
+Type=simple
+User=k1sso
+Group=k1sso
+WorkingDirectory=/home/k1sso/bedriftsgrafen.no
+
+# Use docker exec directly to connect to running prod container
+ExecStart=/usr/bin/docker exec bedriftsgrafen-backend python /app/ops_scripts/batch_geocode.py --batch-size=500 --continuous
+
+# Restart with longer delay (geocoding is rate-limited anyway)
+Restart=always
+RestartSec=30
+
+# Resource limits (be gentle on the server)
+MemoryMax=512M
+CPUQuota=25%
+
+# Logging to systemd journal
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=bedriftsgrafen-geocoding
+
+# Graceful shutdown
+TimeoutStopSec=30
+KillMode=mixed
+KillSignal=SIGTERM
+
+# Security hardening
+NoNewPrivileges=true
+ProtectSystem=strict
+ProtectHome=read-only
+ReadWritePaths=/home/k1sso/bedriftsgrafen.no/logs
+PrivateTmp=true
+
+[Install]
+WantedBy=multi-user.target

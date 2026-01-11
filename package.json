@@ -1,0 +1,32 @@
+{
+  "name": "bedriftsgrafen",
+  "private": true,
+  "version": "1.0.0",
+  "description": "Bedriftsgrafen.no - Norwegian business lookup",
+  "workspaces": [
+    "frontend"
+  ],
+  "scripts": {
+    "prepare": "husky",
+    "validate:frontend": "cd frontend && npm run validate",
+    "validate:backend": "cd backend && ruff check . && mypy .",
+    "validate": "npm run validate:frontend && npm run validate:backend",
+    "test:frontend": "cd frontend && npm run test -- --run",
+    "test:backend": "cd backend && python -m pytest",
+    "test": "npm run test:frontend && npm run test:backend",
+    "check": "npm run validate && npm run test"
+  },
+  "devDependencies": {
+    "husky": "^9.1.7",
+    "lint-staged": "^15.2.10"
+  },
+  "lint-staged": {
+    "frontend/src/**/*.{ts,tsx}": [
+      "./frontend/node_modules/.bin/eslint --config frontend/eslint.config.js --fix",
+      "bash -c \"./frontend/node_modules/.bin/tsc --noEmit --project frontend/tsconfig.json\""
+    ],
+    "backend/**/*.py": [
+      "bash scripts/lint-staged-backend.sh"
+    ]
+  }
+}

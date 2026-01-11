@@ -1,0 +1,1 @@
+export { NewCompaniesList } from './NewCompaniesList'

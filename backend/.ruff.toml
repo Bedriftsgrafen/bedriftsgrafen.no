@@ -1,0 +1,13 @@
+# Ruff configuration for backend
+
+# Extend base configuration if any (default is fine)
+line-length = 120
+target-version = "py311"
+
+[lint]
+# List of rules to ignore globally
+ignore = []
+
+[lint.per-file-ignores]
+# Ignore import and whitespace rules for scripts that need late imports for env loading
+"scripts/*.py" = ["E402", "W291", "W293"]

@@ -1,0 +1,61 @@
+# Python
+__pycache__
+*.py[cod]
+*$py.class
+*.so
+.Python
+*.egg-info
+.eggs
+*.egg
+
+# Virtual environments
+venv
+.venv
+env
+.env
+
+# Logs
+logs
+*.log
+
+# IDE
+.vscode
+.idea
+*.swp
+*.swo
+
+# Test files
+.pytest_cache
+.coverage
+htmlcov
+*.test.py
+__tests__
+
+# SQL migration files (run separately, not in app)
+*.sql
+backend/migration_*.sql
+migrations/
+
+# Documentation (not needed in container)
+*.md
+docs/
+backend/docs/
+
+# AI Context
+.gemini/
+.claude/
+.agent/
+CLAUDE.md
+
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Data files (should not be in container)
+*.json
+!package*.json
+
+# Temporary files
+*.tmp
+*.temp

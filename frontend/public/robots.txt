@@ -1,0 +1,10 @@
+# bedriftsgrafen.no robots.txt
+
+User-agent: *
+Allow: /
+
+# Sitemap index (contains paginated sitemaps for all companies)
+Sitemap: https://bedriftsgrafen.no/api/sitemap_index.xml
+
+# Crawl-delay for politeness (optional)
+Crawl-delay: 1
