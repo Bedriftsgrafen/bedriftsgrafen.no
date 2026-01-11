@@ -55,8 +55,10 @@ dist/
 develop-eggs/
 downloads/
 eggs/
-lib/
+# Python virtual environment lib directories
 lib64/
+**/venv/lib/
+**/env/lib/
 parts/
 sdist/
 var/
@@ -147,7 +149,6 @@ backups/
 database/lastned
 enheter_alle.json
 backend/enheter_alle.json
-backend/klass-version-*.csv
 backend/import.log
 backend/docs/
 backend/migration_*.sql
