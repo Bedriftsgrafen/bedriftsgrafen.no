@@ -4,7 +4,12 @@ on:
   push:
     branches: [main, develop]
   pull_request:
-    branches: [main]
+    branches: [main, develop]
+
+# Cancel in-progress runs for the same PR/branch to save resources
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
   # Frontend type-check and linting
@@ -13,47 +18,71 @@ jobs:
     defaults:
       run:
         working-directory: ./frontend
-
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
           node-version: '22'
           cache: 'npm'
-          cache-dependency-path: package-lock.json
+          cache-dependency-path: frontend/package-lock.json
 
       - run: npm ci
       - run: npm run validate
 
   # Frontend unit tests
   frontend-test:
+    needs: [frontend-validate]
     runs-on: ubuntu-latest
     defaults:
       run:
         working-directory: ./frontend
-
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
           node-version: '22'
           cache: 'npm'
-          cache-dependency-path: package-lock.json
+          cache-dependency-path: frontend/package-lock.json
 
       - run: npm ci
       - run: npm test -- --run
         name: Run Vitest
 
-  # Backend unit tests
-  backend-test:
+  # Backend linting and type-checking
+  backend-validate:
     runs-on: ubuntu-latest
     defaults:
       run:
         working-directory: ./backend
-
     steps:
       - uses: actions/checkout@v4
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+          cache-dependency-path: backend/requirements.txt
       
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+      
+      - name: Run Ruff (Lint & Format)
+        run: |
+          ruff check .
+          ruff format --check .
+          
+      - name: Run Mypy (Type Check)
+        run: mypy .
+
+  # Backend unit tests
+  backend-test:
+    needs: [backend-validate]
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: ./backend
+    steps:
+      - uses: actions/checkout@v4
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
