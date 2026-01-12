@@ -138,6 +138,7 @@ export function SavedFiltersSection({
                     onClick={() => onUpdateFilter(filter.id, filter.name)}
                     className="p-1 text-green-600 hover:text-green-700 hover:bg-green-50 rounded transition-colors"
                     title="Oppdater filter med nåværende verdier"
+                    aria-label="Oppdater filter"
                   >
                     <RefreshCw className="h-3.5 w-3.5" />
                   </button>
@@ -146,6 +147,7 @@ export function SavedFiltersSection({
                   onClick={() => onDeleteFilter(filter.id)}
                   className="p-1 text-purple-400 hover:text-red-600 hover:bg-red-50 rounded transition-colors opacity-0 group-hover:opacity-100"
                   title="Slett filter"
+                  aria-label="Slett filter"
                 >
                   <Trash2 className="h-3.5 w-3.5" />
                 </button>

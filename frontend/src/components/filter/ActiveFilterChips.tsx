@@ -82,6 +82,7 @@ export function ActiveFilterChips() {
                 onClick={onClearSearch}
                 className="ml-1 hover:text-blue-900 transition-colors"
                 title="Fjern søkefilter"
+                aria-label="Fjern søkefilter"
               >
                 <X className="h-3 w-3" />
               </button>

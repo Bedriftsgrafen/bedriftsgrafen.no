@@ -89,3 +89,34 @@ jobs:
       
       - name: Run unit tests
         run: python -m pytest tests/unit -v --tb=short
+
+  # Lighthouse performance audits (on PRs only to save resources)
+  lighthouse:
+    needs: [frontend-test]
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'npm'
+          cache-dependency-path: package-lock.json
+
+      - run: npm ci
+
+      - name: Build frontend
+        run: cd frontend && npm run build
+
+      - name: Run Lighthouse CI
+        run: cd frontend && npx lhci autorun
+        env:
+          LHCI_GITHUB_APP_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Upload Lighthouse Report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: lighthouse-report
+          path: frontend/.lighthouseci
+          retention-days: 14

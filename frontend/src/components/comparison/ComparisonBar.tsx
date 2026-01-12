@@ -52,6 +52,7 @@ export const ComparisonBar = memo(function ComparisonBar() {
                                     onClick={() => handleRemove(company.orgnr)}
                                     className="p-0.5 hover:bg-blue-100 rounded"
                                     title="Fjern"
+                                    aria-label={`Fjern ${company.navn} fra sammenligning`}
                                 >
                                     <X className="h-3.5 w-3.5" />
                                 </button>

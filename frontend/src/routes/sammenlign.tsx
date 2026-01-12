@@ -42,6 +42,7 @@ function ComparisonCard({ item, onRemove }: { item: ComparisonData; onRemove?: (
                     onClick={() => onRemove(item.orgnr)}
                     className="absolute top-3 right-3 p-1.5 hover:bg-gray-100 rounded-lg transition-colors"
                     title="Fjern fra sammenligning"
+                    aria-label="Fjern fra sammenligning"
                 >
                     <X className="h-4 w-4 text-gray-400" />
                 </button>
@@ -265,6 +266,7 @@ function ComparisonPage() {
                             to="/"
                             className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
                             title="Tilbake"
+                            aria-label="Tilbake til forsiden"
                         >
                             <ArrowLeft className="h-5 w-5 text-gray-600" />
                         </Link>
@@ -313,8 +315,8 @@ function ComparisonPage() {
                 {/* Company grid */}
                 {orgNumbers.length > 0 && (
                     <div className={`grid gap-4 ${orgNumbers.length <= 2 ? 'md:grid-cols-2' :
-                            orgNumbers.length === 3 ? 'md:grid-cols-3' :
-                                'md:grid-cols-2 lg:grid-cols-4'
+                        orgNumbers.length === 3 ? 'md:grid-cols-3' :
+                            'md:grid-cols-2 lg:grid-cols-4'
                         }`}>
                         {data.map((item) => (
                             <ComparisonCard

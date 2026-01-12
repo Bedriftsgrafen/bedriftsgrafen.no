@@ -194,6 +194,7 @@ const IndustryColumnPicker = memo(function IndustryColumnPicker({ visibleColumns
                             onClick={onReset}
                             className="text-xs text-blue-600 hover:text-blue-800 flex items-center gap-1"
                             title="Skjul alle"
+                            aria-label="Skjul alle kolonner"
                         >
                             <RotateCcw className="h-3 w-3" />
                         </button>
