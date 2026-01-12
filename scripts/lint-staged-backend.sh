@@ -28,9 +28,16 @@ for file in "$@"; do
 done
 
 if [ -n "$CONTAINER_FILES" ]; then
+    # Check if container is running
+    if ! docker ps --format '{{.Names}}' | grep -q "bedriftsgrafen-backend-dev"; then
+        echo "❌ Error: bedriftsgrafen-backend-dev container is not running."
+        echo "   Please start it with 'npm run dev-up' (or your preferred dev-up alias)."
+        exit 1
+    fi
+
     # Execute ruff in docker
     echo "Running ruff in docker on: $CONTAINER_FILES"
-    docker exec bedriftsgrafen-backend ruff check --fix $CONTAINER_FILES
+    docker exec bedriftsgrafen-backend-dev ruff check --fix $CONTAINER_FILES
 else
     echo "No files to lint in backend."
 fi

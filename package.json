@@ -9,7 +9,7 @@
   "scripts": {
     "prepare": "husky",
     "validate:frontend": "cd frontend && npm run validate",
-    "validate:backend": "cd backend && ruff check . && mypy .",
+    "validate:backend": "docker exec bedriftsgrafen-backend-dev ruff check . && docker exec bedriftsgrafen-backend-dev mypy .",
     "validate": "npm run validate:frontend && npm run validate:backend",
     "test:frontend": "cd frontend && npm run test -- --run",
     "test:backend": "cd backend && python -m pytest",
