@@ -99,14 +99,11 @@ class UpdateService:
 
         # Initial URL determination
         # Priority: start_id > since_date
-        if start_id is not None:
-            next_url: str | None = (
-                f"{self.UPDATES_BASE_URL}?oppdateringsid={start_id}&size={min(page_size, 10000)}"
-            )
-        else:
-            next_url: str | None = (
-                f"{self.UPDATES_BASE_URL}?dato={since_iso}&size={min(page_size, 10000)}"
-            )
+        next_url: str | None = (
+            f"{self.UPDATES_BASE_URL}?oppdateringsid={start_id}&size={min(page_size, 10000)}"
+            if start_id is not None
+            else f"{self.UPDATES_BASE_URL}?dato={since_iso}&size={min(page_size, 10000)}"
+        )
 
         async with httpx.AsyncClient(timeout=self.brreg_api.timeout) as http_client:
             while next_url:

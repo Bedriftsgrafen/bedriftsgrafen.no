@@ -18,7 +18,7 @@ class GeocodingService(BaseExternalService):
     DEFAULT_TIMEOUT = 10.0
 
     # Manual overrides for companies with bad registry data (e.g. centroid in ocean)
-    GEOCODING_OVERRIDES = {
+    GEOCODING_OVERRIDES: dict[str, tuple[float, float]] = {
         # "993144169": (59.923000, 10.681140),
     }
 

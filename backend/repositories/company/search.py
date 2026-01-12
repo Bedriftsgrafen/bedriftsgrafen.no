@@ -34,7 +34,7 @@ class SearchMixin:
                     return await self._search_by_name_impl(name, limit)
         except TimeoutError:
             logger.warning(f"Search semaphore timeout for query: {name}")
-            raise DatabaseException("Search timed out", details="Too many concurrent searches")
+            raise DatabaseException("Search timed out - too many concurrent searches")
 
     async def _search_by_name_impl(self, name: str, limit: int) -> list[models.Company]:
         """Implementation of search logic. Called under semaphore protection."""

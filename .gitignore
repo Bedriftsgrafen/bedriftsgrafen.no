@@ -186,6 +186,7 @@ GEMINI.md
 project-setup-rules.md
 .cursorrules
 .github/copilot-instructions.md
+optimized_prompt.md
 
 # Internal documentation
 docs/
@@ -195,4 +196,3 @@ docs/
 **/.env
 .env.*
 !.env.example
-optimized_prompt.md

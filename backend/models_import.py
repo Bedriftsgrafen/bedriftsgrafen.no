@@ -3,6 +3,7 @@ from datetime import datetime
 
 from sqlalchemy import Column, DateTime, Integer, String, Text
 from sqlalchemy import Enum as SQLEnum
+from sqlalchemy.orm import Mapped
 
 from database import Base
 
@@ -25,8 +26,8 @@ class BulkImportQueue(Base):
 
     __tablename__ = "bulk_import_queue"
 
-    orgnr = Column(String, primary_key=True, index=True)
-    status: Column[ImportStatus] = Column(SQLEnum(ImportStatus), default=ImportStatus.PENDING, index=True)  # type: ignore[assignment]
+    orgnr: Mapped[str] = Column(String, primary_key=True, index=True)
+    status: Mapped[ImportStatus] = Column(SQLEnum(ImportStatus), default=ImportStatus.PENDING, index=True)
     priority = Column(Integer, default=0, index=True)  # Higher = more important
 
     # Timestamps

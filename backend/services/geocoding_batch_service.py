@@ -10,7 +10,9 @@ import logging
 import httpx
 from datetime import datetime
 
-from sqlalchemy import and_, func, select, update
+from typing import Any, Sequence
+
+from sqlalchemy import Row, and_, func, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from models import Company
@@ -36,7 +38,7 @@ class GeocodingBatchService:
         self.db = db
         self.geocoder = GeocodingService()
 
-    async def get_companies_needing_geocoding(self, limit: int = DEFAULT_BATCH_SIZE) -> list[Company]:
+    async def get_companies_needing_geocoding(self, limit: int = DEFAULT_BATCH_SIZE) -> Sequence[Row[Any]]:
         """Fetch companies that need geocoding, selecting only necessary columns."""
         query = (
             select(
@@ -57,7 +59,7 @@ class GeocodingBatchService:
             .limit(limit)
         )
         result = await self.db.execute(query)
-        return result.all()  # Returns list of Row objects with selected columns
+        return result.all()  # Returns Sequence of Row objects with selected columns
 
     async def count_companies_needing_geocoding(self) -> int:
         """Count companies that still need geocoding (excluding max-attempts)."""

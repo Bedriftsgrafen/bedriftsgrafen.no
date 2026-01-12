@@ -12,10 +12,14 @@ from sqlalchemy import (
 )
 from sqlalchemy import text as sa_text
 from sqlalchemy.dialects.postgresql import JSONB
-from sqlalchemy.orm import relationship
+from sqlalchemy.orm import Mapped, relationship
 from sqlalchemy.sql import func
+from typing import TYPE_CHECKING
 
 from database import Base
+
+if TYPE_CHECKING:
+    from models.company import Company
 
 
 class Accounting(Base):
@@ -121,7 +125,7 @@ class Accounting(Base):
         nullable=True,
     )
 
-    company = relationship("Company", back_populates="regnskap")
+    company: Mapped["Company"] = relationship("Company", back_populates="regnskap")
 
 
 class LatestFinancials(Base):

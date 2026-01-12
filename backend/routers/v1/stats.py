@@ -40,7 +40,8 @@ def _enrich_with_nace_name(stat: models.IndustryStats) -> IndustryStatResponse:
     Single source of truth for model -> response conversion (DRY).
     """
     response = IndustryStatResponse.model_validate(stat)
-    response.nace_name = get_nace_name(stat.nace_division)
+    if stat.nace_division:
+        response.nace_name = get_nace_name(stat.nace_division)
     return response
 
 
@@ -151,7 +152,7 @@ async def get_industry_benchmark(
     # Enrich with NACE name matching the code level used
     benchmark["nace_name"] = get_nace_name(benchmark["nace_code"])
 
-    return benchmark
+    return IndustryBenchmarkResponse.model_validate(benchmark)
 
 # =============================================================================
 # Geographic Statistics (for choropleth map)
@@ -229,16 +230,20 @@ async def get_geography_averages(
         national_avg = national_total / len(COUNTY_NAMES) if COUNTY_NAMES else 0
     else:
         metric_col = municipality_metric_columns[metric]
-        query = select(
-            func.sum(metric_col).label("total"),
-            func.count(func.distinct(models.MunicipalityStats.municipality_code)).label("count"),
+        result = await db.execute(
+            select(
+                func.sum(metric_col).label("total"),
+                func.count(func.distinct(models.MunicipalityStats.municipality_code)).label("count"),
+            )
+            .where(models.MunicipalityStats.nace_division == nace) if nace else select(
+                func.sum(metric_col).label("total"),
+                func.count(func.distinct(models.MunicipalityStats.municipality_code)).label("count"),
+            )
         )
-        if nace:
-            query = query.where(models.MunicipalityStats.nace_division == nace)
-        result = await db.execute(query)
         row = result.one()
         national_total = row.total or 0
-        national_avg = national_total / row.count if row.count else 0
+        row_count = row.count or 0
+        national_avg = national_total / row_count if row_count else 0
 
     # Get county average if requested
     county_avg = None
@@ -247,16 +252,17 @@ async def get_geography_averages(
 
     if county_code and level == "municipality":
         county_metric_col = municipality_metric_columns[metric]
-        query = select(
+        county_query = select(
             func.sum(county_metric_col).label("total"),
             func.count(func.distinct(models.MunicipalityStats.municipality_code)).label("count"),
         ).where(func.left(models.MunicipalityStats.municipality_code, 2) == county_code)
         if nace:
-            query = query.where(models.MunicipalityStats.nace_division == nace)
-        result = await db.execute(query)
+            county_query = county_query.where(models.MunicipalityStats.nace_division == nace)
+        result = await db.execute(county_query)
         row = result.one()
         county_total = row.total or 0
-        county_avg = county_total / row.count if row.count else 0
+        row_count = row.count or 0
+        county_avg = county_total / row_count if row_count else 0
         county_name = get_county_name(county_code)
 
     return GeoAveragesResponse(

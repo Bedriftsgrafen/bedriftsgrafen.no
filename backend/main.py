@@ -24,10 +24,12 @@ logger = logging.getLogger(__name__)
 # Initialize rate limiter with get_remote_address as key function
 limiter = Limiter(key_func=get_remote_address, default_limits=["100/minute"])
 
-from routers.admin_import import router as admin_import_router  # noqa: E402
-from routers.health import router as health_router  # noqa: E402
-from routers.sitemap import router as sitemap_router  # noqa: E402
-from routers.v1.companies import router as v1_companies_router  # noqa: E402
+from routers import health  # noqa: E402
+from routers import admin_import  # noqa: E402
+from routers import sitemap  # noqa: E402
+from routers.v1 import companies as v1_companies  # noqa: E402
+from routers.v1 import stats as v1_stats  # noqa: E402
+from routers.v1 import trends as v1_trends  # noqa: E402
 from services.company_service import CompanyService  # noqa: E402
 from services.scheduler import SchedulerService  # noqa: E402
 
@@ -107,18 +109,14 @@ async def bedriftsgrafen_exception_handler(request: Request, exc: Bedriftsgrafen
 
 
 # Include routers
-app.include_router(health_router)
+app.include_router(health.router)
 # V1 API (new versioning)
-app.include_router(v1_companies_router)
-from routers.v1.stats import router as v1_stats_router  # noqa: E402
-
-app.include_router(v1_stats_router)
-from routers.v1.trends import router as v1_trends_router  # noqa: E402
-
-app.include_router(v1_trends_router)
+app.include_router(v1_companies.router)
+app.include_router(v1_stats.router)
+app.include_router(v1_trends.router)
 # Admin and utility routes
-app.include_router(admin_import_router)
-app.include_router(sitemap_router)
+app.include_router(admin_import.router)
+app.include_router(sitemap.router)
 
 
 # NOTE: Table creation is now handled by Alembic migrations

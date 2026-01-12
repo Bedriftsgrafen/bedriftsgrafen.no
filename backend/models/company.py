@@ -12,10 +12,14 @@ from sqlalchemy import (
 )
 from sqlalchemy import text as sa_text
 from sqlalchemy.dialects.postgresql import JSONB, TSVECTOR
-from sqlalchemy.orm import relationship
+from sqlalchemy.orm import Mapped, relationship
 from sqlalchemy.sql import func
 
 from database import Base
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from models.accounting import Accounting
 
 
 class Company(Base):
@@ -143,9 +147,15 @@ class Company(Base):
 
     # Relationships - Use noload to prevent N+1 queries
     # Queries that need these relationships MUST explicitly eager load with selectinload/joinedload
-    regnskap = relationship("Accounting", back_populates="company", cascade="all, delete-orphan", lazy="noload")
-    underenheter = relationship("SubUnit", back_populates="parent_company", cascade="all, delete-orphan", lazy="noload")
-    roller = relationship("Role", back_populates="company", cascade="all, delete-orphan", lazy="noload")
+    regnskap: Mapped[list["Accounting"]] = relationship(
+        "Accounting", back_populates="company", cascade="all, delete-orphan", lazy="noload"
+    )
+    underenheter: Mapped[list["SubUnit"]] = relationship(
+        "SubUnit", back_populates="parent_company", cascade="all, delete-orphan", lazy="noload"
+    )
+    roller: Mapped[list["Role"]] = relationship(
+        "Role", back_populates="company", cascade="all, delete-orphan", lazy="noload"
+    )
 
     @property
     def naeringskoder(self):
@@ -222,7 +232,7 @@ class SubUnit(Base):
     stiftelsesdato = Column(Date)
     updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
 
-    parent_company = relationship("Company", back_populates="underenheter")
+    parent_company: Mapped["Company"] = relationship("Company", back_populates="underenheter")
 
 
 class Role(Base):
@@ -254,4 +264,4 @@ class Role(Base):
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
 
-    company = relationship("Company", back_populates="roller")
+    company: Mapped["Company"] = relationship("Company", back_populates="roller")

@@ -4,7 +4,8 @@ FROM node:22-alpine AS development
 WORKDIR /app
 
 COPY package*.json ./
-RUN npm ci
+# Skip prepare script (husky) - git hooks not needed in containers
+RUN npm ci --ignore-scripts
 
 COPY . .
 
@@ -17,7 +18,8 @@ FROM node:22-alpine AS build
 WORKDIR /app
 
 COPY package*.json ./
-RUN npm ci
+# Skip prepare script (husky) - git hooks not needed in containers
+RUN npm ci --ignore-scripts
 
 COPY . .
 RUN npm run build

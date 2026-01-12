@@ -83,7 +83,7 @@ class BrregApiService(BaseExternalService):
         """
         Parse raw financial statement data into structured format.
         """
-        parsed = {
+        parsed: dict[str, Any] = {
             "aar": None,
             "periode_fra": None,
             "periode_til": None,
@@ -186,7 +186,7 @@ class BrregApiService(BaseExternalService):
                     all_subunits.extend(subunits)
                     logger.debug(f"Fetched {len(subunits)} subunits for {parent_orgnr}, page {page_count}")
 
-                url = data["_links"]["next"]["href"] if "_links" in data and "next" in data["_links"] else None
+                url = data["_links"]["next"]["href"] if "_links" in data and "next" in data["_links"] else ""
 
             except Exception as e:
                 logger.error(f"Error fetching subunits for {parent_orgnr}: {str(e)}")

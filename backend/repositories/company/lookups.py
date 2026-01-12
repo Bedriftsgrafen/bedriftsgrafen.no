@@ -44,12 +44,6 @@ class LookupsMixin:
             if not company:
                 raise CompanyNotFoundException(orgnr)
 
-            # Populate latest financials for handy access
-            if company.regnskap:
-                latest = max(company.regnskap, key=lambda x: x.aar or 0)
-                company.latest_revenue = latest.salgsinntekter or latest.total_inntekt
-                company.latest_profit = latest.aarsresultat
-
             return company
         except CompanyNotFoundException:
             raise
@@ -275,7 +269,9 @@ class LookupsMixin:
 
     async def count(self) -> int:
         """Get total company count."""
-        result = await self.db.execute(select(models.GlobalStats.total_companies))
+        result = await self.db.execute(
+            select(func.count(models.Company.orgnr))
+        )
         count = result.scalar()
         return count or 0
 

@@ -154,7 +154,7 @@ class BulkImportService:
             # Mark as in progress
             queue_item.status = ImportStatus.IN_PROGRESS
             queue_item.started_at = datetime.now(timezone.utc)
-            queue_item.attempt_count += 1
+            queue_item.attempt_count = (queue_item.attempt_count or 0) + 1
             await self.db.commit()
 
             # Rate limiting
@@ -242,8 +242,10 @@ class BulkImportService:
 
         await self.db.commit()
 
-        duration = (batch.completed_at - batch.started_at).total_seconds()
-        companies_per_hour = int((batch.completed_count / duration) * 3600) if duration > 0 else 0
+        duration = 0.0
+        if batch.completed_at and batch.started_at:
+            duration = (batch.completed_at - batch.started_at).total_seconds()
+        companies_per_hour = int(((batch.completed_count or 0) / duration) * 3600) if duration > 0 else 0
 
         return {
             "batch_id": batch.id,
@@ -265,12 +267,12 @@ class BulkImportService:
             result = await self.db.execute(
                 select(func.count(BulkImportQueue.orgnr)).filter(BulkImportQueue.status == status)
             )
-            statuses[status.value] = result.scalar()
+            statuses[status.value] = result.scalar() or 0
 
         total = sum(statuses.values())
-        completed = statuses.get(ImportStatus.COMPLETED.value, 0)
+        completed = statuses.get(ImportStatus.COMPLETED.value, 0) or 0
 
-        progress_pct = (completed / total * 100) if total > 0 else 0
+        progress_pct = (completed / total * 100) if total > 0 else 0.0
 
         return {"total": total, "statuses": statuses, "progress_percentage": round(progress_pct, 2)}
 
@@ -281,13 +283,13 @@ class BulkImportService:
         Returns:
             Number of items reset
         """
-        result = await self.db.execute(
+        cursor_result = await self.db.execute(
             update(BulkImportQueue)
             .where(BulkImportQueue.status == ImportStatus.FAILED)
             .values(status=ImportStatus.PENDING, last_error=None)
         )
         await self.db.commit()
 
-        count = result.rowcount
+        count = cursor_result.rowcount or 0
         logger.info(f"Reset {count} failed items for retry")
         return count
