@@ -21,9 +21,7 @@ module.exports = {
                 'http://localhost:4173/utforsk',      // Explore
             ],
             // Start the Vite preview server for auditing built assets
-            startServerCommand: 'npm run preview -- --port 4173',
-            startServerReadyPattern: 'Local:',
-            startServerReadyTimeout: 30000,
+            staticDistDir: './frontend/dist',
             numberOfRuns: 3, // Run 3 times and take median for accuracy
             settings: {
                 // Throttle to simulate real-world conditions

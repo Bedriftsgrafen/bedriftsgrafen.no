@@ -10,8 +10,7 @@
     "test": "vitest",
     "tc": "tsc --noEmit",
     "lint": "eslint . --ext ts,tsx --report-unused-disable-directives --max-warnings 0",
-    "validate": "run-p tc lint",
-    "lighthouse": "npm run build && lhci autorun"
+    "validate": "run-p tc lint"
   },
   "dependencies": {
     "@tanstack/react-query": "^5.90.12",
@@ -33,7 +32,6 @@
     "zustand": "^5.0.9"
   },
   "devDependencies": {
-    "@lhci/cli": "^0.15.1",
     "@tailwindcss/postcss": "^4.1.18",
     "@testing-library/jest-dom": "^6.9.1",
     "@testing-library/react": "^16.3.0",

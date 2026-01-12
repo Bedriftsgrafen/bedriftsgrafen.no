@@ -15,9 +15,11 @@
     "test:frontend": "cd frontend && npm run test -- --run",
     "test:backend": "if [ -f backend/.venv/bin/pytest ]; then PYTHONPATH=backend backend/.venv/bin/pytest backend/tests/unit -v; else docker exec bedriftsgrafen-backend-dev python3 -m pytest tests/unit -v; fi",
     "test": "npm run test:frontend && npm run test:backend",
-    "check": "npm run validate && npm run test"
+    "check": "npm run validate && npm run test",
+    "lighthouse": "cd frontend && npm run build && cd .. && lhci autorun"
   },
   "devDependencies": {
+    "@lhci/cli": "0.15.1",
     "husky": "^9.1.7",
     "lint-staged": "^16.2.7"
   },

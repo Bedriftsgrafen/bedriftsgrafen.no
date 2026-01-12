@@ -109,7 +109,7 @@ jobs:
         run: cd frontend && npm run build
 
       - name: Run Lighthouse CI
-        run: cd frontend && npx lhci autorun
+        run: npx lhci autorun
         env:
           LHCI_GITHUB_APP_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
@@ -118,5 +118,5 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: lighthouse-report
-          path: frontend/.lighthouseci
+          path: .lighthouseci
           retention-days: 14
