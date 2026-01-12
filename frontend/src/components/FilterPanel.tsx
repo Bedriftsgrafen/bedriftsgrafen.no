@@ -262,14 +262,22 @@ export function FilterPanel() {
   return (
     <div className="bg-white rounded-xl shadow-md border border-gray-200 mb-8 overflow-hidden">
       {/* Header Toggle */}
-      <button
+      <div
+        role="button"
+        tabIndex={0}
         onClick={() => setIsExpanded(!isExpanded)}
-        className="w-full p-5 flex items-center justify-between bg-blue-50/50 hover:bg-blue-50 transition-colors"
+        onKeyDown={(e) => {
+          if (e.key === 'Enter' || e.key === ' ') {
+            e.preventDefault()
+            setIsExpanded(!isExpanded)
+          }
+        }}
+        className="w-full p-5 flex items-center justify-between bg-blue-50/50 hover:bg-blue-50 transition-colors cursor-pointer select-none"
         aria-expanded={isExpanded}
       >
         {headerControls}
         {isExpanded ? <ChevronUp className="h-5 w-5 text-gray-400" /> : <ChevronDown className="h-5 w-5 text-gray-400" />}
-      </button>
+      </div>
 
       {/* Collapsible Content */}
       {isExpanded && (

@@ -15,8 +15,8 @@
 | brreg_api_service | ✅ Tested | - |
 | bulk_import_service | ✅ Tested | - |
 | update_service | ✅ Tested | - |
-| **geocoding_batch_service** | ❌ Missing | Low |
-| **scheduler** | ❌ Missing | Low |
+| geocoding_batch_service | ✅ Tested | - |
+| scheduler | ✅ Tested | - |
 | ssb_service | ✅ Tested | - |
 
 ## Backend Repositories (tests/unit/repositories/)
@@ -26,23 +26,24 @@
 | company_lookups | ✅ Tested | - |
 | company_filter_builder | ✅ Tested | - |
 | accounting_repository | ✅ Tested | - |
-| **company/queries.py** | ❌ Missing | Medium |
-| **company/crud.py** | ❌ Missing | Medium |
-| **company/stats.py** | ❌ Missing | Medium |
-| **stats_repository** | ❌ Missing | Medium |
-| **role_repository** | ❌ Missing | Low |
-| **subunit_repository** | ❌ Missing | Low |
+| company/queries.py | ✅ Tested | - |
+| company/crud.py | ✅ Tested | - |
+| company/stats.py | ✅ Tested | - |
+| stats_repository | ✅ Tested | - |
+| system_repository | ✅ Tested | - |
+| role_repository | ✅ Tested | - |
+| subunit_repository | ✅ Tested | - |
 
 ## Backend Routers (tests/unit/routers/)
 
 | Router | Status | Priority |
 |--------|--------|----------|
-| **v1/companies** | ❌ Missing | High |
-| **v1/stats** | ❌ Missing | High |
-| **v1/trends** | ❌ Missing | Medium |
-| **admin_import** | ❌ Missing | Low |
-| **sitemap** | ❌ Missing | Low |
-| **health** | ❌ Missing | Low |
+| v1/companies | ✅ Tested | - |
+| v1/stats | ✅ Tested | - |
+| v1/trends | ✅ Tested | - |
+| admin_import | ✅ Tested | - |
+| sitemap | ✅ Tested | - |
+| health | ✅ Tested | - |
 
 ---
 
@@ -57,7 +58,7 @@
 | savedFiltersStore | ✅ Tested | - |
 | explorerStore | ✅ Tested | - |
 | toastStore | ✅ Tested | - |
-| **themeStore** | ❌ Missing | Low |
+| themeStore | ✅ Tested | - |
 
 ## Frontend Hooks (src/hooks/__tests__/)
 
@@ -65,19 +66,19 @@
 |------|--------|----------|
 | useFilterParams | ✅ Tested | - |
 | useCompanyModal | ✅ Tested | - |
-| **useTableState** | ❌ Missing | Medium |
-| **usePagination** | ❌ Missing | Low |
-| **useNaceName** | ❌ Missing | Low |
+| useTableState | ✅ Tested | - |
+| usePagination | ✅ Tested | - |
+| useNaceName | ✅ Tested | - |
 
 ## Frontend Components (src/components/__tests__/)
 
 | Component | Status | Priority |
 |-----------|--------|----------|
 | KpiDashboard | ✅ Tested | - |
-| **FilterPanel** | ❌ Missing | High |
-| **CompanyList** | ❌ Missing | High |
-| **CompanyCard** | ❌ Missing | Medium |
-| **StatisticsCards** | ❌ Missing | Medium |
+| FilterPanel | ✅ Tested | - |
+| CompanyList | ✅ Tested | - |
+| CompanyCard | ✅ Tested | - |
+| StatisticsCards | ✅ Tested | - |
 
 ## Frontend Utils (src/utils/__tests__/)
 
@@ -85,8 +86,16 @@
 |------|--------|----------|
 | formatters | ✅ Tested | - |
 | organizationForms | ✅ Tested | - |
-| **api.ts** | ❌ Missing | Medium |
-| **queryKeys.ts** | ❌ Missing | Low |
+| api.ts | ✅ Tested | - |
+| queryKeys.ts | ✅ Tested | - |
+| chartTransformers | ✅ Tested | - |
+| accountingHelpers | ✅ Tested | - |
+| dates | ✅ Tested | - |
+| nace | ✅ Tested | - |
+| postalCoordinates | ✅ Tested | - |
+| analytics | ✅ Tested | - |
+| clipboard | ✅ Tested | - |
+| abTesting | ✅ Tested | - |
 
 ---
 
@@ -94,19 +103,17 @@
 
 | Area | Tested | Missing | Coverage |
 |------|--------|---------|----------|
-| Backend Services | 9 | 5 | 64% |
-| Backend Repositories | 3 | 6 | 33% |
-| Backend Routers | 0 | 6 | 0% |
-| Frontend Stores | 4 | 4 | 50% |
-| Frontend Hooks | 0 | 5 | 0% |
-| Frontend Components | 1 | 4 | 20% |
-| Frontend Utils | 2 | 2 | 50% |
+| Backend Services | 14 | 0 | 100% |
+| Backend Repositories | 10 | 0 | 100% |
+| Backend Routers | 6 | 0 | 100% |
+| Frontend Stores | 8 | 0 | 100% |
+| Frontend Hooks | 5 | 0 | 100% |
+| Frontend Components | 5 | 0 | 100% |
+| Frontend Utils | 12 | 0 | 100% |
 
-**Total: ~35% coverage**
+**Total: 100% unit test coverage for logic-critical paths.**
 
 ## Next Priority Actions
 
-1. Add router tests for v1/companies and v1/stats
-2. Add hook tests for useFilterParams
-3. Add component tests for FilterPanel and CompanyList
-4. Add service tests for bulk_import_service
+All identified high, medium, and low priority missing tests have been implemented!
+Future work can focus on E2E testing using Playwright/Cypress to verify complex user flows.
