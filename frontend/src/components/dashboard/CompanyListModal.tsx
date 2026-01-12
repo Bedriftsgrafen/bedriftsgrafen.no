@@ -157,7 +157,7 @@ export const CompanyListModal = ({
                                         {company.orgnr} • {company.organisasjonsform}
                                     </p>
                                 </div>
-                                <ExternalLink className="w-3 h-3 text-gray-400 flex-shrink-0" />
+                                <ExternalLink className="w-3 h-3 text-gray-400 shrink-0" />
                             </div>
                         </td>
                         <td className="px-4 py-3 text-sm text-gray-600 hidden sm:table-cell">
@@ -204,7 +204,7 @@ export const CompanyListModal = ({
                                         {company.orgnr} • {company.organisasjonsform}
                                     </p>
                                 </div>
-                                <ExternalLink className="w-3 h-3 text-gray-400 flex-shrink-0" />
+                                <ExternalLink className="w-3 h-3 text-gray-400 shrink-0" />
                             </div>
                         </td>
                         <td className="px-4 py-3 text-sm text-gray-600 hidden sm:table-cell">
@@ -249,7 +249,7 @@ export const CompanyListModal = ({
                                         {company.orgnr} • {company.organisasjonsform}
                                     </p>
                                 </div>
-                                <ExternalLink className="w-3 h-3 text-gray-400 flex-shrink-0" />
+                                <ExternalLink className="w-3 h-3 text-gray-400 shrink-0" />
                             </div>
                         </td>
                         <td className="px-4 py-3 text-sm text-gray-600 hidden sm:table-cell">

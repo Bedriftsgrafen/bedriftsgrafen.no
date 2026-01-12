@@ -115,17 +115,17 @@ export const RegionSelect = React.memo(function RegionSelect({ type, value, onCh
                     ${value ? 'text-gray-900' : 'text-gray-500'}
                 `}
             >
-                <Icon className="w-4 h-4 text-gray-400 flex-shrink-0" />
+                <Icon className="w-4 h-4 text-gray-400 shrink-0" />
                 <span className="flex-1 truncate">
                     {displayValue || placeholder || defaultPlaceholder}
                 </span>
                 {value ? (
                     <X
-                        className="w-4 h-4 text-gray-400 hover:text-gray-600 flex-shrink-0"
+                        className="w-4 h-4 text-gray-400 hover:text-gray-600 shrink-0"
                         onClick={handleClear}
                     />
                 ) : (
-                    <ChevronDown className="w-4 h-4 text-gray-400 flex-shrink-0" />
+                    <ChevronDown className="w-4 h-4 text-gray-400 shrink-0" />
                 )}
             </button>
 

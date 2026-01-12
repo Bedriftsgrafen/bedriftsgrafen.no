@@ -47,11 +47,11 @@ function ToastItem({ toast, onClose }: { toast: Toast; onClose: () => void }) {
     <div
       className={`${colors[toast.type]} border rounded-lg shadow-lg p-4 flex items-start gap-3 min-w-[320px] animate-slide-in`}
     >
-      <Icon className={`h-5 w-5 ${iconColors[toast.type]} mt-0.5 flex-shrink-0`} />
+      <Icon className={`h-5 w-5 ${iconColors[toast.type]} mt-0.5 shrink-0`} />
       <p className="flex-1 text-sm font-medium">{toast.message}</p>
       <button
         onClick={onClose}
-        className="flex-shrink-0 p-1 hover:bg-black/5 rounded transition-colors"
+        className="shrink-0 p-1 hover:bg-black/5 rounded transition-colors"
       >
         <X className="h-4 w-4" />
       </button>

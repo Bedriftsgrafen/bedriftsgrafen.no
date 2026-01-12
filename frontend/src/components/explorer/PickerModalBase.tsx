@@ -140,7 +140,7 @@ export function PickerModalBase({
                 onClick={(e) => e.stopPropagation()} // Prevent clicks inside modal from closing it
             >
                 {/* Header */}
-                <div className="flex items-center justify-between p-4 border-b border-gray-200 flex-shrink-0">
+                <div className="flex items-center justify-between p-4 border-b border-gray-200 shrink-0">
                     <h2 id={titleId} className="text-lg font-semibold text-gray-900">
                         {title}
                     </h2>
@@ -156,7 +156,7 @@ export function PickerModalBase({
 
                 {/* Search (optional) */}
                 {searchContent && (
-                    <div className="p-4 border-b border-gray-100 flex-shrink-0">
+                    <div className="p-4 border-b border-gray-100 shrink-0">
                         {searchContent}
                     </div>
                 )}
@@ -167,7 +167,7 @@ export function PickerModalBase({
                 </div>
 
                 {/* Footer */}
-                <div className="flex items-center justify-between gap-3 p-4 border-t border-gray-200 bg-gray-50 rounded-b-2xl flex-shrink-0">
+                <div className="flex items-center justify-between gap-3 p-4 border-t border-gray-200 bg-gray-50 rounded-b-2xl shrink-0">
                     <Button
                         onClick={onClear}
                         variant="ghost"

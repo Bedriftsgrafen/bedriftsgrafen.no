@@ -111,7 +111,7 @@ export function IndustryModal({
                                         <div className="flex-1 min-w-0">
                                             <div className="font-medium text-gray-900 group-hover:text-blue-600 truncate flex items-center gap-2">
                                                 {company.navn}
-                                                <ExternalLink className="h-4 w-4 opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0" />
+                                                <ExternalLink className="h-4 w-4 opacity-0 group-hover:opacity-100 transition-opacity shrink-0" />
                                             </div>
                                             <div className="text-sm text-gray-500">
                                                 Org.nr: {company.orgnr}

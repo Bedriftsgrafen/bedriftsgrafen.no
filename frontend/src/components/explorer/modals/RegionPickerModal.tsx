@@ -126,7 +126,7 @@ const LocationItem = memo(function LocationItem({
                 }`}
         >
             <span
-                className={`flex items-center justify-center h-8 w-8 rounded-lg flex-shrink-0 ${isSelected ? 'bg-blue-600 text-white' : 'bg-gray-100 text-gray-500'
+                className={`flex items-center justify-center h-8 w-8 rounded-lg shrink-0 ${isSelected ? 'bg-blue-600 text-white' : 'bg-gray-100 text-gray-500'
                     }`}
                 aria-hidden="true"
             >
@@ -139,7 +139,7 @@ const LocationItem = memo(function LocationItem({
                 )}
             </div>
             {isSelected && (
-                <Check className="h-5 w-5 text-blue-600 flex-shrink-0" aria-hidden="true" />
+                <Check className="h-5 w-5 text-blue-600 shrink-0" aria-hidden="true" />
             )}
         </button>
     )

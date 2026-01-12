@@ -58,7 +58,7 @@ export const FavoritesSection = memo(function FavoritesSection() {
                         tabIndex={0}
                         onKeyDown={(e) => e.key === 'Enter' && handleCompanyClick(company.orgnr)}
                     >
-                        <div className="flex-shrink-0 p-2 bg-yellow-50 text-yellow-600 rounded-lg">
+                        <div className="shrink-0 p-2 bg-yellow-50 text-yellow-600 rounded-lg">
                             <Building2 className="h-4 w-4" />
                         </div>
                         <div className="flex-1 min-w-0">
@@ -72,7 +72,7 @@ export const FavoritesSection = memo(function FavoritesSection() {
                         <button
                             type="button"
                             onClick={(e) => handleRemove(e, company.orgnr)}
-                            className="flex-shrink-0 p-1 text-gray-300 hover:text-red-500 transition-colors opacity-0 group-hover:opacity-100"
+                            className="shrink-0 p-1 text-gray-300 hover:text-red-500 transition-colors opacity-0 group-hover:opacity-100"
                             title="Fjern fra favoritter"
                         >
                             <X className="h-4 w-4" />

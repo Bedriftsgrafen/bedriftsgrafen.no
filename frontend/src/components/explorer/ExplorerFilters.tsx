@@ -137,7 +137,7 @@ export const ExplorerFilters = memo(function ExplorerFilters() {
                         type="button"
                         className="w-full flex items-center gap-3 px-4 py-3 border border-gray-300 rounded-lg hover:border-gray-400 hover:bg-gray-50 transition-colors text-left"
                     >
-                        <Building2 className="h-5 w-5 text-gray-400 flex-shrink-0" aria-hidden="true" />
+                        <Building2 className="h-5 w-5 text-gray-400 shrink-0" aria-hidden="true" />
                         {naeringskode ? (
                             <span className="text-gray-800 truncate">
                                 <span className="font-medium">{naeringskode}</span>
@@ -156,7 +156,7 @@ export const ExplorerFilters = memo(function ExplorerFilters() {
                         type="button"
                         className="w-full flex items-center gap-3 px-4 py-3 border border-gray-300 rounded-lg hover:border-gray-400 hover:bg-gray-50 transition-colors text-left"
                     >
-                        <MapPin className="h-5 w-5 text-gray-400 flex-shrink-0" aria-hidden="true" />
+                        <MapPin className="h-5 w-5 text-gray-400 shrink-0" aria-hidden="true" />
                         {county ? (
                             <span className="text-gray-800 font-medium truncate">
                                 {COUNTIES.find(c => c.code === county)?.name || county} (fylke)

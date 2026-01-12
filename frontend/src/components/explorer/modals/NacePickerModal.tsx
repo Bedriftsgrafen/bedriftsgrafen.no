@@ -99,7 +99,7 @@ const NaceNode = memo(function NaceNode({
                 <button
                     type="button"
                     onClick={() => hasChildren && onToggle(code)}
-                    className={`flex items-center justify-center h-6 w-6 rounded flex-shrink-0 ${hasChildren ? 'hover:bg-gray-200 cursor-pointer' : ''
+                    className={`flex items-center justify-center h-6 w-6 rounded shrink-0 ${hasChildren ? 'hover:bg-gray-200 cursor-pointer' : ''
                         }`}
                     disabled={!hasChildren}
                 >
@@ -126,7 +126,7 @@ const NaceNode = memo(function NaceNode({
                         }`}
                 >
                     <span
-                        className={`flex items-center justify-center px-1.5 py-0.5 rounded font-mono text-xs flex-shrink-0 ${isSelected
+                        className={`flex items-center justify-center px-1.5 py-0.5 rounded font-mono text-xs shrink-0 ${isSelected
                             ? 'bg-blue-600 text-white'
                             : 'bg-gray-100 text-gray-600'
                             }`}
@@ -135,12 +135,12 @@ const NaceNode = memo(function NaceNode({
                     </span>
                     <span className="flex-1 text-sm text-gray-700 truncate">{name}</span>
                     {count !== undefined && (
-                        <span className="text-xs text-gray-400 flex-shrink-0">
+                        <span className="text-xs text-gray-400 shrink-0">
                             ({count.toLocaleString('nb-NO')})
                         </span>
                     )}
                     {isSelected && (
-                        <Check className="h-4 w-4 text-blue-600 flex-shrink-0" />
+                        <Check className="h-4 w-4 text-blue-600 shrink-0" />
                     )}
                 </button>
             </div>

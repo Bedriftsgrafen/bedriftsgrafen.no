@@ -31,7 +31,7 @@ export function ErrorMessage({
   return (
     <div className="bg-red-50 border border-red-200 rounded-lg p-4">
       <div className="flex items-start gap-3">
-        <AlertCircle className="h-5 w-5 text-red-600 mt-0.5 flex-shrink-0" />
+        <AlertCircle className="h-5 w-5 text-red-600 mt-0.5 shrink-0" />
         <div className="flex-1">
           <p className="text-red-900 font-medium mb-1">Feil ved lasting</p>
           <p className="text-red-700 text-sm">{message}</p>
