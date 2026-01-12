@@ -1,4 +1,3 @@
-import pytest
 from utils.county_codes import get_county_code, get_county_name, is_county_code
 
 def test_get_county_code():

@@ -1,11 +1,4 @@
 echo "🚀 Starting thorough pre-push validation..."
 
-# Check if docker is available (needed for backend validation)
-if ! command -v docker >/dev/null 2>&1; then
-    echo "⚠️  Warning: docker not found. Skipping backend validation."
-    # We might still want to run frontend tests if they don't depend on docker
-    npm run validate:frontend && npm run test:frontend
-else
-    # Run everything
-    npm run check
-fi
+# Run thorough validation (smart fallback for local vs docker is in package.json)
+npm run check

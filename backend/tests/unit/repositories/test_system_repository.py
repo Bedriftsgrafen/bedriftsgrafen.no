@@ -1,5 +1,5 @@
 import pytest
-from unittest.mock import MagicMock, AsyncMock, ANY
+from unittest.mock import MagicMock, AsyncMock
 from repositories.system_repository import SystemRepository
 
 @pytest.fixture

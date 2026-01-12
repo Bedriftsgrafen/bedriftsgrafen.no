@@ -1,7 +1,6 @@
 import pytest
 from unittest.mock import AsyncMock, MagicMock, patch, mock_open
 from services.geocoding_batch_service import GeocodingBatchService
-from services.geocoding_service import GeocodingService
 from models import Company
 
 @pytest.fixture
@@ -95,7 +94,7 @@ async def test_run_batch_processing(service, mock_db_session):
     # run_batch manually uses self.geocoder.geocode_address
     service.geocoder.geocode_address = AsyncMock(return_value=(10, 10))
     
-    with patch("httpx.AsyncClient") as mock_client, \
+    with patch("httpx.AsyncClient"), \
          patch("services.geocoding_service.GeocodingService.build_address_string", return_value="Test Addr"):
         stats = await service.run_batch()
         

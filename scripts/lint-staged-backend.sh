@@ -7,12 +7,20 @@
 # Get the project root (where the script is running from)
 PROJECT_ROOT=$(pwd)
 
-# Prepare the file list for the container
+# Check if local virtualenv has ruff
+RUFF_LOCAL="backend/.venv/bin/ruff"
+if [ -f "$RUFF_LOCAL" ]; then
+    echo "✅ Running local ruff on staged files..."
+    # Local ruff handles host paths directly
+    $RUFF_LOCAL check --fix "$@"
+    exit 0
+fi
+
+# Fallback: Prepare the file list for the container
 CONTAINER_FILES=""
 
 for file in "$@"; do
     # Remove project root prefix
-    # If the file path starts with PROJECT_ROOT, remove it.
     if [[ "$file" == "$PROJECT_ROOT"* ]]; then
         REL_PATH="${file#$PROJECT_ROOT/}"
     else
@@ -30,8 +38,8 @@ done
 if [ -n "$CONTAINER_FILES" ]; then
     # Check if container is running
     if ! docker ps --format '{{.Names}}' | grep -q "bedriftsgrafen-backend-dev"; then
-        echo "❌ Error: bedriftsgrafen-backend-dev container is not running."
-        echo "   Please start it with 'npm run dev-up' (or your preferred dev-up alias)."
+        echo "❌ Error: bedriftsgrafen-backend-dev container is not running and no local venv found."
+        echo "   Please start it with 'npm run dev-up' or create a local venv in backend/.venv"
         exit 1
     fi
 

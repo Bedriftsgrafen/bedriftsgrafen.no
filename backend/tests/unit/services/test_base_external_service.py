@@ -1,7 +1,7 @@
 import pytest
 import httpx
 from unittest.mock import MagicMock, AsyncMock, patch
-from services.base_external_service import BaseExternalService, ExternalApiException, RateLimitException
+from services.base_external_service import BaseExternalService, ExternalApiException
 
 # Concrete implementation for testing
 class TestService(BaseExternalService):

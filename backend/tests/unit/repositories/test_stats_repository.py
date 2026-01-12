@@ -1,6 +1,5 @@
 import pytest
-from unittest.mock import MagicMock, AsyncMock, call
-from sqlalchemy import select, func
+from unittest.mock import MagicMock, AsyncMock
 from repositories.stats_repository import StatsRepository
 import models
 

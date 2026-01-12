@@ -1,6 +1,5 @@
 import pytest
-from unittest.mock import MagicMock, AsyncMock, patch
-from sqlalchemy import text
+from unittest.mock import MagicMock, AsyncMock
 from repositories.company.stats import StatsMixin
 from repositories.company_filter_builder import FilterParams
 

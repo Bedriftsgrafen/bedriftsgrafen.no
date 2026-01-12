@@ -1,8 +1,6 @@
 import pytest
-import asyncio
-from unittest.mock import AsyncMock, MagicMock, patch
-from services.bulk_import_service import BulkImportService, ImportStatus
-from models_import import BulkImportQueue
+from unittest.mock import AsyncMock, MagicMock
+from services.bulk_import_service import BulkImportService
 
 # Mock CompanyService since it is a dependency
 @pytest.fixture

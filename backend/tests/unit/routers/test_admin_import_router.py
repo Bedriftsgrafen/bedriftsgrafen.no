@@ -1,5 +1,5 @@
 import pytest
-from unittest.mock import MagicMock, AsyncMock, patch
+from unittest.mock import AsyncMock, patch
 from fastapi.testclient import TestClient
 from main import app
 from routers.admin_import import verify_admin_key
