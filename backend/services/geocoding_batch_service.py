@@ -7,7 +7,6 @@ respecting Kartverket API limits with throttling.
 
 import asyncio
 import logging
-import re
 import httpx
 from datetime import datetime
 

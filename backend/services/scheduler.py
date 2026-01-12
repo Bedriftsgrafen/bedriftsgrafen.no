@@ -82,7 +82,6 @@ class SchedulerService:
     async def geocode_companies_batch(self) -> None:
         """Geocode a batch of companies without coordinates."""
         from services.geocoding_batch_service import GeocodingBatchService
-        from sqlalchemy.exc import DBAPIError
 
         logger.info("Starting geocoding batch...")
         try:
@@ -105,7 +104,7 @@ class SchedulerService:
                         )
                     else:
                         logger.info("No companies need geocoding")
-                except Exception as e:
+                except Exception:
                     logger.exception("Geocoding batch service failed")
                     await db.rollback()
                     raise
