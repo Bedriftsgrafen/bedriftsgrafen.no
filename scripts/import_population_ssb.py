@@ -23,37 +23,18 @@ logger = logging.getLogger(__name__)
 
 SSB_API_URL = "https://data.ssb.no/api/v0/no/table/06913"
 
+
 async def fetch_ssb_data():
     """Fetch population details from SSB"""
     # Query for "Folkemengde" (contentsCode: Folkemengde) for all municipalities (Region: *)
     # for the latest year available (Tid: top 1).
     payload = {
         "query": [
-            {
-                "code": "Region",
-                "selection": {
-                    "filter": "all",
-                    "values": ["*"]
-                }
-            },
-            {
-                "code": "ContentsCode",
-                "selection": {
-                    "filter": "item",
-                    "values": ["Folkemengde"]
-                }
-            },
-            {
-                "code": "Tid",
-                "selection": {
-                    "filter": "top",
-                    "values": ["1"]
-                }
-            }
+            {"code": "Region", "selection": {"filter": "all", "values": ["*"]}},
+            {"code": "ContentsCode", "selection": {"filter": "item", "values": ["Folkemengde"]}},
+            {"code": "Tid", "selection": {"filter": "top", "values": ["1"]}},
         ],
-        "response": {
-            "format": "json-stat2"
-        }
+        "response": {"format": "json-stat2"},
     }
 
     async with httpx.AsyncClient() as client:
@@ -61,6 +42,7 @@ async def fetch_ssb_data():
         response = await client.post(SSB_API_URL, json=payload, timeout=30)
         response.raise_for_status()
         return response.json()
+
 
 async def import_population():
     data = await fetch_ssb_data()
@@ -73,8 +55,8 @@ async def import_population():
     region_dim = dimension["Region"]
     time_dim = dimension["Tid"]
 
-    regions = list(region_dim["category"]["index"].keys()) # List of commune codes
-    years = list(time_dim["category"]["index"].keys()) # List of years (should be 1)
+    regions = list(region_dim["category"]["index"].keys())  # List of commune codes
+    years = list(time_dim["category"]["index"].keys())  # List of years (should be 1)
     values = data["value"]
 
     current_year = int(years[0])
@@ -89,11 +71,7 @@ async def import_population():
         # Filter out counties or other non-municipality regions if necessary (usually they are 2 digits)
         if len(region_code) == 4:
             pop = values[i]
-            records.append({
-                "municipality_code": region_code,
-                "year": current_year,
-                "population": int(pop)
-            })
+            records.append({"municipality_code": region_code, "year": current_year, "population": int(pop)})
 
     if not records:
         logger.warning("No records found to import.")
@@ -106,12 +84,13 @@ async def import_population():
         stmt = pg_insert(MunicipalityPopulation).values(records)
         stmt = stmt.on_conflict_do_update(
             index_elements=["municipality_code", "year"],
-            set_={"population": stmt.excluded.population, "updated_at": datetime.utcnow()}
+            set_={"population": stmt.excluded.population, "updated_at": datetime.utcnow()},
         )
 
         await session.execute(stmt)
         await session.commit()
         logger.info("Database update complete.")
+
 
 if __name__ == "__main__":
     try:

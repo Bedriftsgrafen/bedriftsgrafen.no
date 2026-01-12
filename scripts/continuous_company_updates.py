@@ -83,7 +83,9 @@ signal.signal(signal.SIGTERM, signal_handler)
 signal.signal(signal.SIGINT, signal_handler)
 
 
-async def fetch_company_updates(service: UpdateService, since_date: date | None = None, start_id: int | None = None) -> dict[str, Any]:
+async def fetch_company_updates(
+    service: UpdateService, since_date: date | None = None, start_id: int | None = None
+) -> dict[str, Any]:
     """
     Fetch incremental company updates from Brønnøysundregistrene
 
@@ -164,7 +166,7 @@ async def main_loop():
                         start_id = int(latest_id_str)
                     except ValueError:
                         logger.warning(f"Invalid update ID in DB: {latest_id_str}, falling back to date")
-                
+
                 # Determine date for fallback or logging
                 if last_sync_date_str:
                     try:

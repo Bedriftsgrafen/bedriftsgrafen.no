@@ -176,6 +176,7 @@ def parse_regnskap_data(data: dict) -> dict:
     # Fallback: if periode_til is missing but we have year, use Dec 31
     if parsed["periode_til"] is None and parsed["aar"]:
         from datetime import date as date_type
+
         parsed["periode_til"] = date_type(parsed["aar"], 12, 31)
 
     # Extract balance sheet data
@@ -221,13 +222,10 @@ def parse_regnskap_data(data: dict) -> dict:
     return parsed
 
 
-
-
-
 async def bulk_upsert_regnskap(session: AsyncSession, records: list[dict]) -> int:
     """
     Bulk insert or update financial data using the correct unique constraint.
-    
+
     The regnskap table has a unique constraint on (orgnr, periode_til).
     """
     if not records:
@@ -261,10 +259,7 @@ async def bulk_upsert_regnskap(session: AsyncSession, records: list[dict]) -> in
 
         # On conflict (orgnr, periode_til), update the columns
         # Uses the named constraint instead of index_elements for correctness
-        stmt = stmt.on_conflict_do_update(
-            constraint="regnskap_orgnr_periode_unique",
-            set_=update_dict
-        )
+        stmt = stmt.on_conflict_do_update(constraint="regnskap_orgnr_periode_unique", set_=update_dict)
 
         await session.execute(stmt)
         return len(records)
@@ -272,9 +267,6 @@ async def bulk_upsert_regnskap(session: AsyncSession, records: list[dict]) -> in
     except Exception as e:
         logger.error(f"Bulk upsert error: {e}")
         raise e
-
-
-
 
 
 async def get_companies_needing_update(session: AsyncSession, limit: int) -> list[Company]:

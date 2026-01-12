@@ -21,6 +21,7 @@ from dotenv import load_dotenv
 # Add parent directory to path to import database module
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
+
 def load_environment():
     """Load environment variables from .env file"""
     # scripts/ -> backend/ -> root/
@@ -37,6 +38,7 @@ def load_environment():
     if os.getenv("DATABASE_HOST") == "bedriftsgrafen-db":
         print("DATABASE_HOST is set to 'bedriftsgrafen-db'. Overriding to 'localhost' for local script execution.")
         os.environ["DATABASE_HOST"] = "localhost"
+
 
 async def add_fulltext_search():
     """Add Full-Text Search support to bedrifter table with batching"""
@@ -58,7 +60,8 @@ async def add_fulltext_search():
 
             # Step 2: Create trigger function
             print("\n[2/5] Creating trigger function...")
-            await db.execute(text("""
+            await db.execute(
+                text("""
 CREATE OR REPLACE FUNCTION bedrifter_search_vector_update()
 RETURNS trigger AS $$
 BEGIN
@@ -68,20 +71,23 @@ BEGIN
     RETURN NEW;
 END
 $$ LANGUAGE plpgsql;
-"""))
+""")
+            )
             await db.commit()
             print("✓ Trigger function created")
 
             # Step 3: Create trigger
             print("\n[3/5] Creating trigger...")
-            await db.execute(text("""
+            await db.execute(
+                text("""
 DROP TRIGGER IF EXISTS bedrifter_search_vector_trigger ON bedrifter;
 CREATE TRIGGER bedrifter_search_vector_trigger
 BEFORE INSERT OR UPDATE OF navn, orgnr
 ON bedrifter
 FOR EACH ROW
 EXECUTE FUNCTION bedrifter_search_vector_update();
-"""))
+""")
+            )
             await db.commit()
             print("✓ Trigger created")
 
@@ -89,7 +95,9 @@ EXECUTE FUNCTION bedrifter_search_vector_update();
             print("\n[4/5] Populating search_vector (batched)...")
 
             # Get total count
-            result = await db.execute(text("SELECT COUNT(*) FROM bedrifter WHERE search_vector IS NULL OR search_vector = ''::tsvector"))
+            result = await db.execute(
+                text("SELECT COUNT(*) FROM bedrifter WHERE search_vector IS NULL OR search_vector = ''::tsvector")
+            )
             total = result.scalar()
             print(f"  → Found {total:,} rows to update")
 
@@ -98,7 +106,8 @@ EXECUTE FUNCTION bedrifter_search_vector_update();
                 updated = 0
 
                 while updated < total:
-                    result = await db.execute(text("""
+                    result = await db.execute(
+                        text("""
 UPDATE bedrifter
 SET search_vector =
     setweight(to_tsvector('norwegian', COALESCE(navn, '')), 'A') ||
@@ -108,7 +117,9 @@ WHERE orgnr IN (
     WHERE search_vector IS NULL OR search_vector = ''::tsvector
     LIMIT :batch_size
 )
-"""), {"batch_size": batch_size})
+"""),
+                        {"batch_size": batch_size},
+                    )
 
                     rows_updated = result.rowcount
                     await db.commit()
@@ -159,22 +170,36 @@ WHERE orgnr IN (
 
     async with AsyncSessionLocal() as db:
         # Check column exists
-        result = await db.execute(text("SELECT COUNT(*) FROM information_schema.columns WHERE table_name = 'bedrifter' AND column_name = 'search_vector'"))
+        result = await db.execute(
+            text(
+                "SELECT COUNT(*) FROM information_schema.columns WHERE table_name = 'bedrifter' AND column_name = 'search_vector'"
+            )
+        )
         col_exists = result.scalar() == 1
-        print(f"{ '✓' if col_exists else '✗'} Column exists: {col_exists}")
+        print(f"{'✓' if col_exists else '✗'} Column exists: {col_exists}")
 
         # Check trigger exists
-        result = await db.execute(text("SELECT COUNT(*) FROM information_schema.triggers WHERE event_object_table = 'bedrifter' AND trigger_name = 'bedrifter_search_vector_trigger'"))
+        result = await db.execute(
+            text(
+                "SELECT COUNT(*) FROM information_schema.triggers WHERE event_object_table = 'bedrifter' AND trigger_name = 'bedrifter_search_vector_trigger'"
+            )
+        )
         trigger_exists = result.scalar() == 1
-        print(f"{ '✓' if trigger_exists else '✗'} Trigger exists: {trigger_exists}")
+        print(f"{'✓' if trigger_exists else '✗'} Trigger exists: {trigger_exists}")
 
         # Check index exists
-        result = await db.execute(text("SELECT COUNT(*) FROM pg_indexes WHERE tablename = 'bedrifter' AND indexname = 'bedrifter_search_vector_idx'"))
+        result = await db.execute(
+            text(
+                "SELECT COUNT(*) FROM pg_indexes WHERE tablename = 'bedrifter' AND indexname = 'bedrifter_search_vector_idx'"
+            )
+        )
         idx_exists = result.scalar() == 1
-        print(f"{ '✓' if idx_exists else '✗'} GIN index exists: {idx_exists}")
+        print(f"{'✓' if idx_exists else '✗'} GIN index exists: {idx_exists}")
 
         # Count populated rows
-        result = await db.execute(text("SELECT COUNT(*) FROM bedrifter WHERE search_vector IS NOT NULL AND search_vector != ''::tsvector"))
+        result = await db.execute(
+            text("SELECT COUNT(*) FROM bedrifter WHERE search_vector IS NOT NULL AND search_vector != ''::tsvector")
+        )
         populated = result.scalar()
 
         result = await db.execute(text("SELECT COUNT(*) FROM bedrifter"))
@@ -188,6 +213,7 @@ WHERE orgnr IN (
     print("\nYou can now use Full-Text Search in queries:")
     print("  SELECT * FROM bedrifter")
     print("  WHERE search_vector @@ websearch_to_tsquery('norwegian', 'search term');")
+
 
 if __name__ == "__main__":
     load_environment()
