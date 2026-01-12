@@ -69,8 +69,15 @@ class BaseExternalService(ABC):
     RATE_LIMIT_BACKOFF_MULTIPLIER: float = 2.0
     MAX_RATE_LIMIT_RETRIES: int = 2
 
-    def __init__(self):
-        """Initialize the service with default configuration."""
+    def __init__(self, client: httpx.AsyncClient | None = None):
+        """
+        Initialize the service.
+        
+        Args:
+            client: Optional shared httpx.AsyncClient. If not provided, 
+                   a new client is created for each request.
+        """
+        self.client = client
         self.timeout = httpx.Timeout(self.DEFAULT_TIMEOUT, connect=self.CONNECT_TIMEOUT)
 
     async def _get(
@@ -125,6 +132,24 @@ class BaseExternalService(ABC):
         """
         return await self._request_with_retry("POST", url, json=json, data=data, headers=headers, context=context)
 
+    async def _perform_request(
+        self,
+        client: httpx.AsyncClient,
+        method: str,
+        url: str,
+        params: dict[str, Any] | None = None,
+        json: dict[str, Any] | None = None,
+        data: dict[str, Any] | None = None,
+        headers: dict[str, str] | None = None,
+    ) -> httpx.Response:
+        """Helper to perform the actual HTTP request."""
+        if method.upper() == "GET":
+            return await client.get(url, params=params, headers=headers)
+        elif method.upper() == "POST":
+            return await client.post(url, json=json, data=data, headers=headers)
+        else:
+            raise ValueError(f"Unsupported HTTP method: {method}")
+
     async def _request_with_retry(
         self,
         method: str,
@@ -145,37 +170,36 @@ class BaseExternalService(ABC):
 
         for attempt in range(self.RETRY_ATTEMPTS):
             try:
-                async with httpx.AsyncClient(timeout=self.timeout) as client:
-                    if method.upper() == "GET":
-                        response = await client.get(url, params=params, headers=headers)
-                    elif method.upper() == "POST":
-                        response = await client.post(url, json=json, data=data, headers=headers)
-                    else:
-                        raise ValueError(f"Unsupported HTTP method: {method}")
+                # Use shared client if available, otherwise create temporary one
+                if self.client:
+                    response = await self._perform_request(self.client, method, url, params, json, data, headers)
+                else:
+                    async with httpx.AsyncClient(timeout=self.timeout) as client:
+                        response = await self._perform_request(client, method, url, params, json, data, headers)
 
-                    # Success or Not Found - return to caller
-                    if response.status_code in (200, 201, 204, 404):
-                        return response
+                # Success or Not Found - return to caller
+                if response.status_code in (200, 201, 204, 404):
+                    return response
 
-                    # Rate limit - exponential backoff
-                    if response.status_code == 429:
-                        rate_limit_attempts += 1
-                        if rate_limit_attempts >= self.MAX_RATE_LIMIT_RETRIES:
-                            raise RateLimitException(self.SERVICE_NAME)
+                # Rate limit - exponential backoff
+                if response.status_code == 429:
+                    rate_limit_attempts += 1
+                    if rate_limit_attempts >= self.MAX_RATE_LIMIT_RETRIES:
+                        raise RateLimitException(self.SERVICE_NAME)
 
-                        backoff = self.RETRY_DELAY * (self.RATE_LIMIT_BACKOFF_MULTIPLIER ** (rate_limit_attempts - 1))
-                        logger.warning(f"{self.SERVICE_NAME}: Rate limit for {context}, backing off {backoff}s")
-                        await asyncio.sleep(backoff)
-                        continue
+                    backoff = self.RETRY_DELAY * (self.RATE_LIMIT_BACKOFF_MULTIPLIER ** (rate_limit_attempts - 1))
+                    logger.warning(f"{self.SERVICE_NAME}: Rate limit for {context}, backing off {backoff}s")
+                    await asyncio.sleep(backoff)
+                    continue
 
-                    # Other errors
-                    logger.error(f"{self.SERVICE_NAME}: API error for {context}: {response.status_code}")
-                    if attempt == self.RETRY_ATTEMPTS - 1:
-                        raise ExternalApiException(
-                            message=f"Failed to fetch {context}",
-                            service=self.SERVICE_NAME,
-                            details=f"Status code: {response.status_code}",
-                        )
+                # Other errors
+                logger.error(f"{self.SERVICE_NAME}: API error for {context}: {response.status_code}")
+                if attempt == self.RETRY_ATTEMPTS - 1:
+                    raise ExternalApiException(
+                        message=f"Failed to fetch {context}",
+                        service=self.SERVICE_NAME,
+                        details=f"Status code: {response.status_code}",
+                    )
 
             except (RateLimitException, ExternalApiException):
                 raise

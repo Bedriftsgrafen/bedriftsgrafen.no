@@ -39,10 +39,20 @@ scheduler_service = SchedulerService()
 async def lifespan(app):
     """Application lifespan manager for startup/shutdown events."""
     # Startup
-    await scheduler_service.start()
+    start_scheduler = os.getenv("START_SCHEDULER", "true").lower() == "true"
+    
+    if start_scheduler:
+        logger.info("Starting scheduler service...")
+        await scheduler_service.start()
+    else:
+        logger.info("Scheduler service disabled (START_SCHEDULER=false)")
+        
     yield
+    
     # Shutdown
-    await scheduler_service.shutdown()
+    if start_scheduler:
+        logger.info("Shutting down scheduler service...")
+        await scheduler_service.shutdown()
 
 
 app = FastAPI(title="Bedriftsgrafen API", lifespan=lifespan)

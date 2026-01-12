@@ -43,7 +43,7 @@ engine = create_async_engine(
     pool_size=POOL_SIZE,
     max_overflow=MAX_OVERFLOW,
     pool_timeout=POOL_TIMEOUT,
-    pool_pre_ping=True,
+    pool_pre_ping=False,  # Disabled to prevent MissingGreenlet errors in async scheduler context
     pool_recycle=POOL_RECYCLE,
     connect_args={"server_settings": {"statement_timeout": str(STATEMENT_TIMEOUT)}},
 )

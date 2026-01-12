@@ -5,6 +5,7 @@ ROBUST VERSION: Prioritizes Vegadresse > Gateadresse. Avoids Eiendom (ocean cent
 
 import logging
 import re
+import httpx
 
 from services.base_external_service import BaseExternalService, ExternalApiException
 
@@ -20,6 +21,9 @@ class GeocodingService(BaseExternalService):
     GEOCODING_OVERRIDES = {
         # "993144169": (59.923000, 10.681140),
     }
+
+    def __init__(self, client: httpx.AsyncClient | None = None):
+        super().__init__(client=client)
 
     async def geocode_address(self, address: str, orgnr: str | None = None) -> tuple[float, float] | None:
         """

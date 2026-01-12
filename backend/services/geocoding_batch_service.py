@@ -7,6 +7,8 @@ respecting Kartverket API limits with throttling.
 
 import asyncio
 import logging
+import re
+import httpx
 from datetime import datetime
 
 from sqlalchemy import and_, func, select, update
@@ -36,9 +38,14 @@ class GeocodingBatchService:
         self.geocoder = GeocodingService()
 
     async def get_companies_needing_geocoding(self, limit: int = DEFAULT_BATCH_SIZE) -> list[Company]:
-        """Fetch companies that need geocoding."""
+        """Fetch companies that need geocoding, selecting only necessary columns."""
         query = (
-            select(Company)
+            select(
+                Company.orgnr, 
+                Company.forretningsadresse, 
+                Company.postadresse, 
+                Company.geocoding_attempts
+            )
             .where(
                 and_(
                     Company.latitude.is_(None),
@@ -51,7 +58,7 @@ class GeocodingBatchService:
             .limit(limit)
         )
         result = await self.db.execute(query)
-        return result.scalars().all()
+        return result.all()  # Returns list of Row objects with selected columns
 
     async def count_companies_needing_geocoding(self) -> int:
         """Count companies that still need geocoding (excluding max-attempts)."""
@@ -75,65 +82,72 @@ class GeocodingBatchService:
 
     async def geocode_company(self, company: Company) -> bool:
         """
-        Geocode a single company.
+        Geocode a single company using a savepoint for transaction isolation.
+        
+        Each company update is wrapped in a savepoint (nested transaction),
+        so failures don't abort the entire batch transaction.
 
         Returns True if successful, False otherwise.
         """
-        # Build address string from company data
-        address = GeocodingService.build_address_string(
-            company.forretningsadresse or {},
-            company.postadresse
-        )
+        # Use a savepoint to isolate this company's transaction
+        async with self.db.begin_nested():
+            try:
+                # Build address string from company data
+                address = GeocodingService.build_address_string(
+                    company.forretningsadresse or {},
+                    company.postadresse
+                )
 
-        if not address:
-            logger.debug(f"No address for company {company.orgnr}")
-            return False
-
-        try:
-            coords = await self.geocoder.geocode_address(address, orgnr=company.orgnr)
-
-            if coords:
-                lat, lon = coords
-                # Update company with coordinates and increment attempts
-                await self.db.execute(
-                    update(Company)
-                    .where(Company.orgnr == company.orgnr)
-                    .values(
-                        latitude=lat,
-                        longitude=lon,
-                        geocoding_attempts=Company.geocoding_attempts + 1,
+                if not address:
+                    logger.debug(f"No address for company {company.orgnr}")
+                    # Increment attempts even when no address
+                    await self.db.execute(
+                        update(Company)
+                        .where(Company.orgnr == company.orgnr)
+                        .values(geocoding_attempts=Company.geocoding_attempts + 1)
                     )
-                )
-                return True
-            else:
-                # Increment attempts even on failure to avoid infinite retries
-                await self.db.execute(
-                    update(Company)
-                    .where(Company.orgnr == company.orgnr)
-                    .values(geocoding_attempts=Company.geocoding_attempts + 1)
-                )
-                logger.debug(f"No coordinates found for {company.orgnr}: {address}")
-                return False
+                    return False
 
-        except Exception as e:
-            # Increment attempts on exception too
-            await self.db.execute(
-                update(Company)
-                .where(Company.orgnr == company.orgnr)
-                .values(geocoding_attempts=Company.geocoding_attempts + 1)
-            )
-            logger.warning(f"Geocoding error for {company.orgnr}: {e}")
-            return False
+                coords = await self.geocoder.geocode_address(address, orgnr=company.orgnr)
+
+                if coords:
+                    lat, lon = coords
+                    # Update company with coordinates and increment attempts
+                    await self.db.execute(
+                        update(Company)
+                        .where(Company.orgnr == company.orgnr)
+                        .values(
+                            latitude=lat,
+                            longitude=lon,
+                            geocoding_attempts=Company.geocoding_attempts + 1,
+                        )
+                    )
+                    return True
+                else:
+                    # Increment attempts even on failure to avoid infinite retries
+                    await self.db.execute(
+                        update(Company)
+                        .where(Company.orgnr == company.orgnr)
+                        .values(geocoding_attempts=Company.geocoding_attempts + 1)
+                    )
+                    logger.debug(f"No coordinates found for {company.orgnr}: {address}")
+                    return False
+
+            except Exception as e:
+                # Any exception inside the savepoint will rollback just this savepoint
+                logger.warning(f"Error geocoding {company.orgnr}: {e}")
+                # Savepoint automatically rolled back, return False
+                return False
 
     async def run_batch(self, batch_size: int = DEFAULT_BATCH_SIZE) -> dict:
         """
-        Run a batch of geocoding operations.
+        Run a batch of geocoding operations with parallel I/O and sequential DB updates.
 
         Returns statistics about the batch run.
         """
         start_time = datetime.now()
 
-        # Get companies to geocode
+        # Get companies to geocode (already optimized to fetch only needed columns)
         companies = await self.get_companies_needing_geocoding(batch_size)
 
         if not companies:
@@ -146,27 +160,87 @@ class GeocodingBatchService:
                 "duration_seconds": 0,
             }
 
+        semaphore = asyncio.Semaphore(10)  # Process 10 companies in parallel I/O
         success_count = 0
         fail_count = 0
 
-        for i, company in enumerate(companies):
-            try:
-                if await self.geocode_company(company):
-                    success_count += 1
-                else:
-                    fail_count += 1
-            except Exception as e:
-                logger.error(f"Unexpected error geocoding {company.orgnr}: {e}")
-                fail_count += 1
-                await asyncio.sleep(self.DELAY_ON_ERROR)
-                continue
+        async with httpx.AsyncClient(timeout=10.0) as client:
+            # Inject shared client into geocoder
+            self.geocoder.client = client
+            
+            async def geocode_task(company):
+                async with semaphore:
+                    try:
+                        address = GeocodingService.build_address_string(
+                            company.forretningsadresse or {},
+                            company.postadresse
+                        )
+                        if not address:
+                            return company.orgnr, None, "No address"
+                        
+                        coords = await self.geocoder.geocode_address(address, orgnr=company.orgnr)
+                        return company.orgnr, coords, address
+                    except Exception as e:
+                        return company.orgnr, None, str(e)
 
-            # Throttle requests
-            if i < len(companies) - 1:  # Don't sleep after last request
-                await asyncio.sleep(self.DELAY_BETWEEN_REQUESTS)
+            # Step 1: Parallel I/O (Geocoding lookups)
+            logger.info(f"Starting parallel geocoding lookups for {len(companies)} companies...")
+            tasks = [geocode_task(c) for c in companies]
+            results = await asyncio.gather(*tasks)
+
+        # Step 2: Sequential DB updates (Session safety)
+        logger.info("Geocoding lookups complete. Starting sequential database updates...")
+        for orgnr, coords, address_or_error in results:
+            # Use savepoint for each update to isolate failures
+            try:
+                async with self.db.begin_nested():
+                    if coords:
+                        lat, lon = coords
+                        await self.db.execute(
+                            update(Company)
+                            .where(Company.orgnr == orgnr)
+                            .values(
+                                latitude=lat,
+                                longitude=lon,
+                                geocoding_attempts=Company.geocoding_attempts + 1,
+                                geocoded_at=func.now()
+                            )
+                        )
+                        success_count += 1
+                    else:
+                        # Increment attempts even on failure
+                        await self.db.execute(
+                            update(Company)
+                            .where(Company.orgnr == orgnr)
+                            .values(geocoding_attempts=Company.geocoding_attempts + 1)
+                        )
+                        fail_count += 1
+                        if address_or_error != "No address":
+                            logger.debug(f"Failed to geocode {orgnr}: {address_or_error}")
+            except Exception as e:
+                logger.error(f"Error updating database for {orgnr}: {e}")
+                # Critical: If the transaction is fundamentally aborted (e.g. timeout), 
+                # following commands will fail. We should rollback the whole batch.
+                if "InFailedSQLTransactionError" in str(e) or "QueryCanceledError" in str(e):
+                    logger.error("Database transaction aborted (likely timeout). Rolling back entire batch.")
+                    await self.db.rollback()
+                    return {
+                        "processed": len(companies),
+                        "success": success_count,
+                        "failed": len(companies) - success_count,
+                        "remaining": await self.count_companies_needing_geocoding(),
+                        "duration_seconds": round((datetime.now() - start_time).total_seconds(), 1),
+                        "error": "Transaction aborted"
+                    }
+                fail_count += 1
 
         # Commit all updates
-        await self.db.commit()
+        try:
+            await self.db.commit()
+        except Exception as e:
+            logger.error(f"Failed to commit batch updates: {e}")
+            await self.db.rollback()
+            raise
 
         # Get remaining count
         remaining = await self.count_companies_needing_geocoding()
@@ -185,7 +259,8 @@ class GeocodingBatchService:
 
         logger.info(
             f"Geocoding batch complete: {success_count}/{len(companies)} success, "
-            f"{remaining:,} remaining, {total_geocoded:,} total geocoded"
+            f"{remaining:,} remaining, {total_geocoded:,} total geocoded. "
+            f"Duration: {stats['duration_seconds']}s ({len(companies)/duration:.1f} comp/s)"
         )
 
         return stats

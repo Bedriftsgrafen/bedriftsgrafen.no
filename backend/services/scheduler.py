@@ -33,10 +33,10 @@ class SchedulerService:
             replace_existing=True
         )
 
-        # Geocode companies without coordinates (every 5 minutes)
+        # Geocode companies without coordinates (every 1 minute)
         self.scheduler.add_job(
             self.geocode_companies_batch,
-            trigger=IntervalTrigger(minutes=5),
+            trigger=IntervalTrigger(minutes=1),
             id='geocode_companies',
             replace_existing=True
         )
@@ -82,25 +82,33 @@ class SchedulerService:
     async def geocode_companies_batch(self) -> None:
         """Geocode a batch of companies without coordinates."""
         from services.geocoding_batch_service import GeocodingBatchService
+        from sqlalchemy.exc import DBAPIError
 
         logger.info("Starting geocoding batch...")
         try:
+            # Use async context manager for session
             async with AsyncSessionLocal() as db:
-                service = GeocodingBatchService(db)
-                result = await service.run_batch(batch_size=100)
+                try:
+                    service = GeocodingBatchService(db)
+                    result = await service.run_batch(batch_size=250)
 
-                # Log progress
-                if result["processed"] > 0:
-                    logger.info(
-                        "Geocoding batch completed",
-                        extra={
-                            "success": result["success"],
-                            "failed": result["failed"],
-                            "remaining": result["remaining"],
-                            "total_geocoded": result["total_geocoded"],
-                        }
-                    )
-                else:
-                    logger.info("No companies need geocoding")
+                    # Log progress
+                    if result["processed"] > 0:
+                        logger.info(
+                            "Geocoding batch completed",
+                            extra={
+                                "success": result["success"],
+                                "failed": result["failed"],
+                                "remaining": result["remaining"],
+                                "total_geocoded": result["total_geocoded"],
+                            }
+                        )
+                    else:
+                        logger.info("No companies need geocoding")
+                except Exception as e:
+                    logger.exception("Geocoding batch service failed")
+                    await db.rollback()
+                    raise
         except Exception as e:
             logger.exception("Failed to run geocoding batch", extra={"error": str(e)})
+
