@@ -1,19 +1,27 @@
 # =============================================================================
-# DEV STACK - Kjører parallelt med prod
+# DEV STACK - Host Network Mode
 # =============================================================================
 #
 # Denne filen definerer dev-containere som:
-# - Bruker prod's database (ingen egen db)
-# - Kobler til prod's nettverk
+# - Kjører på HOST-nettverket (ingen Docker-nettverk opprettes)
+# - Kobler direkte til localhost:5432 for database
 # - Har hot-reload og debugging
+# - Påvirker IKKE iptables eller andre containere
 #
-# KRAV: Prod må kjøre først (for nettverk og database)
+# KRAV: Prod må kjøre først (for database tilgang på localhost:5432)
 #
 # Start:  docker compose -f docker-compose.dev.yml up -d
 # Stopp:  docker compose -f docker-compose.dev.yml down
 # Logs:   docker compose -f docker-compose.dev.yml logs -f
 #
+# TILGANG:
+#   - Backend API: http://localhost:8001
+#   - Frontend:    http://localhost:5173
+#   - Debugger:    localhost:5678
+#
 # =============================================================================
+
+name: bedriftsgrafenno-dev
 
 services:
   backend-dev:
@@ -22,45 +30,51 @@ services:
       dockerfile: Dockerfile
     container_name: bedriftsgrafen-backend-dev
     restart: unless-stopped
-    init: true # Enable tini for zombie reaping and signal handling
+    init: true
+    network_mode: host
     env_file:
       - .env
     volumes:
       - ./backend:/app
       - ./scripts:/app/ops_scripts
-    ports:
-      - "8001:8000" # API tilgjengelig på localhost:8001
-      - "5678:5678" # Debugger
-    networks:
-      - prod-internal
     environment:
-      - DATABASE_HOST=bedriftsgrafen-db
-    command: >
-      sh -c "pip install debugpy && 
-             python -m debugpy --listen 0.0.0.0:5678 
-             -m uvicorn main:app --host 0.0.0.0 --port 8000 --reload"
+      # Direct localhost access - no Docker networking!
+      - DATABASE_HOST=localhost
+      - DATABASE_PORT=5432
+      # Override port to avoid conflict with prod backend
+      - API_PORT=8001
+    deploy:
+      resources:
+        limits:
+          cpus: '2.0'
+          memory: 2G
+        reservations:
+          memory: 512M
+    # Simple command - debugpy can be added manually if needed
+    command: python -m uvicorn main:app --host 0.0.0.0 --port 8001 --reload
 
   frontend-dev:
     build:
       context: ./frontend
       dockerfile: Dockerfile
-      target: build
+      target: development
     container_name: bedriftsgrafen-frontend-dev
     restart: unless-stopped
+    init: true
+    network_mode: host
     volumes:
       - ./frontend:/app
       - /app/node_modules
-    ports:
-      - "5173:5173"
-    networks:
-      - prod-internal
     environment:
       - VITE_API_URL=http://localhost:8001
-    command: sh -c "npm install && npm run dev -- --host"
+    deploy:
+      resources:
+        limits:
+          cpus: '1.5'
+          memory: 1G
+        reservations:
+          memory: 256M
     depends_on:
       - backend-dev
 
-networks:
-  prod-internal:
-    external: true
-    name: bedriftsgrafenno_internal-net
+# NO networks section! Host mode = no Docker networks created

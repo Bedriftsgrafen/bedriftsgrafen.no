@@ -24,15 +24,20 @@ alias prod-build='docker compose -f $BEDRIFTSGRAFEN_DIR/docker-compose.prod.yml 
 alias prod-logs='docker compose -f $BEDRIFTSGRAFEN_DIR/docker-compose.prod.yml logs -f'
 alias prod-ps='docker compose -f $BEDRIFTSGRAFEN_DIR/docker-compose.prod.yml ps'
 
+# Prod specific logs
+alias prod-backend-logs='docker logs -f bedriftsgrafen-backend'
+alias prod-worker-logs='docker logs -f bedriftsgrafen-worker'
+alias prod-frontend-logs='docker logs -f bedriftsgrafen-frontend'
+
 # =============================================================================
 # DEV COMMANDS
 # =============================================================================
 
 # Start/stop dev
-alias dev-up='docker compose -f $BEDRIFTSGRAFEN_DIR/docker-compose.dev.yml up -d'
+alias dev-up='docker compose -f $BEDRIFTSGRAFEN_DIR/docker-compose.dev.yml up -d --remove-orphans'
 alias dev-down='docker compose -f $BEDRIFTSGRAFEN_DIR/docker-compose.dev.yml down'
-alias dev-restart='docker compose -f $BEDRIFTSGRAFEN_DIR/docker-compose.dev.yml restart'
-alias dev-build='docker compose -f $BEDRIFTSGRAFEN_DIR/docker-compose.dev.yml up -d --build'
+alias dev-restart='docker compose -f $BEDRIFTSGRAFEN_DIR/docker-compose.dev.yml restart --remove-orphans'
+alias dev-build='docker compose -f $BEDRIFTSGRAFEN_DIR/docker-compose.dev.yml up -d --build --remove-orphans'
 alias dev-logs='docker compose -f $BEDRIFTSGRAFEN_DIR/docker-compose.dev.yml logs -f'
 alias dev-ps='docker compose -f $BEDRIFTSGRAFEN_DIR/docker-compose.dev.yml ps'
 
@@ -48,6 +53,7 @@ alias dev-frontend-logs='docker logs -f bedriftsgrafen-frontend-dev'
 alias dev-backend='docker exec -it bedriftsgrafen-backend-dev bash'
 alias dev-frontend='docker exec -it bedriftsgrafen-frontend-dev sh'
 alias prod-backend='docker exec -it bedriftsgrafen-backend bash'
+alias prod-worker='docker exec -it bedriftsgrafen-worker bash'
 alias prod-frontend='docker exec -it bedriftsgrafen-frontend sh'
 alias db-shell='docker exec -it bedriftsgrafen-db psql -U admin -d bedriftsgrafen'
 
@@ -116,7 +122,14 @@ bg-help() {
     echo "  dev-backend    Enter dev backend container"
     echo "  dev-frontend   Enter dev frontend container"
     echo "  prod-backend   Enter prod backend container"
+    echo "  prod-worker    Enter prod worker container"
     echo "  db-shell       PostgreSQL shell"
+    echo ""
+    echo "LOGS:"
+    echo "  prod-backend-logs  Follow API logs"
+    echo "  prod-worker-logs   Follow background worker logs"
+    echo "  dev-backend-logs   Follow dev backend logs"
+    echo ""
     echo ""
     echo "MIGRATIONS:"
     echo "  migrate        Run pending migrations"
