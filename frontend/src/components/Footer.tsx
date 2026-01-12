@@ -76,7 +76,7 @@ export function Footer() {
                 {CONTACT_EMAIL}
               </a>
               <a
-                href="https://github.com/sponsors/kerem9811"
+                href="https://github.com/Bedriftsgrafen/bedriftsgrafen.no"
                 target="_blank"
                 rel="noopener noreferrer"
                 className="text-sm text-gray-400 hover:text-blue-400 flex items-center gap-2"

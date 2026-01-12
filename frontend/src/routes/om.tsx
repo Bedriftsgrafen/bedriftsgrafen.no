@@ -1,6 +1,6 @@
 import { createFileRoute } from '@tanstack/react-router'
 import { CONTACT_EMAIL } from '../constants/contact'
-import { Database, TrendingUp, Shield, Heart, Layout, Server, Cloud } from 'lucide-react'
+import { Database, TrendingUp, Shield, Heart, Layout, Server, Cloud, Github } from 'lucide-react'
 import { SEOHead } from '../components/layout'
 
 export const Route = createFileRoute('/om')({
@@ -60,6 +60,25 @@ function AboutPage() {
                     <br />
                     <strong>Kartverket:</strong> Geografiske data og kartvisning
                   </p>
+                </div>
+              </div>
+
+              <div className="flex gap-4">
+                <Github className="h-6 w-6 text-gray-900 shrink-0 mt-1" />
+                <div>
+                  <h2 className="font-semibold text-gray-900 mb-1">Åpen Kildekode</h2>
+                  <p className="text-sm text-gray-600 mb-3">
+                    Bedriftsgrafen er utviklet som åpen kildekode. Du kan utforske koden,
+                    bidra med forbedringer eller rapportere feil på vår GitHub-side.
+                  </p>
+                  <a
+                    href="https://github.com/Bedriftsgrafen/bedriftsgrafen.no"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center px-3 py-1.5 bg-gray-900 hover:bg-gray-800 text-white text-sm font-medium rounded-md transition-all duration-200 ease-in-out hover:-translate-y-0.5 hover:shadow-md border border-gray-900 hover:ring-2 hover:ring-gray-900 hover:ring-offset-1"
+                  >
+                    Se på GitHub
+                  </a>
                 </div>
               </div>
 
