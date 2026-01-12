@@ -26,6 +26,7 @@ export interface SavedFilter {
     employeeMin: number | null
     employeeMax: number | null
     municipality: string
+    county: string  // Added: was missing from saved filters
     foundedFrom: string | null  // ISO date string for serialization
     foundedTo: string | null
     bankruptFrom: string | null
@@ -111,6 +112,7 @@ export function countActiveFilters(filters: SavedFilter['filters']): number {
   if (filters.equityRatioMin !== null || filters.equityRatioMax !== null) count++
   if (filters.employeeMin !== null || filters.employeeMax !== null) count++
   if (filters.municipality) count++
+  if (filters.county) count++
   if (filters.foundedFrom !== null || filters.foundedTo !== null) count++
   if (filters.bankruptFrom !== null || filters.bankruptTo !== null) count++
   if (filters.isBankrupt !== null) count++

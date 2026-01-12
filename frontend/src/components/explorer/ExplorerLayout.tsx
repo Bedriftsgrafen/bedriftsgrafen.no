@@ -37,32 +37,12 @@ export const ExplorerLayout = memo(function ExplorerLayout({ onSelectCompany }: 
     const currentPage = useUiStore((s) => s.currentPage)
     const setPage = useUiStore((s) => s.setPage)
 
-    // Filter state - get all values needed for ActiveFilterChips
-    const searchQuery = useFilterStore((s) => s.searchQuery)
-    const organizationForms = useFilterStore((s) => s.organizationForms)
-    const naeringskode = useFilterStore((s) => s.naeringskode)
-    const municipality = useFilterStore((s) => s.municipality)
-    const county = useFilterStore((s) => s.county)
-    const revenueMin = useFilterStore((s) => s.revenueMin)
-    const revenueMax = useFilterStore((s) => s.revenueMax)
-    const profitMin = useFilterStore((s) => s.profitMin)
-    const profitMax = useFilterStore((s) => s.profitMax)
-    const equityMin = useFilterStore((s) => s.equityMin)
-    const equityMax = useFilterStore((s) => s.equityMax)
-    const employeeMin = useFilterStore((s) => s.employeeMin)
-    const employeeMax = useFilterStore((s) => s.employeeMax)
-    const foundedFrom = useFilterStore((s) => s.foundedFrom)
-    const foundedTo = useFilterStore((s) => s.foundedTo)
-    const bankruptFrom = useFilterStore((s) => s.bankruptFrom)
-    const bankruptTo = useFilterStore((s) => s.bankruptTo)
-    const isBankrupt = useFilterStore((s) => s.isBankrupt)
-    const inLiquidation = useFilterStore((s) => s.inLiquidation)
-    const inForcedLiquidation = useFilterStore((s) => s.inForcedLiquidation)
-    const setSearchQuery = useFilterStore((s) => s.setSearchQuery)
-    const setSort = useFilterStore((s) => s.setSort)
+    // Filter state
+    const hasActiveFilters = useFilterStore((s) => s.getActiveFilterCount() > 0)
     const setMunicipality = useFilterStore((s) => s.setMunicipality)
     const setNaeringskode = useFilterStore((s) => s.setNaeringskode)
     const setCounty = useFilterStore((s) => s.setCounty)
+    const setSort = useFilterStore((s) => s.setSort)
 
     // Check for map filter from sessionStorage (region click from map)
     useEffect(() => {
@@ -119,46 +99,6 @@ export const ExplorerLayout = memo(function ExplorerLayout({ onSelectCompany }: 
     const { data: totalCount, isLoading: countLoading } =
         useCompanyCountQuery(filterParams)
 
-    // Memoized check for active filters
-    const hasActiveFilters = useMemo(
-        () =>
-            Boolean(searchQuery) ||
-            organizationForms.length > 0 ||
-            Boolean(naeringskode) ||
-            Boolean(municipality) ||
-            revenueMin !== null ||
-            revenueMax !== null ||
-            profitMin !== null ||
-            profitMax !== null ||
-            equityMin !== null ||
-            equityMax !== null ||
-            employeeMin !== null ||
-            employeeMax !== null ||
-            foundedFrom !== null ||
-            foundedTo !== null ||
-            isBankrupt !== null ||
-            inLiquidation !== null ||
-            inForcedLiquidation !== null,
-        [
-            searchQuery,
-            organizationForms,
-            naeringskode,
-            municipality,
-            revenueMin,
-            revenueMax,
-            profitMin,
-            profitMax,
-            equityMin,
-            equityMax,
-            employeeMin,
-            employeeMax,
-            foundedFrom,
-            foundedTo,
-            isBankrupt,
-            inLiquidation,
-            inForcedLiquidation,
-        ]
-    )
 
     // Handlers - memoized for stable references
     const handleSelectCompany = useCallback(
@@ -198,9 +138,6 @@ export const ExplorerLayout = memo(function ExplorerLayout({ onSelectCompany }: 
         setPage(Math.min(maxPage, currentPage + 1))
     }, [currentPage, totalCount, itemsPerPage, setPage])
 
-    const handleClearSearch = useCallback(() => {
-        setSearchQuery('')
-    }, [setSearchQuery])
 
     // Log errors for debugging (in production, send to monitoring service)
     if (companiesError && companiesErrorData) {
@@ -221,29 +158,7 @@ export const ExplorerLayout = memo(function ExplorerLayout({ onSelectCompany }: 
                 {/* Active filters - only render when filters are active */}
                 {hasActiveFilters && (
                     <div className="mb-4">
-                        <ActiveFilterChips
-                            searchQuery={searchQuery}
-                            organizationForms={organizationForms}
-                            naeringskode={naeringskode}
-                            municipality={municipality}
-                            county={county}
-                            revenueMin={revenueMin}
-                            revenueMax={revenueMax}
-                            profitMin={profitMin}
-                            profitMax={profitMax}
-                            equityMin={equityMin}
-                            equityMax={equityMax}
-                            employeeMin={employeeMin}
-                            employeeMax={employeeMax}
-                            foundedFrom={foundedFrom}
-                            foundedTo={foundedTo}
-                            bankruptFrom={bankruptFrom}
-                            bankruptTo={bankruptTo}
-                            isBankrupt={isBankrupt}
-                            inLiquidation={inLiquidation}
-                            inForcedLiquidation={inForcedLiquidation}
-                            onClearSearch={handleClearSearch}
-                        />
+                        <ActiveFilterChips />
                     </div>
                 )}
 

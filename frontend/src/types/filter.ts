@@ -10,7 +10,6 @@ export interface OrganizationFormOption {
 export interface FilterState {
   searchQuery: string
   organizationForms: string[]
-  naceCodes: string[]
   naeringskode: string
   revenueMin: number | null
   revenueMax: number | null
@@ -27,30 +26,26 @@ export interface FilterState {
   employeeMin: number | null
   employeeMax: number | null
   municipality: string
+  county: string
   foundedFrom: Date | null
   foundedTo: Date | null
+  bankruptFrom: Date | null
+  bankruptTo: Date | null
   isBankrupt: boolean | null
   inLiquidation: boolean | null
   inForcedLiquidation: boolean | null
-  yearFrom: number | null
-  yearTo: number | null
   hasAccounting: boolean | null
 }
 
-export interface SavedFilter {
-  id: string
-  name: string
-  createdAt: number
-  filters: Partial<FilterState>
-}
+// Note: SavedFilter type is defined in savedFiltersStore.ts to keep persistence types together
 
 export type SortOrder = 'asc' | 'desc'
 
-export type SortField = 
-  | 'navn' 
-  | 'orgnr' 
-  | 'organisasjonsform' 
-  | 'revenue' 
-  | 'profit' 
+export type SortField =
+  | 'navn'
+  | 'orgnr'
+  | 'organisasjonsform'
+  | 'revenue'
+  | 'profit'
   | 'antall_ansatte'
   | 'operating_profit'

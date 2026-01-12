@@ -13,91 +13,150 @@ describe('filterStore', () => {
 
             expect(state.searchQuery).toBe('')
             expect(state.organizationForms).toEqual([])
-            expect(state.naceCodes).toEqual([])
+            expect(state.naeringskode).toBe('')
+            expect(state.revenueMin).toBeNull()
+            expect(state.revenueMax).toBeNull()
+            expect(state.profitMin).toBeNull()
+            expect(state.profitMax).toBeNull()
+            expect(state.equityMin).toBeNull()
+            expect(state.equityMax).toBeNull()
+            expect(state.operatingProfitMin).toBeNull()
+            expect(state.operatingProfitMax).toBeNull()
+            expect(state.liquidityRatioMin).toBeNull()
+            expect(state.liquidityRatioMax).toBeNull()
+            expect(state.equityRatioMin).toBeNull()
+            expect(state.equityRatioMax).toBeNull()
+            expect(state.employeeMin).toBeNull()
+            expect(state.employeeMax).toBeNull()
+            expect(state.municipality).toBe('')
+            expect(state.county).toBe('')
+            expect(state.foundedFrom).toBeNull()
+            expect(state.foundedTo).toBeNull()
+            expect(state.bankruptFrom).toBeNull()
+            expect(state.bankruptTo).toBeNull()
+            expect(state.isBankrupt).toBeNull()
+            expect(state.inLiquidation).toBeNull()
+            expect(state.inForcedLiquidation).toBeNull()
+            expect(state.hasAccounting).toBeNull()
             expect(state.sortBy).toBe('navn')
             expect(state.sortOrder).toBe('asc')
-            expect(state.isBankrupt).toBeNull()
+            expect(state.filterVersion).toBeGreaterThanOrEqual(0)
         })
     })
 
-    describe('setSearchQuery', () => {
-        it('updates search query', () => {
+    describe('actions', () => {
+        it('setSearchQuery updates search query', () => {
             useFilterStore.getState().setSearchQuery('test company')
             expect(useFilterStore.getState().searchQuery).toBe('test company')
         })
-    })
 
-    describe('setOrganizationForms', () => {
-        it('updates organization forms array', () => {
+        it('setOrganizationForms updates organization forms array', () => {
             useFilterStore.getState().setOrganizationForms(['AS', 'ASA'])
             expect(useFilterStore.getState().organizationForms).toEqual(['AS', 'ASA'])
         })
 
-        it('can set empty array', () => {
-            useFilterStore.getState().setOrganizationForms(['AS'])
-            useFilterStore.getState().setOrganizationForms([])
-            expect(useFilterStore.getState().organizationForms).toEqual([])
+        it('setNaeringskode updates industry code', () => {
+            useFilterStore.getState().setNaeringskode('62.100')
+            expect(useFilterStore.getState().naeringskode).toBe('62.100')
         })
-    })
 
-    describe('setRevenueRange', () => {
-        it('sets min and max revenue', () => {
+        it('setRevenueRange sets min and max revenue', () => {
             useFilterStore.getState().setRevenueRange(1000000, 5000000)
             const state = useFilterStore.getState()
             expect(state.revenueMin).toBe(1000000)
             expect(state.revenueMax).toBe(5000000)
         })
 
-        it('handles null values', () => {
-            useFilterStore.getState().setRevenueRange(1000000, null)
-            expect(useFilterStore.getState().revenueMin).toBe(1000000)
-            expect(useFilterStore.getState().revenueMax).toBeNull()
+        it('setProfitRange sets profit range', () => {
+            useFilterStore.getState().setProfitRange(500, 1000)
+            expect(useFilterStore.getState().profitMin).toBe(500)
+            expect(useFilterStore.getState().profitMax).toBe(1000)
         })
-    })
 
-    describe('setStatus', () => {
-        it('sets isBankrupt filter', () => {
+        it('setLiquidityRatioRange sets liquidity ratio range', () => {
+            useFilterStore.getState().setLiquidityRatioRange(0.5, 2.0)
+            expect(useFilterStore.getState().liquidityRatioMin).toBe(0.5)
+            expect(useFilterStore.getState().liquidityRatioMax).toBe(2.0)
+        })
+
+        it('setMunicipality and setCounty update location', () => {
+            useFilterStore.getState().setMunicipality('Oslo')
+            useFilterStore.getState().setCounty('03')
+            expect(useFilterStore.getState().municipality).toBe('Oslo')
+            expect(useFilterStore.getState().county).toBe('03')
+        })
+
+        it('setFoundedRange updates date range', () => {
+            const from = new Date('2020-01-01')
+            const to = new Date('2023-01-01')
+            useFilterStore.getState().setFoundedRange(from, to)
+            expect(useFilterStore.getState().foundedFrom).toEqual(from)
+            expect(useFilterStore.getState().foundedTo).toEqual(to)
+        })
+
+        it('setStatus updates various status flags', () => {
             useFilterStore.getState().setStatus('isBankrupt', true)
+            useFilterStore.getState().setStatus('inLiquidation', false)
             expect(useFilterStore.getState().isBankrupt).toBe(true)
+            expect(useFilterStore.getState().inLiquidation).toBe(false)
         })
 
-        it('can reset to null', () => {
-            useFilterStore.getState().setStatus('isBankrupt', true)
-            useFilterStore.getState().setStatus('isBankrupt', null)
-            expect(useFilterStore.getState().isBankrupt).toBeNull()
+        it('setHasAccounting updates accounting flag', () => {
+            useFilterStore.getState().setHasAccounting(true)
+            expect(useFilterStore.getState().hasAccounting).toBe(true)
         })
-    })
 
-    describe('setSort', () => {
-        it('updates sort by and order', () => {
+        it('setSort updates sort by and order', () => {
             useFilterStore.getState().setSort('revenue', 'desc')
             const state = useFilterStore.getState()
             expect(state.sortBy).toBe('revenue')
             expect(state.sortOrder).toBe('desc')
         })
+
+        it('setAllFilters updates multiple filters and increments version', () => {
+            const initialVersion = useFilterStore.getState().filterVersion
+            useFilterStore.getState().setAllFilters({
+                searchQuery: 'bulk test',
+                revenueMin: 100
+            })
+            const state = useFilterStore.getState()
+            expect(state.searchQuery).toBe('bulk test')
+            expect(state.revenueMin).toBe(100)
+            expect(state.filterVersion).toBe(initialVersion + 1)
+        })
     })
 
     describe('clearFilters', () => {
-        it('resets all filters to defaults', () => {
-            // Set some filters
-            useFilterStore.getState().setSearchQuery('test')
-            useFilterStore.getState().setOrganizationForms(['AS'])
-            useFilterStore.getState().setRevenueRange(1000000, 5000000)
-            useFilterStore.getState().setStatus('isBankrupt', true)
-            useFilterStore.getState().setSort('revenue', 'desc')
+        it('resets ALL filters to defaults', () => {
+            // Set many filters
+            const store = useFilterStore.getState()
+            store.setSearchQuery('test')
+            store.setOrganizationForms(['AS'])
+            store.setNaeringskode('62')
+            store.setRevenueRange(1, 10)
+            store.setProfitRange(1, 10)
+            store.setLiquidityRatioRange(0.1, 0.9)
+            store.setMunicipality('Oslo')
+            store.setStatus('isBankrupt', true)
+            store.setHasAccounting(true)
+            store.setSort('revenue', 'desc')
 
             // Clear
-            useFilterStore.getState().clearFilters()
+            store.clearFilters()
 
-            // Verify reset
+            // Verify reset of random sample of fields
             const state = useFilterStore.getState()
             expect(state.searchQuery).toBe('')
-            expect(state.organizationForms).toEqual([])
+            expect(state.naeringskode).toBe('')
             expect(state.revenueMin).toBeNull()
-            expect(state.revenueMax).toBeNull()
+            expect(state.profitMax).toBeNull()
+            expect(state.liquidityRatioMin).toBeNull()
+            expect(state.municipality).toBe('')
             expect(state.isBankrupt).toBeNull()
+            expect(state.hasAccounting).toBeNull()
             expect(state.sortBy).toBe('navn')
             expect(state.sortOrder).toBe('asc')
+            expect(state.filterVersion).toBeGreaterThan(0)
         })
     })
 
@@ -106,27 +165,28 @@ describe('filterStore', () => {
             expect(useFilterStore.getState().getActiveFilterCount()).toBe(0)
         })
 
-        it('counts search query as 1', () => {
-            useFilterStore.getState().setSearchQuery('test')
+        it('counts range as 1 filter even if both min and max are set', () => {
+            useFilterStore.getState().setRevenueRange(100, 500)
             expect(useFilterStore.getState().getActiveFilterCount()).toBe(1)
         })
 
-        it('counts organization forms as 1', () => {
-            useFilterStore.getState().setOrganizationForms(['AS', 'ASA', 'ENK'])
-            expect(useFilterStore.getState().getActiveFilterCount()).toBe(1)
+        it('counts multiple financial and status filters correctly', () => {
+            const store = useFilterStore.getState()
+            store.setSearchQuery('test')         // 1
+            store.setOrganizationForms(['AS'])   // 2
+            store.setRevenueRange(100, null)     // 3
+            store.setLiquidityRatioRange(null, 2)// 4
+            store.setStatus('isBankrupt', true)  // 5
+            store.setHasAccounting(false)        // 6
+            expect(store.getActiveFilterCount()).toBe(6)
         })
 
-        it('counts revenue range as 1 filter', () => {
-            useFilterStore.getState().setRevenueRange(1000000, 5000000)
-            expect(useFilterStore.getState().getActiveFilterCount()).toBe(1)
-        })
-
-        it('counts multiple filters correctly', () => {
-            useFilterStore.getState().setSearchQuery('test')
-            useFilterStore.getState().setOrganizationForms(['AS'])
-            useFilterStore.getState().setRevenueRange(1000000, null)
-            useFilterStore.getState().setStatus('isBankrupt', true)
-            expect(useFilterStore.getState().getActiveFilterCount()).toBe(4)
+        it('counts locations and dates correctly', () => {
+            const store = useFilterStore.getState()
+            store.setMunicipality('Oslo')        // 1
+            store.setCounty('03')               // 2
+            store.setFoundedRange(new Date(), null) // 3
+            expect(store.getActiveFilterCount()).toBe(3)
         })
     })
 

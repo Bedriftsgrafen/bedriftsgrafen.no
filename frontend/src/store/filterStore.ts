@@ -7,7 +7,6 @@ import { create } from 'zustand'
 interface FilterValues {
   searchQuery: string
   organizationForms: string[]
-  naceCodes: string[]
   naeringskode: string
   revenueMin: number | null
   revenueMax: number | null
@@ -32,8 +31,6 @@ interface FilterValues {
   isBankrupt: boolean | null
   inLiquidation: boolean | null
   inForcedLiquidation: boolean | null
-  yearFrom: number | null
-  yearTo: number | null
   hasAccounting: boolean | null
   sortBy: string
   sortOrder: 'asc' | 'desc'
@@ -45,7 +42,6 @@ interface FilterValues {
 interface FilterActions {
   setSearchQuery: (query: string) => void
   setOrganizationForms: (forms: string[]) => void
-  setNaceCodes: (codes: string[]) => void
   setNaeringskode: (code: string) => void
   setRevenueRange: (min: number | null, max: number | null) => void
   setProfitRange: (min: number | null, max: number | null) => void
@@ -59,7 +55,6 @@ interface FilterActions {
   setFoundedRange: (from: Date | null, to: Date | null) => void
   setBankruptRange: (from: Date | null, to: Date | null) => void
   setStatus: (key: 'isBankrupt' | 'inLiquidation' | 'inForcedLiquidation', value: boolean | null) => void
-  setYearRange: (from: number | null, to: number | null) => void
   setHasAccounting: (has: boolean | null) => void
   setSort: (by: string, order: 'asc' | 'desc') => void
   setAllFilters: (filters: Partial<FilterValues>) => void
@@ -80,7 +75,6 @@ export const useFilterStore = create<FilterState>((set, get) => ({
   // Initial state
   searchQuery: '',
   organizationForms: [],
-  naceCodes: [],
   naeringskode: '',
   revenueMin: null,
   revenueMax: null,
@@ -105,8 +99,6 @@ export const useFilterStore = create<FilterState>((set, get) => ({
   isBankrupt: null,
   inLiquidation: null,
   inForcedLiquidation: null,
-  yearFrom: null,
-  yearTo: null,
   hasAccounting: null,
   sortBy: 'navn',
   sortOrder: 'asc',
@@ -115,7 +107,6 @@ export const useFilterStore = create<FilterState>((set, get) => ({
   // Actions
   setSearchQuery: (query) => set({ searchQuery: query }),
   setOrganizationForms: (forms) => set({ organizationForms: forms }),
-  setNaceCodes: (codes) => set({ naceCodes: codes }),
   setNaeringskode: (code) => set({ naeringskode: code }),
   setRevenueRange: (min, max) => set({ revenueMin: min, revenueMax: max }),
   setProfitRange: (min, max) => set({ profitMin: min, profitMax: max }),
@@ -129,7 +120,6 @@ export const useFilterStore = create<FilterState>((set, get) => ({
   setFoundedRange: (from, to) => set({ foundedFrom: from, foundedTo: to }),
   setBankruptRange: (from, to) => set({ bankruptFrom: from, bankruptTo: to }),
   setStatus: (key, value) => set({ [key]: value }),
-  setYearRange: (from, to) => set({ yearFrom: from, yearTo: to }),
   setHasAccounting: (has) => set({ hasAccounting: has }),
   setSort: (by, order) => set({ sortBy: by, sortOrder: order }),
   setAllFilters: (filters) => set((state) => ({ ...filters, filterVersion: state.filterVersion + 1 })),
@@ -137,7 +127,6 @@ export const useFilterStore = create<FilterState>((set, get) => ({
   clearFilters: () => set((state) => ({
     searchQuery: '',
     organizationForms: [],
-    naceCodes: [],
     naeringskode: '',
     revenueMin: null,
     revenueMax: null,
@@ -162,8 +151,6 @@ export const useFilterStore = create<FilterState>((set, get) => ({
     isBankrupt: null,
     inLiquidation: null,
     inForcedLiquidation: null,
-    yearFrom: null,
-    yearTo: null,
     hasAccounting: null,
     sortBy: 'navn',
     sortOrder: 'asc',
@@ -174,7 +161,6 @@ export const useFilterStore = create<FilterState>((set, get) => ({
     let count = 0
     if (state.searchQuery) count++
     if (state.organizationForms.length > 0) count++
-    if (state.naceCodes.length > 0) count++
     if (state.naeringskode) count++
     if (state.revenueMin !== null || state.revenueMax !== null) count++
     if (state.profitMin !== null || state.profitMax !== null) count++
@@ -190,7 +176,6 @@ export const useFilterStore = create<FilterState>((set, get) => ({
     if (state.isBankrupt !== null) count++
     if (state.inLiquidation !== null) count++
     if (state.inForcedLiquidation !== null) count++
-    if (state.yearFrom !== null || state.yearTo !== null) count++
     if (state.hasAccounting !== null) count++
     return count
   },
