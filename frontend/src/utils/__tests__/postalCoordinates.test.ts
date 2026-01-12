@@ -31,18 +31,16 @@ describe('postalCoordinates util', () => {
     });
 
     describe('getCoordinatesForPostalCodeAsync', () => {
-        it('fetches data and returns coordinates', async () => {
-            const result = await getCoordinatesForPostalCodeAsync('0001');
-            expect(window.fetch).toHaveBeenCalled();
-            expect(result).toEqual([59.9, 10.7]);
-        });
+        it('fetches data and subsequent calls use cache', async () => {
+            // First call should fetch
+            const result1 = await getCoordinatesForPostalCodeAsync('0001');
+            expect(window.fetch).toHaveBeenCalledTimes(1);
+            expect(result1).toEqual([59.9, 10.7]);
 
-        it('uses cache on second call', async () => {
-            await getCoordinatesForPostalCodeAsync('0001');
-            expect(window.fetch).toHaveBeenCalledTimes(1); // From previous test potentially if parallel, but here sequential
-
-            await getCoordinatesForPostalCodeAsync('1234');
-            expect(window.fetch).toHaveBeenCalledTimes(1); // Should reuse promise/cache
+            // Second call should NOT fetch again
+            const result2 = await getCoordinatesForPostalCodeAsync('1234');
+            expect(result2).toEqual([60.0, 11.0]);
+            expect(window.fetch).toHaveBeenCalledTimes(1);
         });
 
         it('handles cleaning of postal code', async () => {
