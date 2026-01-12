@@ -7,7 +7,7 @@
     "frontend"
   ],
   "scripts": {
-    "prepare": "husky || true",
+    "prepare": "husky",
     "validate:frontend": "cd frontend && npm run validate",
     "validate:backend": "docker exec bedriftsgrafen-backend-dev ruff check . && (docker exec bedriftsgrafen-backend-dev mypy . || echo '⚠️ Mypy found type errors but proceeding due to technical debt.')",
     "validate": "npm run validate:frontend && npm run validate:backend",
