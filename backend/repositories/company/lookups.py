@@ -85,7 +85,7 @@ class LookupsMixin:
         # Priority 1: Exact NACE + same postnummer
         if postnummer and len(similar_orgnrs) < limit:
             remaining = limit - len(similar_orgnrs)
-            
+
             stmt = (
                 select(models.Company.orgnr)
                 .where(
@@ -106,23 +106,22 @@ class LookupsMixin:
         # Priority 2: Exact NACE + same kommune
         if kommune and len(similar_orgnrs) < limit:
             remaining = limit - len(similar_orgnrs)
-            
-            stmt = (
-                select(models.Company.orgnr)
-                .where(
-                    models.Company.naeringskode == naeringskode,
-                    func.upper(models.Company.forretningsadresse["kommune"].astext) == kommune,
-                    models.Company.orgnr != orgnr,
-                    models.Company.konkurs.is_(False),
-                    models.Company.under_avvikling.is_(False),
-                    models.Company.under_tvangsavvikling.is_(False),
-                )
+
+            stmt = select(models.Company.orgnr).where(
+                models.Company.naeringskode == naeringskode,
+                func.upper(models.Company.forretningsadresse["kommune"].astext) == kommune,
+                models.Company.orgnr != orgnr,
+                models.Company.konkurs.is_(False),
+                models.Company.under_avvikling.is_(False),
+                models.Company.under_tvangsavvikling.is_(False),
             )
-            
+
             if similar_orgnrs:
                 stmt = stmt.where(models.Company.orgnr.notin_(similar_orgnrs))
-                
-            stmt = stmt.order_by(models.Company.antall_ansatte.desc().nullslast(), models.Company.navn.asc()).limit(remaining)
+
+            stmt = stmt.order_by(models.Company.antall_ansatte.desc().nullslast(), models.Company.navn.asc()).limit(
+                remaining
+            )
 
             result = await self.db.execute(stmt)
             similar_orgnrs.extend(row[0] for row in result.fetchall())
@@ -130,24 +129,23 @@ class LookupsMixin:
         # Priority 3: Same NACE prefix + same kommune
         if kommune and len(similar_orgnrs) < limit:
             remaining = limit - len(similar_orgnrs)
-            
-            stmt = (
-                select(models.Company.orgnr)
-                .where(
-                    func.left(models.Company.naeringskode, 3) == naeringskode_prefix,
-                    models.Company.naeringskode != naeringskode,
-                    func.upper(models.Company.forretningsadresse["kommune"].astext) == kommune,
-                    models.Company.orgnr != orgnr,
-                    models.Company.konkurs.is_(False),
-                    models.Company.under_avvikling.is_(False),
-                    models.Company.under_tvangsavvikling.is_(False),
-                )
+
+            stmt = select(models.Company.orgnr).where(
+                func.left(models.Company.naeringskode, 3) == naeringskode_prefix,
+                models.Company.naeringskode != naeringskode,
+                func.upper(models.Company.forretningsadresse["kommune"].astext) == kommune,
+                models.Company.orgnr != orgnr,
+                models.Company.konkurs.is_(False),
+                models.Company.under_avvikling.is_(False),
+                models.Company.under_tvangsavvikling.is_(False),
             )
-            
+
             if similar_orgnrs:
                 stmt = stmt.where(models.Company.orgnr.notin_(similar_orgnrs))
 
-            stmt = stmt.order_by(models.Company.antall_ansatte.desc().nullslast(), models.Company.navn.asc()).limit(remaining)
+            stmt = stmt.order_by(models.Company.antall_ansatte.desc().nullslast(), models.Company.navn.asc()).limit(
+                remaining
+            )
 
             result = await self.db.execute(stmt)
             similar_orgnrs.extend(row[0] for row in result.fetchall())
@@ -155,22 +153,21 @@ class LookupsMixin:
         # Priority 4: Same NACE prefix, any location
         if len(similar_orgnrs) < limit:
             remaining = limit - len(similar_orgnrs)
-            
-            stmt = (
-                select(models.Company.orgnr)
-                .where(
-                    func.left(models.Company.naeringskode, 3) == naeringskode_prefix,
-                    models.Company.orgnr != orgnr,
-                    models.Company.konkurs.is_(False),
-                    models.Company.under_avvikling.is_(False),
-                    models.Company.under_tvangsavvikling.is_(False),
-                )
+
+            stmt = select(models.Company.orgnr).where(
+                func.left(models.Company.naeringskode, 3) == naeringskode_prefix,
+                models.Company.orgnr != orgnr,
+                models.Company.konkurs.is_(False),
+                models.Company.under_avvikling.is_(False),
+                models.Company.under_tvangsavvikling.is_(False),
             )
 
             if similar_orgnrs:
                 stmt = stmt.where(models.Company.orgnr.notin_(similar_orgnrs))
 
-            stmt = stmt.order_by(models.Company.antall_ansatte.desc().nullslast(), models.Company.navn.asc()).limit(remaining)
+            stmt = stmt.order_by(models.Company.antall_ansatte.desc().nullslast(), models.Company.navn.asc()).limit(
+                remaining
+            )
 
             result = await self.db.execute(stmt)
             similar_orgnrs.extend(row[0] for row in result.fetchall())
@@ -269,9 +266,7 @@ class LookupsMixin:
 
     async def count(self) -> int:
         """Get total company count."""
-        result = await self.db.execute(
-            select(func.count(models.Company.orgnr))
-        )
+        result = await self.db.execute(select(func.count(models.Company.orgnr)))
         count = result.scalar()
         return count or 0
 
@@ -335,15 +330,11 @@ class LookupsMixin:
 
         # Apply county filter
         if county:
-            query = query.where(
-                func.left(models.Company.forretningsadresse["kommunenummer"].astext, 2) == county
-            )
+            query = query.where(func.left(models.Company.forretningsadresse["kommunenummer"].astext, 2) == county)
 
         # Apply municipality filter
         if municipality:
-            query = query.where(
-                models.Company.forretningsadresse["kommune"].astext.ilike(municipality)
-            )
+            query = query.where(models.Company.forretningsadresse["kommune"].astext.ilike(municipality))
 
         # Apply bounding box filter
         if bbox:
@@ -371,4 +362,3 @@ class LookupsMixin:
         rows = result.fetchall()
 
         return list(rows), total
-

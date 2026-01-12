@@ -15,7 +15,7 @@ class IndustryStats(Base):
     """
 
     __tablename__ = "industry_stats"
-    __table_args__ = {'extend_existing': True}
+    __table_args__ = {"extend_existing": True}
 
     nace_division = Column(String, primary_key=True)
     company_count = Column(Integer)
@@ -46,7 +46,7 @@ class IndustrySubclassStats(Base):
     """
 
     __tablename__ = "industry_subclass_stats"
-    __table_args__ = {'extend_existing': True}
+    __table_args__ = {"extend_existing": True}
 
     nace_code = Column(String, primary_key=True)
     company_count = Column(Integer)
@@ -77,7 +77,7 @@ class CountyStats(Base):
     """
 
     __tablename__ = "county_stats"
-    __table_args__ = {'extend_existing': True}
+    __table_args__ = {"extend_existing": True}
 
     county_code = Column(String, primary_key=True)
     nace_division = Column(String, primary_key=True)
@@ -94,7 +94,7 @@ class MunicipalityStats(Base):
     """
 
     __tablename__ = "municipality_stats"
-    __table_args__ = {'extend_existing': True}
+    __table_args__ = {"extend_existing": True}
 
     municipality_code = Column(String, primary_key=True)
     nace_division = Column(String, primary_key=True)

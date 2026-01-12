@@ -20,16 +20,16 @@ GeoLevel = Literal["county", "municipality"]
 # Maps ratio (company_value / industry_avg) to estimated percentile
 # Higher granularity for better UX (top 1%, 2%, 5%, etc.)
 PERCENTILE_THRESHOLDS = [
-    (3.0, 99),   # Top 1% (3x average or more)
-    (2.5, 98),   # Top 2%
-    (2.0, 95),   # Top 5%
-    (1.7, 90),   # Top 10%
-    (1.5, 85),   # Top 15%
-    (1.2, 70),   # Top 30%
-    (1.0, 55),   # Above average
-    (0.8, 40),   # Below average
-    (0.5, 25),   # Bottom 25%
-    (0.3, 10),   # Bottom 10%
+    (3.0, 99),  # Top 1% (3x average or more)
+    (2.5, 98),  # Top 2%
+    (2.0, 95),  # Top 5%
+    (1.7, 90),  # Top 10%
+    (1.5, 85),  # Top 15%
+    (1.2, 70),  # Top 30%
+    (1.0, 55),  # Above average
+    (0.8, 40),  # Below average
+    (0.5, 25),  # Bottom 25%
+    (0.3, 10),  # Bottom 10%
 ]
 
 
@@ -73,9 +73,7 @@ class StatsService:
         """Get municipality name from pre-loaded cache."""
         return StatsService._municipality_names.get(code, f"Kommune {code}")
 
-    async def get_county_stats(
-        self, metric: GeoMetric, nace: str | None = None
-    ) -> list[GeoStatResponse]:
+    async def get_county_stats(self, metric: GeoMetric, nace: str | None = None) -> list[GeoStatResponse]:
         """Get aggregated statistics per county."""
         metric_columns = {
             "company_count": models.CountyStats.company_count,
@@ -113,7 +111,7 @@ class StatsService:
                     name=get_county_name(row.code),
                     value=val,
                     population=pop,
-                    companies_per_capita=per_capita
+                    companies_per_capita=per_capita,
                 )
             )
         return stats
@@ -166,7 +164,7 @@ class StatsService:
                     name=self._get_municipality_name(clean_code),
                     value=val,
                     population=pop,
-                    companies_per_capita=per_capita
+                    companies_per_capita=per_capita,
                 )
             )
 
@@ -211,9 +209,7 @@ class StatsService:
 
         if is_municipal:
             # Try municipal stats first
-            industry_stats = await self.stats_repo.get_industry_stats_by_municipality(
-                nace_code, municipality_code
-            )
+            industry_stats = await self.stats_repo.get_industry_stats_by_municipality(nace_code, municipality_code)
             # If municipal data insufficient, fallback to national silently
             if not industry_stats:
                 is_municipal = False  # Flag that we fell back
@@ -296,4 +292,3 @@ class StatsService:
                 "percentile": calc_percentile(company_op_margin, industry_stats.avg_operating_margin),
             },
         }
-

@@ -79,9 +79,7 @@ class CrudMixin:
             "forretningsadresse": company_data.get("forretningsadresse"),
         }
 
-    async def create_or_update(
-        self, company_data: dict[str, Any], autocommit: bool = False
-    ) -> models.Company:
+    async def create_or_update(self, company_data: dict[str, Any], autocommit: bool = False) -> models.Company:
         """Create or update company from Brønnøysund API data.
 
         Uses PostgreSQL's INSERT...ON CONFLICT DO UPDATE for atomic upsert.
@@ -110,11 +108,7 @@ class CrudMixin:
             stmt = insert(models.Company).values(**fields)
 
             # On conflict (PK orgnr), update all fields except PK and creation metadata
-            update_dict = {
-                k: getattr(stmt.excluded, k)
-                for k in fields.keys()
-                if k not in ["orgnr", "created_at"]
-            }
+            update_dict = {k: getattr(stmt.excluded, k) for k in fields.keys() if k not in ["orgnr", "created_at"]}
 
             stmt = stmt.on_conflict_do_update(
                 index_elements=["orgnr"],

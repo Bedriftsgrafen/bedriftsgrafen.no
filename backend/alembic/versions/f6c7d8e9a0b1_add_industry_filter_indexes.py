@@ -9,6 +9,7 @@ Add indexes to optimize industry statistics and new company queries:
 - stiftelsesdato index for new company queries
 - konkursdato index for bankruptcy date filtering
 """
+
 from typing import Sequence, Union
 
 from alembic import op
@@ -16,8 +17,8 @@ import sqlalchemy as sa
 
 
 # revision identifiers, used by Alembic.
-revision: str = 'f6c7d8e9a0b1'
-down_revision: Union[str, Sequence[str], None] = 'a1b2c3d4e5f6'
+revision: str = "f6c7d8e9a0b1"
+down_revision: Union[str, Sequence[str], None] = "a1b2c3d4e5f6"
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
 

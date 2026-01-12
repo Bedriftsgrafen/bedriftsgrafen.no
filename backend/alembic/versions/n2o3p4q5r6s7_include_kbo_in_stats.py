@@ -8,17 +8,18 @@ KBO (konkursbo/bankruptcy estates) should be visible in map and industry stats.
 KBO exclusion should only apply to "new companies" queries to avoid confusion
 about newly registered KBOs being counted as genuinely new businesses.
 """
+
 from alembic import op
 
-revision = 'n2o3p4q5r6s7'
-down_revision = 'm1n2o3p4q5r6'
+revision = "n2o3p4q5r6s7"
+down_revision = "m1n2o3p4q5r6"
 branch_labels = None
 depends_on = None
 
 
 def upgrade() -> None:
     """Recreate stats views to include KBO companies."""
-    
+
     # Drop and recreate county_stats to include KBO
     op.execute("DROP MATERIALIZED VIEW IF EXISTS county_stats CASCADE;")
     op.execute("""
@@ -39,12 +40,12 @@ def upgrade() -> None:
             LEFT(b.naeringskode, 2)
         ORDER BY county_code, company_count DESC;
     """)
-    
+
     # Recreate indexes - separate execute calls for asyncpg compatibility
     op.execute("CREATE INDEX idx_county_stats_county ON county_stats (county_code);")
     op.execute("CREATE INDEX idx_county_stats_nace ON county_stats (nace_division);")
     op.execute("CREATE UNIQUE INDEX idx_county_stats_pk ON county_stats (county_code, nace_division);")
-    
+
     # Drop and recreate municipality_stats to include KBO
     op.execute("DROP MATERIALIZED VIEW IF EXISTS municipality_stats CASCADE;")
     op.execute("""
@@ -67,12 +68,14 @@ def upgrade() -> None:
             LEFT(b.naeringskode, 2)
         ORDER BY municipality_code, company_count DESC;
     """)
-    
+
     # Recreate indexes - separate execute calls
     op.execute("CREATE INDEX idx_municipality_stats_code ON municipality_stats (municipality_code);")
     op.execute("CREATE INDEX idx_municipality_stats_nace ON municipality_stats (nace_division);")
     op.execute("CREATE INDEX idx_municipality_stats_county ON municipality_stats (county_code);")
-    op.execute("CREATE UNIQUE INDEX idx_municipality_stats_pk ON municipality_stats (municipality_code, nace_division);")
+    op.execute(
+        "CREATE UNIQUE INDEX idx_municipality_stats_pk ON municipality_stats (municipality_code, nace_division);"
+    )
 
 
 def downgrade() -> None:
@@ -97,11 +100,11 @@ def downgrade() -> None:
             LEFT(b.naeringskode, 2)
         ORDER BY county_code, company_count DESC;
     """)
-    
+
     op.execute("CREATE INDEX idx_county_stats_county ON county_stats (county_code);")
     op.execute("CREATE INDEX idx_county_stats_nace ON county_stats (nace_division);")
     op.execute("CREATE UNIQUE INDEX idx_county_stats_pk ON county_stats (county_code, nace_division);")
-    
+
     # Drop and recreate municipality_stats excluding KBO
     op.execute("DROP MATERIALIZED VIEW IF EXISTS municipality_stats CASCADE;")
     op.execute("""
@@ -124,8 +127,10 @@ def downgrade() -> None:
             LEFT(b.naeringskode, 2)
         ORDER BY municipality_code, company_count DESC;
     """)
-    
+
     op.execute("CREATE INDEX idx_municipality_stats_code ON municipality_stats (municipality_code);")
     op.execute("CREATE INDEX idx_municipality_stats_nace ON municipality_stats (nace_division);")
     op.execute("CREATE INDEX idx_municipality_stats_county ON municipality_stats (county_code);")
-    op.execute("CREATE UNIQUE INDEX idx_municipality_stats_pk ON municipality_stats (municipality_code, nace_division);")
+    op.execute(
+        "CREATE UNIQUE INDEX idx_municipality_stats_pk ON municipality_stats (municipality_code, nace_division);"
+    )

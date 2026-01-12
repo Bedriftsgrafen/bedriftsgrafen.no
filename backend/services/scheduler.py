@@ -9,6 +9,7 @@ from database import AsyncSessionLocal, engine
 
 logger = logging.getLogger(__name__)
 
+
 class SchedulerService:
     """Background job scheduler for periodic tasks."""
 
@@ -21,24 +22,24 @@ class SchedulerService:
         self.scheduler.add_job(
             self.refresh_materialized_views,
             trigger=IntervalTrigger(minutes=5),
-            id='refresh_views',
-            replace_existing=True
+            id="refresh_views",
+            replace_existing=True,
         )
 
         # Sync SSB population data weekly (Sundays at 03:00)
         self.scheduler.add_job(
             self.sync_ssb_population,
-            trigger=CronTrigger(day_of_week='sun', hour=3, minute=0),
-            id='sync_ssb_population',
-            replace_existing=True
+            trigger=CronTrigger(day_of_week="sun", hour=3, minute=0),
+            id="sync_ssb_population",
+            replace_existing=True,
         )
 
         # Geocode companies without coordinates (every 1 minute)
         self.scheduler.add_job(
             self.geocode_companies_batch,
             trigger=IntervalTrigger(minutes=1),
-            id='geocode_companies',
-            replace_existing=True
+            id="geocode_companies",
+            replace_existing=True,
         )
 
     async def start(self) -> None:
@@ -74,7 +75,7 @@ class SchedulerService:
                 result = await service.fetch_and_store_population()
                 logger.info(
                     "SSB population sync completed",
-                    extra={"year": result.get("year"), "count": result.get("municipality_count")}
+                    extra={"year": result.get("year"), "count": result.get("municipality_count")},
                 )
         except Exception as e:
             logger.exception("Failed to sync SSB population", extra={"error": str(e)})
@@ -100,7 +101,7 @@ class SchedulerService:
                                 "failed": result["failed"],
                                 "remaining": result["remaining"],
                                 "total_geocoded": result["total_geocoded"],
-                            }
+                            },
                         )
                     else:
                         logger.info("No companies need geocoding")
@@ -110,4 +111,3 @@ class SchedulerService:
                     raise
         except Exception as e:
             logger.exception("Failed to run geocoding batch", extra={"error": str(e)})
-

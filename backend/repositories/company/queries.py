@@ -92,9 +92,7 @@ class QueryMixin:
                 models.LatestFinancials.driftsresultat.label("latest_operating_profit"),
                 models.LatestFinancials.operating_margin.label("latest_operating_margin"),
             )
-            .outerjoin(
-                models.LatestFinancials, models.Company.orgnr == models.LatestFinancials.orgnr
-            )
+            .outerjoin(models.LatestFinancials, models.Company.orgnr == models.LatestFinancials.orgnr)
             .options(*LIST_VIEW_OPTIONS)
         )
 
@@ -122,11 +120,11 @@ class QueryMixin:
         result = await self.db.stream(query)
         async for row in result:
             yield CompanyWithFinancials(
-                company=row[0], 
-                latest_revenue=row[1], 
+                company=row[0],
+                latest_revenue=row[1],
                 latest_profit=row[2],
                 latest_operating_profit=row[3],
-                latest_operating_margin=row[4]
+                latest_operating_margin=row[4],
             )
 
     async def _get_all_optimized(
@@ -142,20 +140,20 @@ class QueryMixin:
         Phase 1: Get paginated orgnrs using indexes (very fast)
         Phase 2: Fetch full company data for those orgnrs
         Phase 3: Fetch financial data only for the returned companies
-        
+
         SECURITY: Uses SQLAlchemy exclusively to prevent SQL injection.
         """
         from sqlalchemy import case, func
-        
+
         sort_column_obj = SORT_COLUMN_MAP.get(sort_by, models.Company.navn)
-        
+
         # Phase 1: Build query using CompanyFilterBuilder (SECURE: parameterized)
         builder = CompanyFilterBuilder(filters)
         builder.apply_all(include_financial=False)
-        
+
         base_query = select(models.Company.orgnr)
         base_query = builder.apply_to_query(base_query)
-        
+
         # Apply ordering
         if filters.name and len(filters.name) >= 3 and not filters.name.isdigit():
             # Search relevance ordering for text queries
@@ -163,13 +161,10 @@ class QueryMixin:
                 case(
                     (func.lower(models.Company.navn) == filters.name.lower(), 0),
                     (func.lower(models.Company.navn).like(f"{filters.name.lower()}%"), 1),
-                    else_=2
+                    else_=2,
                 ),
-                func.ts_rank(
-                    models.Company.search_vector,
-                    func.websearch_to_tsquery('norwegian', filters.name)
-                ).desc(),
-                sort_column_obj.desc() if sort_order == "desc" else sort_column_obj.asc()
+                func.ts_rank(models.Company.search_vector, func.websearch_to_tsquery("norwegian", filters.name)).desc(),
+                sort_column_obj.desc() if sort_order == "desc" else sort_column_obj.asc(),
             )
         else:
             # Standard ordering
@@ -177,9 +172,9 @@ class QueryMixin:
                 base_query = base_query.order_by(sort_column_obj.desc().nullslast())
             else:
                 base_query = base_query.order_by(sort_column_obj.asc().nullslast())
-        
+
         base_query = base_query.limit(limit).offset(skip)
-        
+
         result = await self.db.execute(base_query)
         rows = result.fetchall()
         orgnrs = [row[0] for row in rows]
@@ -264,12 +259,12 @@ class QueryMixin:
 
         return [
             CompanyWithFinancials(
-                company=row[0], 
-                latest_revenue=row[1], 
+                company=row[0],
+                latest_revenue=row[1],
                 latest_profit=row[2],
                 latest_operating_profit=row[3],
-                latest_operating_margin=row[4]
-            ) 
+                latest_operating_margin=row[4],
+            )
             for row in rows
         ]
 

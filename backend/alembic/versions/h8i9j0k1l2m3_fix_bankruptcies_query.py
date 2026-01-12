@@ -4,18 +4,19 @@ Revision ID: h8i9j0k1l2m3
 Revises: g7h8i9j0k1l2
 Create Date: 2025-12-23 14:15:00.000000
 
-Bug fix: The WHERE clause excluded konkurs=true companies, 
+Bug fix: The WHERE clause excluded konkurs=true companies,
 but we still need to count them for bankruptcies_last_year.
 Solution: Use a separate subquery for bankruptcy counts.
 """
+
 from typing import Sequence, Union
 
 from alembic import op
 
 
 # revision identifiers, used by Alembic.
-revision: str = 'h8i9j0k1l2m3'
-down_revision: Union[str, Sequence[str], None] = 'g7h8i9j0k1l2'
+revision: str = "h8i9j0k1l2m3"
+down_revision: Union[str, Sequence[str], None] = "g7h8i9j0k1l2"
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
 
@@ -23,7 +24,7 @@ depends_on: Union[str, Sequence[str], None] = None
 def upgrade() -> None:
     # Drop and recreate materialized view with fixed bankruptcy counting
     op.execute("DROP MATERIALIZED VIEW IF EXISTS industry_stats CASCADE;")
-    
+
     # Solution: Use LEFT JOIN with a subquery for bankruptcy counts
     # since the main query excludes konkurs=true companies
     op.execute("""
@@ -70,7 +71,7 @@ def upgrade() -> None:
         HAVING COUNT(*) >= 10
         ORDER BY company_count DESC;
     """)
-    
+
     # Recreate index
     op.execute("""
         CREATE UNIQUE INDEX idx_industry_stats_nace 
@@ -81,7 +82,7 @@ def upgrade() -> None:
 def downgrade() -> None:
     # Revert to buggy version (just in case)
     op.execute("DROP MATERIALIZED VIEW IF EXISTS industry_stats CASCADE;")
-    
+
     op.execute("""
         CREATE MATERIALIZED VIEW industry_stats AS
         SELECT
@@ -116,7 +117,7 @@ def downgrade() -> None:
         HAVING COUNT(*) >= 10
         ORDER BY company_count DESC;
     """)
-    
+
     op.execute("""
         CREATE UNIQUE INDEX idx_industry_stats_nace 
         ON industry_stats (nace_division);

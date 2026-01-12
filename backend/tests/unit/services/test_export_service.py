@@ -1,22 +1,25 @@
 """
 Unit tests for ExportService.
 """
+
 from unittest.mock import AsyncMock, MagicMock
 import pytest
 from sqlalchemy.ext.asyncio import AsyncSession
 from services.export_service import ExportService
 from services.dtos import CompanyFilterDTO
 
+
 @pytest.fixture
 def mock_db():
     return AsyncMock(spec=AsyncSession)
 
+
 @pytest.mark.asyncio
-async def test_stream_companies_csv_structure(mock_db): 
+async def test_stream_companies_csv_structure(mock_db):
     # Arrange
     service = ExportService(mock_db)
-    service.company_service = AsyncMock() # Parent is AsyncMock
-    
+    service.company_service = AsyncMock()  # Parent is AsyncMock
+
     # Mock stream generator
     async def mock_stream(filters):
         c1 = MagicMock()
@@ -32,7 +35,7 @@ async def test_stream_companies_csv_structure(mock_db):
         c1.latest_profit = 10.0
         c1.stiftelsesdato = None
         yield c1
-        
+
     # Use MagicMock instead of AsyncMock for generator method to avoid coroutine wrapping
     service.company_service.stream_companies = MagicMock(side_effect=mock_stream)
 
@@ -50,11 +53,12 @@ async def test_stream_companies_csv_structure(mock_db):
     assert "Org.nr;Navn" in lines[0]
     assert "123;Test AS" in lines[1]
 
+
 @pytest.mark.asyncio
 async def test_export_row_limit_enforced(mock_db):
     service = ExportService(mock_db)
     service.company_service = AsyncMock()
-    
+
     # Request max limit allowed in DTO (1000)
     # We want to test logic inside service that caps it?
     # ExportService.EXPORT_ROW_LIMIT is 1000. DTO default checks limit <= 1000.
@@ -63,22 +67,22 @@ async def test_export_row_limit_enforced(mock_db):
     # But DTO prevents filters.limit > 1000.
     # So we can test if filters.limit is missing (None) or 0 (implicit unlimited?)
     # DTO defaults limit=100.
-    
+
     filters = CompanyFilterDTO(limit=1000)
-    # Manually bypass DTO validation to test service logic if possible, 
+    # Manually bypass DTO validation to test service logic if possible,
     # but filters is typed.
     # Let's just verify it passes limit=1000.
-    
+
     async def empty_gen(f):
         if False:
-            yield None 
+            yield None
 
     # Use MagicMock here too
     service.company_service.stream_companies = MagicMock(side_effect=empty_gen)
-    
+
     async for _ in service.stream_companies_csv(filters):
         pass
-        
+
     # Assert
     call_args = service.company_service.stream_companies.call_args
     passed_filters = call_args[0][0]

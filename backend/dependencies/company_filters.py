@@ -23,29 +23,26 @@ class CompanyQueryParams:
         self,
         # Text search
         name: str | None = Query(None, description="Search by company name or org number"),
-
         # Basic filters - list params need Query() for proper parsing
         organisasjonsform: list[str] | None = Query(None, description="Filter by organization form codes"),
         naeringskode: str | None = Query(None, max_length=12, description="NACE industry code (max 12 chars)"),
         municipality: str | None = Query(None, description="Filter by municipality (kommune)"),
-        county: str | None = Query(None, description="Filter by county (fylke) - 2-digit county code (e.g., '18' for Nordland)"),
-
+        county: str | None = Query(
+            None, description="Filter by county (fylke) - 2-digit county code (e.g., '18' for Nordland)"
+        ),
         # Employee limits
         min_employees: int | None = Query(None, ge=0, description="Minimum number of employees"),
         max_employees: int | None = Query(None, ge=0, description="Maximum number of employees"),
-
         # Date filters
         founded_from: date | None = Query(None, description="Minimum founding date"),
         founded_to: date | None = Query(None, description="Maximum founding date"),
         bankrupt_from: date | None = Query(None, description="Minimum bankruptcy date"),
         bankrupt_to: date | None = Query(None, description="Maximum bankruptcy date"),
-
         # Status flags
         is_bankrupt: bool | None = Query(None, description="Filter by bankruptcy status"),
         in_liquidation: bool | None = Query(None, description="Filter by liquidation status"),
         in_forced_liquidation: bool | None = Query(None, description="Filter by forced liquidation status"),
         has_accounting: bool | None = Query(None, description="Filter by existence of accounting data"),
-
         # Financial Numeric filters (split into min/max for query params)
         min_revenue: float | None = Query(None, description="Minimum revenue"),
         max_revenue: float | None = Query(None, description="Maximum revenue"),
@@ -59,7 +56,6 @@ class CompanyQueryParams:
         max_liquidity_ratio: float | None = Query(None, description="Maximum liquidity ratio"),
         min_equity_ratio: float | None = Query(None, description="Minimum equity ratio"),
         max_equity_ratio: float | None = Query(None, description="Maximum equity ratio"),
-
         # Exclusion - list param needs Query() for proper parsing
         exclude_org_form: list[str] | None = Query(None, description="Exclude specific organization forms (e.g., KBO)"),
     ):
@@ -92,7 +88,9 @@ class CompanyQueryParams:
         self.max_equity_ratio = max_equity_ratio
         self.exclude_org_form = exclude_org_form
 
-    def to_dto(self, skip: int = 0, limit: int = 100, sort_by: str = "navn", sort_order: str = "asc") -> CompanyFilterDTO:
+    def to_dto(
+        self, skip: int = 0, limit: int = 100, sort_by: str = "navn", sort_order: str = "asc"
+    ) -> CompanyFilterDTO:
         """Convert query params to Service DTO"""
         return CompanyFilterDTO(
             skip=skip,

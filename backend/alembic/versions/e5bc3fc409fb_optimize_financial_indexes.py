@@ -5,6 +5,7 @@ Revises: d4ab2eb298ea
 Create Date: 2025-12-22 17:35:00.000000
 
 """
+
 from typing import Sequence, Union
 
 from alembic import op
@@ -12,8 +13,8 @@ import sqlalchemy as sa
 
 
 # revision identifiers, used by Alembic.
-revision: str = 'e5bc3fc409fb'
-down_revision: Union[str, Sequence[str], None] = 'ad4923e'
+revision: str = "e5bc3fc409fb"
+down_revision: Union[str, Sequence[str], None] = "ad4923e"
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
 
@@ -74,9 +75,8 @@ def downgrade() -> None:
     op.execute("DROP INDEX IF EXISTS idx_latest_financials_equity_desc")
     op.execute("DROP INDEX IF EXISTS idx_bedrifter_orgform_nace")
     op.execute("DROP INDEX IF EXISTS idx_bedrifter_list_covering")
-    
+
     # Restore the dropped index (though it was redundant)
     op.execute(
-        "CREATE INDEX CONCURRENTLY IF NOT EXISTS ix_bedrifter_last_polled_regnskap "
-        "ON bedrifter (last_polled_regnskap)"
+        "CREATE INDEX CONCURRENTLY IF NOT EXISTS ix_bedrifter_last_polled_regnskap ON bedrifter (last_polled_regnskap)"
     )

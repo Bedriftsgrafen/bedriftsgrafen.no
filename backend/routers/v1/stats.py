@@ -20,18 +20,16 @@ router = APIRouter(prefix="/v1/stats", tags=["statistics"])
 # All fields map directly to indexed columns in industry_stats materialized view
 # Safe: FastAPI validates input against Literal type before handler is called
 SortField = Literal[
-    "company_count",        # Primary sort (default)
-    "total_revenue",        # Indexed: DESC NULLS LAST
+    "company_count",  # Primary sort (default)
+    "total_revenue",  # Indexed: DESC NULLS LAST
     "avg_revenue",
-    "total_employees",      # Indexed: DESC NULLS LAST
+    "total_employees",  # Indexed: DESC NULLS LAST
     "bankrupt_count",
     "new_last_year",
     "bankruptcies_last_year",
-    "avg_profit",           # Added for frontend column picker
-    "avg_operating_margin", # Added for frontend column picker
+    "avg_profit",  # Added for frontend column picker
+    "avg_operating_margin",  # Added for frontend column picker
 ]
-
-
 
 
 def _enrich_with_nace_name(stat: models.IndustryStats) -> IndustryStatResponse:
@@ -113,7 +111,7 @@ async def get_industry_benchmark(
         min_length=2,
         max_length=6,
         pattern=r"^(\d{2}|\d{2}\.\d{3})$",
-        description="NACE code: 2 digits (e.g., '62') or 5 digits with dot (e.g., '62.010')"
+        description="NACE code: 2 digits (e.g., '62') or 5 digits with dot (e.g., '62.010')",
     ),
     orgnr: str = Path(..., min_length=9, max_length=9, pattern=r"^\d{9}$", description="Organization number"),
     municipality_code: str | None = Query(
@@ -121,7 +119,7 @@ async def get_industry_benchmark(
         min_length=4,
         max_length=4,
         pattern=r"^\d{4}$",
-        description="Optional 4-digit municipality code for local comparison"
+        description="Optional 4-digit municipality code for local comparison",
     ),
     db: AsyncSession = Depends(get_db),
 ) -> IndustryBenchmarkResponse:
@@ -154,6 +152,7 @@ async def get_industry_benchmark(
 
     return IndustryBenchmarkResponse.model_validate(benchmark)
 
+
 # =============================================================================
 # Geographic Statistics (for choropleth map)
 # =============================================================================
@@ -163,9 +162,6 @@ async def get_industry_benchmark(
 
 # Norwegian municipality names (loaded from database on first request)
 # Code moved to StatsService to avoid duplication
-
-
-
 
 
 @router.get("/geography", response_model=list[GeoStatResponse])
@@ -234,8 +230,9 @@ async def get_geography_averages(
             select(
                 func.sum(metric_col).label("total"),
                 func.count(func.distinct(models.MunicipalityStats.municipality_code)).label("count"),
-            )
-            .where(models.MunicipalityStats.nace_division == nace) if nace else select(
+            ).where(models.MunicipalityStats.nace_division == nace)
+            if nace
+            else select(
                 func.sum(metric_col).label("total"),
                 func.count(func.distinct(models.MunicipalityStats.municipality_code)).label("count"),
             )

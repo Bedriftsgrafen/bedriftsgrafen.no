@@ -1,4 +1,5 @@
 """Service for fetching and storing data from Statistics Norway (SSB)."""
+
 import logging
 import re
 from datetime import datetime
@@ -54,10 +55,7 @@ class SsbService:
                 response.raise_for_status()
                 data = response.json()
         except httpx.HTTPStatusError as e:
-            logger.error(
-                "SSB API request failed",
-                extra={"status_code": e.response.status_code, "url": url}
-            )
+            logger.error("SSB API request failed", extra={"status_code": e.response.status_code, "url": url})
             raise RuntimeError(f"SSB API request failed: {e.response.status_code}")
         except httpx.TimeoutException:
             logger.error("SSB API request timed out", extra={"timeout": SSB_REQUEST_TIMEOUT})
@@ -154,10 +152,7 @@ class SsbService:
             return 0
 
         # Build list of dicts for bulk upsert
-        rows = [
-            {"municipality_code": code, "year": year, "population": pop}
-            for code, pop in population_data.items()
-        ]
+        rows = [{"municipality_code": code, "year": year, "population": pop} for code, pop in population_data.items()]
 
         # Use PostgreSQL INSERT ... ON CONFLICT DO UPDATE (upsert)
         stmt = insert(models.MunicipalityPopulation).values(rows)

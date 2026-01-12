@@ -5,14 +5,15 @@ Revises: e5bc3fc409fb
 Create Date: 2025-12-22 19:32:00.000000
 
 """
+
 from typing import Sequence, Union
 
 from alembic import op
 
 
 # revision identifiers, used by Alembic.
-revision: str = 'f7a8b9c0d1e2'
-down_revision: Union[str, Sequence[str], None] = 'e5bc3fc409fb'
+revision: str = "f7a8b9c0d1e2"
+down_revision: Union[str, Sequence[str], None] = "e5bc3fc409fb"
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
 
@@ -33,7 +34,7 @@ def upgrade() -> None:
         END
         $function$;
     """)
-    
+
     # Update the trigger to fire on vedtektsfestet_formaal changes too
     op.execute("""
         DROP TRIGGER IF EXISTS bedrifter_search_vector_trigger ON bedrifter;
@@ -45,7 +46,7 @@ def upgrade() -> None:
         FOR EACH ROW
         EXECUTE FUNCTION bedrifter_search_vector_update();
     """)
-    
+
     # Rebuild search vectors for existing data (may take a few minutes)
     # Using batched update to avoid locking the entire table
     op.execute("""
@@ -72,7 +73,7 @@ def downgrade() -> None:
         END
         $function$;
     """)
-    
+
     # Revert trigger
     op.execute("""
         DROP TRIGGER IF EXISTS bedrifter_search_vector_trigger ON bedrifter;

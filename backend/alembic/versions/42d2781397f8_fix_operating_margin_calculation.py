@@ -5,14 +5,15 @@ Revises: a69b80bb0302
 Create Date: 2026-01-06 08:59:09.583984
 
 """
+
 from typing import Sequence, Union
 
 from alembic import op
 
 
 # revision identifiers, used by Alembic.
-revision: str = '42d2781397f8'
-down_revision: Union[str, Sequence[str], None] = 'a69b80bb0302'
+revision: str = "42d2781397f8"
+down_revision: Union[str, Sequence[str], None] = "a69b80bb0302"
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
 
@@ -21,7 +22,7 @@ def upgrade() -> None:
     """Add NULL filter to avg_operating_margin calculation in industry_stats."""
     # Drop and recreate materialized view with improved operating margin calculation
     op.execute("DROP MATERIALIZED VIEW IF EXISTS industry_stats CASCADE;")
-    
+
     # Updated view: adds driftsresultat IS NOT NULL filter to operating margin calculation
     op.execute("""
         CREATE MATERIALIZED VIEW industry_stats AS
@@ -67,7 +68,7 @@ def upgrade() -> None:
         HAVING COUNT(*) >= 10
         ORDER BY company_count DESC;
     """)
-    
+
     # Recreate unique index for CONCURRENTLY refresh
     op.execute("""
         CREATE UNIQUE INDEX idx_industry_stats_nace 
@@ -78,7 +79,7 @@ def upgrade() -> None:
 def downgrade() -> None:
     """Revert to previous operating margin calculation without NULL filter."""
     op.execute("DROP MATERIALIZED VIEW IF EXISTS industry_stats CASCADE;")
-    
+
     op.execute("""
         CREATE MATERIALIZED VIEW industry_stats AS
         WITH bankruptcy_counts AS (
@@ -120,9 +121,8 @@ def downgrade() -> None:
         HAVING COUNT(*) >= 10
         ORDER BY company_count DESC;
     """)
-    
+
     op.execute("""
         CREATE UNIQUE INDEX idx_industry_stats_nace 
         ON industry_stats (nace_division);
     """)
-

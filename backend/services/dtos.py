@@ -26,6 +26,7 @@ class RangeFilter(BaseModel):
 
 class IndustryStatsDTO(BaseModel):
     """DTO for aggregated industry statistics."""
+
     company_count: int = 0
     avg_revenue: float | None = None
     avg_profit: float | None = None

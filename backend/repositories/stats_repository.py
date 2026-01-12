@@ -11,6 +11,7 @@ logger = logging.getLogger(__name__)
 
 GeoMetric = Literal["company_count", "new_last_year", "bankrupt_count", "total_employees"]
 
+
 class StatsRepository:
     def __init__(self, db: AsyncSession):
         self.db = db
@@ -18,24 +19,18 @@ class StatsRepository:
     async def get_industry_stats(self, nace_division: str) -> models.IndustryStats | None:
         """Get aggregated statistics for a specific NACE division (2-digit)."""
         result = await self.db.execute(
-            select(models.IndustryStats).where(
-                models.IndustryStats.nace_division == nace_division
-            )
+            select(models.IndustryStats).where(models.IndustryStats.nace_division == nace_division)
         )
         return result.scalar_one_or_none()
 
     async def get_industry_subclass_stats(self, nace_code: str) -> models.IndustrySubclassStats | None:
         """Get aggregated statistics for a specific NACE subclass (5-digit)."""
         result = await self.db.execute(
-            select(models.IndustrySubclassStats).where(
-                models.IndustrySubclassStats.nace_code == nace_code
-            )
+            select(models.IndustrySubclassStats).where(models.IndustrySubclassStats.nace_code == nace_code)
         )
         return result.scalar_one_or_none()
 
-    async def get_county_stats(
-        self, metric_col, nace: str | None = None
-    ) -> list[models.CountyStats]:
+    async def get_county_stats(self, metric_col, nace: str | None = None) -> list[models.CountyStats]:
         """Get raw county stats query result."""
         query = select(
             models.CountyStats.county_code.label("code"),
@@ -48,9 +43,7 @@ class StatsRepository:
         result = await self.db.execute(query)
         return result.all()
 
-    async def get_municipality_stats(
-        self, metric_col, nace: str | None = None, county_code: str | None = None
-    ):
+    async def get_municipality_stats(self, metric_col, nace: str | None = None, county_code: str | None = None):
         """Get raw municipality stats query result."""
         query = select(
             models.MunicipalityStats.municipality_code.label("code"),
@@ -69,6 +62,7 @@ class StatsRepository:
     async def get_latest_population_year(self) -> int | None:
         """Get the most recent year with population data."""
         from sqlalchemy import func as sa_func
+
         query = select(sa_func.max(models.MunicipalityPopulation.year))
         result = await self.db.execute(query)
         return result.scalar()
@@ -113,7 +107,8 @@ class StatsRepository:
         # Determine if we're filtering by full code (5-digit) or division (2-digit)
         is_subclass = len(nace_code) > 2
         nace_filter = (
-            models.Company.naeringskode == nace_code if is_subclass
+            models.Company.naeringskode == nace_code
+            if is_subclass
             else func.left(models.Company.naeringskode, 2) == nace_code
         )
 
@@ -127,15 +122,17 @@ class StatsRepository:
                 func.avg(models.Company.antall_ansatte).label("avg_employees"),
                 func.avg(
                     case(
-                        (and_(models.LatestAccountings.salgsinntekter > 0, 
-                              models.LatestAccountings.driftsresultat.isnot(None)),
-                         (models.LatestAccountings.driftsresultat / models.LatestAccountings.salgsinntekter) * 100),
-                        else_=None
+                        (
+                            and_(
+                                models.LatestAccountings.salgsinntekter > 0,
+                                models.LatestAccountings.driftsresultat.isnot(None),
+                            ),
+                            (models.LatestAccountings.driftsresultat / models.LatestAccountings.salgsinntekter) * 100,
+                        ),
+                        else_=None,
                     )
                 ).label("avg_operating_margin"),
-                func.percentile_cont(0.5).within_group(
-                    models.LatestAccountings.salgsinntekter
-                ).label("median_revenue"),
+                func.percentile_cont(0.5).within_group(models.LatestAccountings.salgsinntekter).label("median_revenue"),
             )
             .select_from(models.Company)
             .join(models.LatestAccountings, models.Company.orgnr == models.LatestAccountings.orgnr)
@@ -163,4 +160,3 @@ class StatsRepository:
             avg_operating_margin=row.avg_operating_margin,
             median_revenue=row.median_revenue,
         )
-

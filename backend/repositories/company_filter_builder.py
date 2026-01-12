@@ -114,63 +114,69 @@ class FilterParams:
 
     def has_financial_filters(self) -> bool:
         """Check if any financial value filters are present (requires join)."""
-        return any([
-            self.min_revenue,
-            self.max_revenue,
-            self.min_profit,
-            self.max_profit,
-            self.min_equity,
-            self.max_equity,
-            self.min_operating_profit,
-            self.max_operating_profit,
-            self.min_liquidity_ratio,
-            self.max_liquidity_ratio,
-            self.min_equity_ratio,
-            self.max_equity_ratio,
-        ])
+        return any(
+            [
+                self.min_revenue,
+                self.max_revenue,
+                self.min_profit,
+                self.max_profit,
+                self.min_equity,
+                self.max_equity,
+                self.min_operating_profit,
+                self.max_operating_profit,
+                self.min_liquidity_ratio,
+                self.max_liquidity_ratio,
+                self.min_equity_ratio,
+                self.max_equity_ratio,
+            ]
+        )
 
     def is_empty(self) -> bool:
         """Check if no filters are set (use for fast-path optimization)."""
-        return not any([
-            self.name,
-            self.organisasjonsform,
-            self.naeringskode,
-            self.min_employees,
-            self.max_employees,
-            self.municipality,
-            self.county,
-            self.founded_from,
-            self.founded_to,
-            self.bankrupt_from,
-            self.bankrupt_to,
-            self.is_bankrupt,
-            self.in_liquidation,
-            self.in_forced_liquidation,
-            self.has_financial_filters(),
-            self.has_accounting,
-            self.exclude_org_form,
-        ])
+        return not any(
+            [
+                self.name,
+                self.organisasjonsform,
+                self.naeringskode,
+                self.min_employees,
+                self.max_employees,
+                self.municipality,
+                self.county,
+                self.founded_from,
+                self.founded_to,
+                self.bankrupt_from,
+                self.bankrupt_to,
+                self.is_bankrupt,
+                self.in_liquidation,
+                self.in_forced_liquidation,
+                self.has_financial_filters(),
+                self.has_accounting,
+                self.exclude_org_form,
+            ]
+        )
 
     def has_only_org_form_filter(self) -> bool:
         """Check if only organisasjonsform filter is set (for pre-computed counts)."""
-        return bool(self.organisasjonsform) and not any([
-            self.name,
-            self.naeringskode,
-            self.min_employees,
-            self.max_employees,
-            self.municipality,
-            self.county,
-            self.founded_from,
-            self.founded_to,
-            self.bankrupt_from,
-            self.bankrupt_to,
-            self.is_bankrupt,
-            self.in_liquidation,
-            self.in_forced_liquidation,
-            self.has_financial_filters(),
-            self.has_accounting,
-            self.exclude_org_form,
-        ])
+        return bool(self.organisasjonsform) and not any(
+            [
+                self.name,
+                self.naeringskode,
+                self.min_employees,
+                self.max_employees,
+                self.municipality,
+                self.county,
+                self.founded_from,
+                self.founded_to,
+                self.bankrupt_from,
+                self.bankrupt_to,
+                self.is_bankrupt,
+                self.in_liquidation,
+                self.in_forced_liquidation,
+                self.has_financial_filters(),
+                self.has_accounting,
+                self.exclude_org_form,
+            ]
+        )
 
 
 class CompanyFilterBuilder:
@@ -368,7 +374,9 @@ class CompanyFilterBuilder:
                 self._clauses.append(or_(models.Company.konkurs.is_(True), models.Company.organisasjonsform == "KBO"))
             else:
                 # Exclude konkurs AND KBO
-                self._clauses.append(and_(models.Company.konkurs.isnot(True), models.Company.organisasjonsform != "KBO"))
+                self._clauses.append(
+                    and_(models.Company.konkurs.isnot(True), models.Company.organisasjonsform != "KBO")
+                )
 
         # Liquidation status
         if self._f.in_liquidation is not None:

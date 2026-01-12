@@ -135,9 +135,9 @@ class LatestFinancials(Base):
     """
 
     __tablename__ = "latest_financials"
-    
+
     # Map to existing materialized view
-    __table_args__ = {'extend_existing': True}
+    __table_args__ = {"extend_existing": True}
 
     orgnr = Column(String, primary_key=True)
     aar = Column(Integer)
@@ -157,9 +157,9 @@ class LatestAccountings(Base):
     """
 
     __tablename__ = "latest_accountings"
-    
+
     # Map to existing materialized view
-    __table_args__ = {'extend_existing': True}
+    __table_args__ = {"extend_existing": True}
 
     orgnr = Column(String, primary_key=True)
     aar = Column(Integer)

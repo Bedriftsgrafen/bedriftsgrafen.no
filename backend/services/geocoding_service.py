@@ -53,7 +53,7 @@ class GeocodingService(BaseExternalService):
 
             # Since _get returns response even on 404 (though Kartverket usually returns 200 with empty list), we check status
             if response.status_code != 200:
-                 return None
+                return None
 
             data = response.json()
             addresses = data.get("adresser", [])
@@ -153,7 +153,7 @@ class GeocodingService(BaseExternalService):
                     continue
                 line_lower = line.lower().strip()
                 # Skip non-street lines
-                if any(line_lower.startswith(prefix) for prefix in ['c/o', 'att:', 'att ', 'v/', 'postboks', 'pb ']):
+                if any(line_lower.startswith(prefix) for prefix in ["c/o", "att:", "att ", "v/", "postboks", "pb "]):
                     continue
                 # This looks like a street address
                 street = line.strip()

@@ -173,7 +173,7 @@ class TestPercentileEstimation:
 
 class TestEstimatePercentile:
     """Tests for percentile estimation from ratio.
-    
+
     Note: _estimate_percentile is an internal method used by get_industry_benchmark.
     These tests verify the percentile thresholds are correctly ordered.
     The actual estimation logic is tested via integration tests.

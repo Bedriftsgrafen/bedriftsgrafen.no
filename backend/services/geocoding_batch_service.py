@@ -41,12 +41,7 @@ class GeocodingBatchService:
     async def get_companies_needing_geocoding(self, limit: int = DEFAULT_BATCH_SIZE) -> Sequence[Row[Any]]:
         """Fetch companies that need geocoding, selecting only necessary columns."""
         query = (
-            select(
-                Company.orgnr, 
-                Company.forretningsadresse, 
-                Company.postadresse, 
-                Company.geocoding_attempts
-            )
+            select(Company.orgnr, Company.forretningsadresse, Company.postadresse, Company.geocoding_attempts)
             .where(
                 and_(
                     Company.latitude.is_(None),
@@ -63,11 +58,15 @@ class GeocodingBatchService:
 
     async def count_companies_needing_geocoding(self) -> int:
         """Count companies that still need geocoding (excluding max-attempts)."""
-        query = select(func.count()).select_from(Company).where(
-            and_(
-                Company.latitude.is_(None),
-                Company.forretningsadresse.isnot(None),
-                Company.geocoding_attempts < self.MAX_GEOCODING_ATTEMPTS,
+        query = (
+            select(func.count())
+            .select_from(Company)
+            .where(
+                and_(
+                    Company.latitude.is_(None),
+                    Company.forretningsadresse.isnot(None),
+                    Company.geocoding_attempts < self.MAX_GEOCODING_ATTEMPTS,
+                )
             )
         )
         result = await self.db.execute(query)
@@ -75,16 +74,14 @@ class GeocodingBatchService:
 
     async def count_geocoded_companies(self) -> int:
         """Count companies that have been geocoded."""
-        query = select(func.count()).select_from(Company).where(
-            Company.latitude.isnot(None)
-        )
+        query = select(func.count()).select_from(Company).where(Company.latitude.isnot(None))
         result = await self.db.execute(query)
         return result.scalar() or 0
 
     async def geocode_company(self, company: Company) -> bool:
         """
         Geocode a single company using a savepoint for transaction isolation.
-        
+
         Each company update is wrapped in a savepoint (nested transaction),
         so failures don't abort the entire batch transaction.
 
@@ -94,10 +91,7 @@ class GeocodingBatchService:
         async with self.db.begin_nested():
             try:
                 # Build address string from company data
-                address = GeocodingService.build_address_string(
-                    company.forretningsadresse or {},
-                    company.postadresse
-                )
+                address = GeocodingService.build_address_string(company.forretningsadresse or {}, company.postadresse)
 
                 if not address:
                     logger.debug(f"No address for company {company.orgnr}")
@@ -168,17 +162,16 @@ class GeocodingBatchService:
         async with httpx.AsyncClient(timeout=10.0) as client:
             # Inject shared client into geocoder
             self.geocoder.client = client
-            
+
             async def geocode_task(company):
                 async with semaphore:
                     try:
                         address = GeocodingService.build_address_string(
-                            company.forretningsadresse or {},
-                            company.postadresse
+                            company.forretningsadresse or {}, company.postadresse
                         )
                         if not address:
                             return company.orgnr, None, "No address"
-                        
+
                         coords = await self.geocoder.geocode_address(address, orgnr=company.orgnr)
                         return company.orgnr, coords, address
                     except Exception as e:
@@ -204,7 +197,7 @@ class GeocodingBatchService:
                                 latitude=lat,
                                 longitude=lon,
                                 geocoding_attempts=Company.geocoding_attempts + 1,
-                                geocoded_at=func.now()
+                                geocoded_at=func.now(),
                             )
                         )
                         success_count += 1
@@ -220,7 +213,7 @@ class GeocodingBatchService:
                             logger.debug(f"Failed to geocode {orgnr}: {address_or_error}")
             except Exception as e:
                 logger.error(f"Error updating database for {orgnr}: {e}")
-                # Critical: If the transaction is fundamentally aborted (e.g. timeout), 
+                # Critical: If the transaction is fundamentally aborted (e.g. timeout),
                 # following commands will fail. We should rollback the whole batch.
                 if "InFailedSQLTransactionError" in str(e) or "QueryCanceledError" in str(e):
                     logger.error("Database transaction aborted (likely timeout). Rolling back entire batch.")
@@ -231,7 +224,7 @@ class GeocodingBatchService:
                         "failed": len(companies) - success_count,
                         "remaining": await self.count_companies_needing_geocoding(),
                         "duration_seconds": round((datetime.now() - start_time).total_seconds(), 1),
-                        "error": "Transaction aborted"
+                        "error": "Transaction aborted",
                     }
                 fail_count += 1
 
@@ -261,10 +254,11 @@ class GeocodingBatchService:
         logger.info(
             f"Geocoding batch complete: {success_count}/{len(companies)} success, "
             f"{remaining:,} remaining, {total_geocoded:,} total geocoded. "
-            f"Duration: {stats['duration_seconds']}s ({len(companies)/duration:.1f} comp/s)"
+            f"Duration: {stats['duration_seconds']}s ({len(companies) / duration:.1f} comp/s)"
         )
 
         return stats
+
     async def run_postal_code_backfill(self) -> dict:
         """
         Fast-fill coordinates based on postal codes from local CSV file.
@@ -276,13 +270,12 @@ class GeocodingBatchService:
         import csv
         import os
 
-
         # Find the CSV file
         possible_paths = [
             "/app/backend/data/postnummer.csv",
             "backend/data/postnummer.csv",
             "data/postnummer.csv",
-            "./postnummer.csv"
+            "./postnummer.csv",
         ]
 
         file_path = None
@@ -302,8 +295,8 @@ class GeocodingBatchService:
             # Load postal codes into a dictionary for fast lookup
             def load_postal_codes():
                 postal_map = {}
-                with open(file_path, encoding='utf-8') as f:
-                    reader = csv.reader(f, delimiter='\t')
+                with open(file_path, encoding="utf-8") as f:
+                    reader = csv.reader(f, delimiter="\t")
                     next(reader)  # Skip header
                     for row in reader:
                         if len(row) >= 11:
@@ -337,11 +330,13 @@ class GeocodingBatchService:
                 # Keyset pagination: Fetch next chunk of companies
                 stmt = (
                     select(Company.orgnr, Company.forretningsadresse)
-                    .where(and_(
-                        Company.latitude.is_(None),
-                        Company.forretningsadresse.isnot(None),
-                        Company.orgnr > last_orgnr
-                    ))
+                    .where(
+                        and_(
+                            Company.latitude.is_(None),
+                            Company.forretningsadresse.isnot(None),
+                            Company.orgnr > last_orgnr,
+                        )
+                    )
                     .order_by(Company.orgnr.asc())
                     .limit(fetch_size)
                 )
@@ -364,11 +359,7 @@ class GeocodingBatchService:
 
                     if postnr and postnr in postal_map:
                         lat, lon = postal_map[postnr]
-                        updates.append({
-                            "b_orgnr": orgnr,
-                            "lat": lat,
-                            "lon": lon
-                        })
+                        updates.append({"b_orgnr": orgnr, "lat": lat, "lon": lon})
 
                 # Update DB if we have enough updates
                 if len(updates) >= updates_batch_size:
@@ -376,11 +367,11 @@ class GeocodingBatchService:
                         update(Company.__table__)
                         .where(Company.orgnr == bindparam("b_orgnr"))
                         .values(latitude=bindparam("lat"), longitude=bindparam("lon")),
-                        updates
+                        updates,
                     )
                     updated_count += len(updates)
                     updates = []
-                    await self.db.commit() # Commit partial work
+                    await self.db.commit()  # Commit partial work
 
                 # Advance cursor
                 last_orgnr = rows[-1].orgnr
@@ -391,7 +382,7 @@ class GeocodingBatchService:
                     update(Company.__table__)
                     .where(Company.orgnr == bindparam("b_orgnr"))
                     .values(latitude=bindparam("lat"), longitude=bindparam("lon")),
-                    updates
+                    updates,
                 )
                 updated_count += len(updates)
 
@@ -404,7 +395,7 @@ class GeocodingBatchService:
             return {
                 "updated": updated_count,
                 "duration_seconds": round(duration, 1),
-                "postal_codes_loaded": len(postal_map)
+                "postal_codes_loaded": len(postal_map),
             }
 
         except Exception as e:

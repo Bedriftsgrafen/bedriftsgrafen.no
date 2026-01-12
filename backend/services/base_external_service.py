@@ -72,9 +72,9 @@ class BaseExternalService(ABC):
     def __init__(self, client: httpx.AsyncClient | None = None):
         """
         Initialize the service.
-        
+
         Args:
-            client: Optional shared httpx.AsyncClient. If not provided, 
+            client: Optional shared httpx.AsyncClient. If not provided,
                    a new client is created for each request.
         """
         self.client = client

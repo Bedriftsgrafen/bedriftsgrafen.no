@@ -61,10 +61,7 @@ class BrregApiService(BaseExternalService):
         return data if isinstance(data, list) else []
 
     async def _fetch_and_handle_404(
-        self,
-        url: str,
-        params: dict[str, Any] | None = None,
-        context: str = "request"
+        self, url: str, params: dict[str, Any] | None = None, context: str = "request"
     ) -> Any | None:
         """Helper to fetch data and return None on 404."""
         try:

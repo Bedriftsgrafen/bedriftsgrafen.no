@@ -5,21 +5,22 @@ Revises: b2c3d4e5f6a7
 Create Date: 2026-01-06 14:40:00.000000
 
 """
+
 from typing import Sequence, Union
 
 from alembic import op
 
 
 # revision identifiers, used by Alembic.
-revision: str = 'c3d4e5f6g7h8'
-down_revision: Union[str, Sequence[str], None] = 'b2c3d4e5f6a7'
+revision: str = "c3d4e5f6g7h8"
+down_revision: Union[str, Sequence[str], None] = "b2c3d4e5f6a7"
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
 
 
 def upgrade() -> None:
     """Restore industry_stats and industry_subclass_stats views.
-    
+
     These views were accidentally dropped by a CASCADE operation in a previous migration.
     This migration:
     1. Recreates 'industry_stats' with all required columns (including bankruptcies_last_year).
@@ -27,11 +28,11 @@ def upgrade() -> None:
     3. Restores all performance indexes.
     4. Improves null handling with COALESCE.
     """
-    
+
     # ---------------------------------------------------------
     # 1. Restore industry_stats (2-digit NACE)
     # ---------------------------------------------------------
-    
+
     # Clean up safely (No CASCADE unless necessary, but we are restoring)
     op.execute("DROP MATERIALIZED VIEW IF EXISTS industry_stats CASCADE;")
 
@@ -94,7 +95,7 @@ def upgrade() -> None:
     # ---------------------------------------------------------
     # 2. Restore industry_subclass_stats (5-digit NACE)
     # ---------------------------------------------------------
-    
+
     op.execute("DROP MATERIALIZED VIEW IF EXISTS industry_subclass_stats CASCADE;")
 
     op.execute("""
@@ -156,9 +157,15 @@ def upgrade() -> None:
     op.execute("CREATE INDEX idx_industry_stats_bankruptcies ON industry_stats (bankruptcies_last_year DESC);")
 
     # Indexes for industry_subclass_stats
-    op.execute("CREATE INDEX idx_industry_subclass_stats_company_count ON industry_subclass_stats (company_count DESC);")
-    op.execute("CREATE INDEX idx_industry_subclass_stats_total_revenue ON industry_subclass_stats (total_revenue DESC NULLS LAST);")
-    op.execute("CREATE INDEX idx_industry_subclass_stats_bankruptcies ON industry_subclass_stats (bankruptcies_last_year DESC);")
+    op.execute(
+        "CREATE INDEX idx_industry_subclass_stats_company_count ON industry_subclass_stats (company_count DESC);"
+    )
+    op.execute(
+        "CREATE INDEX idx_industry_subclass_stats_total_revenue ON industry_subclass_stats (total_revenue DESC NULLS LAST);"
+    )
+    op.execute(
+        "CREATE INDEX idx_industry_subclass_stats_bankruptcies ON industry_subclass_stats (bankruptcies_last_year DESC);"
+    )
 
 
 def downgrade() -> None:

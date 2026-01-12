@@ -4,13 +4,16 @@ from services.role_service import RoleService
 from sqlalchemy.ext.asyncio import AsyncSession
 from models import Role
 
+
 @pytest.fixture
 def mock_db():
     return AsyncMock(spec=AsyncSession)
 
+
 @pytest.fixture
 def role_service(mock_db):
     return RoleService(mock_db)
+
 
 @pytest.mark.asyncio
 async def test_get_roles_cached(role_service):
@@ -27,19 +30,17 @@ async def test_get_roles_cached(role_service):
     role_service.role_repo.is_cache_valid.assert_called_with("123")
     role_service.brreg_api.fetch_roles.assert_not_called()
 
+
 @pytest.mark.asyncio
 async def test_get_roles_fetch_api_success(role_service):
     # Arrange
     role_service.role_repo.is_cache_valid = AsyncMock(return_value=False)
     role_service.role_repo.delete_by_orgnr = AsyncMock()
     role_service.role_repo.create_batch = AsyncMock()
-    
-    api_data = [{
-        "type_kode": "DAGL",
-        "type_beskrivelse": "Daglig leder",
-        "person_navn": "Ola Nordmann",
-        "rekkefoelge": 1
-    }]
+
+    api_data = [
+        {"type_kode": "DAGL", "type_beskrivelse": "Daglig leder", "person_navn": "Ola Nordmann", "rekkefoelge": 1}
+    ]
     role_service.brreg_api.fetch_roles = AsyncMock(return_value=api_data)
 
     # Act
@@ -51,6 +52,7 @@ async def test_get_roles_fetch_api_success(role_service):
     role_service.brreg_api.fetch_roles.assert_called_with("123")
     role_service.role_repo.delete_by_orgnr.assert_called()
     role_service.role_repo.create_batch.assert_called()
+
 
 @pytest.mark.asyncio
 async def test_get_roles_api_failure_fallback(role_service):

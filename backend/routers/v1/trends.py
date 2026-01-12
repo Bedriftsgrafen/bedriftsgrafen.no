@@ -28,17 +28,11 @@ async def get_trends_timeline(
     date_col = models.Company.konkursdato if metric == "bankruptcies" else models.Company.stiftelsesdato
 
     # Use subquery approach to avoid GROUP BY issues
-    month_expr = func.to_char(date_col, 'YYYY-MM')
+    month_expr = func.to_char(date_col, "YYYY-MM")
 
     query = (
-        select(
-            month_expr.label('month'),
-            func.count().label('count')
-        )
-        .where(
-            date_col.isnot(None),
-            date_col >= text(f"CURRENT_DATE - interval '{months} months'")
-        )
+        select(month_expr.label("month"), func.count().label("count"))
+        .where(date_col.isnot(None), date_col >= text(f"CURRENT_DATE - interval '{months} months'"))
         .group_by(month_expr)
         .order_by(month_expr)
     )
@@ -47,4 +41,3 @@ async def get_trends_timeline(
     rows = result.all()
 
     return [{"month": row.month, "count": row.count} for row in rows]
-

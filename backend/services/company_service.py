@@ -82,10 +82,7 @@ class CompanyService:
             Count of companies matching filters
         """
         repo_filters = FilterParams(**filters.to_count_params())
-        return await self.company_repo.count_companies(
-            filters=repo_filters,
-            sort_by=filters.sort_by
-        )
+        return await self.company_repo.count_companies(filters=repo_filters, sort_by=filters.sort_by)
 
     async def get_company_with_accounting(self, orgnr: str) -> models.Company | None:
         return await self.company_repo.get_by_orgnr(orgnr)
@@ -125,7 +122,7 @@ class CompanyService:
                 "total_revenue": 0,
                 "total_profit": 0,
                 "total_employees": 0,
-                "by_organisasjonsform": {}
+                "by_organisasjonsform": {},
             }
 
         if result.get("total_count", 0) > 0 or result.get("by_organisasjonsform"):
@@ -324,7 +321,6 @@ class CompanyService:
             logger.warning(f"On-demand geocoding failed for {company.orgnr}: {e}")
 
     async def get_statistics(self) -> dict:
-
         # Check cache first (cache key "dashboard_stats")
         cached_stats = await search_cache.get("dashboard_stats")
         if cached_stats:

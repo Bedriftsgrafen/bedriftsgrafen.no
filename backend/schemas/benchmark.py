@@ -9,9 +9,7 @@ class BenchmarkMetric(BaseModel):
     company_value: float | None = Field(None, description="Company's value for this metric")
     industry_avg: float | None = Field(None, description="Industry average")
     industry_median: float | None = Field(None, description="Industry median (if available)")
-    percentile: int | None = Field(
-        None, ge=0, le=100, description="Company's percentile rank in industry (0-100)"
-    )
+    percentile: int | None = Field(None, ge=0, le=100, description="Company's percentile rank in industry (0-100)")
 
 
 class IndustryBenchmarkResponse(BaseModel):

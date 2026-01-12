@@ -5,14 +5,15 @@ Revises: f7a8b9c0d1e2
 Create Date: 2025-12-22 19:50:00.000000
 
 """
+
 from typing import Sequence, Union
 
 from alembic import op
 
 
 # revision identifiers, used by Alembic.
-revision: str = 'a1b2c3d4e5f6'
-down_revision: Union[str, Sequence[str], None] = 'f7a8b9c0d1e2'
+revision: str = "a1b2c3d4e5f6"
+down_revision: Union[str, Sequence[str], None] = "f7a8b9c0d1e2"
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
 
@@ -47,7 +48,7 @@ def upgrade() -> None:
         HAVING COUNT(*) >= 10
         ORDER BY company_count DESC;
     """)
-    
+
     # Create index for fast lookups by NACE division
     op.execute("""
         CREATE UNIQUE INDEX IF NOT EXISTS idx_industry_stats_nace 

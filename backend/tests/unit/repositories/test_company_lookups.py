@@ -4,13 +4,16 @@ from repositories.company.repository import CompanyRepository
 from sqlalchemy.ext.asyncio import AsyncSession
 import models
 
+
 @pytest.fixture
 def mock_db():
     return AsyncMock(spec=AsyncSession)
 
+
 @pytest.fixture
 def repo(mock_db):
     return CompanyRepository(mock_db)
+
 
 @pytest.mark.asyncio
 async def test_get_similar_companies_integration_flow(repo, mock_db):
@@ -24,7 +27,7 @@ async def test_get_similar_companies_integration_flow(repo, mock_db):
     mock_source.naeringskode = "62.010"
     mock_source.kommune = "OSLO"
     mock_source.postnummer = "0101"
-    
+
     # 2. Mock Priority 1 (Postnummer)
     # Returns 1 hit
     mock_res_p1 = MagicMock()
@@ -52,7 +55,7 @@ async def test_get_similar_companies_integration_flow(repo, mock_db):
     c2 = models.Company(orgnr="222222222", navn="C2")
     c3 = models.Company(orgnr="333333333", navn="C3")
     c4 = models.Company(orgnr="444444444", navn="C4")
-    
+
     mock_final_res.scalars.return_value.all.return_value = [c1, c2, c3, c4]
 
     # Setup side_effect for db.execute
@@ -63,18 +66,18 @@ async def test_get_similar_companies_integration_flow(repo, mock_db):
     # 4. Priority 3 (fetchall)
     # 5. Priority 4 (fetchall)
     # 6. Final select (scalars)
-    
+
     result_mock_1 = MagicMock()
     result_mock_1.fetchone.return_value = mock_source
-    
+
     # Chain the return values for subsequent calls
     mock_db.execute.side_effect = [
-        result_mock_1,           # Source
-        mock_res_p1,             # P1
-        mock_res_p2,             # P2
-        mock_res_p3,             # P3
-        mock_res_p4,             # P4
-        mock_final_res           # Final
+        result_mock_1,  # Source
+        mock_res_p1,  # P1
+        mock_res_p2,  # P2
+        mock_res_p3,  # P3
+        mock_res_p4,  # P4
+        mock_final_res,  # Final
     ]
 
     # Act
@@ -84,7 +87,7 @@ async def test_get_similar_companies_integration_flow(repo, mock_db):
     assert len(results) == 4
     assert results[0].orgnr == "111111111"
     assert results[3].orgnr == "444444444"
-    
+
     # Verification of calls count
     # We expect 6 calls to execute
     assert mock_db.execute.call_count == 6

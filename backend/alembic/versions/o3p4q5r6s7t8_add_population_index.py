@@ -6,6 +6,7 @@ Create Date: 2024-12-30
 
 Creates index on municipality_population(year, municipality_code) for fast population lookups.
 """
+
 from alembic import op
 
 # revision identifiers
@@ -28,4 +29,3 @@ def upgrade() -> None:
 def downgrade() -> None:
     """Drop the population index."""
     op.execute("DROP INDEX IF EXISTS idx_municipality_population_year_code;")
-

@@ -33,31 +33,37 @@ class Company(Base):
         ),
         # Full-text search index
         Index("ix_bedrifter_search_vector", "search_vector", postgresql_using="gin"),
-        
         # Performance Indexes restoration
         Index("ix_bedrifter_konkursdato", "konkursdato"),
         Index("ix_bedrifter_geocoding_attempts", "geocoding_attempts"),
-        
         # Functional / Partial Indexes
         Index(
             "idx_bedrifter_active_only",
             "orgnr",
-            postgresql_where=sa_text("(konkurs IS NOT TRUE) AND (under_avvikling IS NOT TRUE) AND (under_tvangsavvikling IS NOT TRUE)"),
+            postgresql_where=sa_text(
+                "(konkurs IS NOT TRUE) AND (under_avvikling IS NOT TRUE) AND (under_tvangsavvikling IS NOT TRUE)"
+            ),
         ),
         Index(
             "idx_bedrifter_active_navn",
             "navn",
-            postgresql_where=sa_text("(konkurs IS NOT TRUE) AND (under_avvikling IS NOT TRUE) AND (under_tvangsavvikling IS NOT TRUE)"),
+            postgresql_where=sa_text(
+                "(konkurs IS NOT TRUE) AND (under_avvikling IS NOT TRUE) AND (under_tvangsavvikling IS NOT TRUE)"
+            ),
         ),
         Index(
             "idx_bedrifter_active_naeringskode",
             "naeringskode",
-            postgresql_where=sa_text("(konkurs IS NOT TRUE) AND (under_avvikling IS NOT TRUE) AND (under_tvangsavvikling IS NOT TRUE)"),
+            postgresql_where=sa_text(
+                "(konkurs IS NOT TRUE) AND (under_avvikling IS NOT TRUE) AND (under_tvangsavvikling IS NOT TRUE)"
+            ),
         ),
         Index(
             "idx_bedrifter_active_ansatte",
             sa_text("antall_ansatte DESC NULLS LAST"),
-            postgresql_where=sa_text("(konkurs IS NOT TRUE) AND (under_avvikling IS NOT TRUE) AND (under_tvangsavvikling IS NOT TRUE)"),
+            postgresql_where=sa_text(
+                "(konkurs IS NOT TRUE) AND (under_avvikling IS NOT TRUE) AND (under_tvangsavvikling IS NOT TRUE)"
+            ),
         ),
         Index(
             "idx_bedrifter_forr_kommune",
@@ -71,41 +77,82 @@ class Company(Base):
             "idx_search_kommune_navn",
             sa_text("(forretningsadresse ->> 'kommune')"),
             "navn",
-            postgresql_where=sa_text("((konkurs IS NOT TRUE) AND (under_avvikling IS NOT TRUE) AND (under_tvangsavvikling IS NOT TRUE))"),
+            postgresql_where=sa_text(
+                "((konkurs IS NOT TRUE) AND (under_avvikling IS NOT TRUE) AND (under_tvangsavvikling IS NOT TRUE))"
+            ),
         ),
         # Ordering indexes
         Index("idx_bedrifter_antall_ansatte_desc", sa_text("antall_ansatte DESC NULLS LAST")),
         Index("idx_bedrifter_stiftelsesdato_desc", sa_text("stiftelsesdato DESC NULLS LAST")),
         Index("idx_bedrifter_orgnr_desc", sa_text("orgnr DESC NULLS LAST")),
         Index("idx_bedrifter_navn_desc", sa_text("navn DESC NULLS LAST")),
-        
         # Partial index for companies needing financial polling (NULL values not in regular B-tree index)
         Index(
-            "idx_bedrifter_needs_financial_polling",
-            "orgnr",
-            postgresql_where=sa_text("last_polled_regnskap IS NULL")
+            "idx_bedrifter_needs_financial_polling", "orgnr", postgresql_where=sa_text("last_polled_regnskap IS NULL")
         ),
-
         # --- RESTORED INDEXES to match Database definition ---
-        Index("idx_bedrifter_active_orgform", "organisasjonsform", postgresql_where=sa_text("((konkurs IS NOT TRUE) AND (under_avvikling IS NOT TRUE) AND (under_tvangsavvikling IS NOT TRUE))")),
+        Index(
+            "idx_bedrifter_active_orgform",
+            "organisasjonsform",
+            postgresql_where=sa_text(
+                "((konkurs IS NOT TRUE) AND (under_avvikling IS NOT TRUE) AND (under_tvangsavvikling IS NOT TRUE))"
+            ),
+        ),
         Index("idx_bedrifter_konkurs_partial", "konkurs", postgresql_where=sa_text("(konkurs = true)")),
-        Index("idx_bedrifter_konkursdato_partial", sa_text("konkursdato DESC NULLS LAST"), postgresql_where=sa_text("(konkursdato IS NOT NULL)")),
-        Index("idx_bedrifter_list_covering", "navn", postgresql_include=['orgnr', 'organisasjonsform', 'naeringskode', 'antall_ansatte', 'stiftelsesdato']),
+        Index(
+            "idx_bedrifter_konkursdato_partial",
+            sa_text("konkursdato DESC NULLS LAST"),
+            postgresql_where=sa_text("(konkursdato IS NOT NULL)"),
+        ),
+        Index(
+            "idx_bedrifter_list_covering",
+            "navn",
+            postgresql_include=["orgnr", "organisasjonsform", "naeringskode", "antall_ansatte", "stiftelsesdato"],
+        ),
         Index("idx_bedrifter_nace_active", "naeringskode", "konkurs", postgresql_where=sa_text("(konkurs = false)")),
         Index("idx_bedrifter_nace_ansatte", "naeringskode", sa_text("antall_ansatte DESC NULLS LAST")),
         Index("idx_bedrifter_nace_kommune", sa_text("(forretningsadresse ->> 'kommunenummer'::text)"), "naeringskode"),
         Index("idx_bedrifter_nace_stiftelse", "naeringskode", sa_text("stiftelsesdato DESC NULLS LAST")),
-        Index("idx_bedrifter_naeringskode_pattern", "naeringskode", postgresql_ops={'naeringskode': 'text_pattern_ops'}),
-        Index("idx_bedrifter_navn_pattern", "navn", postgresql_ops={'navn': 'text_pattern_ops'}),
+        Index(
+            "idx_bedrifter_naeringskode_pattern", "naeringskode", postgresql_ops={"naeringskode": "text_pattern_ops"}
+        ),
+        Index("idx_bedrifter_navn_pattern", "navn", postgresql_ops={"navn": "text_pattern_ops"}),
         Index("idx_bedrifter_orgform_ansatte", "organisasjonsform", sa_text("antall_ansatte DESC NULLS LAST")),
         Index("idx_bedrifter_orgform_nace", "organisasjonsform", "naeringskode"),
         Index("idx_bedrifter_orgform_navn_asc", "organisasjonsform", "navn"),
         Index("idx_bedrifter_orgform_navn_desc", "organisasjonsform", sa_text("navn DESC")),
         Index("idx_bedrifter_orgform_stiftelse", "organisasjonsform", sa_text("stiftelsesdato DESC NULLS LAST")),
-        Index("idx_companies_geocoding_queue", sa_text("antall_ansatte DESC NULLS LAST"), postgresql_where=sa_text("(latitude IS NULL)")),
-        Index("idx_list_orgform_ansatte", "organisasjonsform", sa_text("antall_ansatte DESC"), postgresql_where=sa_text("((konkurs IS NOT TRUE) AND (under_avvikling IS NOT TRUE) AND (under_tvangsavvikling IS NOT TRUE))")),
-        Index("idx_similar_kommune", sa_text("left(naeringskode, 3)"), sa_text("upper(forretningsadresse ->> 'kommune'::text)"), sa_text("antall_ansatte DESC NULLS LAST"), postgresql_where=sa_text("((konkurs = false) AND (under_avvikling = false) AND (under_tvangsavvikling = false))")),
-        Index("idx_similar_postnummer", "naeringskode", sa_text("(forretningsadresse ->> 'postnummer'::text)"), sa_text("antall_ansatte DESC NULLS LAST"), postgresql_where=sa_text("((konkurs = false) AND (under_avvikling = false) AND (under_tvangsavvikling = false))")),
+        Index(
+            "idx_companies_geocoding_queue",
+            sa_text("antall_ansatte DESC NULLS LAST"),
+            postgresql_where=sa_text("(latitude IS NULL)"),
+        ),
+        Index(
+            "idx_list_orgform_ansatte",
+            "organisasjonsform",
+            sa_text("antall_ansatte DESC"),
+            postgresql_where=sa_text(
+                "((konkurs IS NOT TRUE) AND (under_avvikling IS NOT TRUE) AND (under_tvangsavvikling IS NOT TRUE))"
+            ),
+        ),
+        Index(
+            "idx_similar_kommune",
+            sa_text("left(naeringskode, 3)"),
+            sa_text("upper(forretningsadresse ->> 'kommune'::text)"),
+            sa_text("antall_ansatte DESC NULLS LAST"),
+            postgresql_where=sa_text(
+                "((konkurs = false) AND (under_avvikling = false) AND (under_tvangsavvikling = false))"
+            ),
+        ),
+        Index(
+            "idx_similar_postnummer",
+            "naeringskode",
+            sa_text("(forretningsadresse ->> 'postnummer'::text)"),
+            sa_text("antall_ansatte DESC NULLS LAST"),
+            postgresql_where=sa_text(
+                "((konkurs = false) AND (under_avvikling = false) AND (under_tvangsavvikling = false))"
+            ),
+        ),
     )
 
     orgnr = Column(String, primary_key=True, index=True)
@@ -253,7 +300,7 @@ class Role(Base):
     # Person or entity holding the role
     person_navn = Column(String, nullable=True)
     foedselsdato = Column(Date, nullable=True)  # Only for persons
-    
+
     enhet_navn = Column(String, nullable=True)
     enhet_orgnr = Column(String, nullable=True)  # For companies holding roles (e.g. auditor)
 

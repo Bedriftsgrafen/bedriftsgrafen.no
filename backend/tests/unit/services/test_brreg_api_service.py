@@ -31,10 +31,7 @@ class TestFetchCompany:
         service = BrregApiService()
         mock_response = MagicMock()
         mock_response.status_code = 200
-        mock_response.json.return_value = {
-            "organisasjonsnummer": "123456789",
-            "navn": "Test AS"
-        }
+        mock_response.json.return_value = {"organisasjonsnummer": "123456789", "navn": "Test AS"}
         service._get = AsyncMock(return_value=mock_response)
 
         # Act
@@ -85,9 +82,7 @@ class TestFetchFinancialStatements:
         service = BrregApiService()
         mock_response = MagicMock()
         mock_response.status_code = 200
-        mock_response.json.return_value = [
-            {"regnskapsperiode": {"fraDato": "2023-01-01"}, "aarsresultat": 1000000}
-        ]
+        mock_response.json.return_value = [{"regnskapsperiode": {"fraDato": "2023-01-01"}, "aarsresultat": 1000000}]
         service._get = AsyncMock(return_value=mock_response)
 
         # Act
@@ -125,9 +120,7 @@ class TestFetchFinancialStatements:
 
         # Assert
         call_args = service._get.call_args
-        assert call_args.kwargs.get("params") is not None or (
-            len(call_args) > 1 and call_args[1] is not None
-        )
+        assert call_args.kwargs.get("params") is not None or (len(call_args) > 1 and call_args[1] is not None)
 
 
 class TestFetchAndHandle404:

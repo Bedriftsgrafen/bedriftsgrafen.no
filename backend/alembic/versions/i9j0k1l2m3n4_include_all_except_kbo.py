@@ -7,14 +7,15 @@ Create Date: 2025-12-24 14:20:00.000000
 Change: Remove konkurs/avvikling filters from main query.
 User wants to see ALL companies except KBO in new_last_year.
 """
+
 from typing import Sequence, Union
 
 from alembic import op
 
 
 # revision identifiers, used by Alembic.
-revision: str = 'i9j0k1l2m3n4'
-down_revision: Union[str, Sequence[str], None] = 'h8i9j0k1l2m3'
+revision: str = "i9j0k1l2m3n4"
+down_revision: Union[str, Sequence[str], None] = "h8i9j0k1l2m3"
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
 
@@ -22,7 +23,7 @@ depends_on: Union[str, Sequence[str], None] = None
 def upgrade() -> None:
     # Drop and recreate materialized view: include all companies except KBO
     op.execute("DROP MATERIALIZED VIEW IF EXISTS industry_stats CASCADE;")
-    
+
     # Updated view: removes konkurs/avvikling filters, only excludes KBO from new_last_year
     op.execute("""
         CREATE MATERIALIZED VIEW industry_stats AS
@@ -67,7 +68,7 @@ def upgrade() -> None:
         HAVING COUNT(*) >= 10
         ORDER BY company_count DESC;
     """)
-    
+
     # Recreate unique index for CONCURRENTLY refresh
     op.execute("""
         CREATE UNIQUE INDEX idx_industry_stats_nace 
@@ -78,7 +79,7 @@ def upgrade() -> None:
 def downgrade() -> None:
     # Revert to previous version with konkurs/avvikling filters
     op.execute("DROP MATERIALIZED VIEW IF EXISTS industry_stats CASCADE;")
-    
+
     op.execute("""
         CREATE MATERIALIZED VIEW industry_stats AS
         WITH bankruptcy_counts AS (
@@ -121,7 +122,7 @@ def downgrade() -> None:
         HAVING COUNT(*) >= 10
         ORDER BY company_count DESC;
     """)
-    
+
     op.execute("""
         CREATE UNIQUE INDEX idx_industry_stats_nace 
         ON industry_stats (nace_division);

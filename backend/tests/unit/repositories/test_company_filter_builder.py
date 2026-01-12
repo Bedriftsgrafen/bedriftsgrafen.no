@@ -2,6 +2,7 @@
 Unit tests for CompanyFilterBuilder.
 Tests the translation of FilterParams into SQLAlchemy clauses.
 """
+
 from datetime import date
 
 from sqlalchemy.sql.elements import BinaryExpression, BooleanClauseList
@@ -75,11 +76,11 @@ class TestCompanyFilterBuilder:
         assert len(builder.clauses) == 1
         expr = builder.clauses[0]
         # NOT IN is typically a UnaryExpression(BinaryExpression)
-        # or BinaryExpression with operator NOT IN. 
+        # or BinaryExpression with operator NOT IN.
         # SQLAlchemy 1.4/2.0 specific structure check:
         # It's usually NOT (col IN (...))
         assert "bedrifter.organisasjonsform NOT IN" in str(expr)
-        
+
     def test_apply_nace_filter_simple(self):
         filters = FilterParams(naeringskode="62.010")
         builder = CompanyFilterBuilder(filters)
@@ -109,13 +110,13 @@ class TestCompanyFilterBuilder:
         # Municipality OR structure
         muni_clause = builder.clauses[0]
         assert isinstance(muni_clause, BooleanClauseList)
-        assert len(muni_clause.clauses) == 2 # forretningsadresse OR postadresse
+        assert len(muni_clause.clauses) == 2  # forretningsadresse OR postadresse
 
         # County OR structure
         county_clause = builder.clauses[1]
         assert isinstance(county_clause, BooleanClauseList)
         # Should check left 2 chars
-        
+
     def test_apply_date_filters(self):
         d1 = date(2020, 1, 1)
         d2 = date(2023, 1, 1)
@@ -123,10 +124,10 @@ class TestCompanyFilterBuilder:
         builder = CompanyFilterBuilder(filters)
         builder.apply_date_filters()
         assert len(builder.clauses) == 2
-        
+
         assert builder.clauses[0].left == Company.stiftelsesdato
         assert builder.clauses[0].right.value == d1
-        
+
         assert builder.clauses[1].left == Company.konkursdato
         assert builder.clauses[1].right.value == d2
 
@@ -135,27 +136,27 @@ class TestCompanyFilterBuilder:
         filters = FilterParams(is_bankrupt=True)
         builder = CompanyFilterBuilder(filters)
         builder.apply_status_filters()
-        
+
         clause = builder.clauses[0]
         assert isinstance(clause, BooleanClauseList)
         # OR(konkurs=True, orgform='KBO')
         assert len(clause.clauses) == 2
-        
+
     def test_apply_status_filters_active(self):
         # Case 2: is_bankrupt=False
         filters = FilterParams(is_bankrupt=False)
         builder = CompanyFilterBuilder(filters)
         builder.apply_status_filters()
-        
+
         clause = builder.clauses[0]
         assert isinstance(clause, BooleanClauseList)
         # AND(konkurs!=True, orgform!='KBO')
-        
+
     def test_apply_has_accounting_filter(self):
         filters = FilterParams(has_accounting=True)
         builder = CompanyFilterBuilder(filters)
         builder.apply_has_accounting_filter()
-        
+
         assert len(builder.clauses) == 1
         # EXISTS(SELECT ...)
         assert "EXISTS" in str(builder.clauses[0])
@@ -164,27 +165,26 @@ class TestCompanyFilterBuilder:
         filters = FilterParams(min_revenue=1000000, max_liquidity_ratio=2.0)
         builder = CompanyFilterBuilder(filters)
         builder.apply_financial_filters()
-        
+
         assert builder.needs_financial_join is True
         assert len(builder.clauses) == 2
-        
+
         # Check specific columns used
         # Note: This verifies the Fix "Likviditetsgrad1" is working in the builder
         rev_clause = builder.clauses[0]
         assert rev_clause.left == LatestFinancials.salgsinntekter
-        
+
         liq_clause = builder.clauses[1]
-        assert liq_clause.left == LatestFinancials.likviditetsgrad1 # Critical check
+        assert liq_clause.left == LatestFinancials.likviditetsgrad1  # Critical check
 
     def test_apply_all(self):
         filters = FilterParams(name="Test", min_revenue=1000000)
         # syntax error in test above (1M), python needs 1000000. Correcting in implementation.
         filters = FilterParams(name="Test", min_revenue=1000000)
-        
+
         builder = CompanyFilterBuilder(filters)
         builder.apply_all(include_financial=True)
-        
+
         # Name (1) + Revenue (1) = 2 clauses
         assert len(builder.clauses) == 2
         assert builder.needs_financial_join is True
-

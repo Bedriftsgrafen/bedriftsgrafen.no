@@ -17,7 +17,7 @@ ADMIN_API_KEY = os.getenv("ADMIN_API_KEY")
 
 async def verify_admin_key(x_admin_key: str = Header(None, alias="X-Admin-Key")):
     """Verify admin API key from request header.
-    
+
     Set ADMIN_API_KEY environment variable to enable authentication.
     If not set, admin endpoints are publicly accessible (development mode).
     """
@@ -28,11 +28,7 @@ async def verify_admin_key(x_admin_key: str = Header(None, alias="X-Admin-Key"))
             raise HTTPException(status_code=403, detail="Invalid admin API key")
 
 
-router = APIRouter(
-    prefix="/admin/import",
-    tags=["admin", "import"],
-    dependencies=[Depends(verify_admin_key)]
-)
+router = APIRouter(prefix="/admin/import", tags=["admin", "import"], dependencies=[Depends(verify_admin_key)])
 
 
 class UpdateRequest(BaseModel):
@@ -89,8 +85,9 @@ async def populate_import_queue(
     if queue_request.from_file:
         # Security: Prevent directory traversal
         import os
+
         safe_path = os.path.basename(queue_request.from_file)
-        if safe_path != queue_request.from_file or '..' in queue_request.from_file:
+        if safe_path != queue_request.from_file or ".." in queue_request.from_file:
             raise HTTPException(status_code=400, detail="Invalid file path")
         result = await service.populate_from_file(queue_request.from_file)
     elif queue_request.orgnr_list:
@@ -194,7 +191,9 @@ async def get_geocoding_status(request: Request, db: AsyncSession = Depends(get_
     return {
         "total_geocoded": total_geocoded,
         "remaining": remaining,
-        "percent_complete": round(total_geocoded / (total_geocoded + remaining) * 100, 1) if (total_geocoded + remaining) > 0 else 0,
+        "percent_complete": round(total_geocoded / (total_geocoded + remaining) * 100, 1)
+        if (total_geocoded + remaining) > 0
+        else 0,
     }
 
 

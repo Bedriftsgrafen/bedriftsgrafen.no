@@ -42,15 +42,15 @@ async def lifespan(app):
     """Application lifespan manager for startup/shutdown events."""
     # Startup
     start_scheduler = os.getenv("START_SCHEDULER", "true").lower() == "true"
-    
+
     if start_scheduler:
         logger.info("Starting scheduler service...")
         await scheduler_service.start()
     else:
         logger.info("Scheduler service disabled (START_SCHEDULER=false)")
-        
+
     yield
-    
+
     # Shutdown
     if start_scheduler:
         logger.info("Shutting down scheduler service...")
@@ -138,5 +138,3 @@ async def read_root(request: Request):
 async def get_stats(request: Request, db: AsyncSession = Depends(get_db)):
     service = CompanyService(db)
     return await service.get_statistics()
-
-

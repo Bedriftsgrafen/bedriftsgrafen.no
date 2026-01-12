@@ -8,11 +8,12 @@ from sqlalchemy import select
 # Add parent directory to path to import database module
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
+
 def load_environment():
     """Load environment variables from .env file"""
     # scripts/ -> backend/ -> root/
     project_root = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-    env_path = os.path.join(project_root, '.env')
+    env_path = os.path.join(project_root, ".env")
 
     if os.path.exists(env_path):
         print(f"Loading .env from {env_path}")
@@ -24,6 +25,7 @@ def load_environment():
     if os.getenv("DATABASE_HOST") == "bedriftsgrafen-db":
         print("DATABASE_HOST is set to 'bedriftsgrafen-db'. Overriding to 'localhost' for local script execution.")
         os.environ["DATABASE_HOST"] = "localhost"
+
 
 async def recalculate_kpis():
     """
@@ -83,6 +85,7 @@ async def recalculate_kpis():
 
         await db.commit()
         print(f"✅ Successfully updated {updated_count} records with new KPIs.")
+
 
 if __name__ == "__main__":
     load_environment()

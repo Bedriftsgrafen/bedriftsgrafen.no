@@ -8,14 +8,15 @@ Changes:
 - Exclude KBO from new_last_year count
 - Add bankruptcies_last_year column (companies with konkursdato in last year)
 """
+
 from typing import Sequence, Union
 
 from alembic import op
 
 
 # revision identifiers, used by Alembic.
-revision: str = 'g7h8i9j0k1l2'
-down_revision: Union[str, Sequence[str], None] = 'f6c7d8e9a0b1'
+revision: str = "g7h8i9j0k1l2"
+down_revision: Union[str, Sequence[str], None] = "f6c7d8e9a0b1"
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
 
@@ -23,7 +24,7 @@ depends_on: Union[str, Sequence[str], None] = None
 def upgrade() -> None:
     # Drop and recreate materialized view with updated logic
     op.execute("DROP MATERIALIZED VIEW IF EXISTS industry_stats CASCADE;")
-    
+
     op.execute("""
         CREATE MATERIALIZED VIEW industry_stats AS
         SELECT
@@ -60,7 +61,7 @@ def upgrade() -> None:
         HAVING COUNT(*) >= 10
         ORDER BY company_count DESC;
     """)
-    
+
     # Recreate index
     op.execute("""
         CREATE UNIQUE INDEX idx_industry_stats_nace 
@@ -71,7 +72,7 @@ def upgrade() -> None:
 def downgrade() -> None:
     # Revert to previous version without bankruptcies_last_year
     op.execute("DROP MATERIALIZED VIEW IF EXISTS industry_stats CASCADE;")
-    
+
     op.execute("""
         CREATE MATERIALIZED VIEW industry_stats AS
         SELECT
@@ -99,7 +100,7 @@ def downgrade() -> None:
         HAVING COUNT(*) >= 10
         ORDER BY company_count DESC;
     """)
-    
+
     op.execute("""
         CREATE UNIQUE INDEX idx_industry_stats_nace 
         ON industry_stats (nace_division);

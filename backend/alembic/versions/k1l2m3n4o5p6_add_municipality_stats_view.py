@@ -7,14 +7,15 @@ Create Date: 2025-12-25 08:00:00.000000
 Adds a materialized view aggregating company counts by municipality (kommune) and NACE division.
 Used for the choropleth map at kommune level on /bransjer page.
 """
+
 from typing import Sequence, Union
 
 from alembic import op
 
 
 # revision identifiers, used by Alembic.
-revision: str = 'k1l2m3n4o5p6'
-down_revision: Union[str, Sequence[str], None] = 'j0k1l2m3n4o5'
+revision: str = "k1l2m3n4o5p6"
+down_revision: Union[str, Sequence[str], None] = "j0k1l2m3n4o5"
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
 
@@ -39,7 +40,7 @@ def upgrade() -> None:
         GROUP BY municipality_code, nace_division
         ORDER BY municipality_code, company_count DESC;
     """)
-    
+
     # Create indexes for fast lookups
     op.execute("""
         CREATE INDEX idx_municipality_stats_code 

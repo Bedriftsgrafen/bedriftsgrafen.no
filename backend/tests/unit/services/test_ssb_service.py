@@ -50,18 +50,10 @@ class TestParseJsonStat2:
 
         mock_data = {
             "dimension": {
-                "Region": {
-                    "category": {
-                        "index": {"K0301": 0, "K1103": 1}
-                    }
-                },
-                "Tid": {
-                    "category": {
-                        "index": {"2024": 0}
-                    }
-                }
+                "Region": {"category": {"index": {"K0301": 0, "K1103": 1}}},
+                "Tid": {"category": {"index": {"2024": 0}}},
             },
-            "value": [700000, 145000]
+            "value": [700000, 145000],
         }
 
         # Act
@@ -90,9 +82,9 @@ class TestParseJsonStat2:
                         }
                     }
                 },
-                "Tid": {"category": {"index": {"2024": 0}}}
+                "Tid": {"category": {"index": {"2024": 0}}},
             },
-            "value": [700000, 5000000, 300000]
+            "value": [700000, 5000000, 300000],
         }
 
         # Act
@@ -110,11 +102,8 @@ class TestParseJsonStat2:
         service = SsbService(mock_db)
 
         mock_data = {
-            "dimension": {
-                "Region": {"category": {"index": {"K0301": 0}}},
-                "Tid": {"category": {"index": {"2024": 0}}}
-            },
-            "value": []  # Empty
+            "dimension": {"Region": {"category": {"index": {"K0301": 0}}}, "Tid": {"category": {"index": {"2024": 0}}}},
+            "value": [],  # Empty
         }
 
         # Act
@@ -131,9 +120,9 @@ class TestParseJsonStat2:
         mock_data = {
             "dimension": {
                 "Region": {"category": {"index": {"K0301": 0}}},
-                "Tid": {"category": {"index": {}}}  # No year
+                "Tid": {"category": {"index": {}}},  # No year
             },
-            "value": [700000]
+            "value": [700000],
         }
 
         # Act
@@ -195,17 +184,12 @@ class TestFetchAndStorePopulation:
         mock_response = MagicMock()
         mock_response.raise_for_status = MagicMock()
         mock_response.json.return_value = {
-            "dimension": {
-                "Region": {"category": {"index": {"K0301": 0}}},
-                "Tid": {"category": {"index": {"2024": 0}}}
-            },
-            "value": [700000]
+            "dimension": {"Region": {"category": {"index": {"K0301": 0}}}, "Tid": {"category": {"index": {"2024": 0}}}},
+            "value": [700000],
         }
 
         with patch("httpx.AsyncClient") as mock_client:
-            mock_client.return_value.__aenter__.return_value.post = AsyncMock(
-                return_value=mock_response
-            )
+            mock_client.return_value.__aenter__.return_value.post = AsyncMock(return_value=mock_response)
 
             # Act
             result = await service.fetch_and_store_population()
@@ -222,6 +206,7 @@ class TestFetchAndStorePopulation:
         service = SsbService(mock_db)
 
         import httpx
+
         with patch("httpx.AsyncClient") as mock_client:
             mock_client.return_value.__aenter__.return_value.post = AsyncMock(
                 side_effect=httpx.TimeoutException("Timeout")
@@ -240,6 +225,7 @@ class TestFetchAndStorePopulation:
         service = SsbService(mock_db)
 
         import httpx
+
         mock_response = MagicMock()
         mock_response.status_code = 500
         mock_response.raise_for_status.side_effect = httpx.HTTPStatusError(
@@ -247,9 +233,7 @@ class TestFetchAndStorePopulation:
         )
 
         with patch("httpx.AsyncClient") as mock_client:
-            mock_client.return_value.__aenter__.return_value.post = AsyncMock(
-                return_value=mock_response
-            )
+            mock_client.return_value.__aenter__.return_value.post = AsyncMock(return_value=mock_response)
 
             # Act & Assert
             with pytest.raises(RuntimeError) as exc_info:

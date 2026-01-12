@@ -38,7 +38,6 @@ from utils.response_builders import build_response_metadata
 router = APIRouter(prefix="/v1/companies", tags=["companies-v1"])
 
 
-
 @router.get("", response_model=list[CompanyBase])
 @limiter.limit("5/second")
 async def get_companies(
@@ -96,9 +95,6 @@ async def get_company_stats(
 
     service = CompanyService(db)
     return await service.get_aggregate_stats(filters=filters)
-
-
-
 
 
 @router.get("/export")
@@ -261,7 +257,7 @@ async def get_company_markers(
         min_length=1,
         max_length=12,
         pattern=r"^[\d.]+$",
-        description="NACE code filter (required, e.g. '68' or '68.100')"
+        description="NACE code filter (required, e.g. '68' or '68.100')",
     ),
     bbox: str | None = Query(None, description="Bounding box: west,south,east,north"),
     county: str | None = Query(None, description="2-digit county code filter"),
@@ -332,11 +328,9 @@ async def get_company(request: Request, orgnr: str, db: AsyncSession = Depends(g
     if codes:
         # Fetch all NACE names concurrently
         import asyncio
+
         descriptions = await asyncio.gather(*[NaceService.get_nace_name(c) for c in codes])
-        response.naeringskoder = [
-            Naeringskode(kode=c, beskrivelse=desc)
-            for c, desc in zip(codes, descriptions)
-        ]
+        response.naeringskoder = [Naeringskode(kode=c, beskrivelse=desc) for c, desc in zip(codes, descriptions)]
     else:
         response.naeringskoder = []
 
@@ -477,4 +471,3 @@ async def get_company_roles(
     except Exception as e:
         logging.exception(f"Unexpected error fetching roles for {orgnr}: {e}")
         raise HTTPException(status_code=500, detail="Internal server error")
-

@@ -10,8 +10,7 @@
     "test": "vitest",
     "tc": "tsc --noEmit",
     "lint": "eslint . --ext ts,tsx --report-unused-disable-directives --max-warnings 0",
-    "validate": "run-p tc lint",
-    "prepare": "husky"
+    "validate": "run-p tc lint"
   },
   "dependencies": {
     "@tanstack/react-query": "^5.90.12",

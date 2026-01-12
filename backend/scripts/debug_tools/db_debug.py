@@ -1,4 +1,3 @@
-
 import asyncio
 
 from sqlalchemy import text
@@ -24,6 +23,7 @@ async def debug_db():
             print("Row count:", res.scalar())
         except Exception as e:
             print("Count failed:", e)
+
 
 if __name__ == "__main__":
     asyncio.run(debug_db())

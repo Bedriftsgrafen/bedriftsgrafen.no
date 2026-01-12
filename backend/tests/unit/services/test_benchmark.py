@@ -28,15 +28,15 @@ async def test_get_industry_benchmark_success():
         avg_revenue=1000000.0,
         median_revenue=800000.0,
         avg_profit=100000.0,
-        total_employees=1000, # avg_employees will be 10.0
-        avg_operating_margin=0.10
+        total_employees=1000,  # avg_employees will be 10.0
+        avg_operating_margin=0.10,
     )
 
     # Mock Company Data (Financials + Employees)
     mock_financials = MagicMock()
     mock_financials.salgsinntekter = 2000000.0  # Double average
-    mock_financials.aarsresultat = 50000.0      # Half average
-    mock_financials.driftsresultat = 200000.0   # 10% margin
+    mock_financials.aarsresultat = 50000.0  # Half average
+    mock_financials.driftsresultat = 200000.0  # 10% margin
 
     mock_employees = 20  # Double average
 
@@ -63,6 +63,7 @@ async def test_get_industry_benchmark_success():
     # Employees: 20 vs 10 avg -> Ratio 2.0 -> Percentile 95
     assert result["employees"]["company_value"] == 20
     assert result["employees"]["percentile"] == 95
+
 
 @pytest.mark.asyncio
 async def test_get_industry_benchmark_no_industry_data():
@@ -106,8 +107,8 @@ async def test_get_industry_benchmark_fallback():
         avg_revenue=1000.0,
         median_revenue=800.0,
         avg_profit=100.0,
-        total_employees=5000, # avg_employees=10.0
-        avg_operating_margin=0.1
+        total_employees=5000,  # avg_employees=10.0
+        avg_operating_margin=0.1,
     )
 
     # Subclass returns None
@@ -155,11 +156,11 @@ async def test_get_industry_benchmark_subclass_success():
     mock_subclass_stats = IndustrySubclassStats(
         nace_code="62.010",
         company_count=50,
-        avg_revenue=5000.0, # Higher avg for specific niche
+        avg_revenue=5000.0,  # Higher avg for specific niche
         median_revenue=4000.0,
         avg_profit=500.0,
-        total_employees=250, # avg_employees=5.0
-        avg_operating_margin=0.2
+        total_employees=250,  # avg_employees=5.0
+        avg_operating_margin=0.2,
     )
 
     service.stats_repo.get_industry_subclass_stats.return_value = mock_subclass_stats
@@ -184,4 +185,3 @@ async def test_get_industry_benchmark_subclass_success():
     service.stats_repo.get_industry_subclass_stats.assert_called_with("62.010")
     # Should NOT satisfy fallback
     service.stats_repo.get_industry_stats.assert_not_called()
-

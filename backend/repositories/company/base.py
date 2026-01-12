@@ -61,12 +61,12 @@ class CompanyWithFinancials:
     """Simple wrapper to hold company + financial data together."""
 
     def __init__(
-        self, 
-        company: models.Company, 
-        latest_revenue: float | None = None, 
+        self,
+        company: models.Company,
+        latest_revenue: float | None = None,
         latest_profit: float | None = None,
         latest_operating_profit: float | None = None,
-        latest_operating_margin: float | None = None
+        latest_operating_margin: float | None = None,
     ):
         # Copy company attributes needed for list view
         self.orgnr = company.orgnr
@@ -88,13 +88,13 @@ class CompanyWithFinancials:
         self.latest_revenue = latest_revenue
         self.latest_profit = latest_profit
         self.latest_operating_profit = latest_operating_profit
-        
+
         # Use provided margin or calculate as percentage
         if latest_operating_margin is not None:
             self.latest_operating_margin = latest_operating_margin
         else:
             self.latest_operating_margin = (
-                (latest_operating_profit / latest_revenue * 100) 
-                if latest_revenue and latest_revenue > 0 and latest_operating_profit is not None 
+                (latest_operating_profit / latest_revenue * 100)
+                if latest_revenue and latest_revenue > 0 and latest_operating_profit is not None
                 else None
             )

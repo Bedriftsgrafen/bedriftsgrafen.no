@@ -18,9 +18,7 @@ class MunicipalityPopulation(Base):
 
     __tablename__ = "municipality_population"
 
-    __table_args__ = (
-        Index("idx_municipality_population_year_code", "year", "municipality_code"),
-    )
+    __table_args__ = (Index("idx_municipality_population_year_code", "year", "municipality_code"),)
 
     municipality_code = Column(String, primary_key=True)
     year = Column(Integer, primary_key=True)

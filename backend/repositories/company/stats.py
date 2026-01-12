@@ -29,7 +29,7 @@ class StatsMixin:
         # Financial sort fields that require INNER JOIN
         financial_sort_fields = ("revenue", "profit", "operating_profit", "operating_margin")
         needs_financial_join = sort_by in financial_sort_fields
-        
+
         # Fast path: no filters at all and no financial sort
         if filters.is_empty() and not needs_financial_join:
             return await self.count()
@@ -49,10 +49,7 @@ class StatsMixin:
 
         if filters.has_financial_filters() or needs_financial_join:
             # INNER JOIN for financial sorting/filtering to match list query behavior
-            query = query.join(
-                models.LatestFinancials,
-                models.Company.orgnr == models.LatestFinancials.orgnr
-            )
+            query = query.join(models.LatestFinancials, models.Company.orgnr == models.LatestFinancials.orgnr)
             query, _ = self._apply_filters(query, filters=filters)
         else:
             query, _ = self._apply_filters_no_join(query, filters=filters)
@@ -185,8 +182,6 @@ class StatsMixin:
             count = result.scalar()
             return int(count) if count else 0
         except Exception:
-            result = await self.db.execute(
-                select(func.count(models.Company.orgnr)).filter(models.Company.konkurs)
-            )
+            result = await self.db.execute(select(func.count(models.Company.orgnr)).filter(models.Company.konkurs))
             count = result.scalar()
             return int(count) if count else 0

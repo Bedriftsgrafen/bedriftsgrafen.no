@@ -187,16 +187,11 @@ class UpdateService:
                     if result.latest_oppdateringsid is None:
                         result.latest_oppdateringsid = oppdateringsid
                     else:
-                        result.latest_oppdateringsid = max(
-                            result.latest_oppdateringsid, oppdateringsid
-                        )
+                        result.latest_oppdateringsid = max(result.latest_oppdateringsid, oppdateringsid)
 
         # Determine next URL using keyset pagination
         if last_seen_id:
-            next_url = (
-                f"{self.UPDATES_BASE_URL}"
-                f"?oppdateringsid={last_seen_id}&size={min(page_size, 10000)}"
-            )
+            next_url = f"{self.UPDATES_BASE_URL}?oppdateringsid={last_seen_id}&size={min(page_size, 10000)}"
             logger.info(f"Preparing next batch starting after ID {last_seen_id}...")
         else:
             next_url = data.get("_links", {}).get("next", {}).get("href")
@@ -208,9 +203,7 @@ class UpdateService:
 
         return next_url
 
-    async def _fetch_chunk_details(
-        self, entities: list[dict[str, Any]]
-    ) -> list[FetchResult]:
+    async def _fetch_chunk_details(self, entities: list[dict[str, Any]]) -> list[FetchResult]:
         """Concurrently fetch company details for a chunk of updates.
 
         This is Phase 1 - pure IO with no database access.
@@ -290,7 +283,7 @@ class UpdateService:
             result: Aggregate result tracker to update
         """
         records_since_commit = 0
-        
+
         for fetch_result in fetch_results:
             result.companies_processed += 1
 
@@ -300,9 +293,7 @@ class UpdateService:
                 else:
                     result.api_errors += 1
                     if fetch_result.error and "Invalid" not in fetch_result.error:
-                        result.errors.append(
-                            f"{fetch_result.orgnr}: {fetch_result.error}"
-                        )
+                        result.errors.append(f"{fetch_result.orgnr}: {fetch_result.error}")
                 continue
 
             try:
@@ -318,14 +309,12 @@ class UpdateService:
                     result.companies_created += 1
 
                     # Fetch and persist financials for new companies
-                    await self._fetch_and_persist_financials(
-                        fetch_result.orgnr, result
-                    )
+                    await self._fetch_and_persist_financials(fetch_result.orgnr, result)
                 else:
                     result.companies_updated += 1
 
                 records_since_commit += 1
-                
+
                 # Commit in chunks for efficiency (reduces transaction overhead)
                 if records_since_commit >= DB_COMMIT_CHUNK_SIZE:
                     await self.db.commit()
@@ -339,7 +328,7 @@ class UpdateService:
                 # Rollback the failed transaction
                 await self.db.rollback()
                 records_since_commit = 0  # Reset counter after rollback
-        
+
         # Final commit for remaining records
         if records_since_commit > 0:
             await self.db.commit()
@@ -361,9 +350,7 @@ class UpdateService:
                 try:
                     parsed = await self.brreg_api.parse_financial_data(statement)
                     if parsed.get("aar"):
-                        await self.accounting_repo.create_or_update(
-                            orgnr, parsed, statement
-                        )
+                        await self.accounting_repo.create_or_update(orgnr, parsed, statement)
                         result.financials_updated += 1
                 except ValidationError as e:
                     logger.warning(f"Validation error parsing financials for {orgnr}: {e}")
@@ -383,9 +370,7 @@ class UpdateService:
             logger.info("Refreshing materialized view 'latest_accountings'...")
             from sqlalchemy import text
 
-            await self.db.execute(
-                text("REFRESH MATERIALIZED VIEW CONCURRENTLY latest_accountings")
-            )
+            await self.db.execute(text("REFRESH MATERIALIZED VIEW CONCURRENTLY latest_accountings"))
             await self.db.commit()
             logger.info("Materialized view refreshed successfully.")
         except Exception as e:
