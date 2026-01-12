@@ -1,6 +1,3 @@
-#!/usr/bin/env sh
-. "$(dirname -- "$0")/_/husky.sh"
-
 echo "🚀 Starting thorough pre-push validation..."
 
 # Check if docker is available (needed for backend validation)

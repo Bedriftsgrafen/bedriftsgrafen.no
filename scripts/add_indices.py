@@ -2,10 +2,11 @@ import asyncio
 import os
 import sys
 
-from sqlalchemy import text
-
 # Add parent directory to path to import database module
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+
+from sqlalchemy import text
+from database import engine  # noqa: E402
 
 
 # Manually load .env from project root
@@ -28,22 +29,12 @@ def load_env():
 
 
 # Logic to setup environment
-if os.getenv("DATABASE_HOST"):
-    print(f"Environment variables already set. DATABASE_HOST={os.getenv('DATABASE_HOST')}")
-else:
+if not os.getenv("DATABASE_HOST"):
     load_env()
     # If still not set (e.g. running locally without env vars pre-set), default to localhost
     if not os.getenv("DATABASE_HOST") or os.getenv("DATABASE_HOST") == "bedriftsgrafen-db":
         print("Overriding DATABASE_HOST to localhost for local script execution")
         os.environ["DATABASE_HOST"] = "localhost"
-
-print(f"DB_HOST: {os.getenv('DATABASE_HOST')}")
-print(f"DB_PORT: {os.getenv('DATABASE_PORT')}")
-print(f"DB_USER: {os.getenv('DATABASE_USER')}")
-print(f"DB_NAME: {os.getenv('DATABASE_NAME')}")
-
-# Import engine AFTER loading env vars
-from database import engine
 
 
 async def add_indices():

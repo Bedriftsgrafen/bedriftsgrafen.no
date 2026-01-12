@@ -12,7 +12,7 @@
     "validate:backend": "docker exec bedriftsgrafen-backend-dev ruff check . && docker exec bedriftsgrafen-backend-dev mypy .",
     "validate": "npm run validate:frontend && npm run validate:backend",
     "test:frontend": "cd frontend && npm run test -- --run",
-    "test:backend": "cd backend && python -m pytest",
+    "test:backend": "docker exec bedriftsgrafen-backend-dev python3 -m pytest tests/unit -v",
     "test": "npm run test:frontend && npm run test:backend",
     "check": "npm run validate && npm run test"
   },

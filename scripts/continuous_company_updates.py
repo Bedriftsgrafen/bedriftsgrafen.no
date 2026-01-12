@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+#!/usr/bin/env python3
 """
 Continuous Background Service for Company & Subunit Updates
 
@@ -25,6 +26,7 @@ To run as systemd service:
 
 import asyncio
 import logging
+import os
 import signal
 import sys
 from datetime import date, datetime, timedelta
@@ -33,9 +35,9 @@ from typing import Any
 # Add parent directory to path for imports
 sys.path.insert(0, "/app")
 
-from database import AsyncSessionLocal
-from repositories.system_repository import SystemRepository
-from services.update_service import UpdateService
+from database import AsyncSessionLocal  # noqa: E402
+from repositories.system_repository import SystemRepository  # noqa: E402
+from services.update_service import UpdateService  # noqa: E402
 
 # Configuration
 RETRY_DELAY = 60  # 1 minute before retrying on error
@@ -48,7 +50,6 @@ STATE_KEY_COMPANY_UPDATE = "company_update_latest_id"
 STATE_KEY_LAST_FULL_SYNC = "company_update_last_sync_date"
 
 # Logging setup
-import os
 
 log_handlers = [logging.StreamHandler(sys.stdout)]
 try:

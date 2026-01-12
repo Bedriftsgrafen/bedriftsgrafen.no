@@ -35,14 +35,15 @@ from datetime import datetime, timedelta
 
 import httpx
 from sqlalchemy import select, text, update
+from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import load_only
 
 # Add parent directory to path for imports
 sys.path.insert(0, "/app")
 
-from database import AsyncSessionLocal, engine
-from models import Accounting, Company
+from database import AsyncSessionLocal, engine  # noqa: E402
+from models import Accounting, Company  # noqa: E402
 
 # Configuration
 RATE_LIMIT_DELAY = 0.05  # Reduced delay (we rely on concurrency limit now)
