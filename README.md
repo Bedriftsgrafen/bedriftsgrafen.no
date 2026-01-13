@@ -45,7 +45,7 @@ The system is designed as a microservices-style architecture containerized with 
 graph TD
     Client["Frontend (React)"] <-->|REST API| API["Backend (FastAPI)"]
     API <-->|"Async Queries"| DB[("PostgreSQL")]
-    API -->|"Background Tasks"| Sync["Data Sync Scripts"]
+    API -->|"Background Tasks"| Sync["Scheduler Service"]
     Sync <-->|"Fetch Updates"| External["Brønnøysund API"]
     Sync -->|"Upsert Data"| DB
 ```

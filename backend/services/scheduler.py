@@ -335,12 +335,12 @@ class SchedulerService:
         logger.info("Starting database maintenance (VACUUM ANALYZE)...")
         try:
             async with AsyncSessionLocal() as db:
-                # We need to run these outside of a transaction block
-                await db.execute(text("VACUUM bedrifter;"))
-                await db.execute(text("VACUUM regnskap;"))
-                await db.execute(text("ANALYZE bedrifter;"))
-                await db.execute(text("ANALYZE regnskap;"))
-                logger.info("Database maintenance completed successfully.")
+                # Expanded table list for comprehensive maintenance
+                tables = ["bedrifter", "underenheter", "roller", "regnskap", "municipality_population", "system_state"]
+                for table in tables:
+                    await db.execute(text(f"VACUUM {table};"))
+                    await db.execute(text(f"ANALYZE {table};"))
+                logger.info(f"Database maintenance completed successfully for {len(tables)} tables.")
         except Exception as e:
             logger.error(f"Database maintenance failed: {e}")
 
