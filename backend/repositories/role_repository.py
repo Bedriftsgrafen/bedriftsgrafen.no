@@ -22,15 +22,7 @@ class RoleRepository:
         self.db = db
 
     async def get_by_orgnr(self, orgnr: str) -> list[models.Role]:
-        """
-        Get all roles for a company.
-
-        Args:
-            orgnr: Company organization number
-
-        Returns:
-            List of Role models
-        """
+        """Fetch all roles for a company, sorted by sequence and type."""
         try:
             stmt = (
                 select(models.Role)
@@ -38,9 +30,11 @@ class RoleRepository:
                 .order_by(models.Role.rekkefoelge.asc().nullslast(), models.Role.type_beskrivelse)
             )
             result = await self.db.execute(stmt)
-            return list(result.scalars().all())
+            roles = list(result.scalars().all())
+            logger.debug(f"Fetched {len(roles)} roles for {orgnr}")
+            return roles
         except Exception as e:
-            logger.error(f"Error fetching roles for {orgnr}: {e}")
+            logger.error(f"Failed to fetch roles for {orgnr}: {e}")
             return []
 
     async def get_cache_timestamp(self, orgnr: str) -> datetime | None:
@@ -81,13 +75,14 @@ class RoleRepository:
         cache_expiry = last_updated + timedelta(days=ROLE_CACHE_DAYS)
         return now < cache_expiry
 
-    async def create_batch(self, roles: list[models.Role]) -> int:
+    async def create_batch(self, roles: list[models.Role], commit: bool = True) -> int:
         """
         Batch create roles (more efficient than one-by-one).
         Uses add_all for bulk insert.
 
         Args:
             roles: List of Role models to create
+            commit: Whether to commit the transaction (default True)
 
         Returns:
             Number of roles successfully saved
@@ -96,24 +91,27 @@ class RoleRepository:
             return 0
 
         try:
-            # Bulk insert - single DB roundtrip
+            # Bulk insert using add_all for efficiency
             self.db.add_all(roles)
-            await self.db.commit()
-            logger.info(f"Saved {len(roles)} roles to database")
+            if commit:
+                await self.db.commit()
+            logger.info(f"Successfully saved {len(roles)} roles (commit={commit})")
             return len(roles)
 
         except Exception as e:
-            logger.error(f"Error saving roles batch: {e}")
-            await self.db.rollback()
+            logger.error(f"Failed to save role batch: {e}")
+            if commit:
+                await self.db.rollback()
             return 0
 
-    async def delete_by_orgnr(self, orgnr: str) -> int:
+    async def delete_by_orgnr(self, orgnr: str, commit: bool = True) -> int:
         """
         Delete all roles for a company.
         Used before re-syncing data.
 
         Args:
             orgnr: Company organization number
+            commit: Whether to commit the transaction (default True)
 
         Returns:
             Number of roles deleted
@@ -121,7 +119,8 @@ class RoleRepository:
         try:
             stmt = delete(models.Role).where(models.Role.orgnr == orgnr)
             result = await self.db.execute(stmt)
-            await self.db.commit()
+            if commit:
+                await self.db.commit()
             deleted: int = result.rowcount  # type: ignore[attr-defined]
             logger.info(f"Deleted {deleted} roles for {orgnr}")
             return deleted

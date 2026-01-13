@@ -23,7 +23,10 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from repositories.accounting_repository import AccountingRepository
 from repositories.company import CompanyRepository
+from repositories.role_repository import RoleRepository
+from repositories.subunit_repository import SubUnitRepository
 from repositories.system_repository import SystemRepository
+import models
 from schemas.brreg import FetchResult, UpdateBatchResult
 from services.brreg_api_service import BrregApiService
 
@@ -49,11 +52,15 @@ class UpdateService:
     """
 
     UPDATES_BASE_URL = "https://data.brreg.no/enhetsregisteret/api/oppdateringer/enheter"
+    SUBUNIT_UPDATES_BASE_URL = "https://data.brreg.no/enhetsregisteret/api/oppdateringer/underenheter"
+    ROLE_UPDATES_BASE_URL = "https://data.brreg.no/enhetsregisteret/api/oppdateringer/roller"
 
     def __init__(self, db: AsyncSession):
         self.db = db
         self.brreg_api = BrregApiService()
         self.company_repo = CompanyRepository(db)
+        self.subunit_repo = SubUnitRepository(db)
+        self.role_repo = RoleRepository(db)
         self.accounting_repo = AccountingRepository(db)
         self.system_repo = SystemRepository(db)
 
@@ -364,7 +371,7 @@ class UpdateService:
             logger.warning(f"Error fetching financials for {orgnr}: {e}")
             result.errors.append(f"Financials error {orgnr}: {e!s}")
 
-    async def _refresh_materialized_view(self, result: UpdateBatchResult) -> None:
+    async def _refresh_materialized_view(self, result: Any) -> None:
         """Refresh the latest_accountings materialized view."""
         try:
             logger.info("Refreshing materialized view 'latest_accountings'...")
@@ -375,5 +382,191 @@ class UpdateService:
             logger.info("Materialized view refreshed successfully.")
         except Exception as e:
             logger.error(f"Failed to refresh materialized view: {e}")
-            result.errors.append(f"Failed to refresh materialized view: {e}")
+            if hasattr(result, "errors"):
+                result.errors.append(f"Failed to refresh materialized view: {e}")
             await self.db.rollback()
+
+    async def fetch_subunit_updates(
+        self,
+        since_date: date | None = None,
+        page_size: int = 1000,
+        start_id: int | None = None,
+    ) -> dict[str, Any]:
+        """Fetch and process ALL subunit updates since the given date or ID."""
+        if since_date is None:
+            since_date = date.today() - timedelta(days=1)
+
+        since_datetime = datetime.combine(since_date, datetime.min.time())
+        since_iso = since_datetime.strftime("%Y-%m-%dT%H:%M:%S.000Z")
+
+        result = UpdateBatchResult(since_date=since_date, since_iso=since_iso)
+        logger.info(f"Starting subunit updates metadata sync. Date: {since_iso}, ID: {start_id}")
+
+        next_url: str | None = (
+            f"{self.SUBUNIT_UPDATES_BASE_URL}?oppdateringsid={start_id}&size={min(page_size, 10000)}"
+            if start_id is not None
+            else f"{self.SUBUNIT_UPDATES_BASE_URL}?dato={since_iso}&size={min(page_size, 10000)}"
+        )
+
+        async with httpx.AsyncClient(timeout=self.brreg_api.timeout) as http_client:
+            while next_url:
+                try:
+                    response = await http_client.get(next_url)
+                    if response.status_code != 200:
+                        logger.error(f"API error {response.status_code} for subunits: {next_url}")
+                        break
+
+                    data = response.json()
+                    entities = data.get("_embedded", {}).get("oppdaterteUnderenheter", [])
+                    if not entities:
+                        break
+
+                    # Process updates in bulk
+                    all_subunits = []
+
+                    for entity in entities:
+                        orgnr = entity.get("organisasjonsnummer")
+                        if not orgnr:
+                            continue
+
+                        # Fetch subunit details
+                        try:
+                            subunit_data = await self.brreg_api.fetch_subunit(orgnr)
+                            if subunit_data:
+                                all_subunits.append(
+                                    models.SubUnit(
+                                        orgnr=orgnr,
+                                        navn=subunit_data.get("navn"),
+                                        parent_orgnr=subunit_data.get("overordnetEnhet"),
+                                        organisasjonsform=subunit_data.get("organisasjonsform", {}).get("kode"),
+                                        naeringskode=subunit_data.get("naeringskode1", {}).get("kode"),
+                                        antall_ansatte=subunit_data.get("antallAnsatte", 0),
+                                        beliggenhetsadresse=subunit_data.get("beliggenhetsadresse"),
+                                        postadresse=subunit_data.get("postadresse"),
+                                    )
+                                )
+                                result.companies_updated += 1
+                        except Exception as ex:
+                            logger.warning(f"Failed to fetch subunit details for {orgnr}: {ex}", extra={"orgnr": orgnr})
+                            continue
+
+                        # Update state ID
+                        oppdateringsid = entity.get("oppdateringsid")
+                        if oppdateringsid:
+                            if result.latest_oppdateringsid is None:
+                                result.latest_oppdateringsid = oppdateringsid
+                            else:
+                                result.latest_oppdateringsid = max(result.latest_oppdateringsid, oppdateringsid)
+
+                    # Bulk persistence for the page
+                    if all_subunits:
+                        await self.subunit_repo.create_batch(all_subunits, commit=True)
+
+                    result.companies_processed += len(entities)
+                    logger.info(f"Processed page of {len(entities)} subunit updates", extra={"batch_size": len(entities)})
+                    next_url = data.get("_links", {}).get("next", {}).get("href")
+
+                except Exception as e:
+                    logger.exception(f"Error in subunit updates: {e}")
+                    break
+
+        return result.model_dump()
+
+    async def fetch_role_updates(
+        self,
+        since_date: date | None = None,
+        after_id: int | None = None,
+        page_size: int = 100,
+    ) -> dict[str, Any]:
+        """Fetch and process ALL role updates using CloudEvents batches."""
+        if since_date is None:
+            since_date = date.today() - timedelta(days=1)
+
+        since_iso = since_date.strftime("%Y-%m-%dT%H:%M:%S.000Z")
+        result = UpdateBatchResult(since_date=since_date, since_iso=since_iso)
+
+        logger.info(f"Starting role updates sync. Date: {since_iso}, afterId: {after_id}")
+
+        params = {"size": min(page_size, 1000)}
+        if after_id:
+            params["afterId"] = after_id
+        else:
+            params["afterTime"] = since_iso
+
+        async with httpx.AsyncClient(timeout=self.brreg_api.timeout) as http_client:
+            while True:
+                try:
+                    response = await http_client.get(self.ROLE_UPDATES_BASE_URL, params=params)
+                    if response.status_code != 200:
+                        logger.error(f"API error {response.status_code} for roles: {response.text}")
+                        break
+
+                    events = response.json()
+                    if not events or not isinstance(events, list):
+                        break
+
+                    logger.info(f"Processing batch of {len(events)} role updates...")
+
+                    # Extract unique orgnrs from the event batch
+                    orgnrs_to_sync = set()
+                    last_seen_id = after_id
+                    for event in events:
+                        orgnr = event.get("data", {}).get("organisasjonsnummer")
+                        if orgnr:
+                            orgnrs_to_sync.add(orgnr)
+                        try:
+                            last_seen_id = int(event.get("id"))
+                        except (ValueError, TypeError):
+                            pass
+
+                    # Re-sync roles for each affected company
+                    all_new_roles = []
+                    for orgnr in orgnrs_to_sync:
+                        try:
+                            roles_data = await self.brreg_api.fetch_roles(orgnr)
+                            for r in roles_data:
+                                all_new_roles.append(
+                                    models.Role(
+                                        orgnr=orgnr,
+                                        type_kode=r.get("type_kode"),
+                                        type_beskrivelse=r.get("type_beskrivelse"),
+                                        person_navn=r.get("person_navn"),
+                                        foedselsdato=r.get("foedselsdato"),
+                                        enhet_navn=r.get("enhet_navn"),
+                                        enhet_orgnr=r.get("enhet_orgnr"),
+                                        fratraadt=r.get("fratraadt", False),
+                                        rekkefoelge=r.get("rekkefoelge"),
+                                    )
+                                )
+                            result.companies_updated += 1
+                        except Exception as ex:
+                            logger.warning(f"Failed to fetch roles for {orgnr}: {ex}")
+
+                    # Bulk DB update
+                    if orgnrs_to_sync:
+                        # 1. Delete all old roles for all orgnrs in the batch
+                        from sqlalchemy import delete
+
+                        await self.db.execute(delete(models.Role).where(models.Role.orgnr.in_(orgnrs_to_sync)))
+                        # 2. Bulk insert new roles
+                        if all_new_roles:
+                            await self.role_repo.create_batch(all_new_roles, commit=True)
+                        else:
+                            await self.db.commit()
+
+                    result.companies_processed += len(events)
+                    result.latest_oppdateringsid = last_seen_id
+
+                    # If we got a full batch, continue to next batch
+                    if len(events) >= params["size"]:
+                        params["afterId"] = last_seen_id
+                        if "afterTime" in params:
+                            del params["afterTime"]
+                    else:
+                        break
+
+                except Exception as e:
+                    logger.exception(f"Error in role updates batch: {e}")
+                    break
+
+        return result.model_dump()

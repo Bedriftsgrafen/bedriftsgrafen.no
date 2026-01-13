@@ -54,7 +54,7 @@ class RoleService:
                 return []
 
             # Delete old roles and insert new ones
-            await self.role_repo.delete_by_orgnr(orgnr)
+            await self.role_repo.delete_by_orgnr(orgnr, commit=False)
 
             # Parse API response into Role models
             new_roles = []
@@ -83,7 +83,7 @@ class RoleService:
                     continue
 
             # Save to database
-            await self.role_repo.create_batch(new_roles)
+            await self.role_repo.create_batch(new_roles, commit=True)
 
             return new_roles
 

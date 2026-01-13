@@ -39,6 +39,13 @@ class BrregApiService(BaseExternalService):
         url = f"{self.ENHETSREGISTERET_BASE_URL}/enheter/{orgnr}"
         return await self._fetch_and_handle_404(url, context=f"company {orgnr}")
 
+    async def fetch_subunit(self, orgnr: str) -> dict[str, Any] | None:
+        """
+        Fetch subunit (underenhet) details from Enhetsregisteret.
+        """
+        url = f"{self.ENHETSREGISTERET_BASE_URL}/underenheter/{orgnr}"
+        return await self._fetch_and_handle_404(url, context=f"subunit {orgnr}")
+
     async def fetch_financial_statements(self, orgnr: str, year: int | None = None) -> list[dict[str, Any]]:
         """
         Fetch financial statements from Regnskapsregisteret.
@@ -66,8 +73,8 @@ class BrregApiService(BaseExternalService):
         """Helper to fetch data and return None on 404."""
         try:
             response = await self._get(url, params=params, context=context)
-            if response.status_code == 404:
-                logger.info(f"{context} not found")
+            if response.status_code in (404, 410):
+                logger.info(f"{context} not found (status {response.status_code})")
                 return None
             return response.json()
         except ExternalApiException:

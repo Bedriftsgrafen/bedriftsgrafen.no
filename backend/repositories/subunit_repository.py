@@ -21,23 +21,17 @@ class SubUnitRepository:
         self.db = db
 
     async def get_by_parent_orgnr(self, parent_orgnr: str) -> list[models.SubUnit]:
-        """
-        Get all subunits for a parent company.
-
-        Args:
-            parent_orgnr: Parent company organization number
-
-        Returns:
-            List of SubUnit models
-        """
+        """Fetch all subunits for a parent company, sorted by name."""
         try:
             stmt = (
                 select(models.SubUnit).where(models.SubUnit.parent_orgnr == parent_orgnr).order_by(models.SubUnit.navn)
             )
             result = await self.db.execute(stmt)
-            return list(result.scalars().all())
+            subunits = list(result.scalars().all())
+            logger.debug(f"Fetched {len(subunits)} subunits for parent {parent_orgnr}")
+            return subunits
         except Exception as e:
-            logger.error(f"Error fetching subunits for {parent_orgnr}: {e}")
+            logger.error(f"Failed to fetch subunits for {parent_orgnr}: {e}")
             return []
 
     async def get_by_orgnr(self, orgnr: str) -> models.SubUnit | None:
@@ -91,13 +85,14 @@ class SubUnitRepository:
             logger.error(f"Error searching subunits for '{query}': {e}")
             return []
 
-    async def create_batch(self, subunits: list[models.SubUnit]) -> int:
+    async def create_batch(self, subunits: list[models.SubUnit], commit: bool = True) -> int:
         """
         Batch create subunits (more efficient than one-by-one).
         Uses merge to handle duplicates gracefully.
 
         Args:
             subunits: List of SubUnit models to create/update
+            commit: Whether to commit the transaction (default True)
 
         Returns:
             Number of subunits successfully saved
@@ -110,7 +105,8 @@ class SubUnitRepository:
             for subunit in subunits:
                 await self.db.merge(subunit)
 
-            await self.db.commit()
+            if commit:
+                await self.db.commit()
             logger.info(f"Saved {len(subunits)} subunits to database")
             return len(subunits)
 
@@ -119,13 +115,14 @@ class SubUnitRepository:
             await self.db.rollback()
             return 0
 
-    async def delete_by_parent_orgnr(self, parent_orgnr: str) -> int:
+    async def delete_by_parent_orgnr(self, parent_orgnr: str, commit: bool = True) -> int:
         """
         Delete all subunits for a parent company.
         Useful for re-syncing data.
 
         Args:
             parent_orgnr: Parent company organization number
+            commit: Whether to commit the transaction (default True)
 
         Returns:
             Number of subunits deleted
@@ -133,29 +130,23 @@ class SubUnitRepository:
         try:
             stmt = delete(models.SubUnit).where(models.SubUnit.parent_orgnr == parent_orgnr)
             result = await self.db.execute(stmt)
-            await self.db.commit()
+            if commit:
+                await self.db.commit()
             deleted: int = result.rowcount  # type: ignore[attr-defined]
             logger.info(f"Deleted {deleted} subunits for {parent_orgnr}")
             return deleted
         except Exception as e:
-            logger.error(f"Error deleting subunits for {parent_orgnr}: {e}")
-            await self.db.rollback()
+            logger.error(f"Failed to delete subunits for {parent_orgnr}: {e}")
+            if commit:
+                await self.db.rollback()
             return 0
 
     async def count_by_parent(self, parent_orgnr: str) -> int:
-        """
-        Count subunits for a parent company.
-
-        Args:
-            parent_orgnr: Parent company organization number
-
-        Returns:
-            Count of subunits
-        """
+        """Efficiently count subunits for a parent company."""
         try:
-            stmt = select(models.SubUnit).where(models.SubUnit.parent_orgnr == parent_orgnr)
+            stmt = select(func.count(models.SubUnit.orgnr)).where(models.SubUnit.parent_orgnr == parent_orgnr)
             result = await self.db.execute(stmt)
-            return len(result.scalars().all())
+            return result.scalar_one() or 0
         except Exception as e:
-            logger.error(f"Error counting subunits for {parent_orgnr}: {e}")
+            logger.error(f"Failed to count subunits for {parent_orgnr}: {e}")
             return 0
