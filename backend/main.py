@@ -30,11 +30,9 @@ from routers import sitemap  # noqa: E402
 from routers.v1 import companies as v1_companies  # noqa: E402
 from routers.v1 import stats as v1_stats  # noqa: E402
 from routers.v1 import trends as v1_trends  # noqa: E402
+from routers.v1 import people as v1_people  # noqa: E402
 from services.company_service import CompanyService  # noqa: E402
 from services.scheduler import SchedulerService  # noqa: E402
-
-# Initialize scheduler service
-scheduler_service = SchedulerService()
 
 
 @asynccontextmanager
@@ -42,9 +40,12 @@ async def lifespan(app):
     """Application lifespan manager for startup/shutdown events."""
     # Startup
     start_scheduler = os.getenv("START_SCHEDULER", "true").lower() == "true"
+    scheduler_service = None
 
     if start_scheduler:
         logger.info("Starting scheduler service...")
+        # Lazy initialization to avoid registering jobs (and logging) if disabled
+        scheduler_service = SchedulerService()
         await scheduler_service.start()
     else:
         logger.info("Scheduler service disabled (START_SCHEDULER=false)")
@@ -52,7 +53,7 @@ async def lifespan(app):
     yield
 
     # Shutdown
-    if start_scheduler:
+    if scheduler_service:
         logger.info("Shutting down scheduler service...")
         await scheduler_service.shutdown()
 
@@ -114,6 +115,7 @@ app.include_router(health.router)
 app.include_router(v1_companies.router)
 app.include_router(v1_stats.router)
 app.include_router(v1_trends.router)
+app.include_router(v1_people.router)
 # Admin and utility routes
 app.include_router(admin_import.router)
 app.include_router(sitemap.router)

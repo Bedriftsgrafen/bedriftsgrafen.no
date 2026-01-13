@@ -49,7 +49,7 @@ async def test_create_batch(repo, mock_db_session):
     count = await repo.create_batch(units)
 
     assert count == 2
-    assert mock_db_session.merge.call_count == 2
+    assert mock_db_session.execute.called
     assert mock_db_session.commit.called
 
 

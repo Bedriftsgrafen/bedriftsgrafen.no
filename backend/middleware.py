@@ -34,7 +34,12 @@ class RequestIdMiddleware(BaseHTTPMiddleware):
 
             # Log request completion
             duration = time.time() - start_time
-            logger.info(f"{request.method} {request.url.path} - {response.status_code} - {duration:.3f}s")
+            log_msg = f"{request.method} {request.url.path} - {response.status_code} - {duration:.3f}s"
+
+            if request.url.path == "/health" and response.status_code == 200:
+                logger.debug(log_msg)
+            else:
+                logger.info(log_msg)
 
             return response
 

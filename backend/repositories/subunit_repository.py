@@ -4,6 +4,7 @@ import asyncio
 import logging
 
 from sqlalchemy import delete, func, select
+from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.ext.asyncio import AsyncSession
 
 import models
@@ -101,9 +102,41 @@ class SubUnitRepository:
             return 0
 
         try:
-            # Use merge for upsert behavior (update if exists, insert if new)
-            for subunit in subunits:
-                await self.db.merge(subunit)
+            # Prepare values for bulk insert
+            values = [
+                {
+                    "orgnr": s.orgnr,
+                    "navn": s.navn,
+                    "parent_orgnr": s.parent_orgnr,
+                    "organisasjonsform": s.organisasjonsform,
+                    "naeringskode": s.naeringskode,
+                    "antall_ansatte": s.antall_ansatte,
+                    "beliggenhetsadresse": s.beliggenhetsadresse,
+                    "postadresse": s.postadresse,
+                    "stiftelsesdato": s.stiftelsesdato,
+                }
+                for s in subunits
+            ]
+
+            stmt = insert(models.SubUnit).values(values)
+
+            # Upsert: Update fields on conflict
+            stmt = stmt.on_conflict_do_update(
+                index_elements=[models.SubUnit.orgnr],
+                set_={
+                    "navn": stmt.excluded.navn,
+                    "parent_orgnr": stmt.excluded.parent_orgnr,
+                    "organisasjonsform": stmt.excluded.organisasjonsform,
+                    "naeringskode": stmt.excluded.naeringskode,
+                    "antall_ansatte": stmt.excluded.antall_ansatte,
+                    "beliggenhetsadresse": stmt.excluded.beliggenhetsadresse,
+                    "postadresse": stmt.excluded.postadresse,
+                    "stiftelsesdato": stmt.excluded.stiftelsesdato,
+                    "updated_at": func.now(),
+                },
+            )
+
+            await self.db.execute(stmt)
 
             if commit:
                 await self.db.commit()

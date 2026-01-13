@@ -181,7 +181,7 @@ class SchedulerService:
                     "Company updates completed",
                     extra={
                         "processed": result.get("companies_processed"),
-                        "created": result.get("companies_created"),
+                        "new": result.get("companies_created"),
                         "updated": result.get("companies_updated"),
                     },
                 )
@@ -190,7 +190,7 @@ class SchedulerService:
 
     async def sync_accounting_batch(self) -> None:
         """Sync accounting data for companies needing updates."""
-        from datetime import datetime, timedelta
+        from datetime import datetime, timedelta, timezone
 
         from sqlalchemy import select
 
@@ -203,7 +203,7 @@ class SchedulerService:
                 # 1. Selection logic: New companies first, then oldest polled ones
                 # Priority: never polled -> oldest polled
                 limit = 50
-                cutoff_date = datetime.utcnow().date() - timedelta(days=30)
+                cutoff_date = datetime.now(timezone.utc).date() - timedelta(days=30)
 
                 # Fetch companies that need polling
                 stmt = (
@@ -231,9 +231,12 @@ class SchedulerService:
                         await update_service._fetch_and_persist_financials(orgnr, dummy_result)
                         processed += 1
                     except Exception as ex:
-                        logger.warning(f"Failed to sync accounting for {orgnr}: {ex}")
+                        logger.warning("Failed to sync accounting", extra={"orgnr": orgnr, "error": str(ex)})
 
-                logger.info(f"Accounting sync batch completed. Processed {processed}/{len(orgnrs)} companies.")
+                logger.info(
+                    "Accounting sync batch completed",
+                    extra={"processed": processed, "total": len(orgnrs)},
+                )
 
         except Exception as e:
             logger.exception("Failed to run accounting sync batch", extra={"error": str(e)})

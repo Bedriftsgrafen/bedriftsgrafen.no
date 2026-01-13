@@ -408,6 +408,7 @@ class UpdateService:
             else f"{self.SUBUNIT_UPDATES_BASE_URL}?dato={since_iso}&size={min(page_size, 10000)}"
         )
 
+        pages_processed = 0
         async with httpx.AsyncClient(timeout=self.brreg_api.timeout) as http_client:
             while next_url:
                 try:
@@ -423,7 +424,6 @@ class UpdateService:
 
                     # Process updates in bulk
                     all_subunits = []
-
                     for entity in entities:
                         orgnr = entity.get("organisasjonsnummer")
                         if not orgnr:
@@ -443,6 +443,7 @@ class UpdateService:
                                         antall_ansatte=subunit_data.get("antallAnsatte", 0),
                                         beliggenhetsadresse=subunit_data.get("beliggenhetsadresse"),
                                         postadresse=subunit_data.get("postadresse"),
+                                        stiftelsesdato=self._parse_date(subunit_data.get("stiftelsesdato")),
                                     )
                                 )
                                 result.companies_updated += 1
@@ -463,8 +464,10 @@ class UpdateService:
                         await self.subunit_repo.create_batch(all_subunits, commit=True)
 
                     result.companies_processed += len(entities)
+                    pages_processed += 1
                     logger.info(
-                        f"Processed page of {len(entities)} subunit updates", extra={"batch_size": len(entities)}
+                        f"Processed page {pages_processed} with {len(entities)} subunit updates",
+                        extra={"batch_size": len(entities)},
                     )
                     next_url = data.get("_links", {}).get("next", {}).get("href")
 
@@ -533,7 +536,7 @@ class UpdateService:
                                         type_kode=r.get("type_kode"),
                                         type_beskrivelse=r.get("type_beskrivelse"),
                                         person_navn=r.get("person_navn"),
-                                        foedselsdato=r.get("foedselsdato"),
+                                        foedselsdato=self._parse_date(r.get("foedselsdato")),
                                         enhet_navn=r.get("enhet_navn"),
                                         enhet_orgnr=r.get("enhet_orgnr"),
                                         fratraadt=r.get("fratraadt", False),
@@ -572,3 +575,14 @@ class UpdateService:
                     break
 
         return result.model_dump()
+
+    def _parse_date(self, date_str: Any) -> date | None:
+        """Safely parse a date string from Brreg API into a Python date object."""
+        if not date_str or not isinstance(date_str, str):
+            return None
+        try:
+            # Handle YYYY-MM-DD or ISO with time
+            return datetime.strptime(date_str[:10], "%Y-%m-%d").date()
+        except (ValueError, TypeError, IndexError):
+            logger.debug(f"Failed to parse date string: {date_str}")
+            return None
