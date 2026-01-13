@@ -463,7 +463,9 @@ class UpdateService:
                         await self.subunit_repo.create_batch(all_subunits, commit=True)
 
                     result.companies_processed += len(entities)
-                    logger.info(f"Processed page of {len(entities)} subunit updates", extra={"batch_size": len(entities)})
+                    logger.info(
+                        f"Processed page of {len(entities)} subunit updates", extra={"batch_size": len(entities)}
+                    )
                     next_url = data.get("_links", {}).get("next", {}).get("href")
 
                 except Exception as e:
@@ -487,7 +489,7 @@ class UpdateService:
 
         logger.info(f"Starting role updates sync. Date: {since_iso}, afterId: {after_id}")
 
-        params = {"size": min(page_size, 1000)}
+        params: dict[str, Any] = {"size": min(page_size, 1000)}
         if after_id:
             params["afterId"] = after_id
         else:

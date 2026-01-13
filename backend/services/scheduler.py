@@ -165,9 +165,7 @@ class SchedulerService:
 
                 start_id = int(latest_id_str) if latest_id_str and latest_id_str.isdigit() else None
                 since_date = (
-                    date.fromisoformat(last_sync_date_str)
-                    if last_sync_date_str
-                    else (date.today() - timedelta(days=1))
+                    date.fromisoformat(last_sync_date_str) if last_sync_date_str else (date.today() - timedelta(days=1))
                 )
 
                 result = await service.fetch_updates(since_date=since_date, start_id=start_id)
@@ -210,9 +208,7 @@ class SchedulerService:
                 # Fetch companies that need polling
                 stmt = (
                     select(Company.orgnr)
-                    .where(
-                        (Company.last_polled_regnskap.is_(None)) | (Company.last_polled_regnskap <= cutoff_date)
-                    )
+                    .where((Company.last_polled_regnskap.is_(None)) | (Company.last_polled_regnskap <= cutoff_date))
                     .order_by(Company.last_polled_regnskap.asc().nulls_first())
                     .limit(limit)
                 )
