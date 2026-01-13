@@ -34,6 +34,15 @@ Fetch company and financial data from Brønnøysundregistrene
 - Request body: `{"fetch_financials": true}` (optional, defaults to true)
 - Returns: Fetch status with counts and errors
 
+### Stats & Trends
+- `GET /v1/stats/companies`: Overall company statistics
+- `GET /v1/trends/bankruptcies`: Bankruptcy trends and feed
+- `GET /v1/trends/new-establishments`: New companies feed
+
+### Person & Role Network
+- `GET /v1/people/search?q=...`: Search for people by name (name + birthdate unique keys)
+- `GET /v1/people/roles?name=...&birthdate=...`: List all legally compliant commercial roles for a person.
+
 ## Stats Endpoints
 
 ### GET /stats

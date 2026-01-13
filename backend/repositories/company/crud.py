@@ -62,6 +62,14 @@ class CrudMixin:
             elif isinstance(formaal_raw, str):
                 vedtektsfestet_formaal = formaal_raw
 
+        # Parse registrertIForetaksregisteret
+        # Brreg returns metadata.registrertIForetaksregisteret as 'Ja'/'Nei' or just as a bool depending on version
+        foretaksreg_raw = company_data.get("registrertIForetaksregisteret")
+        if isinstance(foretaksreg_raw, str):
+            registrert_i_foretaksregisteret = foretaksreg_raw.lower() in ("ja", "true")
+        else:
+            registrert_i_foretaksregisteret = bool(foretaksreg_raw)
+
         return {
             "navn": company_data.get("navn"),
             "organisasjonsform": organisasjonsform,
@@ -74,6 +82,7 @@ class CrudMixin:
             "under_tvangsavvikling": company_data.get("underTvangsavvikling", False),
             "vedtektsfestet_formaal": vedtektsfestet_formaal,
             "hjemmeside": company_data.get("hjemmeside"),
+            "registrert_i_foretaksregisteret": registrert_i_foretaksregisteret,
             "data": company_data,
             "postadresse": company_data.get("postadresse"),
             "forretningsadresse": company_data.get("forretningsadresse"),

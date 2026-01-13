@@ -26,6 +26,7 @@ async def test_fetch_subunit_updates_success(update_service, mock_db):
         "organisasjonsnummer": "999888777",
         "navn": "Test Subunit",
         "overordnetEnhet": "123456789",
+        "stiftelsesdato": "2020-05-15",
     }
 
     # Mock HTTP response for the update stream
@@ -48,6 +49,7 @@ async def test_fetch_subunit_updates_success(update_service, mock_db):
     assert len(subunits) == 1
     assert subunits[0].orgnr == "999888777"
     assert subunits[0].parent_orgnr == "123456789"
+    assert subunits[0].stiftelsesdato == date(2020, 5, 15)
 
 
 @pytest.mark.asyncio
@@ -73,7 +75,9 @@ async def test_fetch_subunit_updates_handles_410(update_service, mock_db):
 @pytest.mark.asyncio
 async def test_fetch_role_updates_success(update_service, mock_db):
     # Setup mocks
-    update_service.brreg_api.fetch_roles.return_value = [{"type_kode": "DAGL", "person_navn": "Ola Nordmann"}]
+    update_service.brreg_api.fetch_roles.return_value = [
+        {"type_kode": "DAGL", "person_navn": "Ola Nordmann", "foedselsdato": "1980-01-01"}
+    ]
 
     # Mock CloudEvents batch response
     mock_response = MagicMock()
@@ -94,3 +98,4 @@ async def test_fetch_role_updates_success(update_service, mock_db):
     assert len(roles) == 1
     assert roles[0].orgnr == "987654321"
     assert roles[0].type_kode == "DAGL"
+    assert roles[0].foedselsdato == date(1980, 1, 1)

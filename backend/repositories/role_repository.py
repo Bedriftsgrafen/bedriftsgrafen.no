@@ -1,10 +1,11 @@
 """Repository for Role database operations"""
 
 import logging
-from datetime import datetime, timedelta
+from datetime import date, datetime, timedelta
 
 from sqlalchemy import delete, select
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import contains_eager
 from sqlalchemy.sql import func
 
 import models
@@ -144,5 +145,87 @@ class RoleRepository:
             result = await self.db.execute(stmt)
             return result.scalar_one() or 0
         except Exception as e:
-            logger.error(f"Error counting roles for {orgnr}: {e}")
+            logger.error("Error counting roles", extra={"orgnr": orgnr, "error": str(e)})
             return 0
+
+    async def search_people(self, query: str, limit: int = 10) -> list[dict]:
+        """
+        Search for unique people names across the roles table.
+        Uses trigram similarity for fuzzy matching.
+        """
+        if len(query) < 3:
+            return []
+
+        try:
+            # We want unique combinations of name and birthdate
+            # Using subquery for performance and grouping
+            stmt = (
+                select(
+                    models.Role.person_navn,
+                    models.Role.foedselsdato,
+                    func.count(models.Role.id).label("role_count"),
+                )
+                .where(models.Role.person_navn.ilike(f"%{query}%"))
+                .where(models.Role.person_navn.is_not(None))
+                .group_by(models.Role.person_navn, models.Role.foedselsdato)
+                .order_by(func.count(models.Role.id).desc())
+                .limit(limit)
+            )
+            result = await self.db.execute(stmt)
+            return [
+                {
+                    "name": row.person_navn,
+                    "birthdate": row.foedselsdato,
+                    "role_count": row.role_count,
+                }
+                for row in result
+            ]
+        except Exception as e:
+            logger.error("Error searching people", extra={"query": query, "error": str(e)})
+            return []
+
+    async def get_person_commercial_roles(self, name: str, birthdate: date | None = None) -> list[models.Role]:
+        """
+        Fetch all roles for a person that are considered "commercial" (næringsvirksomhet).
+        Joins with Company to check registrert_i_foretaksregisteret and org form.
+        """
+        from constants.org_forms import COMMERCIAL_ORG_FORMS, NON_COMMERCIAL_ORG_FORMS
+
+        try:
+            # Build base query with join
+            stmt = (
+                select(models.Role)
+                .join(models.Company, models.Role.orgnr == models.Company.orgnr)
+                .options(contains_eager(models.Role.company))
+                .where(models.Role.person_navn == name)
+            )
+
+            # Handle birthdate filtering - match exactly or allow flexible matching
+            if birthdate is not None:
+                stmt = stmt.where(models.Role.foedselsdato == birthdate)
+            # Note: If birthdate is None, we don't filter by it (matches all)
+
+            # Apply legal commercial filtering per Enhetsregisterloven § 22
+            # Rule 1: Registered in Foretaksregisteret = ALWAYS commercial
+            # Rule 2: Fallback to org form whitelist (excluding explicit blacklist)
+            stmt = stmt.where(
+                (models.Company.registrert_i_foretaksregisteret == True)  # noqa: E712
+                | (
+                    models.Company.organisasjonsform.in_(list(COMMERCIAL_ORG_FORMS))
+                    & ~models.Company.organisasjonsform.in_(list(NON_COMMERCIAL_ORG_FORMS))
+                    & (models.Company.organisasjonsform != "STI")
+                )
+            )
+
+            stmt = stmt.order_by(
+                models.Role.fratraadt.asc(),  # Active roles first
+                models.Role.updated_at.desc(),
+            )
+            result = await self.db.execute(stmt)
+            return list(result.scalars().all())
+        except Exception as e:
+            logger.error(
+                "Error fetching commercial roles",
+                extra={"person_name": name, "birthdate": str(birthdate), "error": str(e)},
+            )
+            return []

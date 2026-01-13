@@ -257,7 +257,7 @@ class BrregApiService(BaseExternalService):
 
                     all_roles.append(role_data)
 
-            logger.info(f"Fetched {len(all_roles)} roles for {orgnr}")
+            logger.debug(f"Fetched {len(all_roles)} roles for {orgnr}")
             return all_roles
 
         except ExternalApiException:

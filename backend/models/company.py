@@ -172,6 +172,7 @@ class Company(Base):
     konkursdato = Column(Date, nullable=True)
     under_avvikling = Column(Boolean, default=False)
     under_tvangsavvikling = Column(Boolean, default=False)
+    registrert_i_foretaksregisteret = Column(Boolean, default=False, index=True)
 
     # Formal purpose as text
     vedtektsfestet_formaal = Column(Text, nullable=True)
