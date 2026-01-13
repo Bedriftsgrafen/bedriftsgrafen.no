@@ -34,7 +34,18 @@ export default defineConfig({
     },
     proxy: {
       '/api': {
-        target: 'http://bedriftsgrafen-backend:8000',
+        // eslint-disable-next-line no-undef
+        target: process.env.VITE_API_TARGET || 'http://bedriftsgrafen-backend:8000',
+        changeOrigin: true,
+        rewrite: (path) => path.replace(/^\/api/, '')
+      }
+    }
+  },
+  preview: {
+    port: 5174,
+    proxy: {
+      '/api': {
+        target: 'http://localhost:8000',
         changeOrigin: true,
         rewrite: (path) => path.replace(/^\/api/, '')
       }

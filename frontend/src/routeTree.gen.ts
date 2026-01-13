@@ -19,6 +19,7 @@ import { Route as BransjerRouteImport } from './routes/bransjer'
 import { Route as SplatRouteImport } from './routes/$'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as BedriftOrgnrRouteImport } from './routes/bedrift.$orgnr'
+import { Route as PersonNameBirthdateRouteImport } from './routes/person.$name.$birthdate'
 
 const UtforskRoute = UtforskRouteImport.update({
   id: '/utforsk',
@@ -72,6 +73,13 @@ const BedriftOrgnrRoute = BedriftOrgnrRouteImport.update({
 } as any).lazy(() =>
   import('./routes/bedrift.$orgnr.lazy').then((d) => d.Route),
 )
+const PersonNameBirthdateRoute = PersonNameBirthdateRouteImport.update({
+  id: '/person/$name/$birthdate',
+  path: '/person/$name/$birthdate',
+  getParentRoute: () => rootRouteImport,
+} as any).lazy(() =>
+  import('./routes/person.$name.$birthdate.lazy').then((d) => d.Route),
+)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -84,6 +92,7 @@ export interface FileRoutesByFullPath {
   '/sammenlign': typeof SammenlignRoute
   '/utforsk': typeof UtforskRoute
   '/bedrift/$orgnr': typeof BedriftOrgnrRoute
+  '/person/$name/$birthdate': typeof PersonNameBirthdateRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -96,6 +105,7 @@ export interface FileRoutesByTo {
   '/sammenlign': typeof SammenlignRoute
   '/utforsk': typeof UtforskRoute
   '/bedrift/$orgnr': typeof BedriftOrgnrRoute
+  '/person/$name/$birthdate': typeof PersonNameBirthdateRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -109,6 +119,7 @@ export interface FileRoutesById {
   '/sammenlign': typeof SammenlignRoute
   '/utforsk': typeof UtforskRoute
   '/bedrift/$orgnr': typeof BedriftOrgnrRoute
+  '/person/$name/$birthdate': typeof PersonNameBirthdateRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -123,6 +134,7 @@ export interface FileRouteTypes {
     | '/sammenlign'
     | '/utforsk'
     | '/bedrift/$orgnr'
+    | '/person/$name/$birthdate'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -135,6 +147,7 @@ export interface FileRouteTypes {
     | '/sammenlign'
     | '/utforsk'
     | '/bedrift/$orgnr'
+    | '/person/$name/$birthdate'
   id:
     | '__root__'
     | '/'
@@ -147,6 +160,7 @@ export interface FileRouteTypes {
     | '/sammenlign'
     | '/utforsk'
     | '/bedrift/$orgnr'
+    | '/person/$name/$birthdate'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -160,6 +174,7 @@ export interface RootRouteChildren {
   SammenlignRoute: typeof SammenlignRoute
   UtforskRoute: typeof UtforskRoute
   BedriftOrgnrRoute: typeof BedriftOrgnrRoute
+  PersonNameBirthdateRoute: typeof PersonNameBirthdateRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -234,6 +249,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof BedriftOrgnrRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/person/$name/$birthdate': {
+      id: '/person/$name/$birthdate'
+      path: '/person/$name/$birthdate'
+      fullPath: '/person/$name/$birthdate'
+      preLoaderRoute: typeof PersonNameBirthdateRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
@@ -248,6 +270,7 @@ const rootRouteChildren: RootRouteChildren = {
   SammenlignRoute: SammenlignRoute,
   UtforskRoute: UtforskRoute,
   BedriftOrgnrRoute: BedriftOrgnrRoute,
+  PersonNameBirthdateRoute: PersonNameBirthdateRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

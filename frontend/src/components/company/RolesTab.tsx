@@ -1,6 +1,7 @@
-import { useState, useMemo, useCallback } from 'react'
-import { Users, Briefcase, Building2, AlertCircle, Loader, RefreshCw, Crown, User, UserCheck, ChevronDown, Calendar } from 'lucide-react'
+import React, { useState, useMemo, useCallback, useEffect } from 'react'
+import { Users, Briefcase, Building2, AlertCircle, Loader, RefreshCw, Crown, User, UserCheck, ChevronDown, Calendar, ExternalLink } from 'lucide-react'
 import { useRolesQuery, type Role } from '../../hooks/queries/useRolesQuery'
+import { Link } from '@tanstack/react-router'
 
 interface RolesTabProps {
     orgnr: string
@@ -71,10 +72,28 @@ function RoleCard({ role }: { role: Role }) {
     const config = getRoleConfig(role.type_kode)
     const Icon = config.icon
 
+    // Build person profile URL params
+    const personProfileParams = role.person_navn ? {
+        name: role.person_navn,
+        birthdate: role.foedselsdato || 'unknown'
+    } : null
+
+    const toggleExpanded = () => setIsExpanded(!isExpanded)
+    const handleKeyDown = (e: React.KeyboardEvent) => {
+        if (e.key === 'Enter' || e.key === ' ') {
+            e.preventDefault()
+            toggleExpanded()
+        }
+    }
+
     return (
         <div
-            className={`bg-white border rounded-lg transition-all cursor-pointer ${isExpanded ? 'border-blue-300 shadow-md' : 'border-gray-200 hover:border-blue-200'}`}
-            onClick={() => setIsExpanded(!isExpanded)}
+            role="button"
+            tabIndex={0}
+            aria-expanded={isExpanded}
+            className={`bg-white border rounded-lg transition-all cursor-pointer ${isExpanded ? 'border-blue-300 shadow-md' : 'border-gray-200 hover:border-blue-200'} focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-1`}
+            onClick={toggleExpanded}
+            onKeyDown={handleKeyDown}
         >
             <div className="flex items-center gap-3 p-3">
                 <div className={`p-2 rounded-lg bg-gray-50 ${config.color}`}>
@@ -92,7 +111,7 @@ function RoleCard({ role }: { role: Role }) {
             </div>
 
             {isExpanded && (
-                <div className="px-3 pb-3 pt-0 border-t border-gray-100 mt-1 space-y-1.5 text-xs">
+                <div className="px-3 pb-3 pt-0 border-t border-gray-100 mt-1 space-y-2 text-xs">
                     {role.foedselsdato && (
                         <div className="flex items-center gap-2 text-gray-600">
                             <Calendar className="h-3 w-3 text-gray-400" />
@@ -117,8 +136,21 @@ function RoleCard({ role }: { role: Role }) {
                             <span>Rekkefølge: {role.rekkefoelge}</span>
                         </div>
                     )}
-                    {!role.foedselsdato && !role.enhet_orgnr && role.rekkefoelge === null && (
+                    {!role.foedselsdato && !role.enhet_orgnr && role.rekkefoelge === null && !personProfileParams && (
                         <div className="text-gray-400 italic">Ingen tilleggsinfo tilgjengelig</div>
+                    )}
+
+                    {/* Link to person profile */}
+                    {personProfileParams && (
+                        <Link
+                            to="/person/$name/$birthdate"
+                            params={personProfileParams}
+                            onClick={(e) => e.stopPropagation()}
+                            className="mt-2 flex items-center gap-2 px-3 py-2 bg-blue-50 text-blue-700 rounded-lg hover:bg-blue-100 transition-colors text-xs font-medium group"
+                        >
+                            <ExternalLink className="h-3 w-3 group-hover:scale-110 transition-transform" />
+                            Se alle roller for {role.person_navn}
+                        </Link>
                     )}
                 </div>
             )}
@@ -145,20 +177,31 @@ function RoleSection({ title, roles, icon: Icon }: { title: string; roles: Role[
 
 export function RolesTab({ orgnr }: RolesTabProps) {
     const [isManualFetching, setIsManualFetching] = useState(false)
+    const [cooldown, setCooldown] = useState(false)
     const [fetchError, setFetchError] = useState<string | null>(null)
     const { data: roles, isLoading, isError, error, fetchFromBrreg } = useRolesQuery(orgnr)
 
+    // Cooldown timer
+    useEffect(() => {
+        if (cooldown) {
+            const timer = setTimeout(() => setCooldown(false), 15000)
+            return () => clearTimeout(timer)
+        }
+    }, [cooldown])
+
     const handleFetchFromBrreg = useCallback(async () => {
+        if (cooldown) return
         setIsManualFetching(true)
         setFetchError(null)
         try {
             await fetchFromBrreg()
+            setCooldown(true)
         } catch (err) {
             setFetchError(err instanceof Error ? err.message : 'Kunne ikke hente fra Brønnøysund')
         } finally {
             setIsManualFetching(false)
         }
-    }, [fetchFromBrreg])
+    }, [fetchFromBrreg, cooldown])
 
     // Memoize grouped roles - must be before early returns (hooks rules)
     const { groups: groupedRoles, activeCount } = useMemo(
@@ -229,12 +272,16 @@ export function RolesTab({ orgnr }: RolesTabProps) {
                 </h3>
                 <button
                     onClick={handleFetchFromBrreg}
-                    disabled={isBusy}
-                    className="px-2 py-1 text-sm text-gray-500 hover:text-blue-600 hover:bg-blue-50 rounded transition-colors inline-flex items-center gap-1"
-                    title="Oppdater fra Brønnøysund"
+                    disabled={isBusy || cooldown}
+                    className="px-2 py-1 text-sm text-gray-500 hover:text-blue-600 hover:bg-blue-50 rounded transition-colors inline-flex items-center gap-1 disabled:opacity-70 disabled:cursor-not-allowed"
+                    title={cooldown ? "Nylig oppdatert" : "Oppdater fra Brønnøysund"}
                 >
-                    <RefreshCw className={`h-3.5 w-3.5 ${isBusy ? 'animate-spin' : ''}`} />
-                    {isBusy ? 'Oppdaterer...' : 'Oppdater'}
+                    {isBusy ? (
+                        <RefreshCw className="h-3.5 w-3.5 animate-spin" />
+                    ) : (
+                        <RefreshCw className={`h-3.5 w-3.5 ${cooldown ? 'text-green-600' : ''}`} />
+                    )}
+                    {isBusy ? 'Oppdaterer...' : cooldown ? 'Oppdatert' : 'Oppdater'}
                 </button>
             </div>
 
