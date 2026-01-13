@@ -24,8 +24,11 @@ else
     FRONTEND_AFFECTED=$(echo "$COMPARED_FILES" | grep -q "^frontend/" && echo true || echo false)
     # Check for backend changes
     BACKEND_AFFECTED=$(echo "$COMPARED_FILES" | grep -q "^backend/" && echo true || echo false)
-    # Check for changes outside frontend/backend (e.g. CI config, root scripts)
-    ROOT_AFFECTED=$(echo "$COMPARED_FILES" | grep -qvE "^(frontend/|backend/)" && echo true || echo false)
+    # Check for changes outside frontend/backend, BUT ignore docs/agent/md files
+    # We filter out frontend/backend first.
+    # Then we filter out safe patterns (.agent/, docs/, *.md, .gitignore).
+    # If anything remains, it's a root config change (e.g. package.json, docker-compose).
+    ROOT_AFFECTED=$(echo "$COMPARED_FILES" | grep -vE "^(frontend/|backend/)" | grep -vE "^(\.agent/|docs/|.*\.md$|\.gitignore)" && echo true || echo false)
 fi
 
 # If root configs changed, we must run everything to be safe
