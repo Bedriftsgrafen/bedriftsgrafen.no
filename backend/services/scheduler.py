@@ -1,4 +1,5 @@
 import logging
+import shutil
 
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from apscheduler.triggers.cron import CronTrigger
@@ -73,6 +74,22 @@ class SchedulerService:
             self.run_role_updates,
             trigger=IntervalTrigger(minutes=30),
             id="role_updates",
+            replace_existing=True,
+        )
+
+        # Database maintenance daily at 03:00 (VACUUM ANALYZE)
+        self.scheduler.add_job(
+            self.run_db_maintenance,
+            trigger=CronTrigger(hour=3, minute=0),
+            id="db_maintenance",
+            replace_existing=True,
+        )
+
+        # Disk usage check daily at 06:00
+        self.scheduler.add_job(
+            self.check_disk_usage,
+            trigger=CronTrigger(hour=6, minute=1),
+            id="disk_check",
             replace_existing=True,
         )
 
@@ -312,3 +329,30 @@ class SchedulerService:
                 )
         except Exception as e:
             logger.exception("Failed to run incremental role updates", extra={"error": str(e)})
+
+    async def run_db_maintenance(self) -> None:
+        """Runs VACUUM ANALYZE on main tables for performance optimization."""
+        logger.info("Starting database maintenance (VACUUM ANALYZE)...")
+        try:
+            async with AsyncSessionLocal() as db:
+                # We need to run these outside of a transaction block
+                await db.execute(text("VACUUM bedrifter;"))
+                await db.execute(text("VACUUM regnskap;"))
+                await db.execute(text("ANALYZE bedrifter;"))
+                await db.execute(text("ANALYZE regnskap;"))
+                logger.info("Database maintenance completed successfully.")
+        except Exception as e:
+            logger.error(f"Database maintenance failed: {e}")
+
+    async def check_disk_usage(self) -> None:
+        """Checks disk usage on the root partition and logs warnings if high."""
+        logger.info("Checking disk usage...")
+        try:
+            total, used, free = shutil.disk_usage("/")
+            usage_percent = (used / total) * 100
+            if usage_percent > 80:
+                logger.warning(f"HIGH DISK USAGE: {usage_percent:.1f}% used on root partition")
+            else:
+                logger.info(f"Disk usage OK: {usage_percent:.1f}%")
+        except Exception as e:
+            logger.error(f"Disk usage check failed: {e}")
