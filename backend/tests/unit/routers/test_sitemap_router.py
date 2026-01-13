@@ -1,4 +1,5 @@
 import pytest
+from datetime import date
 from unittest.mock import MagicMock, AsyncMock
 from fastapi.testclient import TestClient
 from main import app, limiter
@@ -29,13 +30,13 @@ def override_get_db(mock_db_session):
 
 @pytest.mark.asyncio
 async def test_sitemap_index(mock_db_session, override_get_db):
-    # Mock total count return
-    mock_db_session.execute.return_value.scalar.return_value = 100000
-    # With 50k per page, this should result in:
-    # Page 1: 50k - 1 + homepage
-    # Page 2: 50k
-    # Page 3: remaining (100k - (50k-1) - 50k? No.)
-    # Logic: ceil((100000 + 1) / 50000) = ceil(100001 / 50000) = 3 pages
+    # Mock company count and person count
+    # 60k companies -> 2 pages
+    # 10k people -> 1 page
+    mock_db_session.execute.side_effect = [
+        MagicMock(scalar=MagicMock(return_value=60000)),  # total_companies
+        MagicMock(scalar=MagicMock(return_value=10000)),  # total_people
+    ]
 
     response = client.get("/sitemap_index.xml")
 
@@ -43,43 +44,50 @@ async def test_sitemap_index(mock_db_session, override_get_db):
     assert response.headers["content-type"] == "application/xml"
     content = response.text
     assert "<sitemapindex" in content
-    assert "/api/sitemaps/1.xml" in content
-    assert "/api/sitemaps/3.xml" in content
+    assert "/api/sitemaps/company_1.xml" in content
+    assert "/api/sitemaps/company_2.xml" in content
+    assert "/api/sitemaps/person_1.xml" in content
 
 
 @pytest.mark.asyncio
-async def test_sitemap_page_1(mock_db_session, override_get_db):
+async def test_sitemap_company_page_1(mock_db_session, override_get_db):
     # Mock result for companies
-    mock_db_session.execute.return_value.all.return_value = [("123",), ("456",)]
+    result_mock = MagicMock()
+    result_mock.scalars.return_value = ["123", "456"]
+    mock_db_session.execute.return_value = result_mock
 
-    response = client.get("/sitemaps/1.xml")
+    response = client.get("/sitemaps/company_1.xml")
 
     assert response.status_code == 200
     content = response.text
     assert "<urlset" in content
-    # Page 1 should include homepage
-    assert "<loc>https://bedriftsgrafen.no</loc>" in content
+    # Page 1 should include static routes (e.g., homepage, utforsk)
+    assert "<loc>https://bedriftsgrafen.no/</loc>" in content
+    assert "<loc>https://bedriftsgrafen.no/utforsk</loc>" in content
     # And companies
-    assert "https://bedriftsgrafen.no/?orgnr=123" in content
+    assert "https://bedriftsgrafen.no/bedrift/123" in content
 
 
 @pytest.mark.asyncio
-async def test_sitemap_page_2(mock_db_session, override_get_db):
-    mock_db_session.execute.return_value.all.return_value = [("789",)]
+async def test_sitemap_person_page_1(mock_db_session, override_get_db):
+    # Mock result for people (name, birthdate)
+    result_mock = MagicMock()
+    result_mock.all.return_value = [("Ola Nordmann", date(1980, 1, 1)), ("Kari Nordmann", None)]
+    mock_db_session.execute.return_value = result_mock
 
-    response = client.get("/sitemaps/2.xml")
+    response = client.get("/sitemaps/person_1.xml")
 
     assert response.status_code == 200
     content = response.text
-    # Page 2 should NOT include homepage
-    assert "<loc>https://bedriftsgrafen.no</loc>" not in content
-    assert "https://bedriftsgrafen.no/?orgnr=789" in content
+    assert "<urlset" in content
+    assert "https://bedriftsgrafen.no/person/Ola Nordmann/1980-01-01" in content
+    assert "https://bedriftsgrafen.no/person/Kari Nordmann/none" in content
 
 
 @pytest.mark.asyncio
-async def test_sitemap_empty_page(mock_db_session, override_get_db):
-    mock_db_session.execute.return_value.all.return_value = []
+async def test_sitemap_invalid_filename(mock_db_session, override_get_db):
+    response = client.get("/sitemaps/invalid.xml")
+    assert response.status_code == 404
 
-    response = client.get("/sitemaps/99.xml")
-    assert response.status_code == 200
-    assert "<urlset" in response.text
+    response = client.get("/sitemaps/unknown_1.xml")
+    assert response.status_code == 404
