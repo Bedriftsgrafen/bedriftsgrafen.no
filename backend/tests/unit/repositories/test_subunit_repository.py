@@ -71,6 +71,6 @@ async def test_search_by_name(repo, mock_db_session):
 
 @pytest.mark.asyncio
 async def test_count_by_parent(repo, mock_db_session):
-    mock_db_session.execute.return_value.scalars.return_value.all.return_value = [1, 2, 3]
+    mock_db_session.execute.return_value.scalar_one.return_value = 3
     count = await repo.count_by_parent("parent1")
     assert count == 3
