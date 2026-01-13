@@ -34,10 +34,10 @@ class SchedulerService:
             replace_existing=True,
         )
 
-        # Geocode companies without coordinates (every 1 minute)
+        # Geocode companies without coordinates (every 1 hour)
         self.scheduler.add_job(
             self.geocode_companies_batch,
-            trigger=IntervalTrigger(minutes=1),
+            trigger=IntervalTrigger(hours=1),
             id="geocode_companies",
             replace_existing=True,
         )
