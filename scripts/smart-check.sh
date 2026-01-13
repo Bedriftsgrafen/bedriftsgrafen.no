@@ -28,7 +28,14 @@ else
     # We filter out frontend/backend first.
     # Then we filter out safe patterns (.agent/, docs/, *.md, .gitignore).
     # If anything remains, it's a root config change (e.g. package.json, docker-compose).
-    ROOT_AFFECTED=$(echo "$COMPARED_FILES" | grep -vE "^(frontend/|backend/)" | grep -vE "^(\.agent/|docs/|.*\.md$|\.gitignore)" && echo true || echo false)
+    # We use || true because if grep finds nothing (all files safe), it returns 1, which triggers set -e
+    REMAINING_FILES=$(echo "$COMPARED_FILES" | grep -vE "^(frontend/|backend/)" | grep -vE "^(\.agent/|docs/|.*\.md$|\.gitignore)" || true)
+
+    if [ -n "$REMAINING_FILES" ]; then
+        ROOT_AFFECTED=true
+    else
+        ROOT_AFFECTED=false
+    fi
 fi
 
 # If root configs changed, we must run everything to be safe
