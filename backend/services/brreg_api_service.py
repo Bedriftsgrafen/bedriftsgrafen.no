@@ -211,7 +211,7 @@ class BrregApiService(BaseExternalService):
         try:
             response = await self._get(url, context=f"roles {orgnr}")
             if response.status_code == 404:
-                logger.info(f"No roles found for {orgnr}")
+                logger.debug(f"No roles found for {orgnr}")
                 return []
 
             data = response.json()
