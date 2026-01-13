@@ -5,9 +5,9 @@ This document consolidates feature ideas and strategic plans for future developm
 ## Priority 1: Quick Wins (1-2 days each)
 
 ### Purpose Search (Formål)
-- Add `vedtektsfestet_formaal` to search index
+- [/] Add `vedtektsfestet_formaal` to search index
 - Users can search "frisør", "konsulent", "eiendom" etc.
-- Already have data, just need to update the TSVECTOR trigger
+- **Status**: Backend column exists, logic in `lookups.py` exists, but the TSVECTOR database trigger needs an update to include this column.
 
 ### Industry Statistics Dashboard
 - New endpoint: `/v1/stats/industries`
@@ -157,15 +157,17 @@ def calculate_trend_score(company):
 
 ## Status Tracking
 
-- [x] Purpose Search
+- [x] Purpose Search (Basic)
+- [/] Purpose Search (Advanced/Formål)
 - [x] Industry Benchmarking (basic)
-- [ ] Industry Statistics Dashboard
-- [ ] Bankruptcy Heatmap
-- [ ] Enhanced Landing Page
-- [ ] New Companies Feed
-- [ ] Geographic Visualization
-- [ ] SSB Integration
-- [ ] Gaselle Detection
+- [x] Industry Statistics Dashboard
+- [x] Bankruptcy Heatmap
+- [/] Enhanced Landing Page (v1)
+- [x] New Companies Feed
+- [x] Geographic Visualization
+- [/] SSB Integration (Basic)
+- [/] Similar Companies (Backend Only)
 - [x] Person Search (Commercial Only)
+- [ ] Gaselle Detection
 - [ ] Role Network Graph
 - [ ] Ownership Chain Visualization
