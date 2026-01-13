@@ -4,7 +4,7 @@ The React/TypeScript frontend for Bedriftsgrafen.no.
 
 ## 🛠️ Tech Stack
 
-- **Framework**: React 18
+- **Framework**: React 19
 - **Language**: TypeScript
 - **Build Tool**: Vite
 - **Styling**: Tailwind CSS
@@ -16,7 +16,7 @@ The React/TypeScript frontend for Bedriftsgrafen.no.
 
 ### Prerequisites
 
-- Node.js 20+
+- Node.js 22+
 - npm
 
 ### Development

@@ -99,6 +99,7 @@ def calculate_trend_score(company):
 | Feature | Description | Effort |
 |---------|-------------|--------|
 | **People Search** | Search "Ola Nordmann" → Find all roles | Very High |
+| **Role Network** | Visualize connections between people/companies | High |
 | **Ownership Graph** | Visualize ownership chains between companies | High |
 | **Predictive Risk Score** | ML model predicting bankruptcy likelihood | Very High |
 | **Export to Excel/PDF** | Professional reports for due diligence | Medium |
@@ -165,3 +166,5 @@ def calculate_trend_score(company):
 - [ ] Geographic Visualization
 - [ ] SSB Integration
 - [ ] Gaselle Detection
+- [/] Person Search (Commercial Only)
+- [ ] Role Network Graph

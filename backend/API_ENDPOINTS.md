@@ -12,7 +12,8 @@ Search companies by name
 - Query params: `name` (required), `limit` (default: 20)
 - Returns: List of matching companies
 
-### GET /v1/companies/{orgnr}Get company details with accounting data
+### GET /v1/companies/{orgnr}
+Get company details with accounting data
 - Path param: `orgnr` (9-digit organization number)
 - Returns: Company with list of accounting records
 

@@ -2,12 +2,12 @@
 name = "bedriftsgrafen-backend"
 version = "1.0.0"
 description = "Backend for Bedriftsgrafen.no"
-requires-python = ">=3.10"
+requires-python = ">=3.11"
 
 [tool.ruff]
 # Same as line-length in Black
 line-length = 120
-target-version = "py310"
+target-version = "py311"
 
 # Exclude test files and migrations from some checks
 exclude = [
@@ -43,7 +43,7 @@ ignore = [
 "alembic/*" = ["E501", "I001"]  # Allow long lines and unordered imports in migrations
 
 [tool.mypy]
-python_version = "3.10"
+python_version = "3.11"
 warn_return_any = false  # SQLAlchemy uses Any extensively
 warn_unused_ignores = true
 disallow_untyped_defs = false

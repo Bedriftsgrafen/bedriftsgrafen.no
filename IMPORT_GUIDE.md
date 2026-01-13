@@ -551,6 +551,6 @@ curl -X POST "http://localhost:8000/companies/913189892/fetch" \
 
 ---
 
-**Last Updated**: 2025-11-27  
+**Last Updated**: 2026-01-13  
 **Version**: 1.0  
 **Status**: Ready for Bulk Import
