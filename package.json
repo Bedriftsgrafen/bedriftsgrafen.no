@@ -10,12 +10,12 @@
     "prepare": "husky",
     "validate:frontend": "cd frontend && npm run validate",
     "sync:backend": "bash scripts/sync-venv.sh",
-    "validate:backend": "npm run sync:backend && if [ -f backend/.venv/bin/ruff ]; then backend/.venv/bin/ruff check backend && (backend/.venv/bin/mypy backend || echo '⚠️ Mypy found type errors'); else docker exec bedriftsgrafen-backend-dev ruff check . && (docker exec bedriftsgrafen-backend-dev mypy . || echo '⚠️ Mypy found type errors'); fi",
+    "validate:backend": "npm run sync:backend && if [ -f backend/.venv/bin/ruff ]; then backend/.venv/bin/ruff check backend && backend/.venv/bin/ruff format --check backend && (backend/.venv/bin/mypy backend || echo '⚠️ Mypy found type errors'); else docker exec bedriftsgrafen-backend-dev ruff check . && docker exec bedriftsgrafen-backend-dev ruff format --check . && (docker exec bedriftsgrafen-backend-dev mypy . || echo '⚠️ Mypy found type errors'); fi",
     "validate": "npm run validate:frontend && npm run validate:backend",
     "test:frontend": "cd frontend && npm run test -- --run",
     "test:backend": "if [ -f backend/.venv/bin/pytest ]; then PYTHONPATH=backend backend/.venv/bin/pytest backend/tests/unit -v; else docker exec bedriftsgrafen-backend-dev python3 -m pytest tests/unit -v; fi",
     "test": "npm run test:frontend && npm run test:backend",
-    "check": "npm run validate && npm run test",
+    "check": "bash scripts/smart-check.sh",
     "lighthouse": "cd frontend && npm run build && cd .. && lhci autorun"
   },
   "devDependencies": {

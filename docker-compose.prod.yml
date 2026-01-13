@@ -10,10 +10,10 @@ services:
     init: true
     env_file:
       - .env
-    environment:
-      - START_SCHEDULER=false
     volumes:
       - ./scripts:/app/ops_scripts:ro
+      - ./backend/logs:/app/logs
+
     networks:
       - internal-net
     depends_on:
@@ -42,6 +42,7 @@ services:
     command: [ "uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000", "--workers", "1" ]
     volumes:
       - ./scripts:/app/ops_scripts:ro
+      - ./backend/logs:/app/logs
     networks:
       - internal-net
     depends_on:

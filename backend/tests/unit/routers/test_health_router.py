@@ -7,6 +7,7 @@ client = TestClient(app)
 # Disable rate limiter
 limiter.enabled = False
 
+
 def test_health_check_returns_200():
     response = client.get("/health")
     assert response.status_code == 200
