@@ -4,13 +4,13 @@
 
 ![Dashboard Preview](./dashboard-preview.png)
 
-## 🚀 Overview
+## Overview
 
 **Bedriftsgrafen** is a full-stack analytics platform designed to democratize access to Norwegian business data. It aggregates, processes, and visualizes financial data from **Brønnøysundregistrene**, providing real-time insights into the Norwegian economy.
 
 Built with a focus on **performance and efficiency**, the entire stack is optimized to run smoothly on modest hardware while handling a dataset of over **1.1 million companies** and millions of financial records.
 
-## 🛠️ Tech Stack
+## Tech Stack
 
 The project leverages a modern, type-safe, and performance-oriented stack:
 
@@ -19,25 +19,25 @@ The project leverages a modern, type-safe, and performance-oriented stack:
 - **Database**: ![PostgreSQL](https://img.shields.io/badge/-PostgreSQL-4169E1?logo=postgresql&logoColor=white) (with `asyncpg` & Full-Text Search)
 - **Infrastructure**: ![Docker](https://img.shields.io/badge/-Docker-2496ED?logo=docker&logoColor=white) ![Ubuntu](https://img.shields.io/badge/-Ubuntu-E95420?logo=ubuntu&logoColor=white) ![Nginx](https://img.shields.io/badge/-Nginx-009639?logo=nginx&logoColor=white)
 
-## ✨ Key Features
+## Key Features
 
-### 📈 Interactive Dashboard
+### Interactive Dashboard
 - **Real-time KPIs**: Tracks Total Revenue, Profitability, and Solvency across the entire dataset.
 - **Industry Benchmarking**: Compare any company against its industry peers (NACE 5-digit) with percentile rankings.
 - **Visualizations**: Dynamic charts powered by `Recharts` showing trends over time.
 - **Responsive Design**: Fully optimized for desktop and mobile using Tailwind CSS.
 
-### 🔍 Advanced Search Engine
+### Advanced Search Engine
 - **Full-Text Search**: Custom PostgreSQL FTS implementation supporting Norwegian language stemming.
 - **Instant Filtering**: Filter 1.1M+ records by Industry (NACE), Employee Count, Revenue, and Foundation Date in milliseconds.
 - **Vector Search**: (Experimental) Semantic search capabilities for finding related businesses.
 
-### 🔄 High-Performance Sync Engine
+### High-Performance Sync Engine
 - **Robust Data Pipeline**: Custom Python service that synchronizes data from Brønnøysundregistrene.
 - **Concurrency Control**: Optimized `asyncio` implementation with rate limiting and backoff strategies to respect API limits.
 - **Resilience**: Handles API outages, timeouts, and data inconsistencies gracefully with automatic recovery.
 
-## 🏗️ Architecture
+## Architecture
 
 The system is designed as a microservices-style architecture containerized with Docker:
 
@@ -68,10 +68,10 @@ This project demonstrates expertise in:
 This project showcases a **modern AI-orchestrated development workflow**, where the developer acts as an **architect and product owner**, defining requirements, making architectural decisions, and ensuring code quality, while leveraging AI assistants for implementation.
 
 **Workflow Benefits**:
-- ✅ **Clear Requirements**: Precise specification of features, constraints, and technical requirements
-- ✅ **Rapid Iteration**: Faster implementation cycles with AI-assisted code generation
-- ✅ **Consistent Quality**: Human oversight ensures adherence to best practices and architectural patterns
-- ✅ **Focus on Problem-Solving**: More time spent on architecture and business logic, less on boilerplate
+- **Clear Requirements**: Precise specification of features, constraints, and technical requirements
+- **Rapid Iteration**: Faster implementation cycles with AI-assisted code generation
+- **Consistent Quality**: Human oversight ensures adherence to best practices and architectural patterns
+- **Focus on Problem-Solving**: More time spent on architecture and business logic, less on boilerplate
 
 **Human Responsibilities** (Product Owner / Architect):
 - Defining product vision and feature requirements
@@ -144,7 +144,7 @@ Key environment variables (see `.env.example` for full list):
 | `CORS_ORIGINS` | Allowed CORS origins | Yes |
 | `PROJECT_ROOT` | Project root directory | No (defaults to pwd) |
 
-## 🤝 Contributing
+## Contributing
 
 Contributions are welcome! Please see [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines.
 
