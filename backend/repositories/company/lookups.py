@@ -51,6 +51,26 @@ class LookupsMixin:
             logger.error(f"Database error fetching company {orgnr}: {e}")
             raise DatabaseException(f"Failed to fetch company {orgnr}", original_error=e)
 
+    async def get_existing_orgnrs(self, orgnrs: list[str]) -> set[str]:
+        """Check which of the given orgnrs exist in the database.
+
+        Args:
+            orgnrs: List of organization numbers to check
+
+        Returns:
+            Set of existing organization numbers
+        """
+        if not orgnrs:
+            return set()
+
+        try:
+            stmt = select(models.Company.orgnr).where(models.Company.orgnr.in_(orgnrs))
+            result = await self.db.execute(stmt)
+            return {row[0] for row in result.fetchall()}
+        except Exception as e:
+            logger.error(f"Database error checking existing orgnrs: {e}")
+            return set()
+
     async def get_similar_companies(self, orgnr: str, limit: int = 5) -> list[models.Company]:
         """Find similar companies based on industry (naeringskode) and location.
 

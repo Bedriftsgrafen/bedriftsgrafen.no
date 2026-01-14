@@ -79,7 +79,8 @@ async def test_get_aggregate_stats_materialized_view(repo, mock_db_session):
     filters = FilterParams()
 
     # Mock row for SELECT * FROM company_totals
-    mock_row_totals = (100, 1000.0, 100.0, 50)
+    # Schema expects: id, count, revenue, profit, employees
+    mock_row_totals = (1, 100, 1000.0, 100.0, 50)
     # Mock rows for orgform breakdown
     mock_rows_breakdown = [("AS", 50), ("ENK", 50)]
 

@@ -158,10 +158,11 @@ _Improvements for maintainability, performance, or consistency_
 ### Verification Commands
 
 ```bash
-# Backend (Local - Sequential)
-ruff check . && mypy . && pytest
+# Backend (Local - Preferred)
+# Requires active venv or direct path usage
+./.venv/bin/ruff check . && ./.venv/bin/mypy . && ./.venv/bin/pytest
 
-# Backend (Docker fallback)
+# Backend (Docker - Fallback/CI parity)
 docker exec bedriftsgrafen-backend-dev bash -c "ruff check . && mypy . && pytest"
 
 # Frontend (Sequential)
@@ -191,6 +192,7 @@ npm run check
 
 | Version | Date | Changes |
 |---------|------|---------|
+| v6 | 2026-01-14 | Added local .venv path for backend verification commands |
 | v5 | 2026-01-12 | Portfolio-ready refactor: cleaner structure, explicit test mandate, verification commands |
 | v4 | 2026-01-12 | Added MECE testing requirements and .agent/MISSING_TESTS.md reference |
 | v3 | 2026-01-06 | Added planning-first approach, SQLAlchemy 2.0 patterns |

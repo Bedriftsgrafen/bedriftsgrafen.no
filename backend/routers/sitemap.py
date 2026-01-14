@@ -172,7 +172,7 @@ async def get_paginated_sitemap(
         limit = URLS_PER_SITEMAP
 
         # Commercial filtering matching get_total_person_count
-        stmt = (
+        person_stmt = (
             select(Role.person_navn, Role.foedselsdato)
             .join(Company, Role.orgnr == Company.orgnr)
             .where(Role.person_navn.is_not(None))
@@ -190,7 +190,7 @@ async def get_paginated_sitemap(
             .limit(limit)
         )
 
-        result = await db.execute(stmt)
+        result = await db.execute(person_stmt)
         for name, birthdate in result.all():
             birthdate_str = birthdate.isoformat() if birthdate else "none"
             # URL friendly escaping would be better but simple f-string for now as per current pattern

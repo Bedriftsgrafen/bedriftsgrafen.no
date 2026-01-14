@@ -419,49 +419,60 @@ class UpdateService:
 
                     data = response.json()
                     entities = data.get("_embedded", {}).get("oppdaterteUnderenheter", [])
-                    if not entities:
-                        break
 
-                    # Process updates in bulk
-                    all_subunits = []
-                    for entity in entities:
+                    # Phase 1: Concurrent fetch subunit details
+                    semaphore = asyncio.Semaphore(CONCURRENCY_LIMIT)
+
+                    async def fetch_one(entity: dict[str, Any]) -> dict[str, Any] | None:
                         orgnr = entity.get("organisasjonsnummer")
                         if not orgnr:
-                            continue
+                            return None
+                        async with semaphore:
+                            try:
+                                return await self.brreg_api.fetch_subunit(orgnr)
+                            except Exception as ex:
+                                logger.warning(f"Failed to fetch subunit details for {orgnr}: {ex}", extra={"orgnr": orgnr})
+                                return None
 
-                        # Fetch subunit details
-                        try:
-                            subunit_data = await self.brreg_api.fetch_subunit(orgnr)
-                            if subunit_data:
-                                all_subunits.append(
-                                    models.SubUnit(
-                                        orgnr=orgnr,
-                                        navn=subunit_data.get("navn"),
-                                        parent_orgnr=subunit_data.get("overordnetEnhet"),
-                                        organisasjonsform=subunit_data.get("organisasjonsform", {}).get("kode"),
-                                        naeringskode=subunit_data.get("naeringskode1", {}).get("kode"),
-                                        antall_ansatte=subunit_data.get("antallAnsatte", 0),
-                                        beliggenhetsadresse=subunit_data.get("beliggenhetsadresse"),
-                                        postadresse=subunit_data.get("postadresse"),
-                                        stiftelsesdato=self._parse_date(subunit_data.get("stiftelsesdato")),
-                                    )
+                    fetch_tasks = [fetch_one(entity) for entity in entities]
+                    fetch_results = await asyncio.gather(*fetch_tasks)
+
+                    # Phase 2: Sequential persist
+                    all_subunits_data = [res for res in fetch_results if res]
+                    
+                    if all_subunits_data:
+                        # Ensure parents exist before saving subunits
+                        await self._ensure_parent_companies_exist(all_subunits_data)
+
+                        all_subunits = []
+                        for subunit_data in all_subunits_data:
+                            orgnr = subunit_data.get("organisasjonsnummer")
+                            all_subunits.append(
+                                models.SubUnit(
+                                    orgnr=orgnr,
+                                    navn=subunit_data.get("navn"),
+                                    parent_orgnr=subunit_data.get("overordnetEnhet"),
+                                    organisasjonsform=subunit_data.get("organisasjonsform", {}).get("kode"),
+                                    naeringskode=subunit_data.get("naeringskode1", {}).get("kode"),
+                                    antall_ansatte=subunit_data.get("antallAnsatte", 0),
+                                    beliggenhetsadresse=subunit_data.get("beliggenhetsadresse"),
+                                    postadresse=subunit_data.get("postadresse"),
+                                    stiftelsesdato=self._parse_date(subunit_data.get("stiftelsesdato")),
                                 )
-                                result.companies_updated += 1
-                        except Exception as ex:
-                            logger.warning(f"Failed to fetch subunit details for {orgnr}: {ex}", extra={"orgnr": orgnr})
-                            continue
+                            )
+                            result.companies_updated += 1
+                        
+                        if all_subunits:
+                            await self.subunit_repo.create_batch(all_subunits, commit=True)
 
-                        # Update state ID
+                    # Update latest ID from original entities
+                    for entity in entities:
                         oppdateringsid = entity.get("oppdateringsid")
                         if oppdateringsid:
                             if result.latest_oppdateringsid is None:
                                 result.latest_oppdateringsid = oppdateringsid
                             else:
                                 result.latest_oppdateringsid = max(result.latest_oppdateringsid, oppdateringsid)
-
-                    # Bulk persistence for the page
-                    if all_subunits:
-                        await self.subunit_repo.create_batch(all_subunits, commit=True)
 
                     result.companies_processed += len(entities)
                     pages_processed += 1
@@ -476,6 +487,53 @@ class UpdateService:
                     break
 
         return result.model_dump()
+
+    async def _ensure_parent_companies_exist(self, subunits_data: list[dict[str, Any]]) -> None:
+        """Ensure all parent companies for a batch of subunits exist in the database.
+        
+        Fetches missing parents from Brreg API if necessary.
+        """
+        # Collect unique parent orgnrs
+        parent_orgnrs: set[str] = {str(s["overordnetEnhet"]) for s in subunits_data if s.get("overordnetEnhet")}
+        if not parent_orgnrs:
+            return
+
+        # Check which parents already exist
+        existing_orgnrs = await self.company_repo.get_existing_orgnrs(list(parent_orgnrs))
+        missing_orgnrs = parent_orgnrs - existing_orgnrs
+
+        if not missing_orgnrs:
+            return
+
+        logger.info(f"Found {len(missing_orgnrs)} missing parent companies. Fetching from Brreg...")
+
+        # Concurrent fetch missing parents
+        semaphore = asyncio.Semaphore(CONCURRENCY_LIMIT)
+
+        async def fetch_parent(orgnr: str) -> dict[str, Any] | None:
+            async with semaphore:
+                try:
+                    return await self.brreg_api.fetch_company(orgnr)
+                except Exception as e:
+                    logger.warning(f"Failed to fetch missing parent {orgnr}: {e}")
+                    return None
+
+        fetch_tasks = [fetch_parent(orgnr) for orgnr in missing_orgnrs]
+        fetched_parents = await asyncio.gather(*fetch_tasks)
+
+        # Sequential persist
+        count = 0
+        for parent_data in fetched_parents:
+            if parent_data:
+                try:
+                    await self.company_repo.create_or_update(parent_data)
+                    count += 1
+                except Exception as e:
+                    logger.error(f"Failed to persist parent {parent_data.get('organisasjonsnummer')}: {e}")
+        
+        if count > 0:
+            await self.db.commit()
+            logger.info(f"Saved {count} missing parent companies to database")
 
     async def fetch_role_updates(
         self,

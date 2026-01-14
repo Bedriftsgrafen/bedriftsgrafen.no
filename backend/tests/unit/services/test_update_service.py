@@ -148,3 +148,69 @@ class TestUpdateBatchResult:
         assert res.companies_updated == 0
         assert res.api_errors == 0
         assert res.since_date == test_date
+
+
+class TestFetchSubunitUpdates:
+    """Tests for subunit update fetching with self-healing parent companies."""
+
+    @pytest.mark.asyncio
+    async def test_fetch_subunit_updates_handles_missing_parents(self):
+        # Arrange
+        mock_db = AsyncMock()
+        service = UpdateService(mock_db)
+
+        # 1. Mock the initial page request
+        mock_page_response = MagicMock()
+        mock_page_response.status_code = 200
+        mock_page_response.json.return_value = {
+            "_embedded": {"oppdaterteUnderenheter": [{"organisasjonsnummer": "123456789", "oppdateringsid": 100}]},
+            "_links": {},
+        }
+
+        # 2. Mock subunit detail fetch
+        mock_subunit_data = {
+            "organisasjonsnummer": "123456789",
+            "navn": "Test Subunit",
+            "overordnetEnhet": "987654321",
+            "organisasjonsform": {"kode": "BEDR"},
+            "naeringskode1": {"kode": "62.010"},
+            "antallAnsatte": 5,
+        }
+        service.brreg_api.fetch_subunit = AsyncMock(return_value=mock_subunit_data)
+
+        # 3. Mock parent existence check (parent is missing)
+        service.company_repo.get_existing_orgnrs = AsyncMock(return_value=set())
+
+        # 4. Mock parent detail fetch
+        mock_parent_data = {
+            "organisasjonsnummer": "987654321",
+            "navn": "Parent Company",
+        }
+        service.brreg_api.fetch_company = AsyncMock(return_value=mock_parent_data)
+
+        # 5. Mock DB operations
+        service.company_repo.create_or_update = AsyncMock()
+        service.subunit_repo.create_batch = AsyncMock(return_value=1)
+
+        with patch("httpx.AsyncClient") as mock_client:
+            mock_client.return_value.__aenter__.return_value.get = AsyncMock(return_value=mock_page_response)
+
+            # Act
+            result = await service.fetch_subunit_updates(page_size=1)
+
+            # Assert
+            # Verify parent was fetched and saved
+            service.brreg_api.fetch_company.assert_called_once_with("987654321")
+            service.company_repo.create_or_update.assert_called_once_with(mock_parent_data)
+
+            # Verify subunit was saved
+            service.subunit_repo.create_batch.assert_called_once()
+            args, _ = service.subunit_repo.create_batch.call_args
+            subunits = args[0]
+            assert len(subunits) == 1
+            assert subunits[0].orgnr == "123456789"
+            assert subunits[0].parent_orgnr == "987654321"
+
+            # Verify result
+            assert result["companies_processed"] == 1
+            assert result["latest_oppdateringsid"] == 100
