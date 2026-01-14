@@ -101,8 +101,12 @@ class CompanyService:
             Dictionary with total_count, total_revenue, total_profit,
             total_employees, and by_organisasjonsform breakdown
         """
-        # Create cache key from filter params
+        # Create cache key from filter params AND sort_by
+        # (Since sort_by can affect joining behavior and thus the resulting count/stats)
         params = filters.to_count_params()
+        if filters.sort_by:
+            params["sort_by"] = filters.sort_by
+
         cache_key = hashlib.md5(str(sorted(params.items())).encode()).hexdigest()
 
         # Check cache
@@ -112,8 +116,8 @@ class CompanyService:
             return cached
 
         # Compute and cache (only cache valid results with data)
-        repo_filters = FilterParams(**params)
-        result = await self.company_repo.get_aggregate_stats(filters=repo_filters)
+        repo_filters = FilterParams(**filters.to_count_params())
+        result = await self.company_repo.get_aggregate_stats(filters=repo_filters, sort_by=filters.sort_by)
 
         # Handle None result (edge case when query returns no data)
         if result is None:

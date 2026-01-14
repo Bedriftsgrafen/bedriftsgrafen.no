@@ -57,7 +57,7 @@ class StatsMixin:
         result = await self.db.execute(query)
         return result.scalar() or 0
 
-    async def get_aggregate_stats(self, filters: FilterParams) -> dict[str, Any]:
+    async def get_aggregate_stats(self, filters: FilterParams, sort_by: str | None = None) -> dict[str, Any]:
         """
         Get aggregate statistics for companies matching filters.
         Returns total count, sum of revenue/profit/employees, and organisation form breakdown.
@@ -65,8 +65,12 @@ class StatsMixin:
         Uses company_totals materialized view for instant unfiltered stats.
         """
         try:
-            # Fast path: no filters - use materialized view
-            if filters.is_empty():
+            # Financial sort fields that require INNER JOIN
+            financial_sort_fields = ("revenue", "profit", "operating_profit", "operating_margin")
+            needs_financial_join = (sort_by in financial_sort_fields) or filters.has_financial_filters()
+
+            # Fast path: no filters and no financial join requirements
+            if filters.is_empty() and not needs_financial_join:
                 try:
                     async with self.db.begin_nested():
                         result = await self.db.execute(text("SELECT * FROM company_totals"))
@@ -78,26 +82,33 @@ class StatsMixin:
                             breakdown = [{"form": r[0], "count": r[1]} for r in breakdown_result.fetchall()]
 
                             return {
-                                "total_count": int(row[0]) if row[0] else 0,
-                                "total_revenue": float(row[1]) if row[1] else 0.0,
-                                "total_profit": float(row[2]) if row[2] else 0.0,
-                                "total_employees": int(row[3]) if row[3] else 0,
+                                "total_count": int(row[1]) if row[1] else 0,
+                                "total_revenue": float(row[2]) if row[2] else 0.0,
+                                "total_profit": float(row[3]) if row[3] else 0.0,
+                                "total_employees": int(row[4]) if row[4] else 0,
                                 "by_organisasjonsform": breakdown,
                             }
                 except Exception as e:
                     logger.warning(f"Materialized view query failed, falling back: {e}")
 
             # Regular query
-            query = (
-                select(
-                    func.count().label("total_count"),
-                    func.sum(func.coalesce(models.LatestFinancials.salgsinntekter, 0)).label("total_revenue"),
-                    func.sum(func.coalesce(models.LatestFinancials.aarsresultat, 0)).label("total_profit"),
-                    func.sum(func.coalesce(models.Company.antall_ansatte, 0)).label("total_employees"),
-                )
-                .select_from(models.Company)
-                .outerjoin(models.LatestFinancials, models.Company.orgnr == models.LatestFinancials.orgnr)
+            query = select(
+                func.count().label("total_count"),
+                func.sum(func.coalesce(models.LatestFinancials.salgsinntekter, 0)).label("total_revenue"),
+                func.sum(func.coalesce(models.LatestFinancials.aarsresultat, 0)).label("total_profit"),
+                func.sum(func.coalesce(models.Company.antall_ansatte, 0)).label("total_employees"),
             )
+
+            if needs_financial_join:
+                # Use INNER JOIN to match list/count behavior when financial criteria are involved
+                query = query.select_from(models.Company).join(
+                    models.LatestFinancials, models.Company.orgnr == models.LatestFinancials.orgnr
+                )
+            else:
+                # Use OUTER JOIN to include companies without financial data
+                query = query.select_from(models.Company).outerjoin(
+                    models.LatestFinancials, models.Company.orgnr == models.LatestFinancials.orgnr
+                )
 
             builder = CompanyFilterBuilder(filters)
             builder.apply_all(include_financial=True)
@@ -117,11 +128,19 @@ class StatsMixin:
             group_query = (
                 select(models.Company.organisasjonsform, func.count())
                 .select_from(models.Company)
-                .outerjoin(models.LatestFinancials, models.Company.orgnr == models.LatestFinancials.orgnr)
                 .group_by(models.Company.organisasjonsform)
                 .order_by(func.count().desc())
                 .limit(5)
             )
+
+            if needs_financial_join:
+                group_query = group_query.join(
+                    models.LatestFinancials, models.Company.orgnr == models.LatestFinancials.orgnr
+                )
+            else:
+                group_query = group_query.outerjoin(
+                    models.LatestFinancials, models.Company.orgnr == models.LatestFinancials.orgnr
+                )
 
             group_query = builder.apply_to_query(group_query)
             group_result = await self.db.execute(group_query)

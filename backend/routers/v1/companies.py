@@ -82,8 +82,7 @@ async def count_companies(
 @limiter.limit("10/second")
 async def get_company_stats(
     request: Request,
-    skip: int = 0,
-    limit: int = 100,
+    sort_by: str = Query("navn", description="Sort field (affects stats when financial sort)"),
     params: CompanyQueryParams = Depends(),
     db: AsyncSession = Depends(get_db),
 ):
@@ -91,7 +90,8 @@ async def get_company_stats(
     Get aggregate statistics for companies matching filters.
     Returns total count, sum of revenue/profit/employees, and organisation form breakdown.
     """
-    filters = params.to_dto(skip=skip, limit=limit)
+    # Build filter DTO (include sort_by as it affects join behavior)
+    filters = params.to_dto(sort_by=sort_by)
 
     service = CompanyService(db)
     return await service.get_aggregate_stats(filters=filters)

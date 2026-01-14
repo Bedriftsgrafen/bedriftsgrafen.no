@@ -115,7 +115,8 @@ class FilterParams:
     def has_financial_filters(self) -> bool:
         """Check if any financial value filters are present (requires join)."""
         return any(
-            [
+            v is not None
+            for v in [
                 self.min_revenue,
                 self.max_revenue,
                 self.min_profit,
@@ -134,7 +135,8 @@ class FilterParams:
     def is_empty(self) -> bool:
         """Check if no filters are set (use for fast-path optimization)."""
         return not any(
-            [
+            v is not None
+            for v in [
                 self.name,
                 self.organisasjonsform,
                 self.naeringskode,
@@ -149,7 +151,7 @@ class FilterParams:
                 self.is_bankrupt,
                 self.in_liquidation,
                 self.in_forced_liquidation,
-                self.has_financial_filters(),
+                self.has_financial_filters() or None,
                 self.has_accounting,
                 self.exclude_org_form,
             ]
@@ -158,7 +160,8 @@ class FilterParams:
     def has_only_org_form_filter(self) -> bool:
         """Check if only organisasjonsform filter is set (for pre-computed counts)."""
         return bool(self.organisasjonsform) and not any(
-            [
+            v is not None
+            for v in [
                 self.name,
                 self.naeringskode,
                 self.min_employees,
@@ -172,7 +175,7 @@ class FilterParams:
                 self.is_bankrupt,
                 self.in_liquidation,
                 self.in_forced_liquidation,
-                self.has_financial_filters(),
+                self.has_financial_filters() or None,
                 self.has_accounting,
                 self.exclude_org_form,
             ]
