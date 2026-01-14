@@ -84,6 +84,15 @@ export function Footer() {
                 <Github className="h-4 w-4" />
                 GitHub
               </a>
+              <a
+                href="https://codewiki.google/github.com/bedriftsgrafen/bedriftsgrafen.no"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-sm text-gray-400 hover:text-blue-400 flex items-center gap-2"
+              >
+                <div className="h-4 w-4 flex items-center justify-center font-bold text-[10px] border border-current rounded-sm">CW</div>
+                CodeWiki
+              </a>
             </div>
             <p className="text-xs text-gray-400 mt-4">
               <kbd className="px-2 py-1 bg-gray-800 border border-gray-700 rounded text-xs text-gray-300">/</kbd> for søk •

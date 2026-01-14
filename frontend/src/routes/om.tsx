@@ -71,14 +71,24 @@ function AboutPage() {
                     Bedriftsgrafen er utviklet som åpen kildekode. Du kan utforske koden,
                     bidra med forbedringer eller rapportere feil på vår GitHub-side.
                   </p>
-                  <a
-                    href="https://github.com/Bedriftsgrafen/bedriftsgrafen.no"
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="inline-flex items-center px-3 py-1.5 bg-gray-900 hover:bg-gray-800 text-white text-sm font-medium rounded-md transition-all duration-200 ease-in-out hover:-translate-y-0.5 hover:shadow-md border border-gray-900 hover:ring-2 hover:ring-gray-900 hover:ring-offset-1"
-                  >
-                    Se på GitHub
-                  </a>
+                  <div className="flex flex-wrap gap-3">
+                    <a
+                      href="https://github.com/Bedriftsgrafen/bedriftsgrafen.no"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex items-center px-3 py-1.5 bg-gray-900 hover:bg-gray-800 text-white text-sm font-medium rounded-md transition-all duration-200 ease-in-out hover:-translate-y-0.5 hover:shadow-md border border-gray-900 hover:ring-2 hover:ring-gray-900 hover:ring-offset-1"
+                    >
+                      Se på GitHub
+                    </a>
+                    <a
+                      href="https://codewiki.google/github.com/bedriftsgrafen/bedriftsgrafen.no"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex items-center px-3 py-1.5 bg-blue-50 hover:bg-blue-100 text-blue-800 text-sm font-medium rounded-md transition-all duration-200 ease-in-out hover:-translate-y-0.5 hover:shadow-md border border-blue-200 hover:ring-2 hover:ring-blue-200 hover:ring-offset-1"
+                    >
+                      CodeWiki
+                    </a>
+                  </div>
                 </div>
               </div>
 
