@@ -181,7 +181,7 @@ static/uploads/
 # -----------------------------------------------------------------------------
 .gemini/
 .claude/
-.agent/
+
 CLAUDE.md
 GEMINI.md
 project-setup-rules.md
