@@ -6,37 +6,35 @@ import { useFilterStore } from '../store/filterStore'
  * Centralizes filter state transformation to prevent duplication
  */
 export function useFilterParams() {
-  const {
-    organizationForms,
-    naeringskode,
-    revenueMin,
-    revenueMax,
-    profitMin,
-    profitMax,
-    equityMin,
-    equityMax,
-    operatingProfitMin,
-    operatingProfitMax,
-    liquidityRatioMin,
-    liquidityRatioMax,
-    equityRatioMin,
-    equityRatioMax,
-    employeeMin,
-    employeeMax,
-    municipality,
-    county,
-    foundedFrom,
-    foundedTo,
-    bankruptFrom,
-    bankruptTo,
-    isBankrupt,
-    inLiquidation,
-    inForcedLiquidation,
-    hasAccounting,
-    sortBy,
-    sortOrder,
-    searchQuery
-  } = useFilterStore()
+  const organizationForms = useFilterStore(s => s.organizationForms)
+  const naeringskode = useFilterStore(s => s.naeringskode)
+  const revenueMin = useFilterStore(s => s.revenueMin)
+  const revenueMax = useFilterStore(s => s.revenueMax)
+  const profitMin = useFilterStore(s => s.profitMin)
+  const profitMax = useFilterStore(s => s.profitMax)
+  const equityMin = useFilterStore(s => s.equityMin)
+  const equityMax = useFilterStore(s => s.equityMax)
+  const operatingProfitMin = useFilterStore(s => s.operatingProfitMin)
+  const operatingProfitMax = useFilterStore(s => s.operatingProfitMax)
+  const liquidityRatioMin = useFilterStore(s => s.liquidityRatioMin)
+  const liquidityRatioMax = useFilterStore(s => s.liquidityRatioMax)
+  const equityRatioMin = useFilterStore(s => s.equityRatioMin)
+  const equityRatioMax = useFilterStore(s => s.equityRatioMax)
+  const employeeMin = useFilterStore(s => s.employeeMin)
+  const employeeMax = useFilterStore(s => s.employeeMax)
+  const municipality = useFilterStore(s => s.municipality)
+  const county = useFilterStore(s => s.county)
+  const foundedFrom = useFilterStore(s => s.foundedFrom)
+  const foundedTo = useFilterStore(s => s.foundedTo)
+  const bankruptFrom = useFilterStore(s => s.bankruptFrom)
+  const bankruptTo = useFilterStore(s => s.bankruptTo)
+  const isBankrupt = useFilterStore(s => s.isBankrupt)
+  const inLiquidation = useFilterStore(s => s.inLiquidation)
+  const inForcedLiquidation = useFilterStore(s => s.inForcedLiquidation)
+  const hasAccounting = useFilterStore(s => s.hasAccounting)
+  const sortBy = useFilterStore(s => s.sortBy)
+  const sortOrder = useFilterStore(s => s.sortOrder)
+  const searchQuery = useFilterStore(s => s.searchQuery)
 
   // Memoize the filter params object to prevent unnecessary re-renders
   // Validation constraints from backend (companies.py Query params):

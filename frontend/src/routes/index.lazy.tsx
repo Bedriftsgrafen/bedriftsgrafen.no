@@ -20,8 +20,8 @@ function HomePage() {
     const navigate = useNavigate()
     const [searchQuery, setSearchQuery] = useState('')
     const [committedPersonQuery, setCommittedPersonQuery] = useState('')
-    const { addRecentSearch } = useUiStore()
-    const { clearFilters } = useFilterStore()
+    const addRecentSearch = useUiStore(s => s.addRecentSearch)
+    const clearFilters = useFilterStore(s => s.clearFilters)
 
     const [searchMode, setSearchMode] = useState<'company' | 'person'>('company')
     const {

@@ -4,7 +4,7 @@ import { create } from 'zustand'
  * Filter values - data only, no functions
  * Used for setAllFilters to ensure type safety
  */
-interface FilterValues {
+export interface FilterValues {
   searchQuery: string
   organizationForms: string[]
   naeringskode: string
@@ -105,23 +105,23 @@ export const useFilterStore = create<FilterState>((set, get) => ({
   filterVersion: 0,
 
   // Actions
-  setSearchQuery: (query) => set({ searchQuery: query }),
-  setOrganizationForms: (forms) => set({ organizationForms: forms }),
-  setNaeringskode: (code) => set({ naeringskode: code }),
-  setRevenueRange: (min, max) => set({ revenueMin: min, revenueMax: max }),
-  setProfitRange: (min, max) => set({ profitMin: min, profitMax: max }),
-  setEquityRange: (min, max) => set({ equityMin: min, equityMax: max }),
-  setOperatingProfitRange: (min, max) => set({ operatingProfitMin: min, operatingProfitMax: max }),
-  setLiquidityRatioRange: (min, max) => set({ liquidityRatioMin: min, liquidityRatioMax: max }),
-  setEquityRatioRange: (min, max) => set({ equityRatioMin: min, equityRatioMax: max }),
-  setEmployeeRange: (min, max) => set({ employeeMin: min, employeeMax: max }),
-  setMunicipality: (m) => set({ municipality: m }),
-  setCounty: (c) => set({ county: c }),
-  setFoundedRange: (from, to) => set({ foundedFrom: from, foundedTo: to }),
-  setBankruptRange: (from, to) => set({ bankruptFrom: from, bankruptTo: to }),
-  setStatus: (key, value) => set({ [key]: value }),
-  setHasAccounting: (has) => set({ hasAccounting: has }),
-  setSort: (by, order) => set({ sortBy: by, sortOrder: order }),
+  setSearchQuery: (query) => set((s) => ({ searchQuery: query, filterVersion: s.filterVersion + 1 })),
+  setOrganizationForms: (forms) => set((s) => ({ organizationForms: forms, filterVersion: s.filterVersion + 1 })),
+  setNaeringskode: (code) => set((s) => ({ naeringskode: code, filterVersion: s.filterVersion + 1 })),
+  setRevenueRange: (min, max) => set((s) => ({ revenueMin: min, revenueMax: max, filterVersion: s.filterVersion + 1 })),
+  setProfitRange: (min, max) => set((s) => ({ profitMin: min, profitMax: max, filterVersion: s.filterVersion + 1 })),
+  setEquityRange: (min, max) => set((s) => ({ equityMin: min, equityMax: max, filterVersion: s.filterVersion + 1 })),
+  setOperatingProfitRange: (min, max) => set((s) => ({ operatingProfitMin: min, operatingProfitMax: max, filterVersion: s.filterVersion + 1 })),
+  setLiquidityRatioRange: (min, max) => set((s) => ({ liquidityRatioMin: min, liquidityRatioMax: max, filterVersion: s.filterVersion + 1 })),
+  setEquityRatioRange: (min, max) => set((s) => ({ equityRatioMin: min, equityRatioMax: max, filterVersion: s.filterVersion + 1 })),
+  setEmployeeRange: (min, max) => set((s) => ({ employeeMin: min, employeeMax: max, filterVersion: s.filterVersion + 1 })),
+  setMunicipality: (m) => set((s) => ({ municipality: m, filterVersion: s.filterVersion + 1 })),
+  setCounty: (c) => set((s) => ({ county: c, filterVersion: s.filterVersion + 1 })),
+  setFoundedRange: (from, to) => set((s) => ({ foundedFrom: from, foundedTo: to, filterVersion: s.filterVersion + 1 })),
+  setBankruptRange: (from, to) => set((s) => ({ bankruptFrom: from, bankruptTo: to, filterVersion: s.filterVersion + 1 })),
+  setStatus: (key, value) => set((s) => ({ [key]: value, filterVersion: s.filterVersion + 1 })),
+  setHasAccounting: (has) => set((s) => ({ hasAccounting: has, filterVersion: s.filterVersion + 1 })),
+  setSort: (by, order) => set({ sortBy: by, sortOrder: order }), // Sort doesn't need to trigger FilterPanel draft re-sync
   setAllFilters: (filters) => set((state) => ({ ...filters, filterVersion: state.filterVersion + 1 })),
   incrementFilterVersion: () => set((state) => ({ filterVersion: state.filterVersion + 1 })),
   clearFilters: () => set((state) => ({

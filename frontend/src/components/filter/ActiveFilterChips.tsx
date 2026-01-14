@@ -1,74 +1,42 @@
 import { useFilterStore } from '../../store/filterStore'
 import { COUNTIES } from '../../constants/explorer'
-import { useCallback } from 'react'
+import { memo, useCallback } from 'react'
 import { X } from 'lucide-react'
 
-export function ActiveFilterChips() {
-  const filters = useFilterStore(useCallback(s => ({
-    searchQuery: s.searchQuery,
-    organizationForms: s.organizationForms,
-    naeringskode: s.naeringskode,
-    municipality: s.municipality,
-    county: s.county,
-    revenueMin: s.revenueMin,
-    revenueMax: s.revenueMax,
-    profitMin: s.profitMin,
-    profitMax: s.profitMax,
-    equityMin: s.equityMin,
-    equityMax: s.equityMax,
-    operatingProfitMin: s.operatingProfitMin,
-    operatingProfitMax: s.operatingProfitMax,
-    liquidityRatioMin: s.liquidityRatioMin,
-    liquidityRatioMax: s.liquidityRatioMax,
-    equityRatioMin: s.equityRatioMin,
-    equityRatioMax: s.equityRatioMax,
-    employeeMin: s.employeeMin,
-    employeeMax: s.employeeMax,
-    foundedFrom: s.foundedFrom,
-    foundedTo: s.foundedTo,
-    bankruptFrom: s.bankruptFrom,
-    bankruptTo: s.bankruptTo,
-    isBankrupt: s.isBankrupt,
-    inLiquidation: s.inLiquidation,
-    inForcedLiquidation: s.inForcedLiquidation,
-    hasAccounting: s.hasAccounting,
-  }), []))
+export const ActiveFilterChips = memo(function ActiveFilterChips() {
+  const searchQuery = useFilterStore(s => s.searchQuery)
+  const organizationForms = useFilterStore(s => s.organizationForms)
+  const naeringskode = useFilterStore(s => s.naeringskode)
+  const municipality = useFilterStore(s => s.municipality)
+  const county = useFilterStore(s => s.county)
+  const revenueMin = useFilterStore(s => s.revenueMin)
+  const revenueMax = useFilterStore(s => s.revenueMax)
+  const profitMin = useFilterStore(s => s.profitMin)
+  const profitMax = useFilterStore(s => s.profitMax)
+  const equityMin = useFilterStore(s => s.equityMin)
+  const equityMax = useFilterStore(s => s.equityMax)
+  const operatingProfitMin = useFilterStore(s => s.operatingProfitMin)
+  const operatingProfitMax = useFilterStore(s => s.operatingProfitMax)
+  const liquidityRatioMin = useFilterStore(s => s.liquidityRatioMin)
+  const liquidityRatioMax = useFilterStore(s => s.liquidityRatioMax)
+  const equityRatioMin = useFilterStore(s => s.equityRatioMin)
+  const equityRatioMax = useFilterStore(s => s.equityRatioMax)
+  const employeeMin = useFilterStore(s => s.employeeMin)
+  const employeeMax = useFilterStore(s => s.employeeMax)
+  const foundedFrom = useFilterStore(s => s.foundedFrom)
+  const foundedTo = useFilterStore(s => s.foundedTo)
+  const bankruptFrom = useFilterStore(s => s.bankruptFrom)
+  const bankruptTo = useFilterStore(s => s.bankruptTo)
+  const isBankrupt = useFilterStore(s => s.isBankrupt)
+  const inLiquidation = useFilterStore(s => s.inLiquidation)
+  const inForcedLiquidation = useFilterStore(s => s.inForcedLiquidation)
+  const hasAccounting = useFilterStore(s => s.hasAccounting)
 
   const setSearchQuery = useFilterStore(s => s.setSearchQuery)
 
   const onClearSearch = useCallback(() => {
     setSearchQuery('')
   }, [setSearchQuery])
-
-  const {
-    searchQuery,
-    organizationForms,
-    naeringskode,
-    municipality,
-    county,
-    revenueMin,
-    revenueMax,
-    profitMin,
-    profitMax,
-    equityMin,
-    equityMax,
-    operatingProfitMin,
-    operatingProfitMax,
-    liquidityRatioMin,
-    liquidityRatioMax,
-    equityRatioMin,
-    equityRatioMax,
-    employeeMin,
-    employeeMax,
-    foundedFrom,
-    foundedTo,
-    bankruptFrom,
-    bankruptTo,
-    isBankrupt,
-    inLiquidation,
-    inForcedLiquidation,
-    hasAccounting,
-  } = filters
 
   return (
     <div className="mt-6 pt-4 border-t border-gray-100">
@@ -167,4 +135,4 @@ export function ActiveFilterChips() {
       </div>
     </div>
   )
-}
+})

@@ -25,15 +25,28 @@ export interface UseCompanyStatsQueryParams {
     max_revenue?: number
     min_profit?: number
     max_profit?: number
+    min_equity?: number
+    max_equity?: number
+    min_operating_profit?: number
+    max_operating_profit?: number
+    min_liquidity_ratio?: number
+    max_liquidity_ratio?: number
+    min_equity_ratio?: number
+    max_equity_ratio?: number
     min_employees?: number
     max_employees?: number
     municipality?: string
     county?: string
     founded_from?: string
     founded_to?: string
+    bankrupt_from?: string
+    bankrupt_to?: string
     is_bankrupt?: boolean
     in_liquidation?: boolean
     in_forced_liquidation?: boolean
+    has_accounting?: boolean
+    exclude_org_form?: string[]
+    sort_by?: string
 }
 
 async function fetchCompanyStats(params: UseCompanyStatsQueryParams): Promise<CompanyStatsResponse> {

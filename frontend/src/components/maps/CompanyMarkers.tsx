@@ -13,6 +13,7 @@ import { useQuery } from '@tanstack/react-query';
 import { apiClient } from '../../utils/apiClient';
 import { MapPin, Users } from 'lucide-react';
 import { renderToString } from 'react-dom/server';
+import { companyQueryKeys } from '../../lib/queryKeys';
 
 // Types
 interface MapMarker {
@@ -200,7 +201,7 @@ export function CompanyMarkers({ naceCode, countyCode, onCompanyClick }: Company
 
     // Fetch markers from API
     const { data, isLoading, isError } = useQuery({
-        queryKey: ['markers', naceCode, countyCode],
+        queryKey: companyQueryKeys.markers(naceCode, countyCode),
         queryFn: async () => {
             const params: Record<string, string> = { naeringskode: naceCode! };
             if (countyCode) params.county = countyCode;

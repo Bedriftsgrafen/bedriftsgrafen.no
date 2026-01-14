@@ -1,13 +1,15 @@
 import { Search, Clock } from 'lucide-react'
 import { useUiStore } from '../store/uiStore'
 import { formatDistanceToNow } from '../utils/formatters'
+import { memo } from 'react'
 
 interface RecentSearchesProps {
   onSelectSearch: (query: string) => void
 }
 
-export function RecentSearches({ onSelectSearch }: RecentSearchesProps) {
-  const { recentSearches, clearRecentSearches } = useUiStore()
+export const RecentSearches = memo(function RecentSearches({ onSelectSearch }: RecentSearchesProps) {
+  const recentSearches = useUiStore(s => s.recentSearches)
+  const clearRecentSearches = useUiStore(s => s.clearRecentSearches)
 
   if (recentSearches.length === 0) {
     return null
@@ -42,4 +44,4 @@ export function RecentSearches({ onSelectSearch }: RecentSearchesProps) {
       </div>
     </div>
   )
-}
+})

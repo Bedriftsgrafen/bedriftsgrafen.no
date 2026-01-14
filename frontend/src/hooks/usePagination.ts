@@ -11,7 +11,8 @@ interface UsePaginationOptions {
  * Uses useMemo for computed values to prevent unnecessary recalculations
  */
 export function usePagination({ itemsPerPage, currentItemsCount }: UsePaginationOptions) {
-  const { currentPage, setPage } = useUiStore()
+  const currentPage = useUiStore(s => s.currentPage)
+  const setPage = useUiStore(s => s.setPage)
 
   const handlePreviousPage = useCallback(() => {
     setPage(Math.max(1, currentPage - 1))

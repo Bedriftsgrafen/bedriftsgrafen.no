@@ -3,9 +3,11 @@ import { History, Building2 } from 'lucide-react'
 import { useUiStore } from '../store/uiStore'
 import { formatDistanceToNow } from '../utils/formatters'
 import { getOrganizationFormLabel } from '../utils/organizationForms'
+import { memo } from 'react'
 
-export function RecentCompanies() {
-  const { recentCompanies, clearRecentCompanies } = useUiStore()
+export const RecentCompanies = memo(function RecentCompanies() {
+  const recentCompanies = useUiStore(s => s.recentCompanies)
+  const clearRecentCompanies = useUiStore(s => s.clearRecentCompanies)
 
   if (recentCompanies.length === 0) {
     return null
@@ -37,7 +39,7 @@ export function RecentCompanies() {
             <Building2 className="h-3.5 w-3.5 text-gray-400 group-hover:text-blue-500" />
             <span className="max-w-[200px] truncate font-medium">{company.navn}</span>
             <span className="text-gray-400 group-hover:text-blue-500">•</span>
-            <span 
+            <span
               className="text-gray-500 group-hover:text-blue-600"
               title={getOrganizationFormLabel(company.organisasjonsform)}
             >
@@ -48,4 +50,4 @@ export function RecentCompanies() {
       </div>
     </div>
   )
-}
+})

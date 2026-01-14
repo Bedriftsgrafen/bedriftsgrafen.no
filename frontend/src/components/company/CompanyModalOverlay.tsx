@@ -29,7 +29,9 @@ interface IndustryModalState {
 
 export function CompanyModalOverlay({ orgnr, onClose }: CompanyModalOverlayProps) {
     const navigate = useNavigate()
-    const { selectedYear, setSelectedYear, addRecentCompany } = useUiStore()
+    const selectedYear = useUiStore(s => s.selectedYear)
+    const setSelectedYear = useUiStore(s => s.setSelectedYear)
+    const addRecentCompany = useUiStore(s => s.addRecentCompany)
 
     // Industry modal state
     const [industryModal, setIndustryModal] = useState<IndustryModalState>({
@@ -96,7 +98,7 @@ export function CompanyModalOverlay({ orgnr, onClose }: CompanyModalOverlayProps
     return (
         <>
             {/* Optional floating button to open full page */}
-            <div className="fixed top-20 right-4 z-[1001]">
+            <div className="fixed top-20 right-4 z-1001">
                 <button
                     onClick={handleOpenFullPage}
                     className="flex items-center gap-2 px-3 py-2 bg-white rounded-lg shadow-lg text-sm text-gray-700 hover:bg-gray-50 transition-colors"

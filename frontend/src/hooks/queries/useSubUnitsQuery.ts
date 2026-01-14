@@ -2,6 +2,8 @@ import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { apiClient } from '../../utils/apiClient'
 import type { SubUnit } from '../../types'
 
+import { companyQueryKeys } from '../../lib/queryKeys'
+
 interface SubUnitsResponse {
   data: SubUnit[]
   total: number
@@ -16,7 +18,7 @@ export function useSubUnitsQuery(orgnr: string | undefined) {
   const queryClient = useQueryClient()
 
   const query = useQuery({
-    queryKey: ['subunits', orgnr],
+    queryKey: companyQueryKeys.subunits(orgnr || ''),
     queryFn: async () => {
       if (!orgnr) return []
       const response = await apiClient.get<SubUnitsResponse>(`/v1/companies/${orgnr}/subunits`)

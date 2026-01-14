@@ -1,4 +1,4 @@
-import React, { useCallback, memo } from 'react'
+import React, { useCallback, memo, useMemo } from 'react'
 import { Building2, MapPin, Briefcase, RotateCcw, Users, TrendingUp } from 'lucide-react'
 import { useFilterStore } from '../../store/filterStore'
 import { useExplorerStore } from '../../store/explorerStore'
@@ -49,6 +49,8 @@ export const ExplorerFilters = memo(function ExplorerFilters() {
     const revenueMax = useFilterStore((s) => s.revenueMax)
     const employeeMin = useFilterStore((s) => s.employeeMin)
     const employeeMax = useFilterStore((s) => s.employeeMax)
+
+    // Actions - stable because they are functions
     const setNaeringskode = useFilterStore((s) => s.setNaeringskode)
     const setMunicipality = useFilterStore((s) => s.setMunicipality)
     const setCounty = useFilterStore((s) => s.setCounty)
@@ -56,7 +58,6 @@ export const ExplorerFilters = memo(function ExplorerFilters() {
     const setRevenueRange = useFilterStore((s) => s.setRevenueRange)
     const setEmployeeRange = useFilterStore((s) => s.setEmployeeRange)
     const clearFilters = useFilterStore((s) => s.clearFilters)
-    const getActiveFilterCount = useFilterStore((s) => s.getActiveFilterCount)
 
     // Get SSB NACE name for selected code
     const naceName = useNaceName(naeringskode)
@@ -67,9 +68,19 @@ export const ExplorerFilters = memo(function ExplorerFilters() {
     const setNaceModalOpen = useExplorerStore((s) => s.setNaceModalOpen)
     const setRegionModalOpen = useExplorerStore((s) => s.setRegionModalOpen)
 
-    const activeFilters = getActiveFilterCount()
+    // Compute active filter count from subscribed values
+    const activeFilters = useMemo(() => {
+        let count = 0
+        if (organizationForms.length > 0) count++
+        if (naeringskode) count++
+        if (municipality) count++
+        if (county) count++
+        if (revenueMin !== null || revenueMax !== null) count++
+        if (employeeMin !== null || employeeMax !== null) count++
+        return count
+    }, [organizationForms, naeringskode, municipality, county, revenueMin, revenueMax, employeeMin, employeeMax])
 
-    // Range change handler - memoized with proper dependencies
+    // Range change handler - uses getState() to avoid dependency on mutable state
     const handleRangeChange = useCallback(
         (field: string, isMin: boolean, value: string, multiplier: number = 1) => {
             const numValue = value === '' ? null : parseFloat(value) * multiplier
@@ -80,30 +91,32 @@ export const ExplorerFilters = memo(function ExplorerFilters() {
             }
 
             const rangeField = field as RangeFilterField
+            const state = useFilterStore.getState()
 
             switch (rangeField) {
                 case 'revenue':
-                    if (isMin) setRevenueRange(numValue, revenueMax)
-                    else setRevenueRange(revenueMin, numValue)
+                    if (isMin) setRevenueRange(numValue, state.revenueMax)
+                    else setRevenueRange(state.revenueMin, numValue)
                     break
                 case 'employee':
-                    if (isMin) setEmployeeRange(numValue, employeeMax)
-                    else setEmployeeRange(employeeMin, numValue)
+                    if (isMin) setEmployeeRange(numValue, state.employeeMax)
+                    else setEmployeeRange(state.employeeMin, numValue)
                     break
             }
         },
-        [revenueMin, revenueMax, employeeMin, employeeMax, setRevenueRange, setEmployeeRange]
+        [setRevenueRange, setEmployeeRange]
     )
 
-    // Organization form toggle - memoized
+    // Organization form toggle - uses getState() to avoid dependency on mutable state
     const handleOrganizationFormToggle = useCallback(
         (value: string) => {
-            const newForms = organizationForms.includes(value)
-                ? organizationForms.filter((f) => f !== value)
-                : [...organizationForms, value]
+            const currentForms = useFilterStore.getState().organizationForms
+            const newForms = currentForms.includes(value)
+                ? currentForms.filter((f) => f !== value)
+                : [...currentForms, value]
             setOrganizationForms(newForms)
         },
-        [organizationForms, setOrganizationForms]
+        [setOrganizationForms]
     )
 
     // Modal handlers - stable references

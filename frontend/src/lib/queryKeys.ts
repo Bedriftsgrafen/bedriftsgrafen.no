@@ -17,6 +17,12 @@ export const companyQueryKeys = {
     'count',
     { filters },
   ] as const,
+  subunits: (orgnr: string) => [...companyQueryKeys.all, 'subunits', orgnr] as const,
+  markers: (nace: string | null, county?: string | null) => [
+    ...companyQueryKeys.all,
+    'markers',
+    { nace, county },
+  ] as const,
 }
 
 export const accountingQueryKeys = {

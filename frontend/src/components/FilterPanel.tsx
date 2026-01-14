@@ -27,7 +27,24 @@ export function FilterPanel() {
   const setAllFilters = useFilterStore(s => s.setAllFilters)
   const clearFilters = useFilterStore(s => s.clearFilters)
   const filterVersion = useFilterStore(s => s.filterVersion)
-  const activeFilters = useFilterStore(s => s.getActiveFilterCount())
+  // Compute active filter count inline (don't call getActiveFilterCount as it uses get() internally)
+  const activeFilters = useFilterStore(s => {
+    let count = 0
+    if (s.searchQuery) count++
+    if (s.organizationForms.length > 0) count++
+    if (s.naeringskode) count++
+    if (s.revenueMin !== null || s.revenueMax !== null) count++
+    if (s.profitMin !== null || s.profitMax !== null) count++
+    if (s.equityMin !== null || s.equityMax !== null) count++
+    if (s.employeeMin !== null || s.employeeMax !== null) count++
+    if (s.municipality) count++
+    if (s.county) count++
+    if (s.isBankrupt !== null) count++
+    if (s.inLiquidation !== null) count++
+    if (s.inForcedLiquidation !== null) count++
+    if (s.hasAccounting !== null) count++
+    return count
+  })
 
   const resetPagination = useResetPagination()
   const { savedFilters, saveFilter, updateFilter, deleteFilter } = useSavedFiltersStore()
@@ -76,12 +93,16 @@ export function FilterPanel() {
   // Local draft state initialized once
   const [draftFilters, setDraftFilters] = useState(getStoreSnapshot)
 
-  // Sync draft filters during render when filterVersion changes (e.g. on Apply or Reset)
-  const [prevVersion, setPrevVersion] = useState(filterVersion)
-  if (filterVersion !== prevVersion) {
-    setPrevVersion(filterVersion)
-    setDraftFilters(getStoreSnapshot())
-  }
+  // Sync draft filters when filterVersion changes (e.g. on Apply or Reset)
+  // Using useEffect instead of render-time setState to prevent infinite loops
+  const prevVersionRef = useRef(filterVersion)
+  useEffect(() => {
+    if (prevVersionRef.current !== filterVersion) {
+      prevVersionRef.current = filterVersion
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      setDraftFilters(getStoreSnapshot())
+    }
+  }, [filterVersion, getStoreSnapshot])
 
   // Keyboard shortcuts
   useEffect(() => {

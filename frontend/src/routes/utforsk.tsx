@@ -31,22 +31,23 @@ function UtforskPage() {
     const { q } = useSearch({ from: '/utforsk' })
 
     // UI state
-    const {
-        itemsPerPage,
-        currentPage,
-        addRecentSearch
-    } = useUiStore()
+    const itemsPerPage = useUiStore(s => s.itemsPerPage)
+    const currentPage = useUiStore(s => s.currentPage)
+    const addRecentSearch = useUiStore(s => s.addRecentSearch)
 
     // Filter state
     const { filterParams, sortBy, sortOrder } = useFilterParams()
-    const { setSort, setSearchQuery } = useFilterStore()
+    const setSort = useFilterStore(s => s.setSort)
+    const setSearchQuery = useFilterStore(s => s.setSearchQuery)
+    const searchQueryInStore = useFilterStore((s) => s.searchQuery)
 
     const inputRef = useRef<HTMLInputElement>(null)
 
     // Sync global search query and history
     useEffect(() => {
+        // ALWAYS update the store, even if q is missing (to handle clearing)
+        setSearchQuery(q || '')
         if (q) {
-            setSearchQuery(q)
             addRecentSearch(q)
         }
     }, [q, setSearchQuery, addRecentSearch])
@@ -136,11 +137,11 @@ function UtforskPage() {
 
                         <div className="relative">
                             <input
-                                key={q} // Reset when URL query changes
                                 type="text"
-                                defaultValue={q || ''}
+                                value={searchQueryInStore}
                                 ref={inputRef}
                                 onKeyDown={handleKeyDown}
+                                onChange={(e) => setSearchQuery(e.target.value)}
                                 placeholder="Søk etter bedrift..."
                                 className="w-full px-4 py-2 pl-10 bg-white border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 shadow-sm"
                             />

@@ -54,7 +54,9 @@ const ColumnPicker: React.FC<ColumnPickerProps> = ({ className }) => {
     const [isOpen, setIsOpen] = useState(false)
     const dropdownRef = useRef<HTMLDivElement>(null)
     const triggerRef = useRef<HTMLButtonElement>(null)
-    const { visibleColumns, toggleColumn, resetColumns } = useUiStore()
+    const visibleColumns = useUiStore(s => s.visibleColumns)
+    const toggleColumn = useUiStore(s => s.toggleColumn)
+    const resetColumns = useUiStore(s => s.resetColumns)
 
     // Handle outside click
     useEffect(() => {
@@ -233,8 +235,9 @@ export function CompanyList({
     countLoading,
     viewMode = 'list'
 }: CompanyListProps) {
-    const { visibleColumns, reorderColumns } = useUiStore()
-    const { clearFilters } = useFilterStore()
+    const visibleColumns = useUiStore(s => s.visibleColumns)
+    const reorderColumns = useUiStore(s => s.reorderColumns)
+    const clearFilters = useFilterStore(s => s.clearFilters)
 
     // Drag state using refs to avoid nested setState anti-pattern
     // Refs are used instead of state because:

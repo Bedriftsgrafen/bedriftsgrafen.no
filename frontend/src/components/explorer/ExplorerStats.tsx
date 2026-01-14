@@ -51,8 +51,11 @@ const STAT_ICONS = {
  * Displays total companies, revenue, profit, and employees.
  */
 export const ExplorerStats = memo(function ExplorerStats() {
-    const { filterParams } = useFilterParams()
-    const { data: stats, isLoading, isError, refetch } = useCompanyStatsQuery(filterParams)
+    const { filterParams, sortBy } = useFilterParams()
+    const { data: stats, isLoading, isError, refetch } = useCompanyStatsQuery({
+        ...filterParams,
+        sort_by: sortBy,
+    })
 
     // Memoize formatted values
     const formattedStats = useMemo(() => {

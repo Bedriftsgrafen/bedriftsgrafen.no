@@ -6,7 +6,7 @@ import { useUiStore } from '../store/uiStore'
  * Centralizes pagination reset logic for DRY principle
  */
 export function useResetPagination() {
-  const { setPage } = useUiStore()
+  const setPage = useUiStore(s => s.setPage)
 
   const resetPagination = useCallback(() => {
     setPage(1)

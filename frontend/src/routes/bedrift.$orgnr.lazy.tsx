@@ -24,7 +24,9 @@ export const Route = createLazyFileRoute('/bedrift/$orgnr')({
 function CompanyPage() {
     const navigate = Route.useNavigate()
     const { orgnr } = Route.useParams()
-    const { selectedYear, setSelectedYear, addRecentCompany } = useUiStore()
+    const selectedYear = useUiStore(s => s.selectedYear)
+    const setSelectedYear = useUiStore(s => s.setSelectedYear)
+    const addRecentCompany = useUiStore(s => s.addRecentCompany)
 
     // Industry modal state
     const [industryModal, setIndustryModal] = useState<IndustryModalState>({

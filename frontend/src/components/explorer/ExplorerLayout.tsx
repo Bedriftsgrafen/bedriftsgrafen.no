@@ -13,7 +13,7 @@ import { useExplorerShortcuts } from '../../hooks/useExplorerShortcuts'
 import { useCompaniesQuery } from '../../hooks/queries/useCompaniesQuery'
 import { useCompanyCountQuery } from '../../hooks/queries/useCompanyCountQuery'
 import { useUiStore } from '../../store/uiStore'
-import { useFilterStore } from '../../store/filterStore'
+import { useFilterStore, type FilterValues } from '../../store/filterStore'
 import { useExplorerStore } from '../../store/explorerStore'
 import { isNumericSortField } from '../../constants/explorer'
 import { ComparisonBar, ComparisonModal } from '../comparison'
@@ -37,11 +37,13 @@ export const ExplorerLayout = memo(function ExplorerLayout({ onSelectCompany }: 
     const currentPage = useUiStore((s) => s.currentPage)
     const setPage = useUiStore((s) => s.setPage)
 
-    // Filter state
-    const hasActiveFilters = useFilterStore((s) => s.getActiveFilterCount() > 0)
-    const setMunicipality = useFilterStore((s) => s.setMunicipality)
-    const setNaeringskode = useFilterStore((s) => s.setNaeringskode)
-    const setCounty = useFilterStore((s) => s.setCounty)
+    // Filter state - inline check to avoid getActiveFilterCount() which uses get() internally
+    const hasActiveFilters = useFilterStore((s) =>
+        !!(s.searchQuery || s.organizationForms.length > 0 || s.naeringskode ||
+            s.municipality || s.county || s.revenueMin !== null || s.revenueMax !== null ||
+            s.employeeMin !== null || s.employeeMax !== null || s.isBankrupt !== null)
+    )
+    const setAllFilters = useFilterStore((s) => s.setAllFilters)
     const setSort = useFilterStore((s) => s.setSort)
 
     // Check for map filter from sessionStorage (region click from map)
@@ -50,14 +52,13 @@ export const ExplorerLayout = memo(function ExplorerLayout({ onSelectCompany }: 
         if (mapFilterStr) {
             try {
                 const mapFilter = JSON.parse(mapFilterStr);
-                if (mapFilter.county) {
-                    setCounty(mapFilter.county);
-                }
-                if (mapFilter.municipality) {
-                    setMunicipality(mapFilter.municipality);
-                }
-                if (mapFilter.nace) {
-                    setNaeringskode(mapFilter.nace);
+                const updates: Partial<FilterValues> = {};
+                if (mapFilter.county) updates.county = mapFilter.county;
+                if (mapFilter.municipality) updates.municipality = mapFilter.municipality;
+                if (mapFilter.nace) updates.naeringskode = mapFilter.nace;
+
+                if (Object.keys(updates).length > 0) {
+                    setAllFilters(updates);
                 }
                 // Clear after applying
                 sessionStorage.removeItem('mapFilter');
@@ -65,7 +66,7 @@ export const ExplorerLayout = memo(function ExplorerLayout({ onSelectCompany }: 
                 console.error('Failed to parse mapFilter:', e);
             }
         }
-    }, [setMunicipality, setNaeringskode, setCounty]);
+    }, [setAllFilters]);
 
     // Explorer UI state
     const viewMode = useExplorerStore((s) => s.viewMode)
