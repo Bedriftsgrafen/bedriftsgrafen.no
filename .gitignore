@@ -184,7 +184,7 @@ static/uploads/
 .agent/legacy/
 
 CLAUDE.md
-GEMINI.md
+
 project-setup-rules.md
 
 .github/copilot-instructions.md
