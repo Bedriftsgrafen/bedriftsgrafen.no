@@ -181,13 +181,14 @@ static/uploads/
 # -----------------------------------------------------------------------------
 .gemini/
 .claude/
+.agent/legacy/
 
 CLAUDE.md
 GEMINI.md
 project-setup-rules.md
 .cursorrules
 .github/copilot-instructions.md
-optimized_prompt.md
+
 
 # Internal documentation
 docs/
