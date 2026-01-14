@@ -50,9 +50,38 @@ This document consolidates feature ideas and strategic plans for future developm
 - Add municipality boundaries GeoJSON (from Kartverket)
 - React component with Leaflet + react-leaflet
 
+
 ---
 
-## Priority 3: Advanced Analytics (1-2 weeks each)
+## Priority 3: Subunit Enhancements (Underavdelinger)
+
+### Subunit Map View
+- **Concept**: Add a "Map" toggle to the "Avdelinger" tab in the company modal. This would switch from the current grid view to an interactive map displaying pins for each subunit's location.
+- **Effort**: Medium
+- **Technical**:
+  - Requires adding geocoding fields (`latitude`, `longitude`) to the `underenheter` table in the database.
+  - A new batch script will be needed to geocode existing subunits.
+  - A new `SubunitMap` component will be created in the frontend using `react-leaflet`.
+
+### Hierarchical View / Organizational Chart
+- **Concept**: Display a simple, read-only organizational chart that shows the parent company at the top and its subunits branching out below it. This provides a clear, immediate understanding of the company's structure.
+- **Effort**: Medium-High
+- **Technical**:
+  - Integrate a library for rendering tree-like structures (e.g., `react-flow`).
+  - Create a new `OrganizationChartView` component that formats the parent-child data for the charting library.
+  - Could be a new sub-tab within the "Avdelinger" tab: "List" | "Map" | "Chart".
+
+### Subunit-Specific Analytics & Comparison
+- **Concept**: Allow users to click on a subunit to see more details, or even compare subunits against each other based on available data like employee count and founding date.
+- **Effort**: High
+- **Technical**:
+  - Add a "Select for Comparison" feature to the subunit cards.
+  - Create a comparison modal showing a side-by-side table of the selected subunits.
+  - Could be extended to show historical trends if we start snapshotting data like employee counts over time.
+
+---
+
+## Priority 4: Advanced Analytics (1-2 weeks each)
 
 ### SSB Integration (Befolkning & Marked)
 **Data Sources:**
@@ -94,7 +123,7 @@ def calculate_trend_score(company):
 
 ---
 
-## Priority 4: Future Vision (Post-MVP)
+## Priority 5: Future Vision (Post-MVP)
 
 | Feature | Description | Effort |
 |---------|-------------|--------|

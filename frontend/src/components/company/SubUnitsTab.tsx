@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { MapPin, Users, Building, AlertCircle, Loader } from 'lucide-react'
+import { MapPin, Users, Building, AlertCircle, Loader, Calendar } from 'lucide-react'
 import { useSubUnitsQuery } from '../../hooks/queries/useSubUnitsQuery'
 import type { SubUnit } from '../../types'
 
@@ -40,6 +40,15 @@ function SubUnitCard({ unit }: { unit: SubUnit }) {
             <Users className="h-4 w-4 text-gray-400 flex-none" />
             <span>
               {unit.antall_ansatte} {unit.antall_ansatte === 1 ? 'ansatt' : 'ansatte'}
+            </span>
+          </div>
+        )}
+
+        {unit.stiftelsesdato && (
+          <div className="flex items-center gap-2">
+            <Calendar className="h-4 w-4 text-gray-400 flex-none" />
+            <span>
+              Opprettet: {new Date(unit.stiftelsesdato).toLocaleDateString('no-NO')}
             </span>
           </div>
         )}
