@@ -43,6 +43,8 @@ export function FilterPanel() {
     if (s.inLiquidation !== null) count++
     if (s.inForcedLiquidation !== null) count++
     if (s.hasAccounting !== null) count++
+    if (s.foundedFrom !== null || s.foundedTo !== null) count++
+    if (s.bankruptFrom !== null || s.bankruptTo !== null) count++
     return count
   })
 

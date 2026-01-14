@@ -1,22 +1,26 @@
 import { renderHook, act } from '@testing-library/react';
 import { usePagination } from '../usePagination';
-import { useUiStore } from '../../store/uiStore';
-import { describe, it, expect, beforeEach, afterEach, vi, type Mock } from 'vitest';
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 
 // Mock UI Store
+const mockSetPage = vi.fn();
+let mockUiState = {
+    currentPage: 1,
+    setPage: mockSetPage
+};
+
 vi.mock('../../store/uiStore', () => ({
-    useUiStore: vi.fn()
+    useUiStore: vi.fn((selector) => selector(mockUiState)),
 }));
 
 describe('usePagination', () => {
-    let mockSetPage: Mock;
-
     beforeEach(() => {
-        mockSetPage = vi.fn();
-        (useUiStore as unknown as Mock).mockReturnValue({
+        vi.clearAllMocks();
+        mockSetPage.mockClear();
+        mockUiState = {
             currentPage: 1,
             setPage: mockSetPage
-        });
+        };
     });
 
     afterEach(() => {
@@ -36,10 +40,10 @@ describe('usePagination', () => {
     });
 
     it('handlePreviousPage decreases page', () => {
-        (useUiStore as unknown as Mock).mockReturnValue({
+        mockUiState = {
             currentPage: 2,
             setPage: mockSetPage
-        });
+        };
 
         const { result } = renderHook(() => usePagination({ itemsPerPage: 10, currentItemsCount: 10 }));
 

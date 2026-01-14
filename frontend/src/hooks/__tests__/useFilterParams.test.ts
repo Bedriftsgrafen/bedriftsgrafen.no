@@ -7,17 +7,9 @@
 import { describe, expect, it, beforeEach, vi } from 'vitest'
 import { renderHook } from '@testing-library/react'
 import { useFilterParams } from '../useFilterParams'
-import { useFilterStore } from '../../store/filterStore'
+import { type FilterValues } from '../../store/filterStore'
 
-// Mock the filter store
-vi.mock('../../store/filterStore', () => ({
-    useFilterStore: vi.fn(),
-}))
-
-const mockUseFilterStore = useFilterStore as unknown as ReturnType<typeof vi.fn>
-
-// Default empty filter state
-const emptyFilterState = {
+const emptyFilterState: FilterValues = {
     organizationForms: [],
     naeringskode: '',
     revenueMin: null,
@@ -49,8 +41,15 @@ const emptyFilterState = {
     searchQuery: '',
 }
 
+let mockState = { ...emptyFilterState }
+
+// Mock the filter store
+vi.mock('../../store/filterStore', () => ({
+    useFilterStore: vi.fn((selector) => selector(mockState)),
+}))
+
 beforeEach(() => {
-    mockUseFilterStore.mockReturnValue(emptyFilterState)
+    mockState = { ...emptyFilterState }
 })
 
 describe('useFilterParams', () => {
@@ -73,10 +72,10 @@ describe('useFilterParams', () => {
 
 describe('Filter Value Transformation', () => {
     it('transforms searchQuery to name parameter', () => {
-        mockUseFilterStore.mockReturnValue({
+        mockState = {
             ...emptyFilterState,
             searchQuery: 'test company',
-        })
+        }
 
         const { result } = renderHook(() => useFilterParams())
 
@@ -84,10 +83,10 @@ describe('Filter Value Transformation', () => {
     })
 
     it('passes organizationForms array directly', () => {
-        mockUseFilterStore.mockReturnValue({
+        mockState = {
             ...emptyFilterState,
             organizationForms: ['AS', 'ENK'],
-        })
+        }
 
         const { result } = renderHook(() => useFilterParams())
 
@@ -96,10 +95,10 @@ describe('Filter Value Transformation', () => {
 
     it('formats date objects to ISO date strings', () => {
         const testDate = new Date('2023-06-15T12:00:00Z')
-        mockUseFilterStore.mockReturnValue({
+        mockState = {
             ...emptyFilterState,
             foundedFrom: testDate,
-        })
+        }
 
         const { result } = renderHook(() => useFilterParams())
 
@@ -109,11 +108,11 @@ describe('Filter Value Transformation', () => {
 
 describe('Value Validation', () => {
     it('ensures revenue values are non-negative', () => {
-        mockUseFilterStore.mockReturnValue({
+        mockState = {
             ...emptyFilterState,
             revenueMin: -1000,
             revenueMax: 5000,
-        })
+        }
 
         const { result } = renderHook(() => useFilterParams())
 
@@ -122,11 +121,11 @@ describe('Value Validation', () => {
     })
 
     it('allows negative profit values (no clamping)', () => {
-        mockUseFilterStore.mockReturnValue({
+        mockState = {
             ...emptyFilterState,
             profitMin: -500000,
             profitMax: 1000000,
-        })
+        }
 
         const { result } = renderHook(() => useFilterParams())
 
@@ -135,11 +134,11 @@ describe('Value Validation', () => {
     })
 
     it('clamps equity ratio to 0-1 range', () => {
-        mockUseFilterStore.mockReturnValue({
+        mockState = {
             ...emptyFilterState,
             equityRatioMin: -0.5,
             equityRatioMax: 1.5,
-        })
+        }
 
         const { result } = renderHook(() => useFilterParams())
 
@@ -148,11 +147,11 @@ describe('Value Validation', () => {
     })
 
     it('ensures employee counts are non-negative', () => {
-        mockUseFilterStore.mockReturnValue({
+        mockState = {
             ...emptyFilterState,
             employeeMin: -10,
             employeeMax: 100,
-        })
+        }
 
         const { result } = renderHook(() => useFilterParams())
 
@@ -163,11 +162,11 @@ describe('Value Validation', () => {
 
 describe('Boolean Filters', () => {
     it('passes boolean filter values correctly', () => {
-        mockUseFilterStore.mockReturnValue({
+        mockState = {
             ...emptyFilterState,
             isBankrupt: true,
             hasAccounting: false,
-        })
+        }
 
         const { result } = renderHook(() => useFilterParams())
 
@@ -176,10 +175,10 @@ describe('Boolean Filters', () => {
     })
 
     it('returns undefined for null boolean filters', () => {
-        mockUseFilterStore.mockReturnValue({
+        mockState = {
             ...emptyFilterState,
             isBankrupt: null,
-        })
+        }
 
         const { result } = renderHook(() => useFilterParams())
 
@@ -189,11 +188,11 @@ describe('Boolean Filters', () => {
 
 describe('Sort Parameters', () => {
     it('returns sortBy and sortOrder from store', () => {
-        mockUseFilterStore.mockReturnValue({
+        mockState = {
             ...emptyFilterState,
             sortBy: 'revenue',
             sortOrder: 'desc',
-        })
+        }
 
         const { result } = renderHook(() => useFilterParams())
 

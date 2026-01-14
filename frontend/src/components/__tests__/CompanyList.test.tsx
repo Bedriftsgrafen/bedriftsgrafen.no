@@ -11,22 +11,23 @@ const mockReorderColumns = vi.fn()
 const mockClearFilters = vi.fn()
 
 // Mock useUiStore
-vi.mock('../../store/uiStore', async () => {
-    const actual = await vi.importActual('../../store/uiStore')
-    return {
-        ...actual,
-        useUiStore: vi.fn(() => ({
-            visibleColumns: ['navn', 'orgnr'], // Default checked columns for test
-            toggleColumn: mockToggleColumn,
-            resetColumns: mockResetColumns,
-            reorderColumns: mockReorderColumns,
-        })),
+vi.mock('../../store/uiStore', () => ({
+    useUiStore: vi.fn((selector) => selector({
+        visibleColumns: ['navn', 'orgnr'], // Default checked columns for test
+        toggleColumn: mockToggleColumn,
+        resetColumns: mockResetColumns,
+        reorderColumns: mockReorderColumns,
+    })),
+    COLUMN_CONFIG: {
+        navn: { label: 'Navn', sortable: true },
+        orgnr: { label: 'Org.nr', sortable: true },
+        // Add others if needed by COLUMN_CONFIG[column].label
     }
-})
+}))
 
 // Mock useFilterStore
 vi.mock('../../store/filterStore', () => ({
-    useFilterStore: vi.fn(() => ({
+    useFilterStore: vi.fn((selector) => selector({
         clearFilters: mockClearFilters,
     }))
 }))
