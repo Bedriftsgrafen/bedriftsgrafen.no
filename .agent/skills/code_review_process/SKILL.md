@@ -35,7 +35,12 @@ To act as the "Bedriftsgrafen Lead Architect" and ensure every code change is pr
 - [ ] **Frontend**: `vitest` + `@testing-library/react`. Coverage for stores/hooks/components.
 - [ ] **Rule**: New features without tests are **REJECTED**.
 
-### 5. Style
+### 5. Maintainability
+- [ ] **DRY (Don't Repeat Yourself)**: No duplicated logic. Extract shared code to utilities or hooks.
+- [ ] **KISS (Keep It Simple, Stupid)**: Avoid over-engineering. Prefer simple, readable solutions.
+- [ ] **Component Size**: Break down large components (>200 lines) into smaller sub-components.
+
+### 6. Style
 - [ ] **Backend**: `ruff` compliant.
 - [ ] **Frontend**: `eslint` + `prettier` compliant.
 
