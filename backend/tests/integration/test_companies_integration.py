@@ -41,7 +41,7 @@ def test_get_company_success(MockServiceClass, MockNaceService):
     mock_company.vedtektsfestet_formaal = None
     mock_company.regnskap = []  # Relationship
     mock_company.roller = []  # Relationship
-    
+
     # Missing fields required by CompanyBase schema (to avoid MagicMock auto-creation causing type errors)
     mock_company.longitude = 10.0
     mock_company.konkurs = False

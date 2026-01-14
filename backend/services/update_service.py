@@ -431,7 +431,9 @@ class UpdateService:
                             try:
                                 return await self.brreg_api.fetch_subunit(orgnr)
                             except Exception as ex:
-                                logger.warning(f"Failed to fetch subunit details for {orgnr}: {ex}", extra={"orgnr": orgnr})
+                                logger.warning(
+                                    f"Failed to fetch subunit details for {orgnr}: {ex}", extra={"orgnr": orgnr}
+                                )
                                 return None
 
                     fetch_tasks = [fetch_one(entity) for entity in entities]
@@ -439,7 +441,7 @@ class UpdateService:
 
                     # Phase 2: Sequential persist
                     all_subunits_data = [res for res in fetch_results if res]
-                    
+
                     if all_subunits_data:
                         # Ensure parents exist before saving subunits
                         await self._ensure_parent_companies_exist(all_subunits_data)
@@ -461,7 +463,7 @@ class UpdateService:
                                 )
                             )
                             result.companies_updated += 1
-                        
+
                         if all_subunits:
                             await self.subunit_repo.create_batch(all_subunits, commit=True)
 
@@ -490,7 +492,7 @@ class UpdateService:
 
     async def _ensure_parent_companies_exist(self, subunits_data: list[dict[str, Any]]) -> None:
         """Ensure all parent companies for a batch of subunits exist in the database.
-        
+
         Fetches missing parents from Brreg API if necessary.
         """
         # Collect unique parent orgnrs
@@ -530,7 +532,7 @@ class UpdateService:
                     count += 1
                 except Exception as e:
                     logger.error(f"Failed to persist parent {parent_data.get('organisasjonsnummer')}: {e}")
-        
+
         if count > 0:
             await self.db.commit()
             logger.info(f"Saved {count} missing parent companies to database")
