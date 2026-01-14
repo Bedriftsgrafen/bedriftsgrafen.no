@@ -16,6 +16,8 @@ The FastAPI-based backend service for Bedriftsgrafen.no.
 - Docker & Docker Compose
 - Python 3.11+ (for local development without Docker)
 
+**Note:** For dependency management, please refer to the [Dependency Management Skill](../.agent/skills/dependency_management/SKILL.md).
+
 ### Running Locally
 
 See the root [README.md](../README.md) for Docker-based setup (recommended).

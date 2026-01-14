@@ -63,31 +63,13 @@ This project demonstrates expertise in:
 - **DevOps**: Docker containerization, CI/CD pipelines, and automated health monitoring.
 - **AI-Orchestrated Development**: Modern workflow leveraging AI assistance for implementation.
 
-### Development Approach
+### Standardized Skills
+This project uses a rigorous set of **Skills** to standardized workflows for both human and AI developers. These are version-controlled in `.agent/skills/` and enforce:
+- **Review Standards**: Lead Architect persona with strict security/performance checks.
+- **Commit Conventions**: Conventional commits.
+- **Verification**: Mandatory local testing before push.
 
-This project showcases a **modern AI-orchestrated development workflow**, where the developer acts as an **architect and product owner**, defining requirements, making architectural decisions, and ensuring code quality, while leveraging AI assistants for implementation.
-
-**Workflow Benefits**:
-- **Clear Requirements**: Precise specification of features, constraints, and technical requirements
-- **Rapid Iteration**: Faster implementation cycles with AI-assisted code generation
-- **Consistent Quality**: Human oversight ensures adherence to best practices and architectural patterns
-- **Focus on Problem-Solving**: More time spent on architecture and business logic, less on boilerplate
-
-**Human Responsibilities** (Product Owner / Architect):
-- Defining product vision and feature requirements
-- Making architectural and technology stack decisions
-- Reviewing and approving all implementations
-- Ensuring code quality, security, and maintainability
-- Writing comprehensive specifications and acceptance criteria
-
-**AI Assistant Responsibilities** (Implementation Partner):
-- Implementing features based on detailed specifications
-- Generating boilerplate and repetitive code structures
-- Suggesting best practices and patterns
-- Creating tests and documentation
-- Refactoring and optimization under human guidance
-
-This approach represents the future of software development—combining **human creativity, strategic thinking, and domain expertise** with **AI-powered implementation efficiency**.
+See [CONTRIBUTING.md](CONTRIBUTING.md) for details.
 
 ## Getting Started
 

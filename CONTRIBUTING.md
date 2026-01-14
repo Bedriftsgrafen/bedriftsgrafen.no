@@ -2,137 +2,45 @@
 
 Thank you for considering contributing to Bedriftsgrafen! This document outlines the process and guidelines for contributing to this project.
 
-## About This Project
+## 🤖 AI-Orchestrated Workflow
 
-This project was developed using an **AI-orchestrated workflow**, where clear requirements and architectural decisions are defined by the product owner, and implementation is assisted by AI tools. This approach emphasizes:
-- Clear, well-documented requirements and specifications
-- Thoughtful architecture and design decisions
-- Consistent code quality and best practices
-- Rapid iteration and development cycles
+This project uses an **AI-orchestrated workflow**. We define strict "Skills" that both human developers and AI agents must follow. These skills are the **single source of truth** for all development standards.
 
-When contributing, please maintain this standard by providing clear pull request descriptions and following the established patterns in the codebase.
+You can find detailed workflows and standards in the `.agent/skills/` directory:
+
+| Area | Skill File | Description |
+|------|------------|-------------|
+| **Code Review** | [.agent/skills/code_review_process/SKILL.md](.agent/skills/code_review_process/SKILL.md) | Quality standards, architecture, security, and maintainability rules. |
+| **Commit Messages** | [.agent/skills/git_commit_convention/SKILL.md](.agent/skills/git_commit_convention/SKILL.md) | Strict `<type>(<scope>): <subject>` format. |
+| **Safe Push** | [.agent/skills/safe_push/SKILL.md](.agent/skills/safe_push/SKILL.md) | Mandatory local validation (`ruff`, `mypy`, `test`) *before* pushing. |
+| **New Features** | [.agent/skills/feature_implementation/SKILL.md](.agent/skills/feature_implementation/SKILL.md) | Step-by-step checklist (Model -> Repo -> Service -> API -> UI). |
+| **Migrations** | [.agent/skills/database_migration/SKILL.md](.agent/skills/database_migration/SKILL.md) | Safe Alembic migration workflow. |
+| **Dependencies** | [.agent/skills/dependency_management/SKILL.md](.agent/skills/dependency_management/SKILL.md) | Adding pip/npm packages. |
 
 ## Development Setup
 
 See [README.md](README.md#-getting-started) for initial setup instructions.
 
-### Local Development
+### Quick Start
+1.  **Backend**: Uses Python 3.11+ and specific virtual environment paths.
+2.  **Frontend**: Uses Node.js 22+.
 
-**Frontend:**
-```bash
-cd frontend
-npm install
-npm run dev
-```
-
-**Backend:**
-```bash
-docker compose up -d db
-cd backend
-pip install -r requirements.txt
-uvicorn main:app --reload
-```
-
-## Code Style
-
-### Frontend (TypeScript/React)
-- Use TypeScript strict mode
-- Follow ESLint configuration (`.eslintrc.js`)
-- Use functional components with hooks
-- Prefer `const` over `let`
-- Use meaningful variable names
-- Add comments for complex logic
-
-### Backend (Python)
-- Follow PEP 8 style guide
-- Use type hints for all functions
-- Run `ruff check .` before committing
-- Use async/await for database operations
-- Document functions with docstrings
-
-## Testing
-
-### Frontend Tests
-```bash
-cd frontend
-npm run test
-```
-
-### Backend Tests
-```bash
-docker compose exec backend python -m pytest
-```
-
-### Type Checking
-```bash
-# Frontend
-cd frontend && npm run tc
-
-# Backend
-cd backend && mypy .
-```
+Refer to the **Safe Push Skill** for the exact commands to run tests and linters locally.
 
 ## Pull Request Process
 
-1. **Update documentation** for any new features or changes
-2. **Add tests** for new functionality
-3. **Ensure all tests pass** locally before submitting
-4. **Update FUTURE_IDEAS.md** if proposing new features
-5. **Follow commit message conventions** (see below)
-6. **Request review** from maintainers
-
-## Commit Message Conventions
-
-We use conventional commits format:
-
-- `feat:` New feature
-- `fix:` Bug fix
-- `docs:` Documentation changes
-- `style:` Code style changes (formatting, etc.)
-- `refactor:` Code refactoring
-- `test:` Test additions/changes
-- `chore:` Maintenance tasks
-- `perf:` Performance improvements
-
-**Examples:**
-- `feat: add company comparison feature`
-- `fix: resolve geocoding batch processing error`
-- `docs: update installation instructions`
-
-## Code Review Guidelines
-
-When reviewing pull requests:
-
-- Be respectful and constructive
-- Focus on code quality and maintainability
-- Check for test coverage
-- Verify documentation is updated
-- Ensure no hardcoded credentials or secrets
+1.  **Follow the Skills**: Ensure your code passes the **Code Review** standards.
+2.  **Validate Locally**: Use the workflows in **Safe Push** to run `ruff`, `mypy`, and tests.
+3.  **Commit**: Use the **Git Commit Convention**.
+4.  **Push**: Incremental pushes are preferred.
 
 ## Reporting Bugs
 
 Use GitHub Issues to report bugs. Include:
-
-- Clear description of the bug
+- Clear description
 - Steps to reproduce
 - Expected vs actual behavior
-- Environment details (OS, browser, Docker version)
-- Screenshots if applicable
-
-## Suggesting Features
-
-Feature requests are welcome! Please:
-
-- Check existing issues first
-- Provide clear use case
-- Explain expected behavior
-- Consider adding it to FUTURE_IDEAS.md
-
-## Questions?
-
-- Open a GitHub Discussion
-- Check existing documentation
-- Contact: bedriftsgrafen@gmail.com
+- Environment details
 
 ## License
 
