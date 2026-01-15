@@ -85,6 +85,14 @@ class SchedulerService:
             replace_existing=True,
         )
 
+        # Retry failed syncs every hour
+        self.scheduler.add_job(
+            self.retry_failed_syncs,
+            trigger=IntervalTrigger(hours=1),
+            id="retry_syncs",
+            replace_existing=True,
+        )
+
         # Disk usage check daily at 06:00
         self.scheduler.add_job(
             self.check_disk_usage,
@@ -356,3 +364,86 @@ class SchedulerService:
                 logger.info(f"Disk usage OK: {usage_percent:.1f}%")
         except Exception as e:
             logger.error(f"Disk usage check failed: {e}")
+
+    async def retry_failed_syncs(self) -> None:
+        """Retry failed synchronization attempts."""
+        from sqlalchemy import select
+        from models import SyncError, SyncErrorStatus
+        from services.update_service import UpdateService
+        from datetime import datetime
+
+        logger.info("Starting retry of failed syncs...")
+        try:
+            async with AsyncSessionLocal() as db:
+                # Fetch pending or previously retrying errors that haven't hit max attempts
+                stmt = select(SyncError).where(
+                    SyncError.status.in_([SyncErrorStatus.PENDING, SyncErrorStatus.RETRYING]),
+                    SyncError.attempt_count < 5,
+                )
+                result = await db.execute(stmt)
+                errors = result.scalars().all()
+
+                if not errors:
+                    logger.info("No failed syncs to retry.")
+                    return
+
+                update_service = UpdateService(db)
+                resolved_count = 0
+
+                for error in errors:
+                    try:
+                        error.status = SyncErrorStatus.RETRYING
+                        error.attempt_count += 1
+                        error.last_retry_at = datetime.utcnow()
+                        await db.commit()
+
+                        success = False
+                        if error.entity_type == "company":
+                            # Use CompanyService logic via UpdateService helper
+                            parent_data = await update_service.brreg_api.fetch_company(error.orgnr)
+                            if parent_data:
+                                res = await update_service.company_repo.create_or_update(parent_data)
+                                if res:
+                                    success = True
+                        elif error.entity_type == "role":
+                            # Re-sync roles for the company
+                            roles_data = await update_service.brreg_api.fetch_roles(error.orgnr)
+                            # We need to map to models.Role
+                            from models import Role
+
+                            roles = [
+                                Role(
+                                    orgnr=error.orgnr,
+                                    type_kode=r.get("type_kode"),
+                                    type_beskrivelse=r.get("type_beskrivelse"),
+                                    person_navn=r.get("person_navn"),
+                                    foedselsdato=update_service._parse_date(r.get("foedselsdato")),
+                                    enhet_navn=r.get("enhet_navn"),
+                                    enhet_orgnr=r.get("enhet_orgnr"),
+                                    fratraadt=r.get("fratraadt", False),
+                                    rekkefoelge=r.get("rekkefoelge"),
+                                )
+                                for r in roles_data
+                            ]
+                            await update_service.role_repo.create_batch(roles, commit=True)
+                            success = True
+
+                        # Add more entity types (subunit) as needed here
+                        if success:
+                            error.status = SyncErrorStatus.RESOLVED
+                            error.resolved_at = datetime.utcnow()
+                            resolved_count += 1
+                            logger.info(f"Successfully resolved sync error for {error.orgnr}")
+
+                        await db.commit()
+
+                    except Exception as ex:
+                        logger.warning(f"Retry failed for {error.orgnr}: {ex}")
+                        if error.attempt_count >= 5:
+                            error.status = SyncErrorStatus.PERMANENT_FAILURE
+                        await db.commit()
+
+                logger.info(f"Retry batch completed. Resolved {resolved_count}/{len(errors)} errors.")
+
+        except Exception as e:
+            logger.exception("Failed to run retry_failed_syncs", extra={"error": str(e)})

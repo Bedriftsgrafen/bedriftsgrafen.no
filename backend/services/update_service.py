@@ -64,6 +64,55 @@ class UpdateService:
         self.accounting_repo = AccountingRepository(db)
         self.system_repo = SystemRepository(db)
 
+    async def report_sync_error(
+        self,
+        orgnr: str,
+        entity_type: str,
+        error_message: str,
+        status: models.SyncErrorStatus = models.SyncErrorStatus.PENDING,
+        status_code: int | None = None,
+    ) -> None:
+        """Report a synchronization error.
+
+        Smart Filtering:
+        - Ignores 404s for 'accounting' (expected missing data).
+        - Ignores 404s for 'role' (some small companies have no roles).
+        """
+        # Skip expected missing records (data reality, not a technical sync error)
+        if status_code == 404 and entity_type in ("accounting", "role"):
+            return
+
+        try:
+            from sqlalchemy import select
+
+            # Check if an unresolved error already exists to avoid duplicates
+            stmt = select(models.SyncError).where(
+                models.SyncError.orgnr == orgnr,
+                models.SyncError.entity_type == entity_type,
+                models.SyncError.status.in_([models.SyncErrorStatus.PENDING, models.SyncErrorStatus.RETRYING]),
+            )
+            result = await self.db.execute(stmt)
+            existing = result.scalar_one_or_none()
+
+            if existing:
+                existing.error_message = error_message
+                existing.attempt_count += 1
+                existing.last_retry_at = datetime.utcnow()
+            else:
+                new_error = models.SyncError(
+                    orgnr=orgnr,
+                    entity_type=entity_type,
+                    error_message=error_message,
+                    status=status,
+                    attempt_count=1,
+                )
+                self.db.add(new_error)
+
+            # We don't commit here; we rely on the caller's transaction context
+            # or the next sequential commit in the batch flow.
+        except Exception as e:
+            logger.error(f"Failed to report sync error for {orgnr}: {e}")
+
     async def fetch_updates(
         self,
         since_date: date | None = None,
@@ -444,16 +493,24 @@ class UpdateService:
 
                     if all_subunits_data:
                         # Ensure parents exist before saving subunits
-                        await self._ensure_parent_companies_exist(all_subunits_data)
+                        verified_parents = await self._ensure_parent_companies_exist(all_subunits_data)
 
                         all_subunits = []
                         for subunit_data in all_subunits_data:
+                            parent_orgnr = subunit_data.get("overordnetEnhet")
+                            if parent_orgnr and parent_orgnr not in verified_parents:
+                                logger.warning(
+                                    f"Skipping subunit {subunit_data.get('organisasjonsnummer')} "
+                                    f"because parent {parent_orgnr} is missing and could not be fetched."
+                                )
+                                continue
+
                             orgnr = subunit_data.get("organisasjonsnummer")
                             all_subunits.append(
                                 models.SubUnit(
                                     orgnr=orgnr,
                                     navn=subunit_data.get("navn"),
-                                    parent_orgnr=subunit_data.get("overordnetEnhet"),
+                                    parent_orgnr=parent_orgnr,
                                     organisasjonsform=subunit_data.get("organisasjonsform", {}).get("kode"),
                                     naeringskode=subunit_data.get("naeringskode1", {}).get("kode"),
                                     antall_ansatte=subunit_data.get("antallAnsatte", 0),
@@ -490,22 +547,23 @@ class UpdateService:
 
         return result.model_dump()
 
-    async def _ensure_parent_companies_exist(self, subunits_data: list[dict[str, Any]]) -> None:
+    async def _ensure_parent_companies_exist(self, subunits_data: list[dict[str, Any]]) -> set[str]:
         """Ensure all parent companies for a batch of subunits exist in the database.
 
         Fetches missing parents from Brreg API if necessary.
+        Returns the set of all verified (existing or created) parent orgnrs.
         """
         # Collect unique parent orgnrs
         parent_orgnrs: set[str] = {str(s["overordnetEnhet"]) for s in subunits_data if s.get("overordnetEnhet")}
         if not parent_orgnrs:
-            return
+            return set()
 
         # Check which parents already exist
         existing_orgnrs = await self.company_repo.get_existing_orgnrs(list(parent_orgnrs))
         missing_orgnrs = parent_orgnrs - existing_orgnrs
 
         if not missing_orgnrs:
-            return
+            return existing_orgnrs
 
         logger.info(f"Found {len(missing_orgnrs)} missing parent companies. Fetching from Brreg...")
 
@@ -517,7 +575,9 @@ class UpdateService:
                 try:
                     return await self.brreg_api.fetch_company(orgnr)
                 except Exception as e:
-                    logger.warning(f"Failed to fetch missing parent {orgnr}: {e}")
+                    error_msg = f"Failed to fetch missing parent: {e!s}"
+                    logger.warning(f"{error_msg} for {orgnr}")
+                    await self.report_sync_error(orgnr, "company", error_msg)
                     return None
 
         fetch_tasks = [fetch_parent(orgnr) for orgnr in missing_orgnrs]
@@ -531,11 +591,17 @@ class UpdateService:
                     await self.company_repo.create_or_update(parent_data)
                     count += 1
                 except Exception as e:
-                    logger.error(f"Failed to persist parent {parent_data.get('organisasjonsnummer')}: {e}")
+                    error_msg = f"Failed to persist parent: {e!s}"
+                    logger.error(f"{error_msg} for {parent_data.get('organisasjonsnummer')}")
+                    await self.report_sync_error(str(parent_data.get("organisasjonsnummer")), "company", error_msg)
 
         if count > 0:
             await self.db.commit()
             logger.info(f"Saved {count} missing parent companies to database")
+
+        # Re-check existence to get final set of verified parents
+        # (Alternatively, we could track which ones succeeded above)
+        return await self.company_repo.get_existing_orgnrs(list(parent_orgnrs))
 
     async def fetch_role_updates(
         self,
@@ -584,13 +650,27 @@ class UpdateService:
                         except (ValueError, TypeError):
                             pass
 
-                    # Re-sync roles for each affected company
-                    all_new_roles = []
+                    await self.db.commit()
+
+                    # Phase 1: Collect all roles for all companies in this batch
+                    all_batch_roles: list[models.Role] = []
+                    processed_orgnrs: set[str] = set()
+
                     for orgnr in orgnrs_to_sync:
                         try:
+                            # Use Brreg API directly to fetch current roles
                             roles_data = await self.brreg_api.fetch_roles(orgnr)
+
+                            # Ensure any companies mentioned in the roles exist as parents
+                            potential_parents = [
+                                {"overordnetEnhet": r.get("enhet_orgnr")} for r in roles_data if r.get("enhet_orgnr")
+                            ]
+                            if potential_parents:
+                                await self._ensure_parent_companies_exist(potential_parents)
+
+                            # Create Role models
                             for r in roles_data:
-                                all_new_roles.append(
+                                all_batch_roles.append(
                                     models.Role(
                                         orgnr=orgnr,
                                         type_kode=r.get("type_kode"),
@@ -604,24 +684,30 @@ class UpdateService:
                                     )
                                 )
                             result.companies_updated += 1
-                        except Exception as ex:
-                            logger.warning(f"Failed to fetch roles for {orgnr}: {ex}")
+                            processed_orgnrs.add(orgnr)
 
-                    # Bulk DB update
-                    if orgnrs_to_sync:
-                        # 1. Delete all old roles for all orgnrs in the batch
+                        except Exception as e:
+                            error_msg = f"Failed to sync roles: {e!s}"
+                            logger.error(f"{error_msg} for {orgnr}")
+                            status_code = getattr(e, "status_code", None) if hasattr(e, "status_code") else None
+                            await self.report_sync_error(orgnr, "role", error_msg, status_code=status_code)
+
+                    # Phase 2: Transactional database update
+                    if processed_orgnrs:
+                        # 1. Delete old roles for successfully processed companies
                         from sqlalchemy import delete
 
-                        await self.db.execute(delete(models.Role).where(models.Role.orgnr.in_(orgnrs_to_sync)))
+                        await self.db.execute(delete(models.Role).where(models.Role.orgnr.in_(processed_orgnrs)))
+
                         # 2. Bulk insert new roles
-                        if all_new_roles:
-                            await self.role_repo.create_batch(all_new_roles, commit=True)
-                        else:
-                            await self.db.commit()
+                        if all_batch_roles:
+                            await self.role_repo.create_batch(all_batch_roles, commit=False)
+
+                        # 3. Final commit for this batch
+                        await self.db.commit()
 
                     result.companies_processed += len(events)
                     result.latest_oppdateringsid = last_seen_id
-
                     # If we got a full batch, continue to next batch
                     if len(events) >= params["size"]:
                         params["afterId"] = last_seen_id

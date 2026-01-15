@@ -11,6 +11,7 @@ from .stats import (
     MunicipalityStats,
 )
 from .system import DashboardStats, OrgFormCounts, SystemState
+from .sync_error import SyncError, SyncErrorStatus
 
 __all__ = [
     "Base",
@@ -30,4 +31,6 @@ __all__ = [
     "DashboardStats",
     "OrgFormCounts",
     "SystemState",
+    "SyncError",
+    "SyncErrorStatus",
 ]

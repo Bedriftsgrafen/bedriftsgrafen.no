@@ -29,6 +29,9 @@ async def test_fetch_subunit_updates_success(update_service, mock_db):
         "stiftelsesdato": "2020-05-15",
     }
 
+    # Mock parent verification (NEW)
+    update_service._ensure_parent_companies_exist = AsyncMock(return_value={"123456789"})
+
     # Mock HTTP response for the update stream
     mock_response = MagicMock()
     mock_response.status_code = 200
@@ -78,6 +81,9 @@ async def test_fetch_role_updates_success(update_service, mock_db):
     update_service.brreg_api.fetch_roles.return_value = [
         {"type_kode": "DAGL", "person_navn": "Ola Nordmann", "foedselsdato": "1980-01-01"}
     ]
+
+    # Mock parent verification (NEW)
+    update_service._ensure_parent_companies_exist = AsyncMock(return_value={"111222333"})
 
     # Mock CloudEvents batch response
     mock_response = MagicMock()
