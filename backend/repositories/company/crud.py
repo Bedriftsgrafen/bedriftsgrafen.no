@@ -163,3 +163,13 @@ class CrudMixin:
             .values(last_polled_regnskap=datetime.now(timezone.utc).date())
         )
         await self.db.execute(stmt)
+
+    async def update_last_polled_roles(self, orgnr: str) -> None:
+        """Update the last_polled_roles timestamp for a company."""
+        # Note: No internal commit here, relies on caller to commit
+        stmt = (
+            update(models.Company)
+            .where(models.Company.orgnr == orgnr)
+            .values(last_polled_roles=datetime.now(timezone.utc).date())
+        )
+        await self.db.execute(stmt)

@@ -101,6 +101,22 @@ class SchedulerService:
             replace_existing=True,
         )
 
+        # Ghost parent repair DAILY at 04:00 (critical FK integrity)
+        self.scheduler.add_job(
+            self.run_ghost_repair,
+            trigger=CronTrigger(hour=4, minute=0),
+            id="ghost_repair",
+            replace_existing=True,
+        )
+
+        # Role backfill weekly (Sundays at 04:30) for Role Network feature
+        self.scheduler.add_job(
+            self.run_role_backfill,
+            trigger=CronTrigger(day_of_week="sun", hour=4, minute=30),
+            id="role_backfill",
+            replace_existing=True,
+        )
+
     async def start(self) -> None:
         self.scheduler.start()
         logger.info("Scheduler started", extra={"jobs": [job.id for job in self.scheduler.get_jobs()]})
@@ -447,3 +463,29 @@ class SchedulerService:
 
         except Exception as e:
             logger.exception("Failed to run retry_failed_syncs", extra={"error": str(e)})
+
+    async def run_ghost_repair(self) -> None:
+        """Daily: Fix subunits referencing non-existent parent companies (critical FK integrity)."""
+        from services.repair_service import RepairService
+
+        logger.info("Starting daily ghost repair...")
+        try:
+            async with AsyncSessionLocal() as db:
+                service = RepairService(db, repair=True)
+                await service.fix_ghost_parents(limit=500)
+                logger.info("Daily ghost repair completed successfully.")
+        except Exception as e:
+            logger.exception("Failed to run ghost repair", extra={"error": str(e)})
+
+    async def run_role_backfill(self) -> None:
+        """Weekly: Backfill roles for companies to build Role Network dataset."""
+        from services.repair_service import RepairService
+
+        logger.info("Starting weekly role backfill...")
+        try:
+            async with AsyncSessionLocal() as db:
+                service = RepairService(db, repair=True)
+                await service.backfill_roles(limit=500)
+                logger.info("Weekly role backfill completed successfully.")
+        except Exception as e:
+            logger.exception("Failed to run role backfill", extra={"error": str(e)})
