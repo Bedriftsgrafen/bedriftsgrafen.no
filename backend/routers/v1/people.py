@@ -16,7 +16,7 @@ from repositories.role_repository import RoleRepository
 
 logger = logging.getLogger(__name__)
 
-router = APIRouter(prefix="/v1/people", tags=["people"])
+router: APIRouter = APIRouter(prefix="/v1/people", tags=["people"])
 
 
 class PersonSearchResult(BaseModel):

@@ -28,7 +28,9 @@ async def verify_admin_key(x_admin_key: str = Header(None, alias="X-Admin-Key"))
             raise HTTPException(status_code=403, detail="Invalid admin API key")
 
 
-router = APIRouter(prefix="/admin/import", tags=["admin", "import"], dependencies=[Depends(verify_admin_key)])
+router: APIRouter = APIRouter(
+    prefix="/admin/import", tags=["admin", "import"], dependencies=[Depends(verify_admin_key)]
+)
 
 
 class UpdateRequest(BaseModel):

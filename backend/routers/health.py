@@ -2,7 +2,7 @@ from fastapi import APIRouter, Request
 
 from main import limiter
 
-router = APIRouter(tags=["health"])
+router: APIRouter = APIRouter(tags=["health"])
 
 
 @router.get("/health")

@@ -50,9 +50,9 @@ class StatsMixin:
         if filters.has_financial_filters() or needs_financial_join:
             # INNER JOIN for financial sorting/filtering to match list query behavior
             query = query.join(models.LatestFinancials, models.Company.orgnr == models.LatestFinancials.orgnr)
-            query, _ = self._apply_filters(query, filters=filters)
+            query, _ = self._apply_filters(query, filters=filters)  # type: ignore
         else:
-            query, _ = self._apply_filters_no_join(query, filters=filters)
+            query, _ = self._apply_filters_no_join(query, filters=filters)  # type: ignore
 
         result = await self.db.execute(query)
         return result.scalar() or 0

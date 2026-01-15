@@ -20,7 +20,7 @@ from database import get_db
 from main import limiter
 from models import Company, Role
 
-router = APIRouter(tags=["SEO"])
+router: APIRouter = APIRouter(tags=["SEO"])
 
 # Constants for sitemap pagination
 URLS_PER_SITEMAP = 50000  # Google limit per file

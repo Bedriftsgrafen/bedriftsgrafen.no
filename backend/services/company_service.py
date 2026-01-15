@@ -10,7 +10,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 import models
 from repositories.accounting_repository import AccountingRepository
 from repositories.company_filter_builder import FilterParams
-from repositories.company import CompanyRepository
+from repositories.company import CompanyRepository, CompanyWithFinancials
 from repositories.subunit_repository import SubUnitRepository
 from services.brreg_api_service import BrregApiService
 from services.dtos import CompanyFilterDTO
@@ -38,7 +38,7 @@ class CompanyService:
         # NOTE: cache is module-level (see below) so it's shared across
         # CompanyService instances.
 
-    async def get_companies(self, filters: CompanyFilterDTO) -> list[models.Company]:
+    async def get_companies(self, filters: CompanyFilterDTO) -> list[CompanyWithFinancials]:
         """Get companies with filters using DTO pattern
 
         Args:
@@ -209,7 +209,12 @@ class CompanyService:
         Returns:
             Dictionary with status and stored data info
         """
-        result = {"orgnr": orgnr, "company_fetched": False, "financials_fetched": 0, "errors": []}
+        result: dict[str, Any] = {
+            "orgnr": orgnr,
+            "company_fetched": False,
+            "financials_fetched": 0,
+            "errors": [],
+        }
 
         # Fetch company data
         company_data = await self.brreg_api.fetch_company(orgnr)

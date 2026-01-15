@@ -1,6 +1,6 @@
 import logging
 from datetime import date, datetime
-from typing import Any
+from typing import Any, Sequence
 
 from sqlalchemy import select, text
 from sqlalchemy.dialects.postgresql import insert
@@ -56,7 +56,7 @@ class AccountingRepository:
         except (ZeroDivisionError, OverflowError):
             return None
 
-    async def get_by_orgnr(self, orgnr: str) -> list[models.Accounting]:
+    async def get_by_orgnr(self, orgnr: str) -> Sequence[models.Accounting]:
         """Get all accounting records for a company.
 
         Args:
@@ -177,7 +177,7 @@ class AccountingRepository:
             }
 
             # Use PostgreSQL's INSERT...ON CONFLICT for atomic upsert
-            stmt = insert(models.Accounting).values(**insert_data)
+            stmt: Any = insert(models.Accounting).values(**insert_data)
 
             # On conflict (duplicate orgnr, periode_til), update all non-generated fields
             # Generated columns (likviditetsgrad1, ebitda_margin, egenkapitalandel) are excluded

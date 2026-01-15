@@ -1,6 +1,6 @@
 import asyncio
 import logging
-from typing import Literal
+from typing import Literal, Any, Sequence
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -83,7 +83,7 @@ class StatsService:
         }
         metric_col = metric_columns[metric]
 
-        rows = await self.stats_repo.get_county_stats(metric_col, nace)
+        rows: Sequence[Any] = await self.stats_repo.get_county_stats(metric_col, nace)
 
         # Fetch population for all municipalities to aggregate by county
         # Uses latest available year from SSB data (auto-fallback)
@@ -136,7 +136,7 @@ class StatsService:
         # Fetch stats and population data sequentially
         # Note: asyncio.gather causes issues with SQLAlchemy async sessions
         # when both tasks use the same session (race condition on close)
-        rows = await self.stats_repo.get_municipality_stats(metric_col, nace, county_code)
+        rows: Sequence[Any] = await self.stats_repo.get_municipality_stats(metric_col, nace, county_code)
         pop_rows = await self.stats_repo.get_municipality_populations()
 
         # Build population lookup map (STRIP keys for safety)
@@ -204,10 +204,10 @@ class StatsService:
         is_municipal = municipality_code is not None
 
         # 1. Fetch Industry Stats
-        industry_stats = None
+        industry_stats: Any = None
         used_nace_code = nace_code
 
-        if is_municipal:
+        if municipality_code is not None:
             # Try municipal stats first
             industry_stats = await self.stats_repo.get_industry_stats_by_municipality(nace_code, municipality_code)
             # If municipal data insufficient, fallback to national silently

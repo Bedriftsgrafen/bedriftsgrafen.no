@@ -1,5 +1,5 @@
 import logging
-from typing import Literal
+from typing import Literal, Sequence, Any
 
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -30,7 +30,7 @@ class StatsRepository:
         )
         return result.scalar_one_or_none()
 
-    async def get_county_stats(self, metric_col, nace: str | None = None) -> list[models.CountyStats]:
+    async def get_county_stats(self, metric_col, nace: str | None = None) -> Sequence[Any]:
         """Get raw county stats query result."""
         query = select(
             models.CountyStats.county_code.label("code"),
@@ -67,7 +67,7 @@ class StatsRepository:
         result = await self.db.execute(query)
         return result.scalar()
 
-    async def get_municipality_populations(self, year: int | None = None) -> list[models.MunicipalityPopulation]:
+    async def get_municipality_populations(self, year: int | None = None) -> Sequence[models.MunicipalityPopulation]:
         """Get population data for all municipalities for a specific year.
 
         If year is None, uses the latest available year.

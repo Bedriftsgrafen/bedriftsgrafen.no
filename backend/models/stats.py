@@ -1,9 +1,9 @@
 from sqlalchemy import (
-    Column,
     Float,
     Integer,
     String,
 )
+from sqlalchemy.orm import Mapped, mapped_column
 
 from database import Base
 
@@ -17,19 +17,19 @@ class IndustryStats(Base):
     __tablename__ = "industry_stats"
     __table_args__ = {"extend_existing": True}
 
-    nace_division = Column(String, primary_key=True)
-    company_count = Column(Integer)
-    total_employees = Column(Integer)
-    new_last_year = Column(Integer)
-    bankrupt_count = Column(Integer)
-    bankruptcies_last_year = Column(Integer)
-    total_revenue = Column(Float)
-    avg_revenue = Column(Float)
-    total_profit = Column(Float)
-    avg_profit = Column(Float)
-    median_revenue = Column(Float)
-    profitable_count = Column(Integer)
-    avg_operating_margin = Column(Float)
+    nace_division: Mapped[str] = mapped_column(String, primary_key=True)
+    company_count: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    total_employees: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    new_last_year: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    bankrupt_count: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    bankruptcies_last_year: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    total_revenue: Mapped[float | None] = mapped_column(Float, nullable=True)
+    avg_revenue: Mapped[float | None] = mapped_column(Float, nullable=True)
+    total_profit: Mapped[float | None] = mapped_column(Float, nullable=True)
+    avg_profit: Mapped[float | None] = mapped_column(Float, nullable=True)
+    median_revenue: Mapped[float | None] = mapped_column(Float, nullable=True)
+    profitable_count: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    avg_operating_margin: Mapped[float | None] = mapped_column(Float, nullable=True)
 
     @property
     def avg_employees(self) -> float:
@@ -48,19 +48,19 @@ class IndustrySubclassStats(Base):
     __tablename__ = "industry_subclass_stats"
     __table_args__ = {"extend_existing": True}
 
-    nace_code = Column(String, primary_key=True)
-    company_count = Column(Integer)
-    total_employees = Column(Integer)
-    new_last_year = Column(Integer)
-    bankrupt_count = Column(Integer)
-    bankruptcies_last_year = Column(Integer)
-    total_revenue = Column(Float)
-    avg_revenue = Column(Float)
-    total_profit = Column(Float)
-    avg_profit = Column(Float)
-    median_revenue = Column(Float)
-    profitable_count = Column(Integer)
-    avg_operating_margin = Column(Float)
+    nace_code: Mapped[str] = mapped_column(String, primary_key=True)
+    company_count: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    total_employees: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    new_last_year: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    bankrupt_count: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    bankruptcies_last_year: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    total_revenue: Mapped[float | None] = mapped_column(Float, nullable=True)
+    avg_revenue: Mapped[float | None] = mapped_column(Float, nullable=True)
+    total_profit: Mapped[float | None] = mapped_column(Float, nullable=True)
+    avg_profit: Mapped[float | None] = mapped_column(Float, nullable=True)
+    median_revenue: Mapped[float | None] = mapped_column(Float, nullable=True)
+    profitable_count: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    avg_operating_margin: Mapped[float | None] = mapped_column(Float, nullable=True)
 
     @property
     def avg_employees(self) -> float:
@@ -79,12 +79,12 @@ class CountyStats(Base):
     __tablename__ = "county_stats"
     __table_args__ = {"extend_existing": True}
 
-    county_code = Column(String, primary_key=True)
-    nace_division = Column(String, primary_key=True)
-    company_count = Column(Integer)
-    new_last_year = Column(Integer)
-    bankrupt_count = Column(Integer)
-    total_employees = Column(Integer)
+    county_code: Mapped[str] = mapped_column(String, primary_key=True)
+    nace_division: Mapped[str] = mapped_column(String, primary_key=True)
+    company_count: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    new_last_year: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    bankrupt_count: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    total_employees: Mapped[int | None] = mapped_column(Integer, nullable=True)
 
 
 class MunicipalityStats(Base):
@@ -96,9 +96,9 @@ class MunicipalityStats(Base):
     __tablename__ = "municipality_stats"
     __table_args__ = {"extend_existing": True}
 
-    municipality_code = Column(String, primary_key=True)
-    nace_division = Column(String, primary_key=True)
-    company_count = Column(Integer)
-    new_last_year = Column(Integer)
-    bankrupt_count = Column(Integer)
-    total_employees = Column(Integer)
+    municipality_code: Mapped[str] = mapped_column(String, primary_key=True)
+    nace_division: Mapped[str] = mapped_column(String, primary_key=True)
+    company_count: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    new_last_year: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    bankrupt_count: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    total_employees: Mapped[int | None] = mapped_column(Integer, nullable=True)

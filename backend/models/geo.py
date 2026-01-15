@@ -1,10 +1,11 @@
+from datetime import datetime
 from sqlalchemy import (
-    Column,
     DateTime,
     Integer,
     String,
     Index,
 )
+from sqlalchemy.orm import Mapped, mapped_column
 from sqlalchemy.sql import func
 
 from database import Base
@@ -20,7 +21,9 @@ class MunicipalityPopulation(Base):
 
     __table_args__ = (Index("idx_municipality_population_year_code", "year", "municipality_code"),)
 
-    municipality_code = Column(String, primary_key=True)
-    year = Column(Integer, primary_key=True)
-    population = Column(Integer, nullable=False)
-    updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
+    municipality_code: Mapped[str] = mapped_column(String, primary_key=True)
+    year: Mapped[int] = mapped_column(Integer, primary_key=True)
+    population: Mapped[int] = mapped_column(Integer, nullable=False)
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), onupdate=func.now()
+    )

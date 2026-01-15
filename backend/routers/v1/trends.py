@@ -9,7 +9,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 import models
 from database import get_db
 
-router = APIRouter(prefix="/v1/trends", tags=["Trends"])
+router: APIRouter = APIRouter(prefix="/v1/trends", tags=["Trends"])
 
 
 @router.get("/timeline")

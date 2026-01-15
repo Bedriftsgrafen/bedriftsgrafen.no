@@ -381,4 +381,4 @@ class LookupsMixin:
         result = await self.db.execute(query)
         rows = result.fetchall()
 
-        return list(rows), total
+        return [tuple(r) for r in rows], total

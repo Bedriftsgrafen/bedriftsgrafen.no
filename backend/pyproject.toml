@@ -61,24 +61,6 @@ exclude = [
 module = "alembic.*"
 ignore_errors = true
 
-[[tool.mypy.overrides]]
-module = [
-    "services.kpi_service",
-    "services.stats_service",
-    "services.company_service",
-    "services.bulk_import_service",
-    "services.geocoding_batch_service",
-    "repositories.company.*",
-    "repositories.stats_repository",
-    "repositories.accounting_repository",
-    "routers.v1.stats",
-    "main",
-]
-# SQLAlchemy ORM patterns cause many false positives with:
-# - Column types (Mapped[_N] vs float)
-# - Relationship inference
-# - Result/Row types
-disable_error_code = ["arg-type", "return-value", "assignment", "union-attr", "operator", "attr-defined", "misc", "var-annotated", "index", "truthy-function", "has-type"]
 
 [tool.pytest.ini_options]
 asyncio_mode = "auto"

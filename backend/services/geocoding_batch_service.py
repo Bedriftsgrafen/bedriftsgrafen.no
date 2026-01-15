@@ -364,7 +364,7 @@ class GeocodingBatchService:
                 # Update DB if we have enough updates
                 if len(updates) >= updates_batch_size:
                     await self.db.execute(
-                        update(Company.__table__)
+                        update(Company)
                         .where(Company.orgnr == bindparam("b_orgnr"))
                         .values(latitude=bindparam("lat"), longitude=bindparam("lon")),
                         updates,
@@ -379,7 +379,7 @@ class GeocodingBatchService:
             # Flush remaining updates
             if updates:
                 await self.db.execute(
-                    update(Company.__table__)
+                    update(Company)
                     .where(Company.orgnr == bindparam("b_orgnr"))
                     .values(latitude=bindparam("lat"), longitude=bindparam("lon")),
                     updates,

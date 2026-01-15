@@ -84,14 +84,14 @@ class CompanyWithFinancials:
         self.postadresse = company.postadresse
         self.forretningsadresse = company.forretningsadresse
         self.data = None
-        self.naeringskoder = []
+        self.naeringskoder: list[str] = []
         self.latest_revenue = latest_revenue
         self.latest_profit = latest_profit
         self.latest_operating_profit = latest_operating_profit
 
         # Use provided margin or calculate as percentage
         if latest_operating_margin is not None:
-            self.latest_operating_margin = latest_operating_margin
+            self.latest_operating_margin: float | None = latest_operating_margin
         else:
             self.latest_operating_margin = (
                 (latest_operating_profit / latest_revenue * 100)

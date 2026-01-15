@@ -14,7 +14,7 @@ from schemas.benchmark import IndustryBenchmarkResponse
 from schemas.stats import GeoAveragesResponse, GeoStatResponse, IndustryStatResponse
 from services.stats_service import GeoLevel, GeoMetric, StatsService
 
-router = APIRouter(prefix="/v1/stats", tags=["statistics"])
+router: APIRouter = APIRouter(prefix="/v1/stats", tags=["statistics"])
 
 # Type alias for sort field validation
 # All fields map directly to indexed columns in industry_stats materialized view
@@ -229,18 +229,18 @@ async def get_geography_averages(
         result = await db.execute(
             select(
                 func.sum(metric_col).label("total"),
-                func.count(func.distinct(models.MunicipalityStats.municipality_code)).label("count"),
+                func.count(func.distinct(models.MunicipalityStats.municipality_code)).label("unit_count"),
             ).where(models.MunicipalityStats.nace_division == nace)
             if nace
             else select(
                 func.sum(metric_col).label("total"),
-                func.count(func.distinct(models.MunicipalityStats.municipality_code)).label("count"),
+                func.count(func.distinct(models.MunicipalityStats.municipality_code)).label("unit_count"),
             )
         )
         row = result.one()
         national_total = row.total or 0
-        row_count = row.count or 0
-        national_avg = national_total / row_count if row_count else 0
+        row_unit_count = row.unit_count or 0
+        national_avg = national_total / row_unit_count if row_unit_count else 0
 
     # Get county average if requested
     county_avg = None
@@ -251,15 +251,15 @@ async def get_geography_averages(
         county_metric_col = municipality_metric_columns[metric]
         county_query = select(
             func.sum(county_metric_col).label("total"),
-            func.count(func.distinct(models.MunicipalityStats.municipality_code)).label("count"),
+            func.count(func.distinct(models.MunicipalityStats.municipality_code)).label("unit_count"),
         ).where(func.left(models.MunicipalityStats.municipality_code, 2) == county_code)
         if nace:
             county_query = county_query.where(models.MunicipalityStats.nace_division == nace)
         result = await db.execute(county_query)
         row = result.one()
         county_total = row.total or 0
-        row_count = row.count or 0
-        county_avg = county_total / row_count if row_count else 0
+        row_unit_count = row.unit_count or 0
+        county_avg = county_total / row_unit_count if row_unit_count else 0
         county_name = get_county_name(county_code)
 
     return GeoAveragesResponse(

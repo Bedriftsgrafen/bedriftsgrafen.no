@@ -35,7 +35,7 @@ from services.role_service import RoleService
 from utils.caching import set_subunit_detail_cache, set_subunit_search_cache
 from utils.response_builders import build_response_metadata
 
-router = APIRouter(prefix="/v1/companies", tags=["companies-v1"])
+router: APIRouter = APIRouter(prefix="/v1/companies", tags=["companies-v1"])
 
 
 @router.get("", response_model=list[CompanyBase])

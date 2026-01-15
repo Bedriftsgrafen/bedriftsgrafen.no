@@ -185,8 +185,8 @@ class QueryMixin:
         # Phase 2: Fetch full company data
         query = select(models.Company).options(*LIST_VIEW_OPTIONS).filter(models.Company.orgnr.in_(orgnrs))
         result = await self.db.execute(query)
-        companies_dict = {c.orgnr: c for c in result.unique().scalars().all()}
-        companies = [companies_dict[orgnr] for orgnr in orgnrs if orgnr in companies_dict]
+        companies_dict: dict[str, models.Company] = {c.orgnr: c for c in result.unique().scalars().all()}  # type: ignore
+        companies: list[models.Company] = [companies_dict[orgnr] for orgnr in orgnrs if orgnr in companies_dict]
 
         if not companies:
             return []

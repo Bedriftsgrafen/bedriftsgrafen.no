@@ -1,3 +1,4 @@
+from datetime import date, datetime
 from sqlalchemy import (
     Boolean,
     Column,
@@ -12,11 +13,11 @@ from sqlalchemy import (
 )
 from sqlalchemy import text as sa_text
 from sqlalchemy.dialects.postgresql import JSONB, TSVECTOR
-from sqlalchemy.orm import Mapped, relationship
+from sqlalchemy.orm import Mapped, relationship, mapped_column
 from sqlalchemy.sql import func
 
 from database import Base
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 if TYPE_CHECKING:
     from models.accounting import Accounting
@@ -155,43 +156,45 @@ class Company(Base):
         ),
     )
 
-    orgnr = Column(String, primary_key=True, index=True)
-    navn = Column(Text, index=True)
-    organisasjonsform = Column(String)
-    naeringskode = Column(String, index=True)
-    antall_ansatte = Column(Integer)
-    hjemmeside = Column(Text, nullable=True)
-    stiftelsesdato = Column(Date, nullable=True)
+    orgnr: Mapped[str] = mapped_column(String, primary_key=True, index=True)
+    navn: Mapped[str | None] = mapped_column(Text, index=True, nullable=True)
+    organisasjonsform: Mapped[str | None] = mapped_column(String, nullable=True)
+    naeringskode: Mapped[str | None] = mapped_column(String, index=True, nullable=True)
+    antall_ansatte: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    hjemmeside: Mapped[str | None] = mapped_column(Text, nullable=True)
+    stiftelsesdato: Mapped[date | None] = mapped_column(Date, nullable=True)
 
     # Address data (stored as JSONB for flexibility)
-    postadresse = Column(JSONB)
-    forretningsadresse = Column(JSONB)
+    postadresse: Mapped[dict | None] = mapped_column(JSONB, nullable=True)
+    forretningsadresse: Mapped[dict | None] = mapped_column(JSONB, nullable=True)
 
     # Bankruptcy info
-    konkurs = Column(Boolean, default=False, index=True)
-    konkursdato = Column(Date, nullable=True)
-    under_avvikling = Column(Boolean, default=False)
-    under_tvangsavvikling = Column(Boolean, default=False)
-    registrert_i_foretaksregisteret = Column(Boolean, default=False, index=True)
+    konkurs: Mapped[bool] = mapped_column(Boolean, default=False, index=True)
+    konkursdato: Mapped[date | None] = mapped_column(Date, nullable=True)
+    under_avvikling: Mapped[bool] = mapped_column(Boolean, default=False)
+    under_tvangsavvikling: Mapped[bool] = mapped_column(Boolean, default=False)
+    registrert_i_foretaksregisteret: Mapped[bool] = mapped_column(Boolean, default=False, index=True)
 
     # Formal purpose as text
-    vedtektsfestet_formaal = Column(Text, nullable=True)
+    vedtektsfestet_formaal: Mapped[str | None] = mapped_column(Text, nullable=True)
 
     # Raw data from Brønnøysund for future proofing
-    raw_data = Column("data", JSONB)
+    raw_data: Mapped[dict | None] = mapped_column("data", JSONB, nullable=True)
 
     # Geocoding fields
-    latitude = Column(Float, nullable=True)
-    longitude = Column(Float, nullable=True)
-    geocoding_attempts = Column(Integer, default=0)
-    geocoded_at = Column(DateTime, nullable=True)
+    latitude: Mapped[float | None] = mapped_column(Float, nullable=True)
+    longitude: Mapped[float | None] = mapped_column(Float, nullable=True)
+    geocoding_attempts: Mapped[int] = mapped_column(Integer, default=0)
+    geocoded_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
 
     # Search vector
-    search_vector = Column(TSVECTOR)
+    search_vector: Mapped[Any] = mapped_column(TSVECTOR)
 
     # Metadata
-    created_at = Column(DateTime(timezone=True), server_default=func.now())
-    last_polled_regnskap = Column(Date, nullable=True, index=True)  # Tracks when financials were last fetched
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    last_polled_regnskap: Mapped[date | None] = mapped_column(
+        Date, nullable=True, index=True
+    )  # Tracks when financials were last fetched
 
     # Relationships - Use noload to prevent N+1 queries
     # Queries that need these relationships MUST explicitly eager load with selectinload/joinedload
@@ -266,19 +269,23 @@ class SubUnit(Base):
         ),
     )
 
-    orgnr = Column(String, primary_key=True, index=True)
-    parent_orgnr = Column(String, ForeignKey("bedrifter.orgnr"), index=True)
-    navn = Column(String, index=True)
-    organisasjonsform = Column(String, index=True)  # Example: "BEDR"
-    naeringskode = Column(String, index=True)
-    antall_ansatte = Column(Integer, default=0, index=True)
-    beliggenhetsadresse = Column(JSONB)  # Usually distinct from parent's address
-    postadresse = Column(JSONB)
+    orgnr: Mapped[str] = mapped_column(String, primary_key=True, index=True)
+    parent_orgnr: Mapped[str] = mapped_column(String, ForeignKey("bedrifter.orgnr"), index=True)
+    navn: Mapped[str] = mapped_column(String, index=True)
+    organisasjonsform: Mapped[str | None] = mapped_column(String, index=True, nullable=True)  # Example: "BEDR"
+    naeringskode: Mapped[str | None] = mapped_column(String, index=True, nullable=True)
+    antall_ansatte: Mapped[int] = mapped_column(Integer, default=0, index=True)
+    beliggenhetsadresse: Mapped[dict | None] = mapped_column(
+        JSONB, nullable=True
+    )  # Usually distinct from parent's address
+    postadresse: Mapped[dict | None] = mapped_column(JSONB, nullable=True)
     # data = Column(JSONB)  # DB seems to lack this
     # SubUnits often use 'beliggenhetsadresse' etc directly.
 
-    stiftelsesdato = Column(Date)
-    updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
+    stiftelsesdato: Mapped[date | None] = mapped_column(Date, nullable=True)
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), onupdate=func.now()
+    )
 
     parent_company: Mapped["Company"] = relationship("Company", back_populates="underenheter")
 
@@ -291,25 +298,27 @@ class Role(Base):
 
     __tablename__ = "roller"
 
-    id = Column(Integer, primary_key=True, index=True)
-    orgnr = Column(String, ForeignKey("bedrifter.orgnr"), index=True, nullable=False)
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, index=True)
+    orgnr: Mapped[str] = mapped_column(String, ForeignKey("bedrifter.orgnr"), index=True, nullable=False)
 
     # Type: e.g. "dagligLeder", "styreleder", "styremedlem", "varamedlem"
-    type_kode = Column(String, index=True, nullable=True)
-    type_beskrivelse = Column(String, nullable=True)
+    type_kode: Mapped[str | None] = mapped_column(String, index=True, nullable=True)
+    type_beskrivelse: Mapped[str | None] = mapped_column(String, nullable=True)
 
     # Person or entity holding the role
-    person_navn = Column(String, nullable=True)
-    foedselsdato = Column(Date, nullable=True)  # Only for persons
+    person_navn: Mapped[str | None] = mapped_column(String, nullable=True)
+    foedselsdato: Mapped[date | None] = mapped_column(Date, nullable=True)  # Only for persons
 
-    enhet_navn = Column(String, nullable=True)
-    enhet_orgnr = Column(String, nullable=True)  # For companies holding roles (e.g. auditor)
+    enhet_navn: Mapped[str | None] = mapped_column(String, nullable=True)
+    enhet_orgnr: Mapped[str | None] = mapped_column(String, nullable=True)  # For companies holding roles (e.g. auditor)
 
     # Role status
-    fratraadt = Column(Boolean, default=False)
-    rekkefoelge = Column(Integer, nullable=True)
+    fratraadt: Mapped[bool] = mapped_column(Boolean, default=False)
+    rekkefoelge: Mapped[int | None] = mapped_column(Integer, nullable=True)
 
-    created_at = Column(DateTime(timezone=True), server_default=func.now())
-    updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), onupdate=func.now()
+    )
 
     company: Mapped["Company"] = relationship("Company", back_populates="roller")

@@ -1,20 +1,20 @@
 from sqlalchemy import (
-    Column,
     Computed,
     Date,
     DateTime,
     Float,
     ForeignKey,
+    Index,
     Integer,
     String,
     UniqueConstraint,
-    Index,
 )
 from sqlalchemy import text as sa_text
 from sqlalchemy.dialects.postgresql import JSONB
-from sqlalchemy.orm import Mapped, relationship
+from sqlalchemy.orm import Mapped, mapped_column, relationship
 from sqlalchemy.sql import func
 from typing import TYPE_CHECKING
+from datetime import date, datetime
 
 from database import Base
 
@@ -53,70 +53,63 @@ class Accounting(Base):
         ),
     )
 
-    # id = Column(Integer, primary_key=True, index=True) # DB seems to use composite PK? No, migration creates id.
-    # Migration said: op.drop_constraint('fk_regnskap_orgnr'... foreignkey)
-    # And op.create_unique_constraint(uq_regnskap_orgnr_aar...)
-
-    # Actually, migration line 22 (check_schema_drift) implies 'id' is adding? No.
-    # Let's keep existing columns but fix names.
-
-    id = Column(Integer, primary_key=True, index=True)
-    orgnr = Column(String, ForeignKey("bedrifter.orgnr"), index=True)
-    # navn = Column(String)  # Not in DB
-    # stiftelsesdato = Column(Date) # Not in DB
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, index=True)
+    orgnr: Mapped[str] = mapped_column(String, ForeignKey("bedrifter.orgnr"), index=True)
 
     # Period info
-    periode_fra = Column(Date)
-    periode_til = Column(Date)
-    aar = Column(Integer, index=True)
+    periode_fra: Mapped[date | None] = mapped_column(Date, nullable=True)
+    periode_til: Mapped[date | None] = mapped_column(Date, nullable=True)
+    aar: Mapped[int] = mapped_column(Integer, index=True)
 
     # Financial data
-    salgsinntekter = Column(Float)
-    annen_driftsinntekt = Column(Float)
-    varekostnad = Column(Float)
-    lonnskostnad = Column(Float)
-    avskrivninger = Column(Float)  # DB name
-    nedskrivning = Column(Float)
-    annen_driftskostnad = Column(Float)
-    driftsresultat = Column(Float)
-    finansinntekt = Column(Float)
-    finanskostnad = Column(Float)
-    ordinaert_resultat_for_skatt = Column(Float)
-    skattekostnad = Column(Float)
-    aarsresultat = Column(Float)
+    salgsinntekter: Mapped[float | None] = mapped_column(Float, nullable=True)
+    annen_driftsinntekt: Mapped[float | None] = mapped_column(Float, nullable=True)
+    varekostnad: Mapped[float | None] = mapped_column(Float, nullable=True)
+    lonnskostnad: Mapped[float | None] = mapped_column(Float, nullable=True)
+    avskrivninger: Mapped[float | None] = mapped_column(Float, nullable=True)  # DB name
+    nedskrivning: Mapped[float | None] = mapped_column(Float, nullable=True)
+    annen_driftskostnad: Mapped[float | None] = mapped_column(Float, nullable=True)
+    driftsresultat: Mapped[float | None] = mapped_column(Float, nullable=True)
+    finansinntekt: Mapped[float | None] = mapped_column(Float, nullable=True)
+    finanskostnad: Mapped[float | None] = mapped_column(Float, nullable=True)
+    ordinaert_resultat_for_skatt: Mapped[float | None] = mapped_column(Float, nullable=True)
+    skattekostnad: Mapped[float | None] = mapped_column(Float, nullable=True)
+    aarsresultat: Mapped[float | None] = mapped_column(Float, nullable=True)
 
     # Balanse - Eiendeler
-    anleggsmidler = Column(Float)
-    omloepsmidler = Column(Float)
-    sum_eiendeler = Column(Float)
+    anleggsmidler: Mapped[float | None] = mapped_column(Float, nullable=True)
+    omloepsmidler: Mapped[float | None] = mapped_column(Float, nullable=True)
+    sum_eiendeler: Mapped[float | None] = mapped_column(Float, nullable=True)
 
     # Balanse - Egenkapital og gjeld
-    egenkapital = Column(Float)
-    gjeld = Column(Float)
-    kortsiktig_gjeld = Column(Float)
-    langsiktig_gjeld = Column(Float)
-    sum_egenkapital_gjeld = Column(Float)
+    egenkapital: Mapped[float | None] = mapped_column(Float, nullable=True)
+    gjeld: Mapped[float | None] = mapped_column(Float, nullable=True)
+    kortsiktig_gjeld: Mapped[float | None] = mapped_column(Float, nullable=True)
+    langsiktig_gjeld: Mapped[float | None] = mapped_column(Float, nullable=True)
+    sum_egenkapital_gjeld: Mapped[float | None] = mapped_column(Float, nullable=True)
 
     # Computed/Derived columns present in DB
-    total_inntekt = Column(Float)
-    gjeldsgrad = Column(Float)
-    ebitda = Column(Float)
-    ebitda_margin = Column(Float)
+    total_inntekt: Mapped[float | None] = mapped_column(Float, nullable=True)
+    gjeldsgrad: Mapped[float | None] = mapped_column(Float, nullable=True)
+    ebitda: Mapped[float | None] = mapped_column(Float, nullable=True)
+    ebitda_margin: Mapped[float | None] = mapped_column(Float, nullable=True)
 
     # Metadata
-    created_at = Column(DateTime(timezone=True), server_default=func.now())
-    updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), onupdate=func.now()
+    )
 
     # Raw data for completeness
-    raw_data = Column(JSONB)
+    raw_data: Mapped[dict | None] = mapped_column(JSONB, nullable=True)
 
     # Computed columns
-    likviditetsgrad1 = Column(
+    likviditetsgrad1: Mapped[float | None] = mapped_column(
         Float,
         Computed("omloepsmidler / NULLIF(kortsiktig_gjeld, 0)", persisted=True),
         nullable=True,
     )
-    egenkapitalandel = Column(
+    egenkapitalandel: Mapped[float | None] = mapped_column(
         Float,
         Computed(
             "egenkapital / (egenkapital + COALESCE(kortsiktig_gjeld, 0) + COALESCE(langsiktig_gjeld, 0))",
@@ -139,15 +132,15 @@ class LatestFinancials(Base):
     # Map to existing materialized view
     __table_args__ = {"extend_existing": True}
 
-    orgnr = Column(String, primary_key=True)
-    aar = Column(Integer)
-    salgsinntekter = Column(Float)
-    aarsresultat = Column(Float)
-    egenkapital = Column(Float)
-    driftsresultat = Column(Float)
-    likviditetsgrad1 = Column("likviditetsgrad", Float)
-    egenkapitalandel = Column(Float)
-    operating_margin = Column(Float)
+    orgnr: Mapped[str] = mapped_column(String, primary_key=True)
+    aar: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    salgsinntekter: Mapped[float | None] = mapped_column(Float, nullable=True)
+    aarsresultat: Mapped[float | None] = mapped_column(Float, nullable=True)
+    egenkapital: Mapped[float | None] = mapped_column(Float, nullable=True)
+    driftsresultat: Mapped[float | None] = mapped_column(Float, nullable=True)
+    likviditetsgrad1: Mapped[float | None] = mapped_column("likviditetsgrad", Float, nullable=True)
+    egenkapitalandel: Mapped[float | None] = mapped_column(Float, nullable=True)
+    operating_margin: Mapped[float | None] = mapped_column(Float, nullable=True)
 
 
 class LatestAccountings(Base):
@@ -161,10 +154,10 @@ class LatestAccountings(Base):
     # Map to existing materialized view
     __table_args__ = {"extend_existing": True}
 
-    orgnr = Column(String, primary_key=True)
-    aar = Column(Integer)
-    salgsinntekter = Column(Float)
-    aarsresultat = Column(Float)
-    driftsresultat = Column(Float)
-    total_inntekt = Column(Float)
-    avskrivninger = Column(Float)
+    orgnr: Mapped[str] = mapped_column(String, primary_key=True)
+    aar: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    salgsinntekter: Mapped[float | None] = mapped_column(Float, nullable=True)
+    aarsresultat: Mapped[float | None] = mapped_column(Float, nullable=True)
+    driftsresultat: Mapped[float | None] = mapped_column(Float, nullable=True)
+    total_inntekt: Mapped[float | None] = mapped_column(Float, nullable=True)
+    avskrivninger: Mapped[float | None] = mapped_column(Float, nullable=True)

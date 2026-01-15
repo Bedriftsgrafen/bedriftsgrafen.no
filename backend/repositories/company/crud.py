@@ -114,7 +114,7 @@ class CrudMixin:
             # Prepare UPSERT statement
             from sqlalchemy.dialects.postgresql import insert
 
-            stmt = insert(models.Company).values(**fields)
+            stmt: Any = insert(models.Company).values(**fields)
 
             # On conflict (PK orgnr), update all fields except PK and creation metadata
             update_dict = {k: getattr(stmt.excluded, k) for k in fields.keys() if k not in ["orgnr", "created_at"]}

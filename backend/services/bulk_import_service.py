@@ -210,7 +210,7 @@ class BulkImportService:
         result = await self.db.execute(
             select(func.count(BulkImportQueue.orgnr)).filter(BulkImportQueue.status == ImportStatus.PENDING)
         )
-        batch.total_companies = result.scalar()
+        batch.total_companies = int(result.scalar() or 0)
 
         self.db.add(batch)
         await self.db.commit()
@@ -233,12 +233,12 @@ class BulkImportService:
         completed = await self.db.execute(
             select(func.count(BulkImportQueue.orgnr)).filter(BulkImportQueue.status == ImportStatus.COMPLETED)
         )
-        batch.completed_count = completed.scalar()
+        batch.completed_count = int(completed.scalar() or 0)
 
         failed = await self.db.execute(
             select(func.count(BulkImportQueue.orgnr)).filter(BulkImportQueue.status == ImportStatus.FAILED)
         )
-        batch.failed_count = failed.scalar()
+        batch.failed_count = int(failed.scalar() or 0)
 
         await self.db.commit()
 
@@ -290,6 +290,6 @@ class BulkImportService:
         )
         await self.db.commit()
 
-        count = cursor_result.rowcount or 0
+        count = getattr(cursor_result, "rowcount", 0) or 0
         logger.info(f"Reset {count} failed items for retry")
         return count
