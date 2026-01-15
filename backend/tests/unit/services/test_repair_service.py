@@ -25,13 +25,13 @@ def mock_db():
 @pytest.fixture
 def repair_service(mock_db):
     """Create a RepairService instance with mocked dependencies."""
-    with patch("services.repair_service.BrregApiService") as mock_brreg, patch(
-        "services.repair_service.UpdateService"
-    ) as mock_update, patch("services.repair_service.CompanyRepository") as mock_company_repo, patch(
-        "services.repair_service.SubUnitRepository"
-    ) as mock_subunit_repo, patch(
-        "services.repair_service.RoleRepository"
-    ) as mock_role_repo:
+    with (
+        patch("services.repair_service.BrregApiService") as mock_brreg,
+        patch("services.repair_service.UpdateService") as mock_update,
+        patch("services.repair_service.CompanyRepository") as mock_company_repo,
+        patch("services.repair_service.SubUnitRepository") as mock_subunit_repo,
+        patch("services.repair_service.RoleRepository") as mock_role_repo,
+    ):
         service = RepairService(mock_db, repair=False)
         service.brreg_api = mock_brreg.return_value
         service.update_service = mock_update.return_value
@@ -45,11 +45,13 @@ class TestRepairServiceInit:
     """Tests for RepairService initialization."""
 
     def test_init_sets_repair_mode(self, mock_db):
-        with patch("services.repair_service.BrregApiService"), patch(
-            "services.repair_service.UpdateService"
-        ), patch("services.repair_service.CompanyRepository"), patch(
-            "services.repair_service.SubUnitRepository"
-        ), patch("services.repair_service.RoleRepository"):
+        with (
+            patch("services.repair_service.BrregApiService"),
+            patch("services.repair_service.UpdateService"),
+            patch("services.repair_service.CompanyRepository"),
+            patch("services.repair_service.SubUnitRepository"),
+            patch("services.repair_service.RoleRepository"),
+        ):
             service = RepairService(mock_db, repair=True)
             assert service.repair is True
 
