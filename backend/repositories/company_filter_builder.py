@@ -47,6 +47,7 @@ class FilterParams:
 
     # Location
     municipality: str | None = None
+    municipality_code: str | None = None
     county: str | None = None
 
     # Dates
@@ -88,6 +89,7 @@ class FilterParams:
             min_employees=dto.min_employees,
             max_employees=dto.max_employees,
             municipality=dto.municipality,
+            municipality_code=dto.municipality_code,
             county=dto.county,
             founded_from=dto.founded_from,
             founded_to=dto.founded_to,
@@ -143,6 +145,7 @@ class FilterParams:
                 self.min_employees,
                 self.max_employees,
                 self.municipality,
+                self.municipality_code,
                 self.county,
                 self.founded_from,
                 self.founded_to,
@@ -167,6 +170,7 @@ class FilterParams:
                 self.min_employees,
                 self.max_employees,
                 self.municipality,
+                self.municipality_code,
                 self.county,
                 self.founded_from,
                 self.founded_to,
@@ -316,10 +320,18 @@ class CompanyFilterBuilder:
         Apply municipality and county filters.
 
         Municipality: Exact match on kommune field (case-insensitive)
+        Municipality Code: Exact match on kommunenummer field
         County: Prefix match on kommunenummer (2-digit fylke code)
         """
-        # Municipality filter
-        if self._f.municipality:
+        # Municipality code filter (Language-independent) - Prioritize over name
+        if self._f.municipality_code:
+            muni_code_filter = or_(
+                models.Company.forretningsadresse["kommunenummer"].astext == self._f.municipality_code,
+                models.Company.postadresse["kommunenummer"].astext == self._f.municipality_code,
+            )
+            self._clauses.append(muni_code_filter)
+        elif self._f.municipality:
+            # Fallback to name-based filter
             muni_upper = self._f.municipality.upper()
             muni_filter = or_(
                 func.upper(models.Company.forretningsadresse["kommune"].astext) == muni_upper,

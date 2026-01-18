@@ -3,7 +3,7 @@
 import logging
 from datetime import date, datetime, timedelta
 
-from sqlalchemy import delete, select
+from sqlalchemy import delete, select, text
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import contains_eager
 from sqlalchemy.sql import func
@@ -148,29 +148,46 @@ class RoleRepository:
             logger.error("Error counting roles", extra={"orgnr": orgnr, "error": str(e)})
             return 0
 
-    async def search_people(self, query: str, limit: int = 10) -> list[dict]:
+    async def search_people(self, query: str, limit: int = 10, include_all: bool = False) -> list[dict]:
         """
         Search for unique people names across the roles table.
         Uses trigram similarity for fuzzy matching.
+        Applying commercial filtering unless include_all is True.
         """
         if len(query) < 3:
             return []
 
+        from constants.org_forms import COMMERCIAL_ORG_FORMS, NON_COMMERCIAL_ORG_FORMS
+
         try:
             # We want unique combinations of name and birthdate
-            # Using subquery for performance and grouping
             stmt = (
                 select(
                     models.Role.person_navn,
                     models.Role.foedselsdato,
                     func.count(models.Role.id).label("role_count"),
                 )
+                .join(models.Company, models.Role.orgnr == models.Company.orgnr)
                 .where(models.Role.person_navn.ilike(f"%{query}%"))
                 .where(models.Role.person_navn.is_not(None))
-                .group_by(models.Role.person_navn, models.Role.foedselsdato)
-                .order_by(func.count(models.Role.id).desc())
-                .limit(limit)
             )
+
+            # Apply commercial filtering unless admin
+            if not include_all:
+                stmt = stmt.where(
+                    (models.Company.registrert_i_foretaksregisteret == True)  # noqa: E712
+                    | (
+                        models.Company.organisasjonsform.in_(list(COMMERCIAL_ORG_FORMS))
+                        & ~models.Company.organisasjonsform.in_(list(NON_COMMERCIAL_ORG_FORMS))
+                        & (models.Company.organisasjonsform != "STI")
+                    )
+                )
+
+            stmt = stmt.group_by(models.Role.person_navn, models.Role.foedselsdato).order_by(
+                func.count(models.Role.id).desc()
+            )
+            stmt = stmt.limit(limit)
+
             result = await self.db.execute(stmt)
             return [
                 {
@@ -184,10 +201,12 @@ class RoleRepository:
             logger.error("Error searching people", extra={"query": query, "error": str(e)})
             return []
 
-    async def get_person_commercial_roles(self, name: str, birthdate: date | None = None) -> list[models.Role]:
+    async def get_person_commercial_roles(
+        self, name: str, birthdate: date | None = None, include_all: bool = False
+    ) -> list[models.Role]:
         """
-        Fetch all roles for a person that are considered "commercial" (næringsvirksomhet).
-        Joins with Company to check registrert_i_foretaksregisteret and org form.
+        Fetch roles for a person. By default, only returns "commercial" (næringsvirksomhet) roles
+        per Enhetsregisterloven § 22. If include_all is True, returns everything (admin view).
         """
         from constants.org_forms import COMMERCIAL_ORG_FORMS, NON_COMMERCIAL_ORG_FORMS
 
@@ -202,20 +221,22 @@ class RoleRepository:
 
             # Handle birthdate filtering - match exactly or allow flexible matching
             if birthdate is not None:
+                if isinstance(birthdate, str):
+                    birthdate = date.fromisoformat(birthdate)
                 stmt = stmt.where(models.Role.foedselsdato == birthdate)
-            # Note: If birthdate is None, we don't filter by it (matches all)
 
-            # Apply legal commercial filtering per Enhetsregisterloven § 22
-            # Rule 1: Registered in Foretaksregisteret = ALWAYS commercial
-            # Rule 2: Fallback to org form whitelist (excluding explicit blacklist)
-            stmt = stmt.where(
-                (models.Company.registrert_i_foretaksregisteret == True)  # noqa: E712
-                | (
-                    models.Company.organisasjonsform.in_(list(COMMERCIAL_ORG_FORMS))
-                    & ~models.Company.organisasjonsform.in_(list(NON_COMMERCIAL_ORG_FORMS))
-                    & (models.Company.organisasjonsform != "STI")
+            # Apply legal commercial filtering per Enhetsregisterloven § 22 unless admin
+            if not include_all:
+                # Rule 1: Registered in Foretaksregisteret = ALWAYS commercial
+                # Rule 2: Fallback to org form whitelist (excluding explicit blacklist)
+                stmt = stmt.where(
+                    (models.Company.registrert_i_foretaksregisteret == True)  # noqa: E712
+                    | (
+                        models.Company.organisasjonsform.in_(list(COMMERCIAL_ORG_FORMS))
+                        & ~models.Company.organisasjonsform.in_(list(NON_COMMERCIAL_ORG_FORMS))
+                        & (models.Company.organisasjonsform != "STI")
+                    )
                 )
-            )
 
             stmt = stmt.order_by(
                 models.Role.fratraadt.asc(),  # Active roles first
@@ -229,3 +250,46 @@ class RoleRepository:
                 extra={"person_name": name, "birthdate": str(birthdate), "error": str(e)},
             )
             return []
+
+    async def count_total_roles(self) -> int:
+        """Count total number of roles in the database."""
+        try:
+            # Use pg_class for fast estimate if possible, otherwise count
+            result = await self.db.execute(
+                text("SELECT reltuples::bigint AS estimate FROM pg_class WHERE relname='roller'")
+            )
+            count = result.scalar()
+            if count and count > 0:
+                return int(count)
+
+            result = await self.db.execute(select(func.count(models.Role.id)))
+            return result.scalar() or 0
+        except Exception as e:
+            logger.error(f"Error counting total roles: {e}")
+            return 0
+
+    async def get_average_board_age(self) -> float:
+        """
+        Calculate the average age of active board members.
+        Board members are defined as day manager, chairman, and board members.
+        """
+        try:
+            # Board roles: dagligLeder (MD), styreleder (Chairman), styremedlem (Board Member)
+            board_role_codes = ["dagligLeder", "styreleder", "styremedlem"]
+
+            # Age calculation: current_year - birth_year
+            # We filter for roles where foedselsdato is not null and fratraadt is False
+            current_year = date.today().year
+
+            stmt = select(func.avg(current_year - func.extract("year", models.Role.foedselsdato))).where(
+                models.Role.type_kode.in_(board_role_codes),
+                models.Role.fratraadt.is_(False),
+                models.Role.foedselsdato.is_not(None),
+            )
+
+            result = await self.db.execute(stmt)
+            avg_age = result.scalar()
+            return round(float(avg_age), 1) if avg_age else 0.0
+        except Exception as e:
+            logger.error(f"Error calculating average board age: {e}")
+            return 0.0

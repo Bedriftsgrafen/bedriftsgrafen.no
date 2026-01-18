@@ -1,6 +1,6 @@
 from fastapi import APIRouter, Request
 
-from main import limiter
+from limiter import limiter
 
 router: APIRouter = APIRouter(tags=["health"])
 

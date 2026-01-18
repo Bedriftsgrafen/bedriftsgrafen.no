@@ -52,7 +52,10 @@ class CompanyFilterDTO(BaseModel):
     # Basic filters
     organisasjonsform: list[str] | None = Field(None, description="Filter by organization forms (AS, ASA, etc.)")
     naeringskode: str | None = Field(None, description="Filter by industry code (NACE)")
-    municipality: str | None = Field(None, description="Filter by municipality (kommune)")
+    municipality: str | None = Field(None, description="Filter by municipality (kommune) name")
+    municipality_code: str | None = Field(
+        None, min_length=4, max_length=4, pattern=r"^\d{4}$", description="Filter by 4-digit municipality code"
+    )
     county: str | None = Field(None, description="Filter by county (fylke) - uses 2-digit code prefix")
 
     # Employee range
@@ -148,6 +151,7 @@ class CompanyFilterDTO(BaseModel):
             "organisasjonsform": self.organisasjonsform,
             "naeringskode": self.naeringskode,
             "municipality": self.municipality,
+            "municipality_code": self.municipality_code,
             "county": self.county,
             "min_employees": self.min_employees,
             "max_employees": self.max_employees,
@@ -182,6 +186,7 @@ class CompanyFilterDTO(BaseModel):
             "organisasjonsform": self.organisasjonsform,
             "naeringskode": self.naeringskode,
             "municipality": self.municipality,
+            "municipality_code": self.municipality_code,
             "county": self.county,
             "min_employees": self.min_employees,
             "max_employees": self.max_employees,

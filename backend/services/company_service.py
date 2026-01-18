@@ -11,6 +11,7 @@ import models
 from repositories.accounting_repository import AccountingRepository
 from repositories.company_filter_builder import FilterParams
 from repositories.company import CompanyRepository, CompanyWithFinancials
+from repositories.role_repository import RoleRepository
 from repositories.subunit_repository import SubUnitRepository
 from services.brreg_api_service import BrregApiService
 from services.dtos import CompanyFilterDTO
@@ -32,6 +33,7 @@ class CompanyService:
         self.db = db  # Store for geocoding updates
         self.company_repo = CompanyRepository(db)
         self.accounting_repo = AccountingRepository(db)
+        self.role_repo = RoleRepository(db)
         self.subunit_repo = SubUnitRepository(db)
         self.brreg_api = BrregApiService()
         self.geocoding_service = GeocodingService()
@@ -368,15 +370,42 @@ class CompanyService:
                 logger.warning("get_bankruptcies_count timed out, using cached/estimated value")
                 bankruptcies = 0
 
+            # New metrics for Jan 2026 renewal
+            try:
+                geocoded_count = await asyncio.wait_for(self.company_repo.get_geocoded_count(), timeout=5.0)
+            except Exception:
+                geocoded_count = 0
+
+            try:
+                new_companies_30d = await asyncio.wait_for(self.company_repo.get_new_companies_30d(), timeout=5.0)
+            except Exception:
+                new_companies_30d = 0
+
+            try:
+                total_roles = await asyncio.wait_for(self.role_repo.count_total_roles(), timeout=5.0)
+            except Exception:
+                total_roles = 0
+
+            try:
+                avg_board_age = await asyncio.wait_for(self.role_repo.get_average_board_age(), timeout=5.0)
+            except Exception:
+                avg_board_age = 0.0
+
             stats = {
                 "total_companies": total_companies,
                 "total_accounting_reports": total_reports,
                 "total_revenue": financial_stats["total_revenue"],
+                "total_ebitda": financial_stats["total_ebitda"],
                 "total_employees": total_employees,
                 "profitable_percentage": financial_stats["profitable_percentage"],
+                "solid_company_percentage": financial_stats["solid_company_percentage"],
                 "avg_operating_margin": financial_stats["avg_operating_margin"],
                 "new_companies_ytd": new_companies_ytd,
+                "new_companies_30d": new_companies_30d,
                 "bankruptcies": bankruptcies,
+                "geocoded_count": geocoded_count,
+                "total_roles": total_roles,
+                "avg_board_age": avg_board_age,
             }
 
             # Cache for 1 hour (3600 seconds)

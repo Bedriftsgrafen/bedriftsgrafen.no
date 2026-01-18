@@ -3,6 +3,8 @@
 Contains get_all, stream_all, and related query methods with optimization logic.
 """
 
+import logging
+from typing import cast
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -13,6 +15,9 @@ from repositories.company.base import (
     CompanyWithFinancials,
 )
 from repositories.company_filter_builder import CompanyFilterBuilder, FilterParams
+
+
+logger = logging.getLogger(__name__)
 
 
 class QueryMixin:
@@ -185,7 +190,8 @@ class QueryMixin:
         # Phase 2: Fetch full company data
         query = select(models.Company).options(*LIST_VIEW_OPTIONS).filter(models.Company.orgnr.in_(orgnrs))
         result = await self.db.execute(query)
-        companies_dict: dict[str, models.Company] = {c.orgnr: c for c in result.unique().scalars().all()}  # type: ignore
+        fetched_companies = cast(list[models.Company], result.scalars().all())
+        companies_dict: dict[str, models.Company] = {c.orgnr: c for c in fetched_companies}
         companies: list[models.Company] = [companies_dict[orgnr] for orgnr in orgnrs if orgnr in companies_dict]
 
         if not companies:

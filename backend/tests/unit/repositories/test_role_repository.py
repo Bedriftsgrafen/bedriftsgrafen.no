@@ -239,6 +239,14 @@ class TestSearchPeople:
 
         assert result == []
 
+    @pytest.mark.asyncio
+    async def test_include_all_parameter_accepted(self, repo, mock_db_session):
+        """Admin bypass parameter is accepted."""
+        mock_db_session.execute.return_value = []
+        result = await repo.search_people("Test", include_all=True)
+        assert result == []
+        mock_db_session.execute.assert_called_once()
+
 
 # ============================================================================
 # Category 6: get_person_commercial_roles (NEW)
@@ -296,3 +304,14 @@ class TestGetPersonCommercialRoles:
         result = await repo.get_person_commercial_roles("Person With Only BRL")
 
         assert result == []
+
+    @pytest.mark.asyncio
+    async def test_include_all_parameter_accepted(self, repo, mock_db_session):
+        """Admin bypass parameter is accepted and returns results."""
+        mock_role = MagicMock(spec=models.Role)
+        mock_db_session.execute.return_value.scalars.return_value.all.return_value = [mock_role]
+
+        result = await repo.get_person_commercial_roles("Test Person", include_all=True)
+
+        assert len(result) == 1
+        assert result[0] == mock_role

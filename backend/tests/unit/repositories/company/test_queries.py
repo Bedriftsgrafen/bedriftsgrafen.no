@@ -36,7 +36,7 @@ async def test_get_all_simple(repo, mock_db_session):
     mock_company.orgnr = "123"
 
     mock_result_companies = MagicMock()
-    mock_result_companies.unique.return_value.scalars.return_value.all.return_value = [mock_company]
+    mock_result_companies.scalars.return_value.all.return_value = [mock_company]
 
     # Phase 3: Financials
     mock_result_fin = MagicMock()

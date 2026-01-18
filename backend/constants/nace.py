@@ -1,6 +1,56 @@
 """NACE division codes and names (Norwegian Standard Industrial Classification)"""
 
 # NACE division names (top-level, 2-digit codes)
+# NACE section names (top-level, 1-letter codes)
+NACE_SECTIONS: dict[str, str] = {
+    "A": "Jordbruk, skogbruk og fiske",
+    "B": "Bergverksdrift og utvinning",
+    "C": "Industri",
+    "D": "Elektrisitets-, gass-, damp- og varmtvannsforsyning",
+    "E": "Vannforsyning, avløps- og renovasjonsvirksomhet",
+    "F": "Bygge- og anleggsvirksomhet",
+    "G": "Varehandel, reparasjon av motorvogner",
+    "H": "Transport og lagring",
+    "I": "Overnattings- og serveringsvirksomhet",
+    "J": "Informasjon og kommunikasjon",
+    "K": "Finansierings- og forsikringsvirksomhet",
+    "L": "Omsetning og drift av fast eiendom",
+    "M": "Faglig, vitenskapelig og teknisk tjenesteyting",
+    "N": "Forretningsmessig tjenesteyting",
+    "O": "Offentlig administrasjon og forsvar, trygdeordninger",
+    "P": "Undervisning",
+    "Q": "Helse- og sosialtjenester",
+    "R": "Kulturell virksomhet, underholdning og fritid",
+    "S": "Annen tjenesteyting",
+    "T": "Lønnet arbeid i private husholdninger",
+    "U": "Internasjonale organisasjoner og organer",
+}
+
+# Mapping sections to their 2-digit divisions for range queries
+NACE_SECTION_MAPPING: dict[str, list[str]] = {
+    "A": ["01", "02", "03"],
+    "B": ["05", "06", "07", "08", "09"],
+    "C": [str(d).zfill(2) for d in range(10, 34)],
+    "D": ["35"],
+    "E": ["36", "37", "38", "39"],
+    "F": ["41", "42", "43"],
+    "G": ["45", "46", "47"],
+    "H": ["49", "50", "51", "52", "53"],
+    "I": ["55", "56"],
+    "J": ["58", "59", "60", "61", "62", "63"],
+    "K": ["64", "65", "66"],
+    "L": ["68"],
+    "M": ["69", "70", "71", "72", "73", "74", "75"],
+    "N": ["77", "78", "79", "80", "81", "82"],
+    "O": ["84"],
+    "P": ["85"],
+    "Q": ["86", "87", "88"],
+    "R": ["90", "91", "92", "93"],
+    "S": ["94", "95", "96"],
+    "T": ["97"],
+    "U": ["99"],
+}
+
 NACE_DIVISIONS: dict[str, str] = {
     "01": "Jordbruk og tjenester tilknyttet jordbruk, jakt og viltstell",
     "02": "Skogbruk og tjenester tilknyttet skogbruk",
@@ -96,10 +146,16 @@ NACE_DIVISIONS: dict[str, str] = {
 def get_nace_name(nace_code: str) -> str:
     """Get the Norwegian name for a NACE code.
 
-    Handles both division codes (2 digits, e.g. '62') and
-    subclass codes (5-6 chars, e.g. '62.010').
-    For subclass codes, returns the division name.
+    Handles NACE sections (A-U), division codes (2 digits),
+    and subclass codes (5-6 chars).
     """
+    if not nace_code:
+        return "Alle bransjer"
+
+    # Check sections first
+    if len(nace_code) == 1 and nace_code in NACE_SECTIONS:
+        return NACE_SECTIONS[nace_code]
+
     # Extract division (first 2 digits) for subclass codes
     division = nace_code[:2] if len(nace_code) >= 2 else nace_code
     return NACE_DIVISIONS.get(division, f"Ukjent ({nace_code})")

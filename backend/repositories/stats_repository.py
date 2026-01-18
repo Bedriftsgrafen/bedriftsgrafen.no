@@ -1,10 +1,12 @@
 import logging
 from typing import Literal, Sequence, Any
 
-from sqlalchemy import func, select
+from sqlalchemy import func, select, and_, case
 from sqlalchemy.ext.asyncio import AsyncSession
 
 import models
+from constants.nace import NACE_SECTION_MAPPING
+from repositories.company_filter_builder import CompanyFilterBuilder, FilterParams
 from services.dtos import IndustryStatsDTO
 
 logger = logging.getLogger(__name__)
@@ -17,11 +19,51 @@ class StatsRepository:
         self.db = db
 
     async def get_industry_stats(self, nace_division: str) -> models.IndustryStats | None:
-        """Get aggregated statistics for a specific NACE division (2-digit)."""
-        result = await self.db.execute(
-            select(models.IndustryStats).where(models.IndustryStats.nace_division == nace_division)
+        """Get aggregated statistics for a specific NACE division (2-digit) or section (1-letter)."""
+        query = select(models.IndustryStats)
+        if len(nace_division) == 1 and nace_division in NACE_SECTION_MAPPING:
+            query = query.where(models.IndustryStats.nace_division.in_(NACE_SECTION_MAPPING[nace_division]))
+        else:
+            query = query.where(models.IndustryStats.nace_division == nace_division)
+
+        result = await self.db.execute(query)
+        # Note: If it's a section, we might get multiple rows - we need to aggregate them
+        # However, for get_industry_stat (singular), we usually expect a singular division.
+        # If it's a section, we should probably aggregate.
+        # But wait, IndustryStats is a materialized view with ONE row per division.
+        # If we query by section, result.scalars().all() return multiple rows.
+        # Let's adjust this to return a combined stat if it's a section.
+        stats = result.scalars().all()
+        if not stats:
+            return None
+        if len(stats) == 1:
+            return stats[0]
+
+        # Aggregate multiple divisions into one (for sections)
+        # Create a transient model instance for the response
+        combined = models.IndustryStats(
+            nace_division=nace_division,
+            company_count=sum(((s.company_count or 0) for s in stats), 0),
+            total_employees=sum(((s.total_employees or 0) for s in stats), 0),
+            new_last_year=sum(((s.new_last_year or 0) for s in stats), 0),
+            bankrupt_count=sum(((s.bankrupt_count or 0) for s in stats), 0),
+            bankruptcies_last_year=sum(((s.bankruptcies_last_year or 0) for s in stats), 0),
+            total_revenue=sum(((s.total_revenue or 0.0) for s in stats), 0.0),
+            total_profit=sum(((s.total_profit or 0.0) for s in stats), 0.0),
+            profitable_count=sum(((s.profitable_count or 0) for s in stats), 0),
         )
-        return result.scalar_one_or_none()
+        # Calculate averages for the combined stat
+        if combined.company_count and combined.company_count > 0:
+            combined.avg_revenue = (combined.total_revenue or 0.0) / combined.company_count
+            combined.avg_profit = (combined.total_profit or 0.0) / combined.company_count
+            # Operating margin is harder to aggregate accurately without weights, but let's use weighted average
+            if combined.total_revenue and combined.total_revenue > 0:
+                total_margin_revenue = sum(((s.avg_operating_margin or 0.0) * (s.total_revenue or 0.0)) for s in stats)
+                combined.avg_operating_margin = total_margin_revenue / combined.total_revenue
+            else:
+                combined.avg_operating_margin = 0.0
+
+        return combined
 
     async def get_industry_subclass_stats(self, nace_code: str) -> models.IndustrySubclassStats | None:
         """Get aggregated statistics for a specific NACE subclass (5-digit)."""
@@ -38,7 +80,10 @@ class StatsRepository:
         ).group_by(models.CountyStats.county_code)
 
         if nace:
-            query = query.where(models.CountyStats.nace_division == nace)
+            if len(nace) == 1 and nace in NACE_SECTION_MAPPING:
+                query = query.where(models.CountyStats.nace_division.in_(NACE_SECTION_MAPPING[nace]))
+            else:
+                query = query.where(models.CountyStats.nace_division == nace)
 
         result = await self.db.execute(query)
         return result.all()
@@ -51,7 +96,10 @@ class StatsRepository:
         ).group_by(models.MunicipalityStats.municipality_code)
 
         if nace:
-            query = query.where(models.MunicipalityStats.nace_division == nace)
+            if len(nace) == 1 and nace in NACE_SECTION_MAPPING:
+                query = query.where(models.MunicipalityStats.nace_division.in_(NACE_SECTION_MAPPING[nace]))
+            else:
+                query = query.where(models.MunicipalityStats.nace_division == nace)
 
         if county_code:
             query = query.where(func.left(models.MunicipalityStats.municipality_code, 2) == county_code)
@@ -100,17 +148,19 @@ class StatsRepository:
         Calculate industry financial stats for companies in a specific municipality.
 
         Returns an IndustryStats-like object with avg_revenue, avg_profit, etc.
-        Uses LatestAccountings materialized view for efficient latest-year lookup.
         """
-        from sqlalchemy import and_, case
+        # Determine filter type: section (1-char), division (2-digit), or subclass (5-digit)
+        from typing import Any
 
-        # Determine if we're filtering by full code (5-digit) or division (2-digit)
-        is_subclass = len(nace_code) > 2
-        nace_filter = (
-            models.Company.naeringskode == nace_code
-            if is_subclass
-            else func.left(models.Company.naeringskode, 2) == nace_code
-        )
+        nace_filter: Any
+        if len(nace_code) == 1 and nace_code in NACE_SECTION_MAPPING:
+            nace_filter = func.left(models.Company.naeringskode, 2).in_(NACE_SECTION_MAPPING[nace_code])
+        else:
+            nace_is_subclass = len(nace_code) > 2
+            if nace_is_subclass:
+                nace_filter = models.Company.naeringskode == nace_code
+            else:
+                nace_filter = func.left(models.Company.naeringskode, 2) == nace_code
 
         # Use LatestAccountings materialized view (already has latest year per company)
         # This avoids the expensive MAX(aar) GROUP BY subquery
@@ -160,3 +210,52 @@ class StatsRepository:
             avg_operating_margin=row.avg_operating_margin,
             median_revenue=row.median_revenue,
         )
+
+    async def get_filtered_geography_stats(
+        self,
+        level: Literal["county", "municipality"],
+        metric: GeoMetric,
+        filters: FilterParams,
+    ) -> Sequence[Any]:
+        """
+        Get live, filtered geographic statistics by aggregating the bedrifter table.
+        Used when advanced filters (org form, revenue, etc.) are present.
+        """
+        # Determine geographic column
+        if level == "county":
+            geo_col = func.left(models.Company.forretningsadresse["kommunenummer"].astext, 2).label("code")
+        else:
+            geo_col = models.Company.forretningsadresse["kommunenummer"].astext.label("code")
+
+        # Determine metric aggregation
+        metric_col: Any
+        if metric == "company_count":
+            metric_col = func.count(models.Company.orgnr).label("value")
+        elif metric == "total_employees":
+            metric_col = func.sum(models.Company.antall_ansatte).label("value")
+        elif metric == "new_last_year":
+            # Approximation for live query: founded in last 365 days
+            from datetime import date, timedelta
+
+            one_year_ago = date.today() - timedelta(days=365)
+            metric_col = func.count(case((models.Company.stiftelsesdato >= one_year_ago, 1))).label("value")
+        elif metric == "bankrupt_count":
+            metric_col = func.count(case((models.Company.konkurs.is_(True), 1))).label("value")
+        else:
+            metric_col = func.count(models.Company.orgnr).label("value")
+
+        # Build query
+        query = select(geo_col, metric_col).where(geo_col.isnot(None))
+
+        # Join with financials if needed
+        builder = CompanyFilterBuilder(filters)
+        builder.apply_all(include_financial=True)
+
+        if builder.needs_financial_join:
+            query = query.join(models.LatestFinancials, models.Company.orgnr == models.LatestFinancials.orgnr)
+
+        query = builder.apply_to_query(query)
+        query = query.group_by(geo_col)
+
+        result = await self.db.execute(query)
+        return result.all()

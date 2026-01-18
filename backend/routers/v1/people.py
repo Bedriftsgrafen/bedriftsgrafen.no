@@ -7,12 +7,13 @@ Only commercial roles (næringsvirksomhet) are returned.
 import logging
 from datetime import date
 
-from fastapi import APIRouter, Depends, Query, Request
+from fastapi import APIRouter, Depends, Header, Query, Request
 from pydantic import BaseModel, Field
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from database import get_db
 from repositories.role_repository import RoleRepository
+from utils.auth import is_admin
 
 logger = logging.getLogger(__name__)
 
@@ -47,6 +48,7 @@ async def search_people(
     request: Request,
     q: str = Query(..., min_length=3, description="Search query (min 3 characters)"),
     limit: int = Query(10, ge=1, le=50, description="Maximum results to return"),
+    x_admin_key: str | None = Header(None, alias="X-Admin-Key"),
     db: AsyncSession = Depends(get_db),
 ) -> list[PersonSearchResult]:
     """
@@ -56,7 +58,7 @@ async def search_people(
     sorted by the number of roles held (most active first).
     """
     role_repo = RoleRepository(db)
-    results = await role_repo.search_people(q, limit=limit)
+    results = await role_repo.search_people(q, limit=limit, include_all=is_admin(x_admin_key))
     return [PersonSearchResult(**r) for r in results]
 
 
@@ -65,6 +67,7 @@ async def get_person_roles(
     request: Request,
     name: str = Query(..., description="Person's full name"),
     birthdate: date | None = Query(None, description="Birth date for disambiguation"),
+    x_admin_key: str | None = Header(None, alias="X-Admin-Key"),
     db: AsyncSession = Depends(get_db),
 ) -> list[RoleResponse]:
     """
@@ -75,7 +78,7 @@ async def get_person_roles(
     entities are excluded to comply with Norwegian privacy regulations.
     """
     role_repo = RoleRepository(db)
-    roles = await role_repo.get_person_commercial_roles(name, birthdate)
+    roles = await role_repo.get_person_commercial_roles(name, birthdate, include_all=is_admin(x_admin_key))
 
     return [
         RoleResponse(

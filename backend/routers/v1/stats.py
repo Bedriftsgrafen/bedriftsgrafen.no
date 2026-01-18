@@ -3,16 +3,16 @@
 from typing import Literal
 
 from fastapi import APIRouter, Depends, HTTPException, Path, Query
-from sqlalchemy import func, select
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 import models
-from constants.counties import COUNTY_NAMES, get_county_name
 from constants.nace import get_nace_name
 from database import get_db
 from schemas.benchmark import IndustryBenchmarkResponse
 from schemas.stats import GeoAveragesResponse, GeoStatResponse, IndustryStatResponse
 from services.stats_service import GeoLevel, GeoMetric, StatsService
+from repositories.company_filter_builder import FilterParams
 
 router: APIRouter = APIRouter(prefix="/v1/stats", tags=["statistics"])
 
@@ -90,7 +90,11 @@ async def get_industry_stats(
 @router.get("/industries/{nace_division}", response_model=IndustryStatResponse)
 async def get_industry_stat(
     nace_division: str = Path(
-        ..., min_length=2, max_length=2, pattern=r"^\d{2}$", description="NACE division code (2 digits, e.g., '68')"
+        ...,
+        min_length=1,
+        max_length=2,
+        pattern=r"^([A-U]|\d{2})$",
+        description="NACE division code (2 digits) or section letter (A-U)",
     ),
     db: AsyncSession = Depends(get_db),
 ) -> IndustryStatResponse:
@@ -108,17 +112,17 @@ async def get_industry_stat(
 async def get_industry_benchmark(
     nace_code: str = Path(
         ...,
-        min_length=2,
-        max_length=6,
-        pattern=r"^(\d{2}|\d{2}\.\d{3})$",
-        description="NACE code: 2 digits (e.g., '62') or 5 digits with dot (e.g., '62.010')",
+        min_length=1,
+        max_length=12,
+        pattern=r"^([A-U]|\d{2}|\d{2}\.\d{3})$",
+        description="NACE code: section letter (A-U), 2nd-digit division, or 5-digit subclass",
     ),
     orgnr: str = Path(..., min_length=9, max_length=9, pattern=r"^\d{9}$", description="Organization number"),
     municipality_code: str | None = Query(
         None,
-        min_length=4,
-        max_length=4,
-        pattern=r"^\d{4}$",
+        min_length=1,
+        max_length=12,
+        pattern=r"^(\d{4})$",
         description="Optional 4-digit municipality code for local comparison",
     ),
     db: AsyncSession = Depends(get_db),
@@ -168,12 +172,21 @@ async def get_industry_benchmark(
 async def get_geography_stats(
     level: GeoLevel = Query("county", description="Geographic level: county or municipality"),
     nace: str | None = Query(
-        None, min_length=2, max_length=2, pattern=r"^\d{2}$", description="NACE division code (2 digits)"
+        None,
+        min_length=1,
+        max_length=12,
+        pattern=r"^([A-U]|\d{2}|\d{2}\.\d{3})$",
+        description="NACE code: section letter (A-U), 2nd-digit division, or 5-digit subclass",
     ),
     metric: GeoMetric = Query("company_count", description="Metric to aggregate"),
     county_code: str | None = Query(
-        None, min_length=2, max_length=2, pattern=r"^\d{2}$", description="Filter by county code (2 digits)"
+        None, min_length=2, max_length=10, pattern=r"^\d{2}$", description="Filter by county code (2 digits)"
     ),
+    org_form: list[str] | None = Query(None, description="Organization forms to filter by"),
+    revenue_min: float | None = Query(None, description="Minimum revenue (MNOK)"),
+    revenue_max: float | None = Query(None, description="Maximum revenue (MNOK)"),
+    employee_min: int | None = Query(None, description="Minimum number of employees"),
+    employee_max: int | None = Query(None, description="Maximum number of employees"),
     db: AsyncSession = Depends(get_db),
 ) -> list[GeoStatResponse]:
     """
@@ -183,89 +196,50 @@ async def get_geography_stats(
     - level=municipality: Returns data per kommune (356 regions)
     - county_code: Filter municipalities to a specific county
     """
+    filters = FilterParams(
+        naeringskode=nace,
+        county=county_code,
+        organisasjonsform=org_form,
+        min_revenue=revenue_min,
+        max_revenue=revenue_max,
+        min_employees=employee_min,
+        max_employees=employee_max,
+    )
     service = StatsService(db)
-    return await service.get_geography_stats(level=level, metric=metric, nace=nace, county_code=county_code)
+    return await service.get_geography_stats(level=level, metric=metric, filters=filters)
 
 
 @router.get("/geography/averages", response_model=GeoAveragesResponse)
 async def get_geography_averages(
     level: GeoLevel = Query("county", description="Geographic level for averages"),
     nace: str | None = Query(
-        None, min_length=2, max_length=2, pattern=r"^\d{2}$", description="NACE division code (2 digits)"
+        None,
+        min_length=1,
+        max_length=12,
+        pattern=r"^([A-U]|\d{2}|\d{2}\.\d{3})$",
+        description="NACE code: section letter (A-U), 2nd-digit division, or 5-digit subclass",
     ),
     metric: GeoMetric = Query("company_count", description="Metric to average"),
     county_code: str | None = Query(
-        None, min_length=2, max_length=2, pattern=r"^\d{2}$", description="County code (2 digits)"
+        None, min_length=2, max_length=10, pattern=r"^\d{2}$", description="County code (2 digits)"
     ),
+    org_form: list[str] | None = Query(None, description="Organization forms to filter by"),
+    revenue_min: float | None = Query(None, description="Minimum revenue (MNOK)"),
+    revenue_max: float | None = Query(None, description="Maximum revenue (MNOK)"),
+    employee_min: int | None = Query(None, description="Minimum number of employees"),
+    employee_max: int | None = Query(None, description="Maximum number of employees"),
     db: AsyncSession = Depends(get_db),
 ) -> GeoAveragesResponse:
     """Get national and county averages for comparison."""
-
-    # Explicit metric column mapping (avoid getattr for safety)
-    county_metric_columns = {
-        "company_count": models.CountyStats.company_count,
-        "new_last_year": models.CountyStats.new_last_year,
-        "bankrupt_count": models.CountyStats.bankrupt_count,
-        "total_employees": models.CountyStats.total_employees,
-    }
-    municipality_metric_columns = {
-        "company_count": models.MunicipalityStats.company_count,
-        "new_last_year": models.MunicipalityStats.new_last_year,
-        "bankrupt_count": models.MunicipalityStats.bankrupt_count,
-        "total_employees": models.MunicipalityStats.total_employees,
-    }
-
-    # Get national total and average
-    if level == "county":
-        metric_col = county_metric_columns[metric]
-        query = select(func.sum(metric_col).label("total"))
-        if nace:
-            query = query.where(models.CountyStats.nace_division == nace)
-        result = await db.execute(query)
-        national_total = result.scalar() or 0
-        national_avg = national_total / len(COUNTY_NAMES) if COUNTY_NAMES else 0
-    else:
-        metric_col = municipality_metric_columns[metric]
-        result = await db.execute(
-            select(
-                func.sum(metric_col).label("total"),
-                func.count(func.distinct(models.MunicipalityStats.municipality_code)).label("unit_count"),
-            ).where(models.MunicipalityStats.nace_division == nace)
-            if nace
-            else select(
-                func.sum(metric_col).label("total"),
-                func.count(func.distinct(models.MunicipalityStats.municipality_code)).label("unit_count"),
-            )
-        )
-        row = result.one()
-        national_total = row.total or 0
-        row_unit_count = row.unit_count or 0
-        national_avg = national_total / row_unit_count if row_unit_count else 0
-
-    # Get county average if requested
-    county_avg = None
-    county_total = None
-    county_name = None
-
-    if county_code and level == "municipality":
-        county_metric_col = municipality_metric_columns[metric]
-        county_query = select(
-            func.sum(county_metric_col).label("total"),
-            func.count(func.distinct(models.MunicipalityStats.municipality_code)).label("unit_count"),
-        ).where(func.left(models.MunicipalityStats.municipality_code, 2) == county_code)
-        if nace:
-            county_query = county_query.where(models.MunicipalityStats.nace_division == nace)
-        result = await db.execute(county_query)
-        row = result.one()
-        county_total = row.total or 0
-        row_unit_count = row.unit_count or 0
-        county_avg = county_total / row_unit_count if row_unit_count else 0
-        county_name = get_county_name(county_code)
-
-    return GeoAveragesResponse(
-        national_avg=round(national_avg, 1),
-        national_total=national_total,
-        county_avg=round(county_avg, 1) if county_avg is not None else None,
-        county_total=county_total,
-        county_name=county_name,
+    filters = FilterParams(
+        naeringskode=nace,
+        organisasjonsform=org_form,
+        min_revenue=revenue_min,
+        max_revenue=revenue_max,
+        min_employees=employee_min,
+        max_employees=employee_max,
+    )
+    service = StatsService(db)
+    return await service.get_geography_averages(
+        level=level, metric=metric, filters=filters, county_code_context=county_code
     )

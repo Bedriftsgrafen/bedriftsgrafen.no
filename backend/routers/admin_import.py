@@ -1,31 +1,16 @@
-import os
 from datetime import date
 
-from fastapi import APIRouter, BackgroundTasks, Depends, Header, HTTPException, Request
+from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Request
 from pydantic import BaseModel
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from database import AsyncSessionLocal, get_db
-from main import limiter
+from limiter import limiter
 from services.bulk_import_service import BulkImportService
 from services.ssb_service import SsbService
 from services.update_service import UpdateService
 
-# Admin API key for authentication (required for all admin endpoints)
-ADMIN_API_KEY = os.getenv("ADMIN_API_KEY")
-
-
-async def verify_admin_key(x_admin_key: str = Header(None, alias="X-Admin-Key")):
-    """Verify admin API key from request header.
-
-    Set ADMIN_API_KEY environment variable to enable authentication.
-    If not set, admin endpoints are publicly accessible (development mode).
-    """
-    if ADMIN_API_KEY:
-        if not x_admin_key:
-            raise HTTPException(status_code=401, detail="Missing X-Admin-Key header")
-        if x_admin_key != ADMIN_API_KEY:
-            raise HTTPException(status_code=403, detail="Invalid admin API key")
+from utils.auth import verify_admin_key
 
 
 router: APIRouter = APIRouter(

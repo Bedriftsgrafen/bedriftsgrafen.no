@@ -1,6 +1,7 @@
 import pytest
 from unittest.mock import MagicMock, AsyncMock
 from repositories.stats_repository import StatsRepository
+from repositories.company_filter_builder import FilterParams
 import models
 
 
@@ -22,7 +23,7 @@ def repo(mock_db_session):
 async def test_get_industry_stats(repo, mock_db_session):
     # Setup mock return
     mock_stats = models.IndustryStats()
-    mock_db_session.execute.return_value.scalar_one_or_none.return_value = mock_stats
+    mock_db_session.execute.return_value.scalars.return_value.all.return_value = [mock_stats]
 
     result = await repo.get_industry_stats("01")
 
@@ -120,3 +121,22 @@ async def test_get_industry_stats_by_municipality(repo, mock_db_session):
     assert result is not None
     assert result.company_count == 10
     assert result.avg_revenue == 1000
+
+
+@pytest.mark.asyncio
+async def test_get_filtered_geography_stats(repo, mock_db_session):
+    # Setup mock return
+    mock_rows = [MagicMock()]
+    mock_db_session.execute.return_value.all.return_value = mock_rows
+
+    filters = FilterParams(organisasjonsform=["AS"])
+
+    # Test county level
+    result = await repo.get_filtered_geography_stats(level="county", metric="company_count", filters=filters)
+    assert result == mock_rows
+    assert mock_db_session.execute.called
+
+    # Test municipality level
+    result = await repo.get_filtered_geography_stats(level="municipality", metric="total_employees", filters=filters)
+    assert result == mock_rows
+    assert mock_db_session.execute.called

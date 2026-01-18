@@ -17,7 +17,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from constants.org_forms import COMMERCIAL_ORG_FORMS, NON_COMMERCIAL_ORG_FORMS
 from database import get_db
-from main import limiter
+from limiter import limiter
 from models import Company, Role
 
 router: APIRouter = APIRouter(tags=["SEO"])

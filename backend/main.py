@@ -5,12 +5,11 @@ from contextlib import asynccontextmanager
 from fastapi import Depends, FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
-from slowapi import Limiter
 from slowapi.errors import RateLimitExceeded
 from slowapi.middleware import SlowAPIMiddleware
-from slowapi.util import get_remote_address
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from limiter import limiter
 from database import get_db
 from exceptions import BedriftsgrafenException
 from middleware import RequestIdMiddleware
@@ -20,9 +19,6 @@ from utils.logging_config import setup_logging
 setup_logging(level=logging.INFO)
 
 logger = logging.getLogger(__name__)
-
-# Initialize rate limiter with get_remote_address as key function
-limiter = Limiter(key_func=get_remote_address, default_limits=["100/minute"])
 
 from routers import health  # noqa: E402
 from routers import admin_import  # noqa: E402

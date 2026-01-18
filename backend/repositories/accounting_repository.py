@@ -227,19 +227,22 @@ class AccountingRepository:
 
     async def get_aggregated_stats(self) -> dict[str, float]:
         """
-        Calculate all financial statistics using the materialized view
+        Calculate all financial statistics using the materialized views
         for instant performance.
         """
         stmt = text("""
             SELECT
-                SUM(salgsinntekter) as total_revenue,
-                COUNT(CASE WHEN aarsresultat > 0 THEN 1 END)::float / NULLIF(COUNT(*), 0) * 100 as profitable_percentage,
+                SUM(la.salgsinntekter) as total_revenue,
+                SUM(COALESCE(la.driftsresultat, 0) + COALESCE(la.avskrivninger, 0)) as total_ebitda,
+                COUNT(CASE WHEN la.aarsresultat > 0 THEN 1 END)::float / NULLIF(COUNT(*), 0) * 100 as profitable_percentage,
+                COUNT(CASE WHEN lf.egenkapitalandel > 0.2 THEN 1 END)::float / NULLIF(COUNT(*), 0) * 100 as solid_company_percentage,
                 AVG(
-                    CASE WHEN total_inntekt > 0
-                    THEN (driftsresultat::float / total_inntekt) * 100
+                    CASE WHEN la.total_inntekt > 0
+                    THEN (la.driftsresultat::float / la.total_inntekt) * 100
                     ELSE NULL END
                 ) as avg_operating_margin
-            FROM latest_accountings
+            FROM latest_accountings la
+            LEFT JOIN latest_financials lf ON la.orgnr = lf.orgnr
         """)
 
         try:
@@ -248,12 +251,23 @@ class AccountingRepository:
 
             return {
                 "total_revenue": float(row.total_revenue) if row.total_revenue else 0.0,
+                "total_ebitda": float(row.total_ebitda) if row.total_ebitda else 0.0,
                 "profitable_percentage": float(row.profitable_percentage) if row.profitable_percentage else 0.0,
+                "solid_company_percentage": float(row.solid_company_percentage)
+                if row.solid_company_percentage
+                else 0.0,
                 "avg_operating_margin": float(row.avg_operating_margin) if row.avg_operating_margin else 0.0,
             }
-        except Exception:
-            # Fallback if view doesn't exist yet
-            return {"total_revenue": 0.0, "profitable_percentage": 0.0, "avg_operating_margin": 0.0}
+        except Exception as e:
+            logger.error(f"Error fetching aggregated financial stats: {e}")
+            # Fallback if views don't exist yet or columns are missing
+            return {
+                "total_revenue": 0.0,
+                "total_ebitda": 0.0,
+                "profitable_percentage": 0.0,
+                "solid_company_percentage": 0.0,
+                "avg_operating_margin": 0.0,
+            }
 
     async def refresh_materialized_view(self):
         """Refresh the materialized view concurrently"""

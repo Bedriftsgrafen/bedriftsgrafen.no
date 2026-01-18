@@ -204,3 +204,32 @@ class StatsMixin:
             result = await self.db.execute(select(func.count(models.Company.orgnr)).filter(models.Company.konkurs))
             count = result.scalar()
             return int(count) if count else 0
+
+    async def get_geocoded_count(self) -> int:
+        """Get count of geocoded companies."""
+        try:
+            result = await self.db.execute(
+                select(func.count(models.Company.orgnr)).filter(models.Company.latitude.isnot(None))
+            )
+            count = result.scalar()
+            return int(count) if count else 0
+        except Exception as e:
+            logger.error(f"Error counting geocoded companies: {e}")
+            return 0
+
+    async def get_new_companies_30d(self) -> int:
+        """Get number of new companies in the last 30 days."""
+        try:
+            from datetime import timedelta
+
+            start_date = date.today() - timedelta(days=30)
+            result = await self.db.execute(
+                select(func.count(models.Company.orgnr)).filter(
+                    models.Company.stiftelsesdato >= start_date, models.Company.organisasjonsform != "KBO"
+                )
+            )
+            count = result.scalar()
+            return int(count) if count else 0
+        except Exception as e:
+            logger.error(f"Error counting new companies (30d): {e}")
+            return 0

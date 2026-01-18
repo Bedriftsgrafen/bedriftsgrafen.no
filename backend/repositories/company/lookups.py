@@ -6,7 +6,7 @@ Contains get_by_orgnr, get_similar_companies, get_by_industry_code.
 import logging
 from typing import Any
 
-from sqlalchemy import select, text, func
+from sqlalchemy import and_, func, select, text
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import defer
 
@@ -311,28 +311,62 @@ class LookupsMixin:
 
     async def get_map_markers(
         self,
-        naeringskode: str,
+        naeringskode: str | None = None,
         county: str | None = None,
         municipality: str | None = None,
+        municipality_code: str | None = None,
         bbox: tuple[float, float, float, float] | None = None,
         limit: int = 5000,
+        organisasjonsform: list[str] | None = None,
+        min_revenue: float | None = None,
+        max_revenue: float | None = None,
+        min_employees: int | None = None,
+        max_employees: int | None = None,
     ) -> tuple[list[tuple], int]:
         """Get companies with coordinates for map display.
 
         Args:
-            naeringskode: NACE code prefix to filter by
+            naeringskode: Optional NACE code prefix to filter by
             county: Optional county code (2-digit kommunenummer prefix)
             municipality: Optional municipality name (case-insensitive)
+            municipality_code: Optional 4-digit municipality code
             bbox: Optional bounding box as (west, south, east, north)
             limit: Maximum number of markers to return
+            organisasjonsform: Optional list of organization forms
+            min_revenue: Optional min revenue (MNOK)
+            max_revenue: Optional max revenue (MNOK)
+            min_employees: Optional min employees
+            max_employees: Optional max employees
 
         Returns:
             Tuple of (list of marker tuples, total count)
             Each marker tuple: (orgnr, navn, latitude, longitude, naeringskode, antall_ansatte)
         """
-        from sqlalchemy import and_
+        from repositories.company_filter_builder import CompanyFilterBuilder, FilterParams
 
-        # Build query - only companies with coordinates
+        # Construct FilterParams
+        filters = FilterParams(
+            naeringskode=naeringskode,
+            organisasjonsform=organisasjonsform,
+            min_revenue=min_revenue,
+            max_revenue=max_revenue,
+            min_employees=min_employees,
+            max_employees=max_employees,
+            municipality=municipality,
+            municipality_code=municipality_code,
+            county=county,
+        )
+
+        builder = CompanyFilterBuilder(filters)
+        # Apply all non-financial filters
+        builder.apply_nace_filter()
+        builder.apply_org_form_filter()
+        builder.apply_employee_filter()
+        builder.apply_location_filter()
+        builder.apply_status_filters()  # Exclude bankrupt by default if desired? No, keeper filter logic
+        builder.apply_exclude_org_form_filter()
+
+        # Build query
         query = select(
             models.Company.orgnr,
             models.Company.navn,
@@ -344,41 +378,36 @@ class LookupsMixin:
             and_(
                 models.Company.latitude.isnot(None),
                 models.Company.longitude.isnot(None),
-                models.Company.naeringskode.startswith(naeringskode),
             )
         )
 
-        # Apply county filter
-        if county:
-            query = query.where(func.left(models.Company.forretningsadresse["kommunenummer"].astext, 2) == county)
-
-        # Apply municipality filter
-        if municipality:
-            query = query.where(models.Company.forretningsadresse["kommune"].astext.ilike(municipality))
-
-        # Apply bounding box filter
+        # Apply bounding box
         if bbox:
             west, south, east, north = bbox
             query = query.where(
                 and_(
-                    models.Company.latitude.between(south, north),
-                    models.Company.longitude.between(west, east),
+                    models.Company.longitude >= west,
+                    models.Company.longitude <= east,
+                    models.Company.latitude >= south,
+                    models.Company.latitude <= north,
                 )
             )
 
-        # Order by employees (prioritize larger companies for visibility)
-        query = query.order_by(models.Company.antall_ansatte.desc().nullslast())
+        # Apply accumulated filters from builder
+        query = builder.apply_to_query(query)
 
-        # Get count first (check if truncated)
+        # Apply financial filters (requires join)
+        if filters.has_financial_filters():
+            query = query.outerjoin(models.LatestFinancials, models.Company.orgnr == models.LatestFinancials.orgnr)
+            builder.apply_financial_filters()
+            query = builder.apply_to_query(query)
+
+        # Get total count BEFORE limit
         count_query = select(func.count()).select_from(query.subquery())
-        total_result = await self.db.execute(count_query)
-        total = total_result.scalar() or 0
+        total = await self.db.scalar(count_query) or 0
 
-        # Apply limit
-        query = query.limit(limit)
-
-        # Execute query
-        result = await self.db.execute(query)
-        rows = result.fetchall()
+        # Apply limit and execute
+        result = await self.db.execute(query.limit(limit))
+        rows = list(result.all())
 
         return [tuple(r) for r in rows], total

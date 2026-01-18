@@ -171,17 +171,37 @@ class TestPercentileEstimation:
         assert percentiles == sorted(percentiles, reverse=True)
 
 
-class TestEstimatePercentile:
-    """Tests for percentile estimation from ratio.
+class TestNaceFallback:
+    """Tests for NACE truncation fallback logic."""
 
-    Note: _estimate_percentile is an internal method used by get_industry_benchmark.
-    These tests verify the percentile thresholds are correctly ordered.
-    The actual estimation logic is tested via integration tests.
-    """
+    @pytest.mark.asyncio
+    async def test_get_county_stats_truncates_nace(self):
+        # Arrange
+        mock_db = MagicMock()
+        service = StatsService(mock_db)
+        service.stats_repo.get_county_stats = AsyncMock(return_value=[])
+        service.stats_repo.get_municipality_populations = AsyncMock(return_value=[])
 
-    def test_percentile_thresholds_have_correct_structure(self):
-        # Assert all thresholds have (ratio, percentile) format
-        for threshold in PERCENTILE_THRESHOLDS:
-            assert len(threshold) == 2
-            assert isinstance(threshold[0], (int, float))
-            assert isinstance(threshold[1], int)
+        # Act: Pass 5-digit NACE
+        await service.get_county_stats("company_count", nace="62.100")
+
+        # Assert: Repo should receive truncated 2-digit NACE
+        # The second arg to get_county_stats is nace
+        args, _ = service.stats_repo.get_county_stats.call_args
+        assert args[1] == "62"
+
+    @pytest.mark.asyncio
+    async def test_get_municipality_stats_truncates_nace(self):
+        # Arrange
+        mock_db = MagicMock()
+        service = StatsService(mock_db)
+        service.stats_repo.get_municipality_stats = AsyncMock(return_value=[])
+        service.stats_repo.get_municipality_populations = AsyncMock(return_value=[])
+        service._ensure_municipality_names_loaded = AsyncMock()
+
+        # Act: Pass 5-digit NACE
+        await service.get_municipality_stats("company_count", nace="62.100")
+
+        # Assert: Repo should receive truncated 2-digit NACE
+        args, _ = service.stats_repo.get_municipality_stats.call_args
+        assert args[1] == "62"
