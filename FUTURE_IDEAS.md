@@ -20,6 +20,10 @@ This document consolidates feature ideas and strategic plans for future developm
 - Map visualization using Leaflet (already integrated)
 - Color intensity = bankruptcy density
 
+### Immediacy Filters (Shortcut Support)
+- Add `period=30d` and `period=90d` filters to `/nyetableringer` and `/konkurser` routes.
+- This supports the "Market Pulse" home page stats.
+
 ---
 
 ## Priority 2: Core Features (3-5 days each)
@@ -50,6 +54,59 @@ This document consolidates feature ideas and strategic plans for future developm
 - Add municipality boundaries GeoJSON (from Kartverket)
 - React component with Leaflet + react-leaflet
 
+### "Battle Mode" (Company Comparison) ⚔️
+- **Concept**: Gamified side-by-side comparison of two companies.
+- **Visuals**: "Fighting game" style character select screen.
+- **Metrics**: Compare "Revenue Growth", "Profit Margin", "Solvency", and "Efficiency".
+- **Outcome**: Declare a "Winner" in each category and an "Overall Champion".
+- **Why**: Highly shareable content making financial analysis fun and accessible.
+- **Tech**: Frontend-heavy implementation reusing existing data + simple scoring logic.
+
+### "Local Heroes" (Municipality Dashboard) 🏘️
+- **Concept**: Dedicated dashboard for every municipality (e.g., `/kommune/bergen`).
+- **Features**:
+  - "Top 10 Most Profitable" in the area.
+  - "Newest Establishments" (last 30 days).
+  - "Largest Employers" (estimated via wage costs).
+- **Why**: High local engagement and excellent for SEO (landing page per municipality).
+- **Tech**: New route `/kommune/[id]`, filtered queries by `kommunenummer`.
+
+### Map & Explorer UX Improvements 🗺️
+
+#### "Look in Map" Button (Explorer → Map Navigation)
+- **Concept**: Add a prominent button in the Explorer tab (next to the company list header or filter summary) that switches to the Map tab with the current filters pre-applied.
+- **Why**: Currently, switching from Explorer to Map loses filter context. This provides a clear, intentional way to visualize the current search results geographically.
+- **Technical**:
+  - Add button in `ExplorerLayout.tsx` or `ActiveFilterChips.tsx`.
+  - On click: Store current filters to `sessionStorage` and programmatically switch to the map tab.
+  - Map reads filters on mount and syncs its state accordingly.
+- **Effort**: Low (1-2 hours)
+
+#### Always-Visible Population Context
+- **Concept**: Display population data alongside company counts throughout the Bransje view to provide market context.
+- **Features**:
+  - Show population in map info panels when hovering/selecting regions.
+  - Display "X companies per 1,000 inhabitants" metric.
+  - Include population in the stats overview tab for the selected region.
+- **Why**: Raw company counts lack context; "100 companies" means something very different in Oslo (700k pop) vs. a small municipality (2k pop). Population context enables meaningful comparisons.
+- **Technical**:
+  - The map already fetches population data via `perCapita` calculations.
+  - Expose population in the `MapLegend` or `selectedRegion` display.
+  - Consider adding a "per capita" toggle to the stats view.
+- **Effort**: Low-Medium (2-4 hours)
+
+#### Sidebar Map Layout (Better for Norway's Geography)
+- **Concept**: Redesign the map view to use a sidebar + map layout instead of full-width. Place the map on the right (~60-70% width) and controls/legend/stats on the left.
+- **Why**: Norway's map is tall and narrow. A full-width layout wastes horizontal space and makes the map appear zoomed out. A taller, narrower container lets the map fill more vertical space, appearing more zoomed in and focused.
+- **Features**:
+  - Left sidebar (30-40%): NACE filter, metric selector, legend, selected region stats.
+  - Right panel (60-70%): The map itself, filling available height.
+  - Responsive: On mobile, stack vertically (controls above map).
+- **Technical**:
+  - Refactor `IndustryMap.tsx` to accept a layout prop or use CSS Grid/Flexbox in the parent.
+  - Move legend and controls outside the map component into the sidebar.
+  - Apply consistent styling to both `/bransjer` and `/kart` routes.
+- **Effort**: Medium (4-8 hours)
 
 ---
 
@@ -112,9 +169,26 @@ def calculate_trend_score(company):
 ```
 
 **Features:**
-- Badge system: 🔥 Gaselle, 📈 Vekst, ➡️ Stabil, 📉 Fallende
+- Badge system: 火 Gaselle, 📈 Vekst, ➡️ Stabil, 📉 Fallende
 - New page: "Top Vekstbedrifter" (filterable by region/industry)
 - Materialized view refreshed weekly
+
+### Person Search & Role Analytics Hub (`/search/people`)
+- **Vision**: Transform the search from a simple lookup to a deep exploration of the Norwegian professional network (6.4m+ roles).
+- **Features**:
+    - **Global Search**: Search by name across all roles, historical and active.
+    - **Board Dynamics**: Filters for role type (Board, MD, Auditor), Board experience (e.g., "Mennesker med >5 styreverv"), and Age demographics.
+    - **Network Visualization**: See "Who worked with whom" to identify clusters of influence.
+    - **Gender & Diversity Tracking**: Industry-wide statistics on board composition.
+- **Immediate Next Step**: Enable a dedicated `/personer` route that auto-focuses the person search on the home page as a bridge.
+
+### Advanced Financial Analytics & Benchmarking (`/analyse`)
+- **Vision**: Provide deep, value-driven insights beyond basic revenue.
+- **Features**:
+    - **Value Creation (EBITDA)**: Aggregated EBITDA per industry/region to show where the "engine" of the economy is.
+    - **Solvency Benchmarking**: Interactive ranking of industries by financial robustness (% companies with >20% equity).
+    - **Efficiency Ratios**: Operating margin and return on equity (ROE) benchmarks.
+- **Technical**: Update `IndustryStats` materialized view to include `total_ebitda` and `solvency_count` for sub-second performance.
 
 ### Real-time Bankruptcy Feed
 - Poll Brønnøysund for new bankruptcies (daily)
@@ -123,7 +197,20 @@ def calculate_trend_score(company):
 
 ---
 
-## Priority 5: Future Vision (Post-MVP)
+## Priority 5: AI & Natural Language Interface
+
+### Bedriftsgrafen Assistant (Chatbot)
+- **Concept**: An intelligent conversational interface capable of answering complex data questions in natural language.
+- **User Value**: Democratizes access to data analysis, allowing non-technical users to extract deep insights without needing SQL or advanced filtering skills.
+- **Example Queries**:
+  - "What percentage of companies have more than 100 MNOK in revenue?"
+  - "Compare bankruptcy rates between construction and retail sectors in 2024."
+  - "Find companies in Oslo with >20% profit margin and <5 employees."
+- **Technical Strategy**:
+  - **RAG / Text-to-SQL**: Use an LLM agent aware of the database schema and domain logic (NACE codes, accounting terms) to generate safe SQL queries.
+  - **Guardrails**: Strict read-only database user and query validation to ensure accuracy and prevent misuse.
+
+## Priority 6: Future Vision (Post-MVP)
 
 | Feature | Description | Effort |
 |---------|-------------|--------|

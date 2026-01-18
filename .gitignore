@@ -42,6 +42,8 @@ cython_debug/
 .coverage.*
 .cache
 .pytest_cache/
+coverage/
+frontend/coverage/
 htmlcov/
 coverage.xml
 nosetests.xml
@@ -158,6 +160,8 @@ backend/migrations/
 # Frontend build artifacts
 frontend/stats.html
 frontend/*.log
+frontend/coverage/
+frontend/eslint_output.txt
 
 
 bashrc_adapted
