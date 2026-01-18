@@ -2,14 +2,16 @@ import React, { useState, useMemo, useCallback, memo } from 'react'
 import { Check, Search, MapPin, Building } from 'lucide-react'
 import { PickerModalBase } from '../PickerModalBase'
 import { COUNTIES } from '../../../constants/explorer'
-import { ALL_NORWEGIAN_MUNICIPALITIES, formatMunicipalityName } from '../../../constants/municipalities'
+import { formatMunicipalityName } from '../../../constants/municipalities'
+import { MUNICIPALITIES } from '../../../constants/municipalityCodes'
 
 /** Picker mode - county or municipality */
 type PickerMode = 'county' | 'municipality'
 
-/** Municipality entry with formatted name */
+/** Municipality entry with formatted name and code */
 interface MunicipalityEntry {
     name: string       // Formatted name (Title Case)
+    code: string       // 4-digit code
     searchable: string // Lowercase for search
 }
 
@@ -18,9 +20,11 @@ export interface RegionPickerModalProps {
     isOpen: boolean
     onClose: () => void
     selectedMunicipality: string
+    selectedMunicipalityCode: string
     selectedCounty: string
-    onSelectMunicipality: (municipality: string) => void
-    onSelectCounty: (county: string) => void
+    selectedCountyCode: string
+    onSelectMunicipality: (name: string, code: string) => void
+    onSelectCounty: (name: string, code: string) => void
 }
 
 /** Props for SearchInput */
@@ -101,18 +105,20 @@ const ModeToggle = memo(function ModeToggle({
 /** Single county or municipality item - memoized for list performance */
 const LocationItem = memo(function LocationItem({
     name,
+    id,
     subtitle,
     isSelected,
     onSelect,
     icon: Icon,
 }: {
     name: string
+    id: string
     subtitle?: string
     isSelected: boolean
-    onSelect: (name: string) => void
+    onSelect: (name: string, id: string) => void
     icon: typeof MapPin | typeof Building
 }) {
-    const handleClick = useCallback(() => onSelect(name), [name, onSelect])
+    const handleClick = useCallback(() => onSelect(name, id), [name, id, onSelect])
 
     return (
         <button
@@ -147,10 +153,11 @@ const LocationItem = memo(function LocationItem({
 
 // Pre-compute municipality entries for performance (computed once at module load)
 const MUNICIPALITY_ENTRIES: readonly MunicipalityEntry[] = Object.freeze(
-    ALL_NORWEGIAN_MUNICIPALITIES.map(name => ({
-        name: formatMunicipalityName(name),
-        searchable: name.toLowerCase()
-    }))
+    MUNICIPALITIES.map(m => ({
+        name: formatMunicipalityName(m.name),
+        code: m.code,
+        searchable: m.name.toLowerCase()
+    })).sort((a, b) => a.name.localeCompare(b.name, 'nb'))
 )
 
 /**
@@ -159,17 +166,19 @@ const MUNICIPALITY_ENTRIES: readonly MunicipalityEntry[] = Object.freeze(
 const RegionPickerModalContent = memo(function RegionPickerModalContent({
     onClose,
     selectedMunicipality,
+    selectedMunicipalityCode,
     selectedCounty,
+    selectedCountyCode,
     onSelectMunicipality,
     onSelectCounty,
 }: Omit<RegionPickerModalProps, 'isOpen'>) {
     // Determine initial mode based on what's already selected
-    const initialMode: PickerMode = selectedCounty ? 'county' : 'municipality'
+    const initialMode: PickerMode = (selectedCounty || selectedCountyCode) ? 'county' : 'municipality'
 
     const [mode, setMode] = useState<PickerMode>(initialMode)
     const [search, setSearch] = useState('')
-    const [tempCounty, setTempCounty] = useState(selectedCounty)
-    const [tempMunicipality, setTempMunicipality] = useState(selectedMunicipality)
+    const [tempCounty, setTempCounty] = useState({ name: selectedCounty, code: selectedCountyCode })
+    const [tempMunicipality, setTempMunicipality] = useState({ name: selectedMunicipality, code: selectedMunicipalityCode })
 
     // Filter based on search
     const filteredCounties = useMemo(() => {
@@ -188,24 +197,37 @@ const RegionPickerModalContent = memo(function RegionPickerModalContent({
     // Handlers
     const handleConfirm = useCallback(() => {
         if (mode === 'county') {
-            onSelectCounty(tempCounty)
-            onSelectMunicipality('') // Clear municipality when county is set
+            onSelectCounty(tempCounty.name, tempCounty.code)
         } else {
-            onSelectMunicipality(tempMunicipality)
-            onSelectCounty('') // Clear county when municipality is set
+            onSelectMunicipality(tempMunicipality.name, tempMunicipality.code)
         }
         onClose()
     }, [mode, tempCounty, tempMunicipality, onSelectCounty, onSelectMunicipality, onClose])
 
     const handleClear = useCallback(() => {
-        onSelectMunicipality('')
-        onSelectCounty('')
+        setTempMunicipality({ name: '', code: '' })
+        setTempCounty({ name: '', code: '' })
+        onSelectMunicipality('', '')
+        onSelectCounty('', '')
         onClose()
     }, [onSelectMunicipality, onSelectCounty, onClose])
 
     const handleModeChange = useCallback((newMode: PickerMode) => {
         setMode(newMode)
         setSearch('')
+        // Clear alternate selection when switching modes to avoid "out of sync" state
+        if (newMode === 'county') setTempMunicipality({ name: '', code: '' })
+        else setTempCounty({ name: '', code: '' })
+    }, [])
+
+    const handleSelectTempCounty = useCallback((name: string, code: string) => {
+        setTempCounty({ name, code })
+        setTempMunicipality({ name: '', code: '' }) // Clear municipality when county is being selected
+    }, [])
+
+    const handleSelectTempMunicipality = useCallback((name: string, code: string) => {
+        setTempMunicipality({ name, code })
+        setTempCounty({ name: '', code: '' }) // Clear county when municipality is being selected
     }, [])
 
     return (
@@ -222,7 +244,7 @@ const RegionPickerModalContent = memo(function RegionPickerModalContent({
                     <SearchInput
                         value={search}
                         onChange={setSearch}
-                        placeholder={mode === 'county' ? 'Søk etter fylke...' : 'Søk etter kommune eller fylke...'}
+                        placeholder={mode === 'county' ? 'Søk etter fylke (f.eks. Nordland)...' : 'Søk etter kommune (f.eks. Hamarøy)...'}
                         ariaLabel={mode === 'county' ? 'Søk etter fylke' : 'Søk etter kommune'}
                     />
                 </div>
@@ -241,8 +263,9 @@ const RegionPickerModalContent = memo(function RegionPickerModalContent({
                                 <LocationItem
                                     key={county.code}
                                     name={county.name}
-                                    isSelected={tempCounty === county.name}
-                                    onSelect={setTempCounty}
+                                    id={county.code}
+                                    isSelected={tempCounty.name === county.name || tempCounty.code === county.code}
+                                    onSelect={handleSelectTempCounty}
                                     icon={Building}
                                 />
                             ))}
@@ -258,10 +281,11 @@ const RegionPickerModalContent = memo(function RegionPickerModalContent({
                         <div className="space-y-1">
                             {filteredMunicipalities.map((m) => (
                                 <LocationItem
-                                    key={m.name}
+                                    key={m.code}
                                     name={m.name}
-                                    isSelected={tempMunicipality === m.name}
-                                    onSelect={setTempMunicipality}
+                                    id={m.code}
+                                    isSelected={tempMunicipality.code === m.code}
+                                    onSelect={handleSelectTempMunicipality}
                                     icon={MapPin}
                                 />
                             ))}
@@ -281,7 +305,9 @@ export const RegionPickerModal = memo(function RegionPickerModal({
     isOpen,
     onClose,
     selectedMunicipality,
+    selectedMunicipalityCode,
     selectedCounty,
+    selectedCountyCode,
     onSelectMunicipality,
     onSelectCounty,
 }: RegionPickerModalProps) {
@@ -290,10 +316,12 @@ export const RegionPickerModal = memo(function RegionPickerModal({
 
     return (
         <RegionPickerModalContent
-            key={`region-modal-${selectedMunicipality}-${selectedCounty}`}
+            key={`region-modal-${selectedMunicipalityCode}-${selectedCountyCode}`}
             onClose={onClose}
             selectedMunicipality={selectedMunicipality}
+            selectedMunicipalityCode={selectedMunicipalityCode}
             selectedCounty={selectedCounty}
+            selectedCountyCode={selectedCountyCode}
             onSelectMunicipality={onSelectMunicipality}
             onSelectCounty={onSelectCounty}
         />

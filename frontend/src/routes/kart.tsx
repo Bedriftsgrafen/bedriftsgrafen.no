@@ -1,16 +1,28 @@
 import { createFileRoute } from '@tanstack/react-router'
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useCallback } from 'react'
 import { Map as MapIcon } from 'lucide-react'
 import { z } from 'zod'
 import { SEOHead } from '../components/layout'
 import { useDocumentTitle } from '../hooks/useDocumentTitle'
 import { IndustryMap } from '../components/maps/IndustryMap'
 import { CompanyModalOverlay } from '../components/company/CompanyModalOverlay'
-import { NACE_CODES, NACE_DIVISIONS } from '../constants/explorer'
+import { MapGuide } from '../components/maps/MapGuide'
+import { MapFilterBar } from '../components/maps/MapFilterBar'
+import { useNavigate, useSearch } from '@tanstack/react-router'
+import { mnokToNok } from '../utils/financials'
 
 // Search params schema for optional NACE filter
 const searchSchema = z.object({
     nace: z.string().optional(),
+    county: z.string().optional(),
+    county_code: z.string().optional(),
+    municipality: z.string().optional(),
+    municipality_code: z.string().optional(),
+    org_form: z.union([z.string(), z.array(z.string())]).optional(),
+    revenue_min: z.coerce.number().optional(),
+    revenue_max: z.coerce.number().optional(),
+    employee_min: z.coerce.number().optional(),
+    employee_max: z.coerce.number().optional(),
 })
 
 export const Route = createFileRoute('/kart')({
@@ -20,20 +32,70 @@ export const Route = createFileRoute('/kart')({
 
 function KartPage() {
     useDocumentTitle('Bedriftskart | Bedriftsgrafen.no')
-    const [selectedCompanyOrgnr, setSelectedCompanyOrgnr] = useState<string | null>(null)
-    const [selectedNace, setSelectedNace] = useState<string | null>(null)
+    const navigate = useNavigate({ from: '/kart' })
+    const search = useSearch({ from: '/kart' })
 
-    // Flatten all NACE divisions for filter dropdown
-    const allNaceDivisions = useMemo(() => {
-        const divisions: { code: string; name: string }[] = []
-        for (const section of NACE_CODES) {
-            const sectionDivisions = NACE_DIVISIONS[section.code] || []
-            for (const div of sectionDivisions) {
-                divisions.push({ code: div.code, name: div.name })
-            }
-        }
-        return divisions.sort((a, b) => parseInt(a.code) - parseInt(b.code))
-    }, [])
+    // Derived state from URL search params
+    const selectedNace = search.nace || null
+    const selectedCountyCode = search.county_code || null
+    const selectedCountyName = search.county || null
+    const selectedMunicipalityCode = search.municipality_code || null
+    const selectedMunicipalityName = search.municipality || null
+    const selectedOrgForms = useMemo(() => {
+        if (!search.org_form) return []
+        return Array.isArray(search.org_form) ? search.org_form : [search.org_form]
+    }, [search.org_form])
+
+    // Normalize financials: URL has MNOK, but IndustryMap/CompanyMarkers expect NOK
+    const revenueMin = useMemo(() => mnokToNok(search.revenue_min), [search.revenue_min])
+    const revenueMax = useMemo(() => mnokToNok(search.revenue_max), [search.revenue_max])
+    const employeeMin = search.employee_min || null
+    const employeeMax = search.employee_max || null
+
+    const [selectedCompanyOrgnr, setSelectedCompanyOrgnr] = useState<string | null>(null)
+
+    // Handlers to update URL search params
+    const handleNaceChange = useCallback((nace: string | null) => {
+        navigate({ search: (prev) => ({ ...prev, nace: nace || undefined }) })
+    }, [navigate])
+
+    const handleCountyChange = useCallback((name: string, code: string) => {
+        navigate({
+            search: (prev) => ({
+                ...prev,
+                county: name || undefined,
+                county_code: code || undefined,
+                municipality: undefined,
+                municipality_code: undefined
+            })
+        })
+    }, [navigate])
+
+    const handleMunicipalityChange = useCallback((name: string, code: string) => {
+        navigate({
+            search: (prev) => ({
+                ...prev,
+                municipality: name || undefined,
+                municipality_code: code || undefined
+            })
+        })
+    }, [navigate])
+
+    const handleOrgFormsChange = useCallback((forms: string[]) => {
+        navigate({ search: (prev) => ({ ...prev, org_form: forms.length > 0 ? forms : undefined }) })
+    }, [navigate])
+
+    const handleRevenueChange = useCallback((val: number | null) => {
+        navigate({ search: (prev) => ({ ...prev, revenue_min: val ?? undefined }) })
+    }, [navigate])
+
+    const handleEmployeeChange = useCallback((val: number | null) => {
+        navigate({ search: (prev) => ({ ...prev, employee_min: val ?? undefined }) })
+    }, [navigate])
+
+    const handleClearFilters = useCallback(() => {
+        navigate({ search: {} })
+    }, [navigate])
 
     return (
         <>
@@ -53,32 +115,39 @@ function KartPage() {
                 </p>
             </div>
 
-            {/* Filter bar */}
-            <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4 mb-6">
-                <label htmlFor="nace-filter" className="block text-sm font-medium text-gray-700 mb-2">
-                    Filtrer etter bransje
-                </label>
-                <select
-                    id="nace-filter"
-                    value={selectedNace || ''}
-                    onChange={(e) => setSelectedNace(e.target.value || null)}
-                    className="block w-full md:w-96 rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 text-sm"
-                >
-                    <option value="">Alle bransjer</option>
-                    {allNaceDivisions.map((div) => (
-                        <option key={div.code} value={div.code}>
-                            {div.code} - {div.name}
-                        </option>
-                    ))}
-                </select>
-            </div>
+            <MapGuide />
 
-            {/* Full-width map */}
-            <div className="rounded-xl overflow-hidden border border-gray-200 shadow-sm">
+            {/* Enhanced Filter Bar */}
+            <MapFilterBar
+                selectedNace={selectedNace}
+                onNaceChange={handleNaceChange}
+                selectedCountyCode={selectedCountyCode}
+                onCountyChange={handleCountyChange}
+                selectedMunicipalityCode={selectedMunicipalityCode}
+                onMunicipalityChange={handleMunicipalityChange}
+                selectedOrgForms={selectedOrgForms}
+                onOrgFormsChange={handleOrgFormsChange}
+                revenueMin={search.revenue_min ?? null}
+                onRevenueChange={handleRevenueChange}
+                employeeMin={search.employee_min ?? null}
+                onEmployeeChange={handleEmployeeChange}
+                onClear={handleClearFilters}
+            />
+
+            <div className="rounded-xl overflow-hidden border border-gray-200 shadow-sm h-[600px] relative">
                 <IndustryMap
                     selectedNace={selectedNace}
                     metric="company_count"
                     onCompanyClick={setSelectedCompanyOrgnr}
+                    countyFromExplorer={selectedCountyName || undefined}
+                    countyCodeFromExplorer={selectedCountyCode || undefined}
+                    municipalityFromExplorer={selectedMunicipalityName || undefined}
+                    municipalityCodeFromExplorer={selectedMunicipalityCode || undefined}
+                    organizationForms={selectedOrgForms}
+                    revenueMin={revenueMin}
+                    revenueMax={revenueMax}
+                    employeeMin={employeeMin}
+                    employeeMax={employeeMax}
                 />
             </div>
 

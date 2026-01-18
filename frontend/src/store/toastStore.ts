@@ -21,7 +21,7 @@ export const useToastStore = create<ToastStore>((set, get) => ({
     // Deduplicate: Don't add if same message already exists
     const existingToast = get().toasts.find(t => t.message === message && t.type === type)
     if (existingToast) return
-    
+
     const id = Math.random().toString(36).substring(7)
     set((state) => ({
       toasts: [...state.toasts, { id, type, message }],
@@ -69,9 +69,28 @@ export function getErrorMessage(error: unknown): string {
     if (status >= 500) {
       return 'Serverfeil. Prøv igjen senere.'
     }
-    // Use server message if available
+    // Handle FastAPI validation errors (422) - detail is an array
+    if (status === 422 && error.response.data) {
+      const data = error.response.data
+      // FastAPI returns { detail: [{loc: [...], msg: string, type: string}, ...] }
+      if (Array.isArray(data.detail) && data.detail.length > 0) {
+        const firstError = data.detail[0]
+        if (firstError.msg && typeof firstError.msg === 'string') {
+          return `Valideringsfeil: ${firstError.msg}`
+        }
+      }
+      // Simple string detail
+      if (typeof data.detail === 'string') {
+        return data.detail
+      }
+      return 'Ugyldig forespørsel. Sjekk parametrene.'
+    }
+    // Use server message if available (simple string detail)
     if (error.response.data && typeof error.response.data === 'object' && 'detail' in error.response.data) {
-      return String(error.response.data.detail)
+      const detail = error.response.data.detail
+      if (typeof detail === 'string') {
+        return detail
+      }
     }
   }
   // Generic fallback

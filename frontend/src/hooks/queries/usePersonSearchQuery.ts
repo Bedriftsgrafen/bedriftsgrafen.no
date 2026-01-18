@@ -37,6 +37,5 @@ export function usePersonSearchQuery(query: string, limit: number = 10) {
         enabled: query.length >= 3,
         staleTime: 1000 * 60 * 5, // 5 minutes
         gcTime: 1000 * 60 * 10, // Keep in cache for 10 minutes
-        placeholderData: [], // Avoid undefined state
     })
 }

@@ -8,6 +8,7 @@ import { NacePickerModal } from './modals/NacePickerModal'
 import { RegionPickerModal } from './modals/RegionPickerModal'
 import { ORGANIZATION_FORMS } from '../../constants/organizationForms'
 import { COUNTIES } from '../../constants/explorer'
+import { formatMunicipalityName } from '../../constants/municipalities'
 import { useNaceName } from '../../hooks/useNaceName'
 import type { RangeFilterField } from '../../types/explorer'
 
@@ -43,7 +44,9 @@ export const ExplorerFilters = memo(function ExplorerFilters() {
     // Shared filter state - using selectors for minimal re-renders
     const naeringskode = useFilterStore((s) => s.naeringskode)
     const municipality = useFilterStore((s) => s.municipality)
+    const municipalityCode = useFilterStore((s) => s.municipalityCode)
     const county = useFilterStore((s) => s.county)
+    const countyCode = useFilterStore((s) => s.countyCode)
     const organizationForms = useFilterStore((s) => s.organizationForms)
     const revenueMin = useFilterStore((s) => s.revenueMin)
     const revenueMax = useFilterStore((s) => s.revenueMax)
@@ -73,12 +76,12 @@ export const ExplorerFilters = memo(function ExplorerFilters() {
         let count = 0
         if (organizationForms.length > 0) count++
         if (naeringskode) count++
-        if (municipality) count++
-        if (county) count++
+        if (municipality || municipalityCode) count++
+        if (county || countyCode) count++
         if (revenueMin !== null || revenueMax !== null) count++
         if (employeeMin !== null || employeeMax !== null) count++
         return count
-    }, [organizationForms, naeringskode, municipality, county, revenueMin, revenueMax, employeeMin, employeeMax])
+    }, [organizationForms, naeringskode, municipality, municipalityCode, county, countyCode, revenueMin, revenueMax, employeeMin, employeeMax])
 
     // Range change handler - uses getState() to avoid dependency on mutable state
     const handleRangeChange = useCallback(
@@ -175,7 +178,9 @@ export const ExplorerFilters = memo(function ExplorerFilters() {
                                 {COUNTIES.find(c => c.code === county)?.name || county} (fylke)
                             </span>
                         ) : municipality ? (
-                            <span className="text-gray-800 font-medium truncate">{municipality}</span>
+                            <span className="text-gray-800 font-medium truncate">
+                                {formatMunicipalityName(municipality)}
+                            </span>
                         ) : (
                             <span className="text-gray-500">Velg område...</span>
                         )}
@@ -238,7 +243,9 @@ export const ExplorerFilters = memo(function ExplorerFilters() {
                     isOpen={isRegionModalOpen}
                     onClose={closeRegionModal}
                     selectedMunicipality={municipality}
+                    selectedMunicipalityCode={municipalityCode}
                     selectedCounty={county}
+                    selectedCountyCode={countyCode}
                     onSelectMunicipality={setMunicipality}
                     onSelectCounty={setCounty}
                 />

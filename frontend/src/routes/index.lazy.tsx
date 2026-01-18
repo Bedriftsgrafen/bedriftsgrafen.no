@@ -26,7 +26,7 @@ function HomePage() {
     const [searchMode, setSearchMode] = useState<'company' | 'person'>('company')
     const {
         data: personResults,
-        isLoading: personSearchLoading
+        isFetching: personSearchLoading
     } = usePersonSearchQuery(committedPersonQuery)
 
     // Handle search - navigate to /utforsk with query param
@@ -80,6 +80,7 @@ function HomePage() {
                     {/* Mode Toggle */}
                     <div className="flex items-center justify-center gap-2 mb-8 relative z-10">
                         <button
+                            id="search-mode-company"
                             onClick={() => handleModeChange('company')}
                             className={`flex items-center gap-2 px-5 py-2 rounded-full font-bold transition-all ${searchMode === 'company'
                                 ? 'bg-white text-blue-900 shadow-lg scale-105'
@@ -90,6 +91,7 @@ function HomePage() {
                             Bedrifter
                         </button>
                         <button
+                            id="search-mode-person"
                             onClick={() => handleModeChange('person')}
                             className={`flex items-center gap-2 px-5 py-2 rounded-full font-bold transition-all ${searchMode === 'person'
                                 ? 'bg-white text-blue-900 shadow-lg scale-105'
@@ -124,6 +126,7 @@ function HomePage() {
                         <div className="flex gap-3">
                             <div className="flex-1 relative">
                                 <input
+                                    id="home-search-input"
                                     type="text"
                                     value={searchQuery}
                                     onChange={(e) => {
@@ -141,7 +144,7 @@ function HomePage() {
                                     <div className="absolute left-0 right-0 top-full mt-2 bg-white rounded-xl shadow-2xl border border-blue-100 overflow-hidden text-gray-900 z-50">
                                         {personSearchLoading ? (
                                             <div className="p-4 text-center text-gray-500 animate-pulse">Søker...</div>
-                                        ) : personResults?.length === 0 ? (
+                                        ) : !personResults || personResults.length === 0 ? (
                                             <div className="p-4 text-center text-gray-500 italic">Ingen personer funnet</div>
                                         ) : (
                                             <div className="max-h-64 overflow-y-auto">

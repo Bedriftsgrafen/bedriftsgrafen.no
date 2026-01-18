@@ -80,10 +80,10 @@ describe('filterStore', () => {
         })
 
         it('setMunicipality and setCounty update location', () => {
-            useFilterStore.getState().setMunicipality('Oslo')
-            useFilterStore.getState().setCounty('03')
+            useFilterStore.getState().setMunicipality('Oslo', '0301')
+            useFilterStore.getState().setCounty('Oslo', '03')
             expect(useFilterStore.getState().municipality).toBe('Oslo')
-            expect(useFilterStore.getState().county).toBe('03')
+            expect(useFilterStore.getState().county).toBe('Oslo')
         })
 
         it('setFoundedRange updates date range', () => {
@@ -136,7 +136,7 @@ describe('filterStore', () => {
             store.setRevenueRange(1, 10)
             store.setProfitRange(1, 10)
             store.setLiquidityRatioRange(0.1, 0.9)
-            store.setMunicipality('Oslo')
+            store.setMunicipality('Oslo', '0301')
             store.setStatus('isBankrupt', true)
             store.setHasAccounting(true)
             store.setSort('revenue', 'desc')
@@ -183,8 +183,8 @@ describe('filterStore', () => {
 
         it('counts locations and dates correctly', () => {
             const store = useFilterStore.getState()
-            store.setMunicipality('Oslo')        // 1
-            store.setCounty('03')               // 2
+            store.setMunicipality('Oslo', '0301')        // 1
+            store.setCounty('Oslo', '03')               // 2
             store.setFoundedRange(new Date(), null) // 3
             expect(store.getActiveFilterCount()).toBe(3)
         })

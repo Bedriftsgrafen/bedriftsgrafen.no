@@ -12,6 +12,7 @@ import {
   OrganizationFormFilter,
   ActiveFilterChips
 } from './filter'
+import { MNOK_MULTIPLIER } from '../utils/financials'
 
 export function FilterPanel() {
   const [isExpanded, setIsExpanded] = useState(false)
@@ -433,10 +434,10 @@ export function FilterPanel() {
                 </div>
               </div>
 
-              <RangeInput label="Omsetning (mill. kr)" fieldName="revenue" minValue={draftFilters.revenueMin} maxValue={draftFilters.revenueMax} onChange={handleRangeChange} multiplier={1000000} />
-              <RangeInput label="Årsresultat (mill. kr)" fieldName="profit" minValue={draftFilters.profitMin} maxValue={draftFilters.profitMax} onChange={handleRangeChange} multiplier={1000000} />
-              <RangeInput label="Egenkapital (mill. kr)" fieldName="equity" minValue={draftFilters.equityMin} maxValue={draftFilters.equityMax} onChange={handleRangeChange} multiplier={1000000} />
-              <RangeInput label="Driftsresultat (mill. kr)" fieldName="operatingProfit" minValue={draftFilters.operatingProfitMin} maxValue={draftFilters.operatingProfitMax} onChange={handleRangeChange} multiplier={1000000} />
+              <RangeInput label="Omsetning (mill. kr)" fieldName="revenue" minValue={draftFilters.revenueMin} maxValue={draftFilters.revenueMax} onChange={handleRangeChange} multiplier={MNOK_MULTIPLIER} />
+              <RangeInput label="Årsresultat (mill. kr)" fieldName="profit" minValue={draftFilters.profitMin} maxValue={draftFilters.profitMax} onChange={handleRangeChange} multiplier={MNOK_MULTIPLIER} />
+              <RangeInput label="Egenkapital (mill. kr)" fieldName="equity" minValue={draftFilters.equityMin} maxValue={draftFilters.equityMax} onChange={handleRangeChange} multiplier={MNOK_MULTIPLIER} />
+              <RangeInput label="Driftsresultat (mill. kr)" fieldName="operatingProfit" minValue={draftFilters.operatingProfitMin} maxValue={draftFilters.operatingProfitMax} onChange={handleRangeChange} multiplier={MNOK_MULTIPLIER} />
             </section>
 
             {/* Column 3: Advanced & Meta */}

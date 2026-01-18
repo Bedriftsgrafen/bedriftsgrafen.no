@@ -18,10 +18,10 @@ export const companyQueryKeys = {
     { filters },
   ] as const,
   subunits: (orgnr: string) => [...companyQueryKeys.all, 'subunits', orgnr] as const,
-  markers: (nace: string | null, county?: string | null) => [
+  markers: (nace: string | null, county?: string | null, region?: string | null) => [
     ...companyQueryKeys.all,
     'markers',
-    { nace, county },
+    { nace, county, region },
   ] as const,
 }
 

@@ -13,7 +13,6 @@ import { useQuery } from '@tanstack/react-query';
 import { apiClient } from '../../utils/apiClient';
 import { MapPin, Users } from 'lucide-react';
 import { renderToString } from 'react-dom/server';
-import { companyQueryKeys } from '../../lib/queryKeys';
 
 // Types
 interface MapMarker {
@@ -34,7 +33,15 @@ interface MarkersResponse {
 interface CompanyMarkersProps {
     naceCode: string | null;
     countyCode?: string | null;
+    municipalityName?: string | null;
+    municipalityCode?: string | null;
     onCompanyClick?: (orgnr: string) => void;
+    // Extra filters
+    organizationForms?: string[];
+    revenueMin?: number | null;
+    revenueMax?: number | null;
+    employeeMin?: number | null;
+    employeeMax?: number | null;
 }
 
 // Minimum zoom level to show markers (lowered for earlier visibility)
@@ -192,20 +199,50 @@ function useMapBounds() {
     return { bounds, zoom };
 }
 
-export function CompanyMarkers({ naceCode, countyCode, onCompanyClick }: CompanyMarkersProps) {
+export function CompanyMarkers({
+    naceCode,
+    countyCode,
+    municipalityName,
+    municipalityCode,
+    onCompanyClick,
+    organizationForms,
+    revenueMin,
+    revenueMax,
+    employeeMin,
+    employeeMax
+}: CompanyMarkersProps) {
     const map = useMap();
     const { bounds, zoom } = useMapBounds();
 
     // Should we show markers?
-    const shouldFetch = Boolean(naceCode) && zoom >= MIN_ZOOM_FOR_MARKERS && bounds;
+    // Allow markers if we have NACE OR if we have other selective filters and are zoomed in
+    const hasActiveFilters = Boolean(naceCode) || (organizationForms && organizationForms.length > 0) || Boolean(municipalityCode || countyCode);
+    const shouldFetch = hasActiveFilters && zoom >= MIN_ZOOM_FOR_MARKERS && bounds;
 
     // Fetch markers from API
     const { data, isLoading, isError } = useQuery({
-        queryKey: companyQueryKeys.markers(naceCode, countyCode),
+        queryKey: ['company-markers', naceCode, countyCode, municipalityCode || municipalityName, organizationForms, revenueMin, revenueMax, employeeMin, employeeMax],
         queryFn: async () => {
-            const params: Record<string, string> = { naeringskode: naceCode! };
+            const params: Record<string, string | number | string[]> = {};
+            if (naceCode) params.naeringskode = naceCode;
             if (countyCode) params.county = countyCode;
-            const { data } = await apiClient.get<MarkersResponse>('/v1/companies/markers', { params });
+            if (municipalityCode) params.municipality_code = municipalityCode;
+            if (municipalityName) params.municipality = municipalityName;
+
+            // Add extra filters if present
+            if (organizationForms && organizationForms.length > 0) params.org_form = organizationForms;
+            if (revenueMin !== null && revenueMin !== undefined) params.revenue_min = revenueMin;
+            if (revenueMax !== null && revenueMax !== undefined) params.revenue_max = revenueMax;
+            if (employeeMin !== null && employeeMin !== undefined) params.employee_min = employeeMin;
+            if (employeeMax !== null && employeeMax !== undefined) params.employee_max = employeeMax;
+
+            const { data } = await apiClient.get<MarkersResponse>('/v1/companies/markers', {
+                params,
+                // Handle array params correctly for FastAPI (multiple Query params)
+                paramsSerializer: {
+                    indexes: null // Result: org_form=AS&org_form=ASA
+                }
+            });
             return data;
         },
         enabled: Boolean(shouldFetch),

@@ -1,5 +1,6 @@
 import { useCallback, useMemo, memo, useEffect } from 'react'
 import { useNavigate } from '@tanstack/react-router'
+import { Map } from 'lucide-react'
 import { ExplorerFilters } from './ExplorerFilters'
 import { ExplorerStats } from './ExplorerStats'
 import { SortSelect } from './SortSelect'
@@ -40,10 +41,10 @@ export const ExplorerLayout = memo(function ExplorerLayout({ onSelectCompany }: 
     // Filter state - inline check to avoid getActiveFilterCount() which uses get() internally
     const hasActiveFilters = useFilterStore((s) =>
         !!(s.searchQuery || s.organizationForms.length > 0 || s.naeringskode ||
-            s.municipality || s.county || s.revenueMin !== null || s.revenueMax !== null ||
+            s.municipality || s.municipalityCode || s.county || s.revenueMin !== null || s.revenueMax !== null ||
             s.employeeMin !== null || s.employeeMax !== null || s.isBankrupt !== null)
     )
-    const setAllFilters = useFilterStore((s) => s.setAllFilters)
+    const setMapFilters = useFilterStore((s) => s.setMapFilters)
     const setSort = useFilterStore((s) => s.setSort)
 
     // Check for map filter from sessionStorage (region click from map)
@@ -54,11 +55,14 @@ export const ExplorerLayout = memo(function ExplorerLayout({ onSelectCompany }: 
                 const mapFilter = JSON.parse(mapFilterStr);
                 const updates: Partial<FilterValues> = {};
                 if (mapFilter.county) updates.county = mapFilter.county;
+                if (mapFilter.county_code) updates.countyCode = mapFilter.county_code;
                 if (mapFilter.municipality) updates.municipality = mapFilter.municipality;
+                if (mapFilter.municipality_code) updates.municipalityCode = mapFilter.municipality_code;
                 if (mapFilter.nace) updates.naeringskode = mapFilter.nace;
 
                 if (Object.keys(updates).length > 0) {
-                    setAllFilters(updates);
+                    // Use setMapFilters to clear stale location filters first
+                    setMapFilters(updates);
                 }
                 // Clear after applying
                 sessionStorage.removeItem('mapFilter');
@@ -66,7 +70,7 @@ export const ExplorerLayout = memo(function ExplorerLayout({ onSelectCompany }: 
                 console.error('Failed to parse mapFilter:', e);
             }
         }
-    }, [setAllFilters]);
+    }, [setMapFilters]);
 
     // Explorer UI state
     const viewMode = useExplorerStore((s) => s.viewMode)
@@ -181,6 +185,34 @@ export const ExplorerLayout = memo(function ExplorerLayout({ onSelectCompany }: 
                         )}
                     </div>
                     <div className="flex flex-wrap items-center gap-1 sm:gap-2">
+                        <button
+                            onClick={() => {
+                                // Store all active filters for map to pick up
+                                const state = useFilterStore.getState();
+                                sessionStorage.setItem('mapFilter', JSON.stringify({
+                                    county: state.county || '',
+                                    county_code: state.countyCode || '',
+                                    municipality: state.municipality || '',
+                                    municipality_code: state.municipalityCode || '',
+                                    nace: state.naeringskode || '',
+                                    org_form: state.organizationForms,
+                                    revenue_min: state.revenueMin,
+                                    revenue_max: state.revenueMax,
+                                    employee_min: state.employeeMin,
+                                    employee_max: state.employeeMax,
+                                }))
+
+                                navigate({
+                                    to: '/bransjer',
+                                    search: { tab: 'map', nace: state.naeringskode || undefined },
+                                    replace: true
+                                })
+                            }}
+                            className="flex items-center gap-2 px-3 py-1.5 text-sm font-medium text-blue-600 hover:text-blue-700 hover:bg-blue-50 border border-blue-200 rounded-lg transition-colors mr-1 sm:mr-2"
+                        >
+                            <Map className="h-4 w-4" />
+                            <span className="hidden sm:inline">Se i kart</span>
+                        </button>
                         <ViewModeToggle />
                         <SortSelect />
                         <ExportButton totalCount={totalCount} />

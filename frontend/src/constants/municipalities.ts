@@ -62,12 +62,86 @@ export const ALL_NORWEGIAN_MUNICIPALITIES: readonly string[] = Object.freeze([
 export const MUNICIPALITY_TOTAL = ALL_NORWEGIAN_MUNICIPALITIES.length // 356
 
 /**
+ * Sami and dual-language name mapping to canonical Norwegian names.
+ * This ensures that when a user clicks a Sami region on the map (e.g., "Hábmer"),
+ * it correctly maps to the Norwegian name used in the registry ("Hamarøy").
+ */
+export const SAMI_NAME_MAPPING: Record<string, string> = {
+    "HÁBMER": "HAMARØY",
+    "HABMER": "HAMARØY",
+    "GUOVDAGEAIDNU": "KAUTOKEINO",
+    "KARASJOHKA": "KARASJOK",
+    "UNJÁRGA": "NESSEBY",
+    "UNJARGA": "NESSEBY",
+    "DEATNU": "TANA",
+    "PORSÁŊGU": "PORSANGER",
+    "PORSANGU": "PORSANGER",
+    "GÁIVUOTNA": "KÅFJORD",
+    "GAIVUOTNA": "KÅFJORD",
+    "LOABÁT": "LAVANGEN",
+    "LOABAT": "LAVANGEN",
+    "RIVTTÁT": "GRATANGEN",
+    "RIVTTAT": "GRATANGEN",
+    "EVENÁŠŠI": "EVENES",
+    "EVENASSI": "EVENES",
+    "SKÁNIT": "TJELDSUND",
+    "SKANIT": "TJELDSUND",
+    "DIERVI": "STORFJORD",
+    "BÁHCCEVEAJDNI": "BÅTSFJORD",
+    "BAHCCEVEAJDNI": "BÅTSFJORD",
+    "BÁIDÁR": "BEIARN",
+    "BAIDAR": "BEIARN",
+    "AARBORTE": "HATTFJELLDAL",
+    "AARPORTE": "HATTFJELLDAL",
+}
+
+/**
  * Format municipality name for display (Title Case)
+ * Prioritizes canonical Norwegian names and includes Sami name in parentheses if applicable.
  */
 export function formatMunicipalityName(name: string): string {
-    return name
-        .toLowerCase()
-        .split(/[\s-]/)
-        .map(word => word.charAt(0).toUpperCase() + word.slice(1))
-        .join(name.includes('-') ? '-' : ' ')
+    // 1. Handle dual names from map (e.g. "Aarborte - Hattfjelldal" or just "Aarborte")
+    const parts = name.includes(' - ') ? name.split(' - ') : [name];
+
+    // Check if any part is a Sami name that maps to a Norwegian name
+    let norwegianName = '';
+    let samiName = '';
+
+    for (const part of parts) {
+        const upper = part.toUpperCase();
+        if (SAMI_NAME_MAPPING[upper]) {
+            norwegianName = SAMI_NAME_MAPPING[upper];
+            samiName = part;
+            break;
+        }
+    }
+
+    // If no part matched mapping, but we have multiple parts, assume first is Sami, second is Norwegian
+    if (!norwegianName && parts.length > 1) {
+        samiName = parts[0];
+        norwegianName = parts[1];
+    } else if (!norwegianName) {
+        // Fallback: use the provided name as norwegian
+        norwegianName = name;
+    }
+
+    const toTitleCase = (str: string) => {
+        const words = str.toLowerCase().split(/[\s-]+/).filter(Boolean);
+        let result = words.map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ');
+
+        // Re-insert dashes for specific Norwegian names (e.g. Sør-Varanger) if original had them
+        if (str.includes('-') && !str.includes(' - ')) {
+            result = words.map(word => word.charAt(0).toUpperCase() + word.slice(1)).join('-');
+        }
+        return result;
+    };
+
+    const formattedNorwegian = toTitleCase(norwegianName);
+
+    // If we have a distinct Sami name, show both: "Hattfjelldal (Aarborte)"
+    if (samiName && samiName.toUpperCase() !== norwegianName.toUpperCase()) {
+        return `${formattedNorwegian} (${toTitleCase(samiName)})`;
+    }
+
+    return formattedNorwegian;
 }

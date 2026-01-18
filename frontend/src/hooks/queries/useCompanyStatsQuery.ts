@@ -36,6 +36,7 @@ export interface UseCompanyStatsQueryParams {
     min_employees?: number
     max_employees?: number
     municipality?: string
+    municipality_code?: string
     county?: string
     founded_from?: string
     founded_to?: string

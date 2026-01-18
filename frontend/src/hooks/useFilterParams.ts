@@ -23,6 +23,7 @@ export function useFilterParams() {
   const employeeMin = useFilterStore(s => s.employeeMin)
   const employeeMax = useFilterStore(s => s.employeeMax)
   const municipality = useFilterStore(s => s.municipality)
+  const municipalityCode = useFilterStore(s => s.municipalityCode)
   const county = useFilterStore(s => s.county)
   const foundedFrom = useFilterStore(s => s.foundedFrom)
   const foundedTo = useFilterStore(s => s.foundedTo)
@@ -48,17 +49,17 @@ export function useFilterParams() {
     organisasjonsform: organizationForms,
     naeringskode: naeringskode || undefined,
     // Revenue/equity must be non-negative
-    min_revenue: revenueMin !== null ? Math.max(0, revenueMin) : undefined,
-    max_revenue: revenueMax !== null ? Math.max(0, revenueMax) : undefined,
+    min_revenue: revenueMin !== null ? Math.max(0, Math.round(revenueMin)) : undefined,
+    max_revenue: revenueMax !== null ? Math.max(0, Math.round(revenueMax)) : undefined,
     // Profit can be negative (no backend constraint)
-    min_profit: profitMin ?? undefined,
-    max_profit: profitMax ?? undefined,
+    min_profit: profitMin !== null ? Math.round(profitMin) : undefined,
+    max_profit: profitMax !== null ? Math.round(profitMax) : undefined,
     // Equity must be non-negative
-    min_equity: equityMin !== null ? Math.max(0, equityMin) : undefined,
-    max_equity: equityMax !== null ? Math.max(0, equityMax) : undefined,
+    min_equity: equityMin !== null ? Math.max(0, Math.round(equityMin)) : undefined,
+    max_equity: equityMax !== null ? Math.max(0, Math.round(equityMax)) : undefined,
     // Operating profit can be negative
-    min_operating_profit: operatingProfitMin ?? undefined,
-    max_operating_profit: operatingProfitMax ?? undefined,
+    min_operating_profit: operatingProfitMin !== null ? Math.round(operatingProfitMin) : undefined,
+    max_operating_profit: operatingProfitMax !== null ? Math.round(operatingProfitMax) : undefined,
     // Liquidity ratio must be non-negative
     min_liquidity_ratio: liquidityRatioMin !== null ? Math.max(0, liquidityRatioMin) : undefined,
     max_liquidity_ratio: liquidityRatioMax !== null ? Math.max(0, liquidityRatioMax) : undefined,
@@ -69,6 +70,7 @@ export function useFilterParams() {
     min_employees: employeeMin !== null ? Math.max(0, employeeMin) : undefined,
     max_employees: employeeMax !== null ? Math.max(0, employeeMax) : undefined,
     municipality: municipality || undefined,
+    municipality_code: municipalityCode || undefined,
     county: county || undefined,
     founded_from: (foundedFrom instanceof Date && !isNaN(foundedFrom.getTime())) ? foundedFrom.toISOString().split('T')[0] : undefined,
     founded_to: (foundedTo instanceof Date && !isNaN(foundedTo.getTime())) ? foundedTo.toISOString().split('T')[0] : undefined,
@@ -97,6 +99,7 @@ export function useFilterParams() {
     employeeMin,
     employeeMax,
     municipality,
+    municipalityCode,
     county,
     foundedFrom,
     foundedTo,

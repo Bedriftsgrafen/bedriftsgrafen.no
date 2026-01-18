@@ -1,5 +1,6 @@
 import { useFilterStore } from '../../store/filterStore'
 import { COUNTIES } from '../../constants/explorer'
+import { formatMunicipalityName } from '../../constants/municipalities'
 import { memo, useCallback } from 'react'
 import { X } from 'lucide-react'
 
@@ -31,6 +32,7 @@ export const ActiveFilterChips = memo(function ActiveFilterChips() {
   const inLiquidation = useFilterStore(s => s.inLiquidation)
   const inForcedLiquidation = useFilterStore(s => s.inForcedLiquidation)
   const hasAccounting = useFilterStore(s => s.hasAccounting)
+  const municipalityCode = useFilterStore(s => s.municipalityCode)
 
   const setSearchQuery = useFilterStore(s => s.setSearchQuery)
 
@@ -68,7 +70,12 @@ export const ActiveFilterChips = memo(function ActiveFilterChips() {
           )}
           {municipality && (
             <span className="px-2 py-1 bg-blue-50 text-blue-700 rounded border border-blue-100 shadow-sm">
-              Kommune: {municipality}
+              Kommune: {formatMunicipalityName(municipality)}
+            </span>
+          )}
+          {municipalityCode && !municipality && (
+            <span className="px-2 py-1 bg-blue-50 text-blue-700 rounded border border-blue-100 shadow-sm">
+              Kommune (kode): {municipalityCode}
             </span>
           )}
           {county && (

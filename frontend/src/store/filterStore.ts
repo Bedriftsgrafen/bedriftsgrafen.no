@@ -23,7 +23,9 @@ export interface FilterValues {
   employeeMin: number | null
   employeeMax: number | null
   municipality: string
+  municipalityCode: string
   county: string
+  countyCode: string
   foundedFrom: Date | null
   foundedTo: Date | null
   bankruptFrom: Date | null
@@ -50,14 +52,17 @@ interface FilterActions {
   setLiquidityRatioRange: (min: number | null, max: number | null) => void
   setEquityRatioRange: (min: number | null, max: number | null) => void
   setEmployeeRange: (min: number | null, max: number | null) => void
-  setMunicipality: (municipality: string) => void
-  setCounty: (county: string) => void
+  setMunicipality: (name: string, code: string) => void
+  setMunicipalityCode: (code: string) => void
+  setCounty: (name: string, code: string) => void
+  setCountyCode: (code: string) => void
   setFoundedRange: (from: Date | null, to: Date | null) => void
   setBankruptRange: (from: Date | null, to: Date | null) => void
   setStatus: (key: 'isBankrupt' | 'inLiquidation' | 'inForcedLiquidation', value: boolean | null) => void
   setHasAccounting: (has: boolean | null) => void
   setSort: (by: string, order: 'asc' | 'desc') => void
   setAllFilters: (filters: Partial<FilterValues>) => void
+  setMapFilters: (filters: Partial<FilterValues>) => void
   clearFilters: () => void
   incrementFilterVersion: () => void
   getActiveFilterCount: () => number
@@ -91,7 +96,9 @@ export const useFilterStore = create<FilterState>((set, get) => ({
   employeeMin: null,
   employeeMax: null,
   municipality: '',
+  municipalityCode: '',
   county: '',
+  countyCode: '',
   foundedFrom: null,
   foundedTo: null,
   bankruptFrom: null,
@@ -115,14 +122,27 @@ export const useFilterStore = create<FilterState>((set, get) => ({
   setLiquidityRatioRange: (min, max) => set((s) => ({ liquidityRatioMin: min, liquidityRatioMax: max, filterVersion: s.filterVersion + 1 })),
   setEquityRatioRange: (min, max) => set((s) => ({ equityRatioMin: min, equityRatioMax: max, filterVersion: s.filterVersion + 1 })),
   setEmployeeRange: (min, max) => set((s) => ({ employeeMin: min, employeeMax: max, filterVersion: s.filterVersion + 1 })),
-  setMunicipality: (m) => set((s) => ({ municipality: m, filterVersion: s.filterVersion + 1 })),
-  setCounty: (c) => set((s) => ({ county: c, filterVersion: s.filterVersion + 1 })),
+  setMunicipality: (name, code) => set((s) => ({ municipality: name, municipalityCode: code, county: '', countyCode: '', filterVersion: s.filterVersion + 1 })),
+  setMunicipalityCode: (c) => set((s) => ({ municipalityCode: c, filterVersion: s.filterVersion + 1 })),
+  setCounty: (name, code) => set((s) => ({ county: name, countyCode: code, municipality: '', municipalityCode: '', filterVersion: s.filterVersion + 1 })),
+  setCountyCode: (c) => set((s) => ({ countyCode: c, filterVersion: s.filterVersion + 1 })),
   setFoundedRange: (from, to) => set((s) => ({ foundedFrom: from, foundedTo: to, filterVersion: s.filterVersion + 1 })),
   setBankruptRange: (from, to) => set((s) => ({ bankruptFrom: from, bankruptTo: to, filterVersion: s.filterVersion + 1 })),
   setStatus: (key, value) => set((s) => ({ [key]: value, filterVersion: s.filterVersion + 1 })),
   setHasAccounting: (has) => set((s) => ({ hasAccounting: has, filterVersion: s.filterVersion + 1 })),
   setSort: (by, order) => set({ sortBy: by, sortOrder: order }), // Sort doesn't need to trigger FilterPanel draft re-sync
   setAllFilters: (filters) => set((state) => ({ ...filters, filterVersion: state.filterVersion + 1 })),
+  setMapFilters: (filters) => set((state) => ({
+    // Clear location fields first to avoid stale filters
+    municipality: '',
+    municipalityCode: '',
+    county: '',
+    countyCode: '',
+    naeringskode: '',
+    // Apply new map filters
+    ...filters,
+    filterVersion: state.filterVersion + 1,
+  })),
   incrementFilterVersion: () => set((state) => ({ filterVersion: state.filterVersion + 1 })),
   clearFilters: () => set((state) => ({
     searchQuery: '',
@@ -143,6 +163,7 @@ export const useFilterStore = create<FilterState>((set, get) => ({
     employeeMin: null,
     employeeMax: null,
     municipality: '',
+    municipalityCode: '',
     county: '',
     foundedFrom: null,
     foundedTo: null,
@@ -170,6 +191,7 @@ export const useFilterStore = create<FilterState>((set, get) => ({
     if (state.equityRatioMin !== null || state.equityRatioMax !== null) count++
     if (state.employeeMin !== null || state.employeeMax !== null) count++
     if (state.municipality) count++
+    if (state.municipalityCode) count++
     if (state.county) count++
     if (state.foundedFrom !== null || state.foundedTo !== null) count++
     if (state.bankruptFrom !== null || state.bankruptTo !== null) count++

@@ -25,6 +25,18 @@ export default defineConfig({
     globals: true,
     environment: 'jsdom',
     setupFiles: './src/setupTests.ts',
+    coverage: {
+      provider: 'v8',
+      reporter: ['text', 'json', 'html'],
+      include: ['src/**/*.ts', 'src/**/*.tsx'],
+      exclude: [
+        'src/**/*.test.ts',
+        'src/**/*.test.tsx',
+        'src/routeTree.gen.ts',
+        'src/main.tsx',
+        'src/setupTests.ts'
+      ]
+    }
   },
   server: {
     host: true, // Needed for Docker

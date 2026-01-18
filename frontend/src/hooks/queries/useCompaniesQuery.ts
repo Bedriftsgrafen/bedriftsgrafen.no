@@ -35,6 +35,7 @@ export interface UseCompaniesQueryParams {
   sort_by?: string
   sort_order?: string
   exclude_org_form?: string[]
+  municipality_code?: string
 }
 
 export function useCompaniesQuery({
@@ -67,7 +68,8 @@ export function useCompaniesQuery({
   has_accounting,
   sort_by,
   sort_order,
-  exclude_org_form
+  exclude_org_form,
+  municipality_code
 }: UseCompaniesQueryParams = {}) {
   return useQuery({
     queryKey: [
@@ -77,7 +79,7 @@ export function useCompaniesQuery({
         filters: {
           name, organisasjonsform, naeringskode,
           employees: { min: min_employees, max: max_employees },
-          location: { municipality, county },
+          location: { municipality, municipality_code, county },
           dates: { founded_from, founded_to },
           status: { is_bankrupt, in_liquidation, in_forced_liquidation },
           financials: {
@@ -108,6 +110,7 @@ export function useCompaniesQuery({
       if (max_employees !== null && max_employees !== undefined) params.max_employees = max_employees
 
       if (municipality) params.municipality = municipality
+      if (municipality_code) params.municipality_code = municipality_code
       if (county) params.county = county
 
       if (founded_from) params.founded_from = founded_from
