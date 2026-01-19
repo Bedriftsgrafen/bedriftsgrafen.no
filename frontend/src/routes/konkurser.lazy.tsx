@@ -12,8 +12,9 @@ import { SummaryCard, TabButton } from '../components/common'
 import { IndustryBreakdownStats } from '../components/dashboard/IndustryBreakdownStats'
 import { TrendChart } from '../components/dashboard/TrendChart'
 import { formatNumber, formatCurrency } from '../utils/formatters'
-import { getOneYearAgo } from '../utils/dates'
+import { getStartingDate } from '../utils/dates'
 import { API_BASE } from '../utils/apiClient'
+import { PeriodSelector } from '../components/common/PeriodSelector'
 import { AffiliateBanner } from '../components/ads/AffiliateBanner'
 import { AFFILIATIONS } from '../constants/affiliations'
 
@@ -35,12 +36,14 @@ interface BankruptcyStats {
 // ============================================================================
 
 function KonkurserPage() {
+    const { period = '1y' } = Route.useSearch()
     useDocumentTitle('Konkurser | Bedriftsgrafen.no')
     const [activeTab, setActiveTab] = useState<'list' | 'stats' | 'map'>('list')
     const [selectedCompanyOrgnr, setSelectedCompanyOrgnr] = useState<string | null>(null)
     const [selectedIndustry, setSelectedIndustry] = useState<{ code: string; name: string } | null>(null)
 
-    const oneYearAgo = getOneYearAgo()
+    const oneYearAgo = getStartingDate(period)
+    const periodLabel = period === '30d' ? 'Siste 30 dager' : period === '90d' ? 'Siste 90 dager' : 'Siste 12 mnd'
 
     // Fetch bankruptcy count for stats
     const { data: count } = useQuery<number>({
@@ -90,12 +93,12 @@ function KonkurserPage() {
                     Konkurser
                 </h1>
                 <p className="text-gray-700 text-lg">
-                    Oversikt over selskaper som har gått konkurs det siste året.
+                    Oversikt over selskaper som har gått konkurs {periodLabel.toLowerCase()}.
                 </p>
             </div>
 
             {/* Summary Cards */}
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4 mb-8">
                 <SummaryCard
                     icon={<Building2 className="w-5 h-5" />}
                     label="Konkurser siste år"
@@ -117,9 +120,11 @@ function KonkurserPage() {
                 <SummaryCard
                     icon={<Calendar className="w-5 h-5" />}
                     label="Periode"
-                    value="Siste 12 mnd"
                     color="blue"
-                />
+                    className="sm:col-span-1 lg:col-span-2 shadow-md border-blue-100/50"
+                >
+                    <PeriodSelector activePeriod={period} route="/konkurser" variant="compact" />
+                </SummaryCard>
             </div>
 
             {/* Affiliate Banner - contextual for users browsing bankruptcies (potential fresh start) */}
@@ -158,7 +163,7 @@ function KonkurserPage() {
 
             {/* Content */}
             {activeTab === 'list' && (
-                <BankruptcyList onSelectCompany={setSelectedCompanyOrgnr} />
+                <BankruptcyList onSelectCompany={setSelectedCompanyOrgnr} bankruptFrom={oneYearAgo} />
             )}
 
             {activeTab === 'stats' && (

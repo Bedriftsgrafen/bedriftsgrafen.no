@@ -6,9 +6,31 @@
  * Get date string for one year ago (YYYY-MM-DD format)
  */
 export function getOneYearAgo(): string {
+    return getDaysAgo(365)
+}
+
+/**
+ * Get date string for N days ago (YYYY-MM-DD format)
+ */
+export function getDaysAgo(days: number): string {
     const date = new Date()
-    date.setFullYear(date.getFullYear() - 1)
+    date.setDate(date.getDate() - days)
     return date.toISOString().split('T')[0]
+}
+
+/**
+ * Get starting date for a given period shortcut
+ */
+export function getStartingDate(period: '30d' | '90d' | '1y'): string {
+    switch (period) {
+        case '30d':
+            return getDaysAgo(30)
+        case '90d':
+            return getDaysAgo(90)
+        case '1y':
+        default:
+            return getOneYearAgo()
+    }
 }
 
 /**

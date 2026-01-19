@@ -7,7 +7,6 @@ import { useMemo } from 'react'
 import { ChevronLeft, ChevronRight, Search, Filter, X } from 'lucide-react'
 import { SortableHeader } from '../common/SortableHeader'
 import { formatNumber } from '../../utils/formatters'
-import { getOneYearAgo } from '../../utils/dates'
 import { RegionSelect } from '../common/RegionSelect'
 import { LoadingState } from '../common/LoadingState'
 import { ErrorState } from '../common/ErrorState'
@@ -18,12 +17,13 @@ import { useCompanyCountQuery } from '../../hooks/queries/useCompanyCountQuery'
 
 interface BankruptcyListProps {
     onSelectCompany: (orgnr: string) => void
+    bankruptFrom: string
 }
 
 type SortField = 'navn' | 'konkursdato' | 'antall_ansatte' | 'naeringskode'
 
 
-export function BankruptcyList({ onSelectCompany }: BankruptcyListProps) {
+export function BankruptcyList({ onSelectCompany, bankruptFrom }: BankruptcyListProps) {
     const {
         page,
         searchQuery, setSearchQuery,
@@ -38,7 +38,6 @@ export function BankruptcyList({ onSelectCompany }: BankruptcyListProps) {
         initialFilters: { nace: '', county: '', municipality: '' }
     })
 
-    const bankruptFrom = getOneYearAgo()
 
     // Fetch bankruptcies with sorting and filters
     const { data: companies, isLoading, error } = useCompaniesQuery({

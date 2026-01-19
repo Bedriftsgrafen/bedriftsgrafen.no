@@ -12,8 +12,9 @@ import { SummaryCard, TabButton } from '../components/common'
 import { IndustryBreakdownStats } from '../components/dashboard/IndustryBreakdownStats'
 import { TrendChart } from '../components/dashboard/TrendChart'
 import { formatNumber, formatCurrency } from '../utils/formatters'
-import { getOneYearAgo } from '../utils/dates'
+import { getStartingDate } from '../utils/dates'
 import { API_BASE } from '../utils/apiClient'
+import { PeriodSelector } from '../components/common/PeriodSelector'
 import { AffiliateBanner } from '../components/ads/AffiliateBanner'
 import { AFFILIATIONS } from '../constants/affiliations'
 
@@ -35,12 +36,14 @@ interface NewCompaniesStats {
 // ============================================================================
 
 function NyetableringerPage() {
+    const { period = '1y' } = Route.useSearch()
     useDocumentTitle('Nyetableringer | Bedriftsgrafen.no')
     const [activeTab, setActiveTab] = useState<'list' | 'stats' | 'map'>('list')
     const [selectedCompanyOrgnr, setSelectedCompanyOrgnr] = useState<string | null>(null)
     const [selectedIndustry, setSelectedIndustry] = useState<{ code: string; name: string } | null>(null)
 
-    const foundedFrom = getOneYearAgo()
+    const foundedFrom = getStartingDate(period)
+    const periodLabel = period === '30d' ? 'Siste 30 dager' : period === '90d' ? 'Siste 90 dager' : 'Siste 12 mnd'
 
     // Fetch new companies count
     const { data: count } = useQuery<number>({
@@ -90,12 +93,12 @@ function NyetableringerPage() {
                     Nyetableringer
                 </h1>
                 <p className="text-gray-700 text-lg">
-                    Oversikt over nye aksjeselskaper etablert det siste året.
+                    Oversikt over nye aksjeselskaper etablert {periodLabel.toLowerCase()}.
                 </p>
             </div>
 
             {/* Summary Cards */}
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4 mb-8">
                 <SummaryCard
                     icon={<Building2 className="w-5 h-5" />}
                     label="Nye selskaper"
@@ -117,9 +120,11 @@ function NyetableringerPage() {
                 <SummaryCard
                     icon={<Calendar className="w-5 h-5" />}
                     label="Periode"
-                    value="Siste 12 mnd"
                     color="blue"
-                />
+                    className="sm:col-span-1 lg:col-span-2 shadow-md border-blue-100/50"
+                >
+                    <PeriodSelector activePeriod={period} route="/nyetableringer" variant="compact" />
+                </SummaryCard>
             </div>
 
             {/* Affiliate Banner - official Tjenestetorget affiliation for new companies */}
@@ -157,7 +162,7 @@ function NyetableringerPage() {
 
             {/* Content */}
             {activeTab === 'list' && (
-                <NewCompaniesList onSelectCompany={setSelectedCompanyOrgnr} />
+                <NewCompaniesList onSelectCompany={setSelectedCompanyOrgnr} foundedFrom={foundedFrom} />
             )}
 
             {activeTab === 'stats' && (

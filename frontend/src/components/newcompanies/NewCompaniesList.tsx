@@ -7,7 +7,6 @@ import { useMemo } from 'react'
 import { ChevronLeft, ChevronRight, Search, Filter, X } from 'lucide-react'
 import { SortableHeader } from '../common/SortableHeader'
 import { formatNumber } from '../../utils/formatters'
-import { getOneYearAgo } from '../../utils/dates'
 import { RegionSelect } from '../common/RegionSelect'
 import { LoadingState } from '../common/LoadingState'
 import { ErrorState } from '../common/ErrorState'
@@ -18,12 +17,13 @@ import { useCompanyCountQuery } from '../../hooks/queries/useCompanyCountQuery'
 
 interface NewCompaniesListProps {
     onSelectCompany: (orgnr: string) => void
+    foundedFrom: string
 }
 
 type SortField = 'navn' | 'stiftelsesdato' | 'antall_ansatte' | 'naeringskode'
 
 
-export function NewCompaniesList({ onSelectCompany }: NewCompaniesListProps) {
+export function NewCompaniesList({ onSelectCompany, foundedFrom }: NewCompaniesListProps) {
     const {
         page,
         searchQuery, setSearchQuery,
@@ -38,7 +38,6 @@ export function NewCompaniesList({ onSelectCompany }: NewCompaniesListProps) {
         initialFilters: { nace: '', county: '', municipality: '' }
     })
 
-    const foundedFrom = getOneYearAgo()
 
     // Fetch new companies with sorting and filters
     const { data: companies, isLoading, error } = useCompaniesQuery({
