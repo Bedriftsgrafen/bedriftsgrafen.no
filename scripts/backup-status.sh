@@ -24,7 +24,9 @@ fi
 
 echo ""
 echo "=== Recent Backups ==="
-ls -lht /mnt/ssd/backups/ 2>/dev/null | grep "^d" | head -5 | awk '{print $9, "-", $6, $7, $8}'
+ls -1d /mnt/ssd/backups/*/ 2>/dev/null | grep -E '[0-9]{8}-[0-9]{6}' | sort -r | head -5 | xargs -I {} basename {} | while read dir; do
+    echo "$dir - $(stat -c %y /mnt/ssd/backups/$dir | cut -d' ' -f1,2 | cut -d':' -f1,2)"
+done
 
 echo ""
 echo "=== Last 3 Log Entries ==="
@@ -32,4 +34,4 @@ grep -E "Starting|complete|Running" /mnt/ssd/backups/backup.log 2>/dev/null | ta
 
 echo ""
 echo "=== Next Scheduled Backup ==="
-systemctl list-timers bedriftsgrafen-backup.timer --no-pager | grep backup
+systemctl list-timers backup-system.timer --no-pager

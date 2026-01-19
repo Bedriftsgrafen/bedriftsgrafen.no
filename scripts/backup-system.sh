@@ -29,13 +29,12 @@ cleanup() {
 }
 trap cleanup EXIT
 
-# Use absolute path for reliability in cron/root context
-# Using the user's symlink as requested
-TARGET="${HOME}/ssd/backups"
+# Avoid HOME dependency as it varies by user/root
+TARGET="/mnt/ssd/backups"
 
 # Verify mount point to prevent writing to local disk
-if ! mountpoint -q "$(readlink -f "${HOME}/ssd")"; then
-    echo "CRITICAL ERROR: Backup drive not mounted at ${HOME}/ssd"
+if ! mountpoint -q "/mnt/ssd"; then
+    echo "CRITICAL ERROR: Backup drive not mounted at /mnt/ssd"
     exit 1
 fi
 
@@ -156,7 +155,9 @@ if [ "$DRY_RUN" = true ]; then
     echo "[DRY-RUN] Would clean up old backups..." | tee -a "$LOG_FILE"
 else
     cd "$TARGET"
-    ls -1dt */ 2>/dev/null | grep -v "current" | tail -n +8 | xargs -r rm -rf
+    # Use sort (name-based) because mtimes are unreliable (rsync preserves source dir time)
+    # This keeps the 7 folders with the highest names (latest dates)
+    ls -1d */ 2>/dev/null | grep -E '^[0-9]{8}-[0-9]{6}/$' | sort -r | tail -n +8 | xargs -r rm -rf
 fi
 
 # Log completion

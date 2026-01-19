@@ -73,16 +73,25 @@ journalctl -u bedriftsgrafen-regnskap-sync -f       # Logs
 
 ## Database Maintenance
 
-### Daily Cron Jobs
+### Automated System Backup (Systemd)
+
+The system performs a **full system backup** (Database + Filesystem) daily at **01:00**.
+
+*   **Mechanism**: Systemd Timer (`backup-system.timer`)
+*   **Script**: `scripts/backup-system.sh`
+*   **Location**: `/mnt/ssd/backups/` (External SSD)
+*   **Retention**: Last 7 snapshots (Incremental using hard-links)
+
+To check backup status and logs:
 
 ```bash
-crontab -e
+./scripts/backup-status.sh
+```
 
-# Add these lines:
-0 2 * * * curl -X POST http://localhost:8000/admin/import/updates -H "Content-Type: application/json" -d '{"limit": 1000}' >> logs/updates.log 2>&1
-0 3 * * * docker exec bedriftsgrafen-db psql -U admin -d bedriftsgrafen -c "VACUUM ANALYZE bedrifter; VACUUM ANALYZE regnskap;" >> logs/db_maintenance.log 2>&1
-0 4 * * * docker exec bedriftsgrafen-db pg_dump -U admin bedriftsgrafen | gzip > backups/bedriftsgrafen_$(date +\%Y\%m\%d).sql.gz 2>&1
-0 5 * * * find backups -name "bedriftsgrafen_*.sql.gz" -mtime +7 -delete
+To manually trigger a backup:
+
+```bash
+sudo systemctl start backup-system.service
 ```
 
 ### Manual Backup & Restore
@@ -211,7 +220,7 @@ Restart after changes: `sudo systemctl restart bedriftsgrafen-regnskap-sync`
 | Type | Location |
 |------|----------|
 | Logs | `logs/` |
-| Backups | `backups/` |
+| Backups | `/mnt/ssd/backups/` |
 | Scripts | `scripts/` |
 | Documentation | `*.md` files in root |
 | API Reference | `backend/API_ENDPOINTS.md` |
