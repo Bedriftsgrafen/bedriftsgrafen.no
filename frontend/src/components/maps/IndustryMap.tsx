@@ -390,7 +390,7 @@ export function IndustryMap({
                     showPerCapita={showPerCapita}
                     metricLabel={METRIC_LABELS[metric] || 'Bedrifter'}
                     onClose={() => setSelectedRegion(null)}
-                    onShowCompanies={(name, code) => {
+                    onShowCompanies={(name: string, code: string) => {
                         if (onSearchClick) onSearchClick(name, code, selectedNace || null);
                         else {
                             const normalizedName = formatMunicipalityName(name);

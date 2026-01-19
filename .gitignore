@@ -61,7 +61,6 @@ eggs/
 lib64/
 **/venv/lib/
 **/env/lib/
-parts/
 sdist/
 var/
 wheels/
