@@ -1,5 +1,4 @@
 import { useEffect, useState, useMemo, useCallback, useRef } from 'react';
-import { MapContainer, TileLayer, GeoJSON } from 'react-leaflet';
 import L from 'leaflet';
 import type { GeoJsonObject, Feature, Geometry, FeatureCollection } from 'geojson';
 import 'leaflet/dist/leaflet.css';
@@ -7,18 +6,15 @@ import { useQuery } from '@tanstack/react-query';
 import { useNavigate } from '@tanstack/react-router';
 import { apiClient } from '../../utils/apiClient';
 import { formatNumber } from '../../utils/formatters';
-import { RefreshCw, Users } from 'lucide-react';
-import { CompanyMarkers } from './CompanyMarkers';
+import { formatMunicipalityName } from '../../constants/municipalities';
+import { MapSidebar } from './MapSidebar';
+import { MapView } from './MapView';
+import { RefreshCw } from 'lucide-react';
+import clsx from 'clsx';
 import { LoadingState } from '../common/LoadingState';
 import { ErrorState } from '../common/ErrorState';
-import { formatMunicipalityName } from '../../constants/municipalities';
 
 // Internal Parts
-import { Legend } from './parts/Legend';
-import { AveragesBox } from './parts/AveragesBox';
-import { NorwayBounds } from './parts/NorwayBounds';
-import { MapAutoZoomer } from './parts/MapAutoZoomer';
-import { RegionInfoPanel } from './parts/RegionInfoPanel';
 import { getColor } from './parts/mapUtils';
 import type { GeoStat, GeoAverages, RegionProperties, GeoLevel } from './parts/types';
 
@@ -103,7 +99,6 @@ export function IndustryMap({
     const [selectedCounty, setSelectedCounty] = useState<string>(() => {
         if (countyCodeFromExplorer) return countyCodeFromExplorer;
         if (municipalityCodeFromExplorer) return municipalityCodeFromExplorer.slice(0, 2);
-        // If we only have a name (legacy/edge case), try to find the code or return empty
         if (countyFromExplorer) {
             return COUNTIES.find(c => c.name === countyFromExplorer)?.code || '';
         }
@@ -131,7 +126,6 @@ export function IndustryMap({
 
     const [showPerCapita, setShowPerCapita] = useState(false);
 
-    // Track previous explorer props
     const prevExplorerPropsRef = useRef({ countyFromExplorer, countyCodeFromExplorer, municipalityCodeFromExplorer, municipalityFromExplorer });
 
     // Fetch geographic stats
@@ -142,7 +136,6 @@ export function IndustryMap({
             if (selectedNace) params.set('nace', selectedNace);
             if (level === 'municipality' && selectedCounty) params.set('county_code', selectedCounty);
 
-            // Add advanced filters
             organizationForms?.forEach(form => params.append('org_form', form));
             if (revenueMin != null) params.set('revenue_min', revenueMin.toString());
             if (revenueMax != null) params.set('revenue_max', revenueMax.toString());
@@ -156,14 +149,12 @@ export function IndustryMap({
         retry: 2,
     });
 
-    // Create lookup map
     const statsMap = useMemo(() => {
         const map = new Map<string, GeoStat>();
         geoStats?.forEach(stat => map.set(stat.code, stat));
         return map;
     }, [geoStats]);
 
-    // Effect to sync when explorer props change
     useEffect(() => {
         const prev = prevExplorerPropsRef.current;
         const hasChanged =
@@ -195,7 +186,6 @@ export function IndustryMap({
                     const countyName = COUNTIES.find(c => c.code === countyFromExplorer)?.name || countyFromExplorer;
                     setSelectedRegion({ name: countyName, code: countyFromExplorer });
                 } else if (municipalityFromExplorer) {
-                    // Fallback: Resolve code by name from geoData
                     const featureCollection = geoData as FeatureCollection<Geometry, RegionProperties>;
                     const features = featureCollection.features;
                     const found = features.find(f => {
@@ -212,7 +202,6 @@ export function IndustryMap({
                         }
                     }
                 } else {
-                    // All filters cleared - reset to national level
                     setLevel('county');
                     setSelectedCounty('');
                     setSelectedRegion(null);
@@ -222,7 +211,6 @@ export function IndustryMap({
         }
     }, [countyFromExplorer, countyCodeFromExplorer, municipalityCodeFromExplorer, municipalityFromExplorer, geoData]);
 
-    // Fetch GeoJSON
     useEffect(() => {
         const abortController = new AbortController();
         const file = level === 'county' ? '/norway-counties.geojson?v=2' : '/norway-municipalities.geojson?v=2';
@@ -245,7 +233,6 @@ export function IndustryMap({
         return () => abortController.abort();
     }, [level]);
 
-    // Fetch averages
     const { data: averages } = useQuery<GeoAverages>({
         queryKey: ['geographyAverages', level, selectedNace, metric, selectedCounty, organizationForms, revenueMin, revenueMax, employeeMin, employeeMax],
         queryFn: async () => {
@@ -253,7 +240,6 @@ export function IndustryMap({
             if (selectedNace) params.set('nace', selectedNace);
             if (level === 'municipality' && selectedCounty) params.set('county_code', selectedCounty);
 
-            // Add advanced filters
             organizationForms?.forEach(form => params.append('org_form', form));
             if (revenueMin != null) params.set('revenue_min', revenueMin.toString());
             if (revenueMax != null) params.set('revenue_max', revenueMax.toString());
@@ -352,84 +338,95 @@ export function IndustryMap({
         );
     }, [statsMap, level, onRegionClick, getValue, generateTooltip, selectedRegion]);
 
-    if (geoDataError) return <div className="h-[500px] flex items-center justify-center border rounded-xl"><ErrorState title="Feil" message={geoDataError} onRetry={() => setGeoData(null)} /></div>;
-    if (!geoData) return <div className="h-[500px] bg-gray-100 rounded-xl flex items-center justify-center"><LoadingState message="Laster kart..." /></div>;
-    if (isError) return <div className="h-[500px] flex items-center justify-center border rounded-xl"><ErrorState title="Feil" message="Noe gikk galt" onRetry={() => refetch()} /></div>;
+    if (geoDataError) return (
+        <div className="h-[600px] flex flex-col items-center justify-center border border-slate-200 rounded-xl bg-slate-50 gap-4">
+            <ErrorState title="Kartfeil" message={geoDataError} onRetry={() => setGeoData(null)} />
+        </div>
+    );
+
+    if (!geoData) return (
+        <div className="h-[600px] bg-slate-50 rounded-xl flex items-center justify-center border border-slate-200">
+            <LoadingState message="Laster kartdata..." />
+        </div>
+    );
+
+    if (isError) return (
+        <div className="h-[600px] flex flex-col items-center justify-center border border-slate-200 rounded-xl bg-slate-50 gap-4">
+            <ErrorState title="Tjenestefeil" message="Kunne ikke hente statistikk" onRetry={() => refetch()} />
+        </div>
+    );
 
     const metricLabel = showPerCapita ? 'Bedrifter pr 1000 innb.' : (METRIC_LABELS[metric] || 'Verdi');
 
     return (
-        <div className="relative h-[500px] rounded-xl overflow-hidden border border-gray-200 shadow-sm">
-            {/* Controls */}
-            <div className="absolute top-20 left-2 z-1000 flex flex-col gap-2">
-                <div className="bg-white/95 backdrop-blur-sm rounded-lg shadow-lg p-1 flex">
-                    <button onClick={() => { setLevel('county'); setSelectedCounty(''); }} className={`px-3 py-1.5 text-xs font-medium rounded ${level === 'county' ? 'bg-blue-600 text-white' : 'text-gray-600 hover:bg-gray-100'}`}>Fylker</button>
-                    <button onClick={() => setLevel('municipality')} className={`px-3 py-1.5 text-xs font-medium rounded ${level === 'municipality' ? 'bg-blue-600 text-white' : 'text-gray-600 hover:bg-gray-100'}`}>Kommuner</button>
+        <div className="flex flex-col md:flex-row h-[600px] rounded-xl overflow-hidden border border-slate-200 shadow-xl bg-white">
+            <MapSidebar
+                level={level}
+                setLevel={(l) => { setLevel(l); if (l === 'county') setSelectedCounty(''); }}
+                showPerCapita={showPerCapita}
+                setShowPerCapita={setShowPerCapita}
+                selectedRegionData={selectedRegionData}
+                hoveredRegion={hoveredRegion}
+                maxValue={maxValue}
+                metricLabel={metricLabel}
+                averages={averages}
+                onCloseRegion={() => setSelectedRegion(null)}
+                onShowCompanies={(name, code) => {
+                    if (onSearchClick) onSearchClick(name, code, selectedNace || null);
+                    else {
+                        const normalizedName = formatMunicipalityName(name);
+                        const isCounty = code.length === 2;
+                        sessionStorage.setItem('mapFilter', JSON.stringify({
+                            county: isCounty ? code : '',
+                            municipality: isCounty ? '' : normalizedName,
+                            municipality_code: isCounty ? '' : code,
+                            nace: selectedNace,
+                        }));
+                        navigate({ to: '/bransjer', search: { nace: selectedNace || undefined } });
+                    }
+                }}
+            />
+
+            <div className="flex-1 relative bg-slate-50">
+                <div className="absolute top-4 right-4 z-[1000]">
+                    <button
+                        onClick={() => refetch()}
+                        className="bg-white/90 backdrop-blur-sm rounded-full shadow-lg p-2.5 hover:bg-white hover:scale-110 transition-all active:scale-95 disabled:opacity-50 border border-slate-100"
+                        title="Oppdater kartdata"
+                    >
+                        <RefreshCw className={clsx("h-4 w-4 text-slate-600", isRefetching ? "animate-spin" : "")} />
+                    </button>
                 </div>
 
-                <button
-                    onClick={() => setShowPerCapita(!showPerCapita)}
-                    className={`flex items-center gap-2 px-3 py-1.5 text-xs font-medium rounded-lg shadow-lg ${showPerCapita ? 'bg-purple-600 text-white' : 'bg-white/95 text-gray-700'}`}
-                >
-                    <Users className="h-3 w-3" />
-                    Per innbygger
-                </button>
-
-            </div>
-
-            {/* Refresh */}
-            <div className="absolute top-4 right-4 z-1000">
-                <button onClick={() => refetch()} className="bg-white/95 backdrop-blur-sm rounded-lg shadow-lg p-2 hover:bg-gray-50 disabled:opacity-50">
-                    <RefreshCw className={`h-4 w-4 text-gray-600 ${isRefetching ? 'animate-spin' : ''}`} />
-                </button>
-            </div>
-
-            {selectedRegionData && (
-                <RegionInfoPanel
-                    regionData={selectedRegionData}
-                    showPerCapita={showPerCapita}
-                    metricLabel={METRIC_LABELS[metric] || 'Bedrifter'}
-                    onClose={() => setSelectedRegion(null)}
-                    onShowCompanies={(name: string, code: string) => {
-                        if (onSearchClick) onSearchClick(name, code, selectedNace || null);
-                        else {
-                            const normalizedName = formatMunicipalityName(name);
-                            const isCounty = code.length === 2;
-                            sessionStorage.setItem('mapFilter', JSON.stringify({
-                                county: isCounty ? code : '',
-                                municipality: isCounty ? '' : normalizedName,
-                                municipality_code: isCounty ? '' : code,
-                                nace: selectedNace,
-                            }));
-                            navigate({ to: '/bransjer', search: { nace: selectedNace || undefined } });
-                        }
-                        setSelectedRegion(null);
-                    }}
-                />
-            )}
-
-            <MapContainer center={[65, 15]} zoom={4} scrollWheelZoom={true} style={{ height: '100%', width: '100%' }} className="bg-gray-50">
-                <TileLayer attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>' url="https://{s}.basemaps.cartocdn.com/light_nolabels/{z}/{x}/{y}{r}.png" />
-                <NorwayBounds />
-                <MapAutoZoomer selectedRegionCode={selectedRegion?.code || null} geoData={geoData} />
-                {geoStats && <GeoJSON key={`${level}-${selectedNace}-${metric}-${selectedCounty}-${selectedRegion?.code || 'none'}`} data={geoData} style={style} onEachFeature={onEachFeature} />}
-                <CompanyMarkers
-                    naceCode={selectedNace || null}
-                    countyCode={selectedCounty || (selectedRegion?.code?.length === 2 ? selectedRegion.code : undefined)}
+                <MapView
+                    level={level}
+                    selectedNace={selectedNace}
+                    metric={metric}
+                    selectedCounty={selectedCounty}
+                    geoData={geoData}
+                    geoStats={geoStats}
+                    selectedRegionCode={selectedRegion?.code || null}
+                    style={style}
+                    onEachFeature={onEachFeature}
+                    onCompanyClick={(orgnr: string) => onCompanyClick ? onCompanyClick(orgnr) : navigate({ to: '/bedrift/$orgnr', params: { orgnr } })}
                     municipalityName={level === 'municipality' && selectedRegionData && selectedRegionData.code.length === 4 ? selectedRegionData.name : undefined}
                     municipalityCode={level === 'municipality' && selectedRegionData && selectedRegionData.code.length === 4 ? selectedRegionData.code : undefined}
-                    onCompanyClick={(orgnr) => onCompanyClick ? onCompanyClick(orgnr) : navigate({ to: '/bedrift/$orgnr', params: { orgnr } })}
                     organizationForms={organizationForms}
                     revenueMin={revenueMin}
                     revenueMax={revenueMax}
                     employeeMin={employeeMin}
                     employeeMax={employeeMax}
                 />
-            </MapContainer>
 
-            <Legend maxValue={maxValue} metricLabel={metricLabel} />
-            {!showPerCapita && <AveragesBox averages={averages} level={level} currentValue={hoveredRegion || undefined} />}
-            {isLoading && <div className="absolute inset-0 bg-white/50 flex items-center justify-center z-1001"><div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600" /></div>}
+                {isLoading && (
+                    <div className="absolute inset-0 bg-white/40 backdrop-blur-[1px] flex items-center justify-center z-[1001] animate-in fade-in">
+                        <div className="flex flex-col items-center gap-3 bg-white p-6 rounded-2xl shadow-2xl border border-slate-100" style={{ pointerEvents: 'auto' }}>
+                            <div className="animate-spin rounded-full h-10 w-10 border-[3px] border-blue-600 border-t-transparent" />
+                            <p className="text-xs font-black text-slate-400 uppercase tracking-widest">Henter data...</p>
+                        </div>
+                    </div>
+                )}
+            </div>
         </div>
     );
 }

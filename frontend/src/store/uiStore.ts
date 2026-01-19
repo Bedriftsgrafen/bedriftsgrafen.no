@@ -26,6 +26,7 @@ export type CompanyColumn =
   | 'revenue'
   | 'profit'
   | 'operating_margin'
+  | 'vedtektsfestet_formaal'
 
 // Column configuration with labels
 export const COLUMN_CONFIG: Record<CompanyColumn, { label: string; sortable: boolean; default: boolean }> = {
@@ -39,6 +40,7 @@ export const COLUMN_CONFIG: Record<CompanyColumn, { label: string; sortable: boo
   revenue: { label: 'Omsetning', sortable: true, default: true },
   profit: { label: 'Resultat', sortable: true, default: true },
   operating_margin: { label: 'Driftsmargin', sortable: true, default: false },
+  vedtektsfestet_formaal: { label: 'Formål', sortable: false, default: false },
 }
 
 // Default visible columns

@@ -118,7 +118,7 @@ function HomePage() {
                     </h1>
                     <p className="text-white/90 text-center mb-6 relative z-10">
                         {searchMode === 'company'
-                            ? 'Søk på bedriftsnavn, organisasjonsnummer, bransje eller sted'
+                            ? 'Søk på bedriftsnavn, organisasjonsnummer, bransje, sted eller formål'
                             : 'Søk etter navn på personer i styre og ledelse'}
                     </p>
 
@@ -136,7 +136,7 @@ function HomePage() {
                                     }}
                                     onKeyDown={handleKeyDown}
                                     placeholder={searchMode === 'company'
-                                        ? "Søk etter bedrift, orgnr, bransje..."
+                                        ? "Søk etter bedrift, orgnr, bransje eller formål..."
                                         : "Søk etter navn på person..."}
                                     className="w-full px-4 py-3 bg-white border-0 rounded-lg focus:ring-2 focus:ring-blue-300 focus:outline-none text-blue-900 placeholder-blue-900/50 shadow-lg font-medium"
                                 />
@@ -188,6 +188,17 @@ function HomePage() {
                             </button>
                         </div>
                     </div>
+
+                    {searchMode === 'company' && (
+                        <div className="mt-4 flex flex-wrap gap-2 justify-center text-xs text-white/70 relative z-10 animate-in fade-in slide-in-from-top-1">
+                            <span className="font-semibold text-white/90">Tips:</span>
+                            <span>Prøv å søke etter formål som</span>
+                            <button onClick={() => { setSearchQuery('bærekraft'); handleSearch('bærekraft'); }} className="underline hover:text-white transition-colors">"bærekraft"</button>,
+                            <button onClick={() => { setSearchQuery('ai'); handleSearch('ai'); }} className="underline hover:text-white transition-colors">"ai"</button>
+                            <span>eller</span>
+                            <button onClick={() => { setSearchQuery('regnskap'); handleSearch('regnskap'); }} className="underline hover:text-white transition-colors">"regnskap"</button>
+                        </div>
+                    )}
                 </div>
             </section>
 

@@ -36,6 +36,12 @@ const getCellValue = (company: Company, column: CompanyColumn): React.ReactNode 
         case 'revenue': return formatCurrency(company.latest_revenue)
         case 'profit': return formatCurrency(company.latest_profit)
         case 'operating_margin': return renderMargin(company.latest_operating_margin)
+        case 'vedtektsfestet_formaal':
+            return (
+                <div className="max-w-md truncate" title={company.vedtektsfestet_formaal || ''}>
+                    {company.vedtektsfestet_formaal || <span className="text-gray-400">—</span>}
+                </div>
+            )
         default: {
             // Exhaustiveness check - TypeScript will error if we miss a case
             void (column satisfies never)

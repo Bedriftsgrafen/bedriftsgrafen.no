@@ -1,5 +1,5 @@
 import { createLazyFileRoute } from '@tanstack/react-router'
-import { useCallback, useEffect, useRef, type KeyboardEvent } from 'react'
+import { useCallback, useEffect } from 'react'
 import { SEOHead } from '../components/layout'
 import { FilterPanel } from '../components/FilterPanel'
 import { CONTACT_EMAIL } from '../constants/contact'
@@ -13,7 +13,7 @@ import { useCompanyCountQuery } from '../hooks/queries/useCompanyCountQuery'
 import { useUiStore } from '../store/uiStore'
 import { useFilterStore } from '../store/filterStore'
 import { useSlowLoadingToast } from '../hooks/useSlowLoadingToast'
-import { Search } from 'lucide-react'
+import { ExplorerSearchBar } from '../components/explorer/ExplorerSearchBar'
 
 export const Route = createLazyFileRoute('/utforsk')({
     component: UtforskPage,
@@ -32,9 +32,6 @@ function UtforskPage() {
     const { filterParams, sortBy, sortOrder } = useFilterParams()
     const setSort = useFilterStore(s => s.setSort)
     const setSearchQuery = useFilterStore(s => s.setSearchQuery)
-    const searchQueryInStore = useFilterStore((s) => s.searchQuery)
-
-    const inputRef = useRef<HTMLInputElement>(null)
 
     // Sync global search query and history
     useEffect(() => {
@@ -81,12 +78,6 @@ function UtforskPage() {
         navigate({ to: '/utforsk', search: { q: trimmed || undefined } })
     }, [navigate])
 
-    const handleKeyDown = useCallback((e: KeyboardEvent) => {
-        if (e.key === 'Enter') {
-            handleSearch(inputRef.current?.value || '')
-        }
-    }, [handleSearch])
-
     const handleSelectCompany = useCallback((orgnr: string) => {
         navigate({ to: '/bedrift/$orgnr', params: { orgnr } })
     }, [navigate])
@@ -128,18 +119,11 @@ function UtforskPage() {
                             Søk, filtrer og analyser norske bedrifter.
                         </p>
 
-                        <div className="relative">
-                            <input
-                                type="text"
-                                value={searchQueryInStore}
-                                ref={inputRef}
-                                onKeyDown={handleKeyDown}
-                                onChange={(e) => setSearchQuery(e.target.value)}
-                                placeholder="Søk etter bedrift..."
-                                className="w-full px-4 py-2 pl-10 bg-white border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 shadow-sm"
-                            />
-                            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
-                        </div>
+                        <ExplorerSearchBar
+                            initialValue={q || ''}
+                            onSearch={handleSearch}
+                            isLoading={companiesLoading}
+                        />
                     </div>
 
                     <div className="shrink-0">

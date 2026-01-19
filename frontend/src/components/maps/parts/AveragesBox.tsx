@@ -5,16 +5,21 @@ interface AveragesBoxProps {
     averages?: GeoAverages;
     level: GeoLevel;
     currentValue?: { name: string; value: number };
+    isSidebar?: boolean;
 }
 
-export function AveragesBox({ averages, level, currentValue }: AveragesBoxProps) {
+export function AveragesBox({ averages, level, currentValue, isSidebar = false }: AveragesBoxProps) {
     if (!averages) return null;
 
     const formatNum = (n: number) => formatNumber(n);
 
+    const containerClasses = isSidebar
+        ? "bg-white rounded-lg p-3 w-full border border-slate-100"
+        : "absolute bottom-4 right-4 bg-white/95 backdrop-blur-sm rounded-lg shadow-lg p-3 z-1000 min-w-[180px]";
+
     return (
-        <div className="absolute bottom-4 right-4 bg-white/95 backdrop-blur-sm rounded-lg shadow-lg p-3 z-1000 min-w-[180px]">
-            <div className="text-xs font-medium text-gray-700 mb-2">
+        <div className={containerClasses}>
+            <div className="text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-2">
                 {level === 'county' ? 'Fylkessammenligning' : 'Kommunesammenligning'}
             </div>
 

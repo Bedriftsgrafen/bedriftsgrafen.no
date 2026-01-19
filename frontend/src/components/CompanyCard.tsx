@@ -68,6 +68,13 @@ export const CompanyCard = memo(function CompanyCard({ company, onClick }: Compa
                 </p>
             )}
 
+            {/* Purpose snippet if available - Important for search discovery */}
+            {company.vedtektsfestet_formaal && (
+                <p className="text-[11px] text-slate-500 line-clamp-2 mb-3 leading-relaxed italic border-l-2 border-slate-100 pl-2">
+                    {company.vedtektsfestet_formaal}
+                </p>
+            )}
+
             {/* Location */}
             {kommune && (
                 <div className="flex items-center gap-1 text-xs text-gray-500 mb-3">

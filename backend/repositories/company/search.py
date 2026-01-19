@@ -6,7 +6,7 @@ Contains search_by_name and related search methods.
 import asyncio
 import logging
 
-from sqlalchemy import func, or_, select
+from sqlalchemy import case, func, or_, select
 from sqlalchemy.exc import DBAPIError
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -70,8 +70,18 @@ class SearchMixin:
             select(models.Company)
             .options(*LIST_VIEW_OPTIONS)
             .filter(models.Company.search_vector.op("@@")(search_query))
-            .limit(limit)
         )
+
+        # Apply relevance ordering (matching logic from QueryMixin._get_all_optimized)
+        query = query.order_by(
+            case(
+                (func.lower(models.Company.navn) == name.lower(), 0),
+                (func.lower(models.Company.navn).like(f"{name.lower()}%"), 1),
+                else_=2,
+            ),
+            func.ts_rank(models.Company.search_vector, search_query).desc(),
+            models.Company.navn.asc(),
+        ).limit(limit)
 
         try:
             result = await self.db.execute(query)

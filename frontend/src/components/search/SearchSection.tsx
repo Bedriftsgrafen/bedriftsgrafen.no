@@ -39,7 +39,7 @@ export function SearchSection({ value, onChange, onSearch }: SearchSectionProps)
         <div className="relative max-w-2xl mx-auto">
           <input
             type="text"
-            placeholder="Søk etter bedrift, org.nr..."
+            placeholder="Søk etter bedrift, org.nr, bransje eller formål..."
             value={value}
             onChange={(e) => onChange(e.target.value)}
             onKeyDown={handleKeyDown}
