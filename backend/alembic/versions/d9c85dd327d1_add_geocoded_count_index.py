@@ -5,14 +5,15 @@ Revises: e23a88891398
 Create Date: 2026-01-19 08:13:46.172018
 
 """
+
 from typing import Sequence, Union
 
 from alembic import op
 
 
 # revision identifiers, used by Alembic.
-revision: str = 'd9c85dd327d1'
-down_revision: Union[str, Sequence[str], None] = 'e23a88891398'
+revision: str = "d9c85dd327d1"
+down_revision: Union[str, Sequence[str], None] = "e23a88891398"
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
 

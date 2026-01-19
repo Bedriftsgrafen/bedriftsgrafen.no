@@ -41,24 +41,25 @@ import models  # noqa: E402
 
 for table in models.Base.metadata.tables.values():
     table.indexes = set()
-    
+
 # Register missing functions for SQLite
 from sqlalchemy import event  # noqa: E402
 from sqlalchemy.engine import Engine  # noqa: E402
+
 
 @event.listens_for(Engine, "connect")
 def register_sqlite_functions(dbapi_connection, connection_record):
     # aiosqlite/sqlite3 use different ways to register functions depending on the driver
     # but for aiosqlite we usually need to access the underlying sync connection if possible
-    # or rely on the sync event if we were using sync driver. 
+    # or rely on the sync event if we were using sync driver.
     # For aiosqlite specifically, we might need a different approach, but let's try this first.
     def left(s, n):
         return s[:n] if s else None
-    
+
     try:
         dbapi_connection.create_function("left", 2, left)
     except Exception:
-        pass # Fallback if driver doesn't support it directly here
+        pass  # Fallback if driver doesn't support it directly here
 
 
 @pytest.fixture

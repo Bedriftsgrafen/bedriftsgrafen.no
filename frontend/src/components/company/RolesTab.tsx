@@ -2,6 +2,8 @@ import React, { useState, useMemo, useCallback, useEffect } from 'react'
 import { Users, Briefcase, Building2, AlertCircle, Loader, RefreshCw, Crown, User, UserCheck, ChevronDown, Calendar, ExternalLink } from 'lucide-react'
 import { useRolesQuery, type Role } from '../../hooks/queries/useRolesQuery'
 import { Link } from '@tanstack/react-router'
+import { AffiliateBanner } from '../ads/AffiliateBanner'
+import { AFFILIATIONS } from '../../constants/affiliations'
 
 interface RolesTabProps {
     orgnr: string
@@ -54,16 +56,13 @@ function groupRoles(roles: Role[]): { groups: [string, Role[]][]; activeCount: n
 
     // Sort groups by priority using ROLE_PRIORITY constant
     const sorted: [string, Role[]][] = []
-
     for (const key of ROLE_PRIORITY) {
         if (groups[key]) sorted.push([key, groups[key]])
     }
-
     // Add any remaining groups not in priority list
     for (const [key, value] of Object.entries(groups)) {
         if (!ROLE_PRIORITY.includes(key)) sorted.push([key, value])
     }
-
     return { groups: sorted, activeCount }
 }
 
@@ -72,7 +71,6 @@ function RoleCard({ role }: { role: Role }) {
     const config = getRoleConfig(role.type_kode)
     const Icon = config.icon
 
-    // Build person profile URL params
     const personProfileParams = role.person_navn ? {
         name: role.person_navn,
         birthdate: role.foedselsdato || 'unknown'
@@ -136,10 +134,6 @@ function RoleCard({ role }: { role: Role }) {
                             <span>Rekkefølge: {role.rekkefoelge}</span>
                         </div>
                     )}
-                    {!role.foedselsdato && !role.enhet_orgnr && role.rekkefoelge === null && !personProfileParams && (
-                        <div className="text-gray-400 italic">Ingen tilleggsinfo tilgjengelig</div>
-                    )}
-
                     {/* Link to person profile */}
                     {personProfileParams && (
                         <Link
@@ -181,7 +175,6 @@ export function RolesTab({ orgnr }: RolesTabProps) {
     const [fetchError, setFetchError] = useState<string | null>(null)
     const { data: roles, isLoading, isError, error, fetchFromBrreg } = useRolesQuery(orgnr)
 
-    // Cooldown timer
     useEffect(() => {
         if (cooldown) {
             const timer = setTimeout(() => setCooldown(false), 15000)
@@ -203,7 +196,6 @@ export function RolesTab({ orgnr }: RolesTabProps) {
         }
     }, [fetchFromBrreg, cooldown])
 
-    // Memoize grouped roles - must be before early returns (hooks rules)
     const { groups: groupedRoles, activeCount } = useMemo(
         () => groupRoles(roles || []),
         [roles]
@@ -234,7 +226,7 @@ export function RolesTab({ orgnr }: RolesTabProps) {
                 <button
                     onClick={handleFetchFromBrreg}
                     disabled={isBusy}
-                    className="ml-4 px-3 py-1 bg-red-600 text-white rounded text-sm hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors shrink-0 whitespace-nowrap inline-flex items-center gap-2"
+                    className="px-3 py-1 bg-red-600 text-white rounded text-sm hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors shrink-0 whitespace-nowrap inline-flex items-center gap-2"
                 >
                     {isBusy && <Loader className="h-3 w-3 animate-spin" />}
                     {isBusy ? 'Henter...' : 'Prøv igjen'}
@@ -296,6 +288,17 @@ export function RolesTab({ orgnr }: RolesTabProps) {
                     />
                 )
             })}
+
+            {/* Affiliate Banner - contextual for roles/accounting */}
+            <div className="mt-8 pt-6 border-t border-gray-100">
+                <AffiliateBanner
+                    bannerId={`roles_${AFFILIATIONS.TJENESTETORGET_ACCOUNTANT.id}`}
+                    placement="roles_tab"
+                    {...AFFILIATIONS.TJENESTETORGET_ACCOUNTANT}
+                    title="Behov for ny regnskapsfører?"
+                    description="Sammenlign tilbud fra flere regnskapsførere – enkelt og helt uforpliktende."
+                />
+            </div>
         </div>
     )
 }

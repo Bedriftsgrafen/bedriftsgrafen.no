@@ -51,12 +51,15 @@ class CompanyFilterDTO(BaseModel):
     name: Annotated[str | None, Field(description="Search by company name or organization number")] = None
 
     # Basic filters
-    organisasjonsform: Annotated[list[str] | None, Field(description="Filter by organization forms (AS, ASA, etc.)")] = None
+    organisasjonsform: Annotated[
+        list[str] | None, Field(description="Filter by organization forms (AS, ASA, etc.)")
+    ] = None
     naeringskode: Annotated[str | None, Field(description="Filter by industry code (NACE)")] = None
     municipality: Annotated[str | None, Field(description="Filter by municipality (kommune) name")] = None
-    municipality_code: Annotated[str | None, Field(
-        min_length=4, max_length=4, pattern=r"^\d{4}$", description="Filter by 4-digit municipality code"
-    )] = None
+    municipality_code: Annotated[
+        str | None,
+        Field(min_length=4, max_length=4, pattern=r"^\d{4}$", description="Filter by 4-digit municipality code"),
+    ] = None
     county: Annotated[str | None, Field(description="Filter by county (fylke) - uses 2-digit code prefix")] = None
 
     # Employee range
@@ -85,16 +88,21 @@ class CompanyFilterDTO(BaseModel):
     equity_ratio_range: Annotated[RangeFilter | None, Field(description="Equity ratio range filter")] = None
 
     # Exclusion filters
-    exclude_org_form: Annotated[list[str] | None, Field(
-        description="Exclude specific organization forms (e.g., KBO for konkursbo)"
-    )] = None
+    exclude_org_form: Annotated[
+        list[str] | None, Field(description="Exclude specific organization forms (e.g., KBO for konkursbo)")
+    ] = None
 
     # Sorting
-    sort_by: Annotated[str, Field(
-        pattern="^(navn|orgnr|organisasjonsform|antall_ansatte|stiftelsesdato|konkursdato|naeringskode|revenue|profit|operating_profit|operating_margin|kommune)$",
-        description="Field to sort by",
-    )] = "navn"
-    sort_order: Annotated[str, Field(pattern="^(asc|desc)$", description="Sort order (ascending or descending)")] = "asc"
+    sort_by: Annotated[
+        str,
+        Field(
+            pattern="^(navn|orgnr|organisasjonsform|antall_ansatte|stiftelsesdato|konkursdato|naeringskode|revenue|profit|operating_profit|operating_margin|kommune)$",
+            description="Field to sort by",
+        ),
+    ] = "navn"
+    sort_order: Annotated[str, Field(pattern="^(asc|desc)$", description="Sort order (ascending or descending)")] = (
+        "asc"
+    )
 
     @model_validator(mode="after")
     def validate_employee_range(self):

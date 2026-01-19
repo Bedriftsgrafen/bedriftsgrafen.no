@@ -382,7 +382,7 @@ class CompanyService:
             try:
                 # Group tasks: geocoded_count, new_30d, total_roles, avg_age
                 results = await asyncio.gather(*renewal_tasks, return_exceptions=True)
-                
+
                 # Helper to safely extract results or fall back to default
                 def get_val(idx: int, default_val: Any) -> Any:
                     val = results[idx]

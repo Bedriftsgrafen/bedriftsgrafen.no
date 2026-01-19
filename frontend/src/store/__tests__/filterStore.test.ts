@@ -79,10 +79,12 @@ describe('filterStore', () => {
             expect(useFilterStore.getState().liquidityRatioMax).toBe(2.0)
         })
 
-        it('setMunicipality and setCounty update location', () => {
+        it('setMunicipality and setCounty update location and clear each other', () => {
             useFilterStore.getState().setMunicipality('Oslo', '0301')
-            useFilterStore.getState().setCounty('Oslo', '03')
             expect(useFilterStore.getState().municipality).toBe('Oslo')
+
+            useFilterStore.getState().setCounty('Oslo', '03')
+            expect(useFilterStore.getState().municipality).toBe('') // Cleared
             expect(useFilterStore.getState().county).toBe('Oslo')
         })
 
@@ -183,9 +185,8 @@ describe('filterStore', () => {
 
         it('counts locations and dates correctly', () => {
             const store = useFilterStore.getState()
-            store.setMunicipality('Oslo', '0301')        // 1
-            store.setCounty('Oslo', '03')               // 2
-            store.setFoundedRange(new Date(), null) // 3
+            store.setSearchQuery('test')                // 1
+            store.setCounty('Oslo', '03')               // 3 (county name + code, clears municipality)
             expect(store.getActiveFilterCount()).toBe(3)
         })
     })

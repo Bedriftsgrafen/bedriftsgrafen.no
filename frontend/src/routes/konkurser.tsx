@@ -14,6 +14,8 @@ import { TrendChart } from '../components/dashboard/TrendChart'
 import { formatNumber, formatCurrency } from '../utils/formatters'
 import { getOneYearAgo } from '../utils/dates'
 import { API_BASE } from '../utils/apiClient'
+import { AffiliateBanner } from '../components/ads/AffiliateBanner'
+import { AFFILIATIONS } from '../constants/affiliations'
 
 export const Route = createFileRoute('/konkurser')({
     component: KonkurserPage,
@@ -117,6 +119,17 @@ function KonkurserPage() {
                     label="Periode"
                     value="Siste 12 mnd"
                     color="blue"
+                />
+            </div>
+
+            {/* Affiliate Banner - contextual for users browsing bankruptcies (potential fresh start) */}
+            <div className="mb-6">
+                <AffiliateBanner
+                    bannerId={`konkurser_${AFFILIATIONS.TJENESTETORGET_ACCOUNTANT.id}`}
+                    placement="konkurser_page"
+                    {...AFFILIATIONS.TJENESTETORGET_ACCOUNTANT}
+                    title="Behov for ny start?"
+                    description="Få en god start på ditt neste prosjekt. Sammenlign regnskapsførere som hjelper deg fra dag én."
                 />
             </div>
 

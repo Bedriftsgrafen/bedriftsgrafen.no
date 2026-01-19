@@ -30,26 +30,22 @@ describe('StatisticsCards', () => {
         mockUseStatsQuery.mockReturnValue({
             data: {
                 total_companies: 1000,
-                total_accounting_reports: 444,
-                total_revenue: 10000000,
-                profitable_percentage: 60.5,
+                total_roles: 6400000,
+                geocoded_count: 850,
+                total_ebitda: 5000000,
+                new_companies_30d: 120,
+                solid_company_percentage: 65.4,
             },
             isLoading: false
         })
 
-        // Smart mock for company counts
-        mockUseCompanyCountQuery.mockImplementation((args) => {
-            if (args?.is_bankrupt) return { data: 111 } // Bankruptcies
-            if (args?.organisasjonsform) return { data: 222 } // New companies
-            return { data: 333 } // Total count
-        })
+        mockUseCompanyCountQuery.mockReturnValue({ data: 1000 })
     })
 
     it('renders loading skeletons when loading', () => {
         mockUseStatsQuery.mockReturnValue({ isLoading: true, data: null })
         render(<StatisticsCards />)
 
-        // Skeletons usually have animate-pulse class
         const skeletons = screen.getAllByText('', { selector: '.animate-pulse' })
         expect(skeletons.length).toBeGreaterThan(0)
     })
@@ -57,46 +53,56 @@ describe('StatisticsCards', () => {
     it('renders statistics correctly', () => {
         render(<StatisticsCards />)
 
-        expect(screen.getByText('Totalt bedrifter')).toBeInTheDocument()
-        expect(screen.queryAllByText('333').length).toBeGreaterThan(0)
+        expect(screen.getByText('Bedriftspopulasjonen')).toBeInTheDocument()
+        expect(screen.getByText('1.0 k')).toBeInTheDocument()
 
-        expect(screen.getByText('Nye siste år')).toBeInTheDocument()
-        expect(screen.queryAllByText('222').length).toBeGreaterThan(0)
+        expect(screen.getByText('Næringslivets Roller')).toBeInTheDocument()
+        expect(screen.getByText('6.4 mill.')).toBeInTheDocument()
 
-        expect(screen.getByText('Konkurser siste år')).toBeInTheDocument()
-        expect(screen.queryAllByText('111').length).toBeGreaterThan(0)
+        expect(screen.getByText('Geografisk Innsikt')).toBeInTheDocument()
+        expect(screen.getByText('85.0%')).toBeInTheDocument()
 
-        expect(screen.getByText('Regnskapsrapporter')).toBeInTheDocument()
-        expect(screen.queryAllByText('444').length).toBeGreaterThan(0)
+        expect(screen.getByText('Verdiskaping')).toBeInTheDocument()
+        expect(screen.getByText('5.0 mill. kr')).toBeInTheDocument()
 
-        expect(screen.getByText('Samlet omsetning')).toBeInTheDocument()
-        expect(screen.queryAllByText('10.0 mill. kr').length).toBeGreaterThan(0)
+        expect(screen.getByText('Næringslivets Puls')).toBeInTheDocument()
+        expect(screen.getByText('120')).toBeInTheDocument()
 
-        expect(screen.getByText('Andel lønnsomme')).toBeInTheDocument()
-        expect(screen.queryAllByText('60.5%').length).toBeGreaterThan(0)
+        expect(screen.getByText('Finansiell Robusthet')).toBeInTheDocument()
+        expect(screen.getByText('65.4%')).toBeInTheDocument()
     })
 
     it('handles navigation on card click', () => {
         render(<StatisticsCards />)
 
-        // Find card with href (e.g., Regnskapsrapporter -> /bransjer)
-        const card = screen.getByText('Regnskapsrapporter').closest('button')
+        // Find card with href (e.g., Verdiskaping -> /bransjer)
+        const card = screen.getByText('Verdiskaping').closest('button')
         fireEvent.click(card!)
 
         expect(mockNavigate).toHaveBeenCalledWith({ to: '/bransjer' })
     })
 
-    it('handles scroll action on card click', () => {
+    it('handles scroll action or click behavior on special cards', () => {
         render(<StatisticsCards />)
 
-        // Find card with onClick (Totalt bedrifter)
-        const card = screen.getByText('Totalt bedrifter').closest('button')
+        // Find card with onClick (Bedriftspopulasjonen)
+        const card = screen.getByText('Bedriftspopulasjonen').closest('button')
+
+        // Mock the elements that focusSearch tries to find
+        const mockBtn = document.createElement('button')
+        mockBtn.id = 'search-mode-company'
+        document.body.appendChild(mockBtn)
+
+        const mockInput = document.createElement('input')
+        mockInput.id = 'home-search-input'
+        document.body.appendChild(mockInput)
+
         fireEvent.click(card!)
 
-        // Since we mocked scrollIntoView, we check if getElementById was called/used?
-        // But the component uses document.getElementById('company-table')?.scrollIntoView()
-        // This is hard to assert without spying on document.getElementById or verify scroll.
-        // We can check that navigate was NOT called.
+        // Should NOT navigate
         expect(mockNavigate).not.toHaveBeenCalled()
+
+        document.body.removeChild(mockBtn)
+        document.body.removeChild(mockInput)
     })
 })

@@ -1,12 +1,11 @@
-import { Building2, MapPin, Users, Calendar, Globe, Briefcase, ChevronRight, AlertTriangle, ExternalLink, Calculator } from 'lucide-react'
+import { Building2, MapPin, Users, Calendar, Globe, Briefcase, ChevronRight, AlertTriangle, ExternalLink } from 'lucide-react'
 import { useMemo } from 'react'
 import type { CompanyWithAccounting, Naeringskode } from '../../types'
 import { formatDate } from '../../utils/formatters'
 import { getOrganizationFormLabel } from '../../utils/organizationForms'
 import { LocationMap } from '../common/LocationMap'
 import { AffiliateBanner } from '../ads/AffiliateBanner'
-import { useABTest } from '../../utils/abTesting'
-import { CONTACT_EMAIL } from '../../constants/contact'
+import { AFFILIATIONS } from '../../constants/affiliations'
 
 interface OverviewTabProps {
   company: CompanyWithAccounting
@@ -14,7 +13,6 @@ interface OverviewTabProps {
 }
 
 export function OverviewTab({ company, onOpenIndustry }: OverviewTabProps) {
-  const abTestVariant = useABTest('overview_banner_copy', ['A', 'B'])
 
   const showAffiliateBanner = useMemo(() => {
     if (!company.stiftelsesdato) return false
@@ -229,17 +227,9 @@ export function OverviewTab({ company, onOpenIndustry }: OverviewTabProps) {
       {/* Affiliate Banner - shown for newer companies */}
       {showAffiliateBanner && (
         <AffiliateBanner
-          bannerId={`accounting_overview_${abTestVariant}`}
+          bannerId={`overview_${AFFILIATIONS.TJENESTETORGET_ACCOUNTANT.id}`}
           placement="overview_tab"
-          title={abTestVariant === 'A' ? "Tilbyr dere regnskapstjenester?" : "Vil du hjelpe gründere?"}
-          description={abTestVariant === 'A'
-            ? `Nå ut til nye bedrifter i etableringsfasen. Bli vår samarbeidspartner. Kontakt ${CONTACT_EMAIL}.`
-            : `Denne annonseplassen er reservert for regnskapsførere. Kontakt oss på ${CONTACT_EMAIL} for avtale.`}
-          buttonText="Send e-post"
-          link={`mailto:${CONTACT_EMAIL}`}
-          icon={Calculator}
-          variant="accounting"
-          isPlaceholder
+          {...AFFILIATIONS.TJENESTETORGET_ACCOUNTANT}
         />
       )}
     </div>

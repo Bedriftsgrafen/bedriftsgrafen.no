@@ -8,9 +8,9 @@ describe('Sami Name Mapping', () => {
     })
 
     it('formatMunicipalityName returns Norwegian name for Sami input', () => {
-        // Should map Hábmer -> Hamarøy
-        expect(formatMunicipalityName('HÁBMER')).toBe('Hamarøy')
-        expect(formatMunicipalityName('habmer')).toBe('Hamarøy')
+        // Should map Hábmer -> Hamarøy (Hábmer)
+        expect(formatMunicipalityName('HÁBMER')).toBe('Hamarøy (Hábmer)')
+        expect(formatMunicipalityName('habmer')).toBe('Hamarøy (Habmer)')
     })
 
     it('formatMunicipalityName handles normal names correctly', () => {

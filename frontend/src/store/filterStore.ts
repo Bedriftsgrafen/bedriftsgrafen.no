@@ -193,6 +193,7 @@ export const useFilterStore = create<FilterState>((set, get) => ({
     if (state.municipality) count++
     if (state.municipalityCode) count++
     if (state.county) count++
+    if (state.countyCode) count++
     if (state.foundedFrom !== null || state.foundedTo !== null) count++
     if (state.bankruptFrom !== null || state.bankruptTo !== null) count++
     if (state.isBankrupt !== null) count++

@@ -21,6 +21,7 @@ interface AffiliateBannerProps {
     /** Set to '#' for placeholder banners */
     link: string
     icon?: LucideIcon
+    logo?: string
     variant: BannerVariant
     /** If true, shows as a placeholder banner */
     isPlaceholder?: boolean
@@ -72,6 +73,7 @@ export const AffiliateBanner = memo(function AffiliateBanner({
     buttonText,
     link,
     icon: Icon = Lightbulb,
+    logo,
     variant,
     isPlaceholder = false,
 }: AffiliateBannerProps) {
@@ -99,11 +101,19 @@ export const AffiliateBanner = memo(function AffiliateBanner({
             </span>
 
             <div className="flex items-start gap-4">
-                {/* Icon */}
+                {/* Icon or Logo */}
                 <div
-                    className={`shrink-0 p-2 rounded-lg ${styles.iconBg}`}
+                    className={`shrink-0 flex items-center justify-center overflow-hidden rounded-lg ${styles.iconBg} ${logo ? 'w-12 h-12 p-0' : 'p-2'}`}
                 >
-                    <Icon className={`h-5 w-5 ${styles.iconColor}`} />
+                    {logo ? (
+                        <img
+                            src={logo}
+                            alt=""
+                            className="w-full h-full object-contain"
+                        />
+                    ) : (
+                        <Icon className={`h-5 w-5 ${styles.iconColor}`} />
+                    )}
                 </div>
 
                 {/* Content */}

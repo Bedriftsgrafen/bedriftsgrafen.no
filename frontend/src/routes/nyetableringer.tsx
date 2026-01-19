@@ -1,7 +1,7 @@
 import { createFileRoute } from '@tanstack/react-router'
 import { useState, useCallback } from 'react'
 import { useQuery } from '@tanstack/react-query'
-import { Sparkles, BarChart3, List, Map, Building2, TrendingUp, Users, Calendar, Calculator } from 'lucide-react'
+import { Sparkles, BarChart3, List, Map, Building2, TrendingUp, Users, Calendar } from 'lucide-react'
 import { SEOHead } from '../components/layout'
 import { useDocumentTitle } from '../hooks/useDocumentTitle'
 import { NewCompaniesList } from '../components/newcompanies'
@@ -15,7 +15,7 @@ import { formatNumber, formatCurrency } from '../utils/formatters'
 import { getOneYearAgo } from '../utils/dates'
 import { API_BASE } from '../utils/apiClient'
 import { AffiliateBanner } from '../components/ads/AffiliateBanner'
-import { CONTACT_EMAIL } from '../constants/contact'
+import { AFFILIATIONS } from '../constants/affiliations'
 
 export const Route = createFileRoute('/nyetableringer')({
     component: NyetableringerPage,
@@ -122,18 +122,12 @@ function NyetableringerPage() {
                 />
             </div>
 
-            {/* Affiliate Banner - contextual tip for new company founders */}
+            {/* Affiliate Banner - official Tjenestetorget affiliation for new companies */}
             <div className="mb-6">
                 <AffiliateBanner
-                    bannerId="accounting_nyetableringer"
+                    bannerId={`nyetableringer_${AFFILIATIONS.TJENESTETORGET_ACCOUNTANT.id}`}
                     placement="nyetableringer_page"
-                    title="Partnerskap her?"
-                    description="Nå ut til beslutningstakere i norske bedrifter. Kontakt oss for annonsering og samarbeid."
-                    buttonText="Ta kontakt"
-                    link={`mailto:${CONTACT_EMAIL}`}
-                    icon={Calculator}
-                    variant="accounting"
-                    isPlaceholder
+                    {...AFFILIATIONS.TJENESTETORGET_ACCOUNTANT}
                 />
             </div>
 

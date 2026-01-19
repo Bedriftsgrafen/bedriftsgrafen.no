@@ -1,5 +1,5 @@
 import React, { useMemo, useEffect } from 'react'
-import { TrendingUp, Database, Calculator, Wallet } from 'lucide-react'
+import { TrendingUp, Database, Wallet } from 'lucide-react'
 import type { CompanyWithAccounting, AccountingWithKpis } from '../../types'
 import { formatDate } from '../../utils/formatters'
 import { deduplicateAccountingsByYear } from '../../utils/accountingHelpers'
@@ -11,6 +11,7 @@ import { EmptyState } from '../EmptyState'
 import { YearSelector } from './YearSelector'
 import { AffiliateBanner } from '../ads/AffiliateBanner'
 import { CONTACT_EMAIL } from '../../constants/contact'
+import { AFFILIATIONS } from '../../constants/affiliations'
 
 // Constants
 const REVENUE_THRESHOLD_HIGH = 10_000_000 // 10M NOK
@@ -38,21 +39,20 @@ function getAdConfig(company: CompanyWithAccounting) {
     return {
       id: "premium_banking_financials",
       title: "Tilbyr dere Private Banking?",
-      desc: `Nå ut til bedrifter med høy omsetning.Denne plassen er ledig for samarbeid.Kontakt oss på ${CONTACT_EMAIL}.`,
-      btn: "Send e-post",
+      description: `Nå ut til bedrifter med høy omsetning. Denne plassen er ledig for samarbeid. Kontakt oss på ${CONTACT_EMAIL}.`,
+      buttonText: "Send e-post",
       icon: Wallet,
-      variant: "banking" as const
+      variant: "banking" as const,
+      link: `mailto:${CONTACT_EMAIL}`
     }
   }
 
+  // Priority: Official Tjenestetorget affiliation for companies with few accounting records
   if (company.regnskap.length < 2) {
+    const aff = AFFILIATIONS.TJENESTETORGET_ACCOUNTANT
     return {
-      id: "accounting_financials",
-      title: "Synliggjør din bedrift her?",
-      desc: "Nå ut til beslutningstakere i norske bedrifter. Kontakt oss for annonsering og samarbeid.",
-      btn: "Ta kontakt",
-      icon: Calculator,
-      variant: "accounting" as const
+      ...aff,
+      id: `financials_${aff.id}`
     }
   }
 
@@ -72,18 +72,13 @@ export const FinancialsTab = React.memo(function FinancialsTab({
 }: FinancialsTabProps) {
 
   // Filter accounting records to only show years with actual financial data
-  // AND deduplicate by year (prefer highest revenue) to avoid UI glitches
   const validAccountings = useMemo(() => {
     const rawFiltered = company.regnskap.filter(acc =>
       acc.salgsinntekter != null ||
       acc.aarsresultat != null ||
       acc.sum_eiendeler != null
     )
-
-    // Use shared deduplication utility
     const deduplicated = deduplicateAccountingsByYear(rawFiltered)
-
-    // Sort descending for display
     return deduplicated.sort((a, b) => b.aar - a.aar)
   }, [company.regnskap])
 
@@ -92,12 +87,10 @@ export const FinancialsTab = React.memo(function FinancialsTab({
   // Auto-select latest year if none selected
   useEffect(() => {
     if (selectedYear === null && validAccountings.length > 0) {
-      // validAccountings is sorted descending, so [0] is latest
       onSelectYear(validAccountings[0].aar)
     }
   }, [selectedYear, validAccountings, onSelectYear])
 
-  // No accounting data - show import option
   if (validAccountings.length === 0) {
     return (
       <section className="mb-6" aria-label="Manglende regnskapsdata">
@@ -116,6 +109,23 @@ export const FinancialsTab = React.memo(function FinancialsTab({
 
   return (
     <div className="space-y-8 animate-fade-in pb-8">
+      {/* Smart Affiliate Targeting - Moved to top for better visibility */}
+      {adConfig && (
+        <div className="mb-2">
+          <AffiliateBanner
+            bannerId={adConfig.id}
+            placement="financials_tab"
+            title={adConfig.title}
+            description={adConfig.description}
+            buttonText={adConfig.buttonText}
+            link={adConfig.link}
+            icon={adConfig.icon}
+            variant={adConfig.variant}
+            isPlaceholder={adConfig.variant === 'banking'}
+          />
+        </div>
+      )}
+
       {/* Year Selector */}
       <section aria-label="Velg regnskapsår">
         <YearSelector
@@ -164,10 +174,6 @@ export const FinancialsTab = React.memo(function FinancialsTab({
             ) : kpiData ? (
               <KpiDashboard data={kpiData} />
             ) : (
-              // Show skeleton if we have a selected year but no data yet (likely loading)
-              // Or if data is truly missing, EmptyState might be better, but kpiData is usually fetched if year exists.
-              // Assuming null kpiData with !loading !error means fetching hasn't started or returned nothing.
-              // Given auto-select effect, this state should be transient.
               <div className="h-40 flex items-center justify-center text-gray-400 border border-dashed rounded-lg">
                 Laster nøkkeltall...
               </div>
@@ -182,30 +188,11 @@ export const FinancialsTab = React.memo(function FinancialsTab({
           <h3 id="charts-heading" className="text-xl font-semibold text-gray-900 mb-4">
             Historisk Utvikling
           </h3>
-          {/* Removed fixed h-[300px] to allow content to grow naturally */}
           <div className="min-h-[300px]">
             {kpiLoading ? <ChartSkeleton height={300} /> : <CompanyCharts company={company} />}
           </div>
         </section>
       )}
-
-      {/* Smart Affiliate Targeting */}
-      {adConfig && (
-        <div className="mt-8 border-t pt-8">
-          <AffiliateBanner
-            bannerId={adConfig.id}
-            placement="financials_tab"
-            title={adConfig.title}
-            description={adConfig.desc}
-            buttonText={adConfig.btn}
-            link={`mailto:${CONTACT_EMAIL} `}
-            icon={adConfig.icon}
-            variant={adConfig.variant}
-            isPlaceholder
-          />
-        </div>
-      )}
     </div>
   )
 })
-
