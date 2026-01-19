@@ -24,7 +24,7 @@ export const RecentSearches = memo(function RecentSearches({ onSelectSearch }: R
         </div>
         <button
           onClick={clearRecentSearches}
-          className="text-sm px-3 py-1.5 bg-red-50 text-red-600 hover:bg-red-100 hover:text-red-700 border border-red-200 rounded-lg transition-colors font-medium"
+          className="text-sm px-3 py-1.5 bg-red-50 text-red-700 hover:bg-red-100 hover:text-red-800 border border-red-200 rounded-lg transition-colors font-medium"
         >
           Tøm
         </button>

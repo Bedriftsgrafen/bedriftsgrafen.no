@@ -16,11 +16,11 @@ interface SummaryCardProps {
 }
 
 const COLOR_CLASSES: Record<CardColor, string> = {
-    blue: 'bg-blue-50 text-blue-600',
-    red: 'bg-red-50 text-red-600',
-    orange: 'bg-orange-50 text-orange-600',
-    green: 'bg-green-50 text-green-600',
-    purple: 'bg-purple-50 text-purple-600',
+    blue: 'bg-blue-50 text-blue-700',
+    red: 'bg-red-50 text-red-700',
+    orange: 'bg-orange-50 text-orange-800',
+    green: 'bg-green-50 text-green-700',
+    purple: 'bg-purple-50 text-purple-700',
 }
 
 export const SummaryCard = memo(function SummaryCard({

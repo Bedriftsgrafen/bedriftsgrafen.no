@@ -1,6 +1,6 @@
 import { Search, AlertTriangle, Sparkles, BarChart3, Map, Info, Home } from 'lucide-react'
 import { Link, useRouterState } from '@tanstack/react-router'
-import logo from '../../img/bg_logo.webp'
+import logo from '../../img/bg_logo_small.webp'
 
 const navItems = [
   { to: '/', label: 'Hjem', icon: Home },

@@ -17,7 +17,7 @@ export function ErrorState({
         <div className={`bg-red-50 border border-red-200 rounded-xl p-6 text-center ${className}`}>
             <div className="flex flex-col items-center gap-2">
                 <AlertCircle className="h-8 w-8 text-red-500" />
-                <h3 className="text-red-900 font-medium">{title}</h3>
+                <div className="text-red-900 font-bold mb-1">{title}</div>
                 <p className="text-red-700 text-sm mb-2">{message}</p>
                 {onRetry && (
                     <button

@@ -371,7 +371,7 @@ export function FilterPanel() {
                     <button
                       onClick={() => setDraftFilters(prev => ({ ...prev, searchQuery: '' }))}
                       className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-300 hover:text-gray-500"
-                      aria-label="Tøm felt"
+                      aria-label="Tøm søkefelt"
                     >
                       <X className="h-4 w-4" />
                     </button>
@@ -505,7 +505,7 @@ export function FilterPanel() {
             <div className="flex gap-3">
               <button
                 onClick={resetFilters}
-                className="px-5 py-2 text-sm font-medium text-gray-600 hover:text-red-600 hover:bg-red-50 rounded-lg transition-all"
+                className="px-5 py-2 text-sm font-medium text-gray-600 hover:text-red-700 hover:bg-red-50 rounded-lg transition-all"
               >
                 Nullstill alle
               </button>

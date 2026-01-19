@@ -60,9 +60,9 @@ export function TrendChart({ metric, title, color, months = 12 }: TrendChartProp
     return (
         <div className="bg-white rounded-lg border border-gray-200 p-6 shadow-sm">
             <div className="flex items-center justify-between mb-4">
-                <h3 className="font-semibold text-gray-900">{title}</h3>
+                <h2 className="font-semibold text-gray-900">{title}</h2>
                 {trend && (
-                    <div className={`flex items-center text-sm ${trend.direction === 'up' ? 'text-red-600' : 'text-green-600'}`}>
+                    <div className={`flex items-center text-sm ${trend.direction === 'up' ? 'text-red-700' : 'text-green-700'}`}>
                         {trend.direction === 'up' ? (
                             <TrendingUp className="h-4 w-4 mr-1" />
                         ) : (

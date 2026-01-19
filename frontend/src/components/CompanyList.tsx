@@ -16,7 +16,7 @@ import { formatCurrency, formatNumber } from '../utils/formatters'
 // Extract rendering logic to pure functions
 const renderMargin = (margin: number | null | undefined) => {
     if (margin == null) return <span className="text-gray-400">—</span>
-    const colorClass = margin > 0 ? 'text-green-600' : margin < 0 ? 'text-red-600' : 'text-gray-600'
+    const colorClass = margin > 0 ? 'text-green-700' : margin < 0 ? 'text-red-700' : 'text-gray-600'
     return <span className={clsx("font-medium", colorClass)}>{margin.toFixed(1)}%</span>
 }
 
@@ -272,7 +272,7 @@ export function CompanyList({
     if (isError) {
         return (
             <div className="bg-white rounded-xl shadow-md overflow-hidden border border-gray-200 p-6 text-center">
-                <p className="text-red-600 mb-3">Kunne ikke laste bedrifter</p>
+                <p className="text-red-700 mb-3 font-medium">Kunne ikke laste bedrifter</p>
                 <Button onClick={onRetry} variant="primary">Prøv igjen</Button>
             </div>
         )

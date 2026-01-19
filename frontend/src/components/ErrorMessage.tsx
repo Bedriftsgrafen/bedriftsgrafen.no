@@ -6,14 +6,14 @@ interface Props {
   compact?: boolean
 }
 
-export function ErrorMessage({ 
-  message = 'Kunne ikke laste data', 
+export function ErrorMessage({
+  message = 'Kunne ikke laste data',
   onRetry,
-  compact = false 
+  compact = false
 }: Props) {
   if (compact) {
     return (
-      <div className="flex items-center gap-2 text-red-600 text-sm">
+      <div className="flex items-center gap-2 text-red-700 text-sm">
         <AlertCircle className="h-4 w-4" />
         <span>{message}</span>
         {onRetry && (
@@ -31,14 +31,14 @@ export function ErrorMessage({
   return (
     <div className="bg-red-50 border border-red-200 rounded-lg p-4">
       <div className="flex items-start gap-3">
-        <AlertCircle className="h-5 w-5 text-red-600 mt-0.5 shrink-0" />
+        <AlertCircle className="h-5 w-5 text-red-700 mt-0.5 shrink-0" />
         <div className="flex-1">
           <p className="text-red-900 font-medium mb-1">Feil ved lasting</p>
           <p className="text-red-700 text-sm">{message}</p>
           {onRetry && (
             <button
               onClick={onRetry}
-              className="mt-3 flex items-center gap-2 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors text-sm font-medium"
+              className="mt-3 flex items-center gap-2 px-4 py-2 bg-red-700 text-white rounded-lg hover:bg-red-800 transition-colors text-sm font-medium"
             >
               <RefreshCw className="h-4 w-4" />
               Prøv på nytt

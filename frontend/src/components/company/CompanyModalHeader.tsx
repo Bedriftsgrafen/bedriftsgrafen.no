@@ -66,7 +66,7 @@ export function CompanyModalHeader({
       <div className="flex-1">
         {isLoading ? (
           <div className="space-y-2">
-            <div className="h-8 bg-gray-200 rounded w-64 animate-pulse" />
+            <h1 className="h-8 bg-gray-200 rounded w-64 animate-pulse" />
             <div className="h-4 bg-gray-200 rounded w-48 animate-pulse" />
           </div>
         ) : isError ? (
@@ -77,10 +77,10 @@ export function CompanyModalHeader({
           />
         ) : company ? (
           <>
-            <h2 className="text-2xl font-bold text-gray-900 flex items-center gap-2">
+            <h1 className="text-2xl font-bold text-gray-900 flex items-center gap-2">
               <Building2 className="h-6 w-6 text-blue-600" />
               {company.navn}
-            </h2>
+            </h1>
             <div className="flex items-center gap-3 mt-1">
               <div className="text-sm text-gray-600 flex items-center gap-2">
                 <span>Org.nr: {company.orgnr}</span>

@@ -69,7 +69,8 @@ export default defineConfig({
       output: {
         manualChunks: {
           'vendor-react': ['react', 'react-dom'],
-          'vendor-ui': ['lucide-react', 'recharts'],
+          'vendor-ui': ['lucide-react'],
+          'vendor-charts': ['recharts'],
           'vendor-maps': ['leaflet', 'react-leaflet', 'supercluster', 'use-supercluster'],
           'vendor-utils': ['axios', '@tanstack/react-query', 'zustand', '@tanstack/react-router']
         }

@@ -76,7 +76,23 @@
         window.dataLayer = window.dataLayer || [];
         function gtag() { dataLayer.push(arguments); }
         gtag('js', new Date());
-        gtag('config', 'G-8GYNJE4Z3Q');
+
+        // Set default consent to be privacy-friendly
+        gtag('consent', 'default', {
+          'ad_storage': 'denied',
+          'ad_user_data': 'denied',
+          'ad_personalization': 'denied',
+          'analytics_storage': 'granted',
+          'wait_for_update': 500
+        });
+
+        // Initialize GA4 with restricted data features
+        gtag('config', 'G-8GYNJE4Z3Q', {
+          'anonymize_ip': true,
+          'allow_google_signals': false,
+          'allow_ad_personalization_signals': false,
+          'debug_mode': false
+        });
       };
     });
   </script>

@@ -21,7 +21,7 @@ export const KpiDashboard = memo(function KpiDashboard({ data }: Props) {
 
         <div className="bg-white p-4 rounded-lg shadow border border-gray-200">
           <div className="text-sm text-gray-500">Årsresultat</div>
-          <div className={`text-2xl font-bold tabular-nums ${(data.aarsresultat || 0) >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+          <div className={`text-2xl font-bold tabular-nums ${(data.aarsresultat || 0) >= 0 ? 'text-green-700' : 'text-red-700'}`}>
             {formatNOK(data.aarsresultat)}
           </div>
           <div className="text-xs text-gray-400 mt-1 tabular-nums">{formatLargeNumber(data.aarsresultat)}</div>

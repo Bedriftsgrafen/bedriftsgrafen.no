@@ -118,9 +118,9 @@ export const AffiliateBanner = memo(function AffiliateBanner({
 
                 {/* Content */}
                 <div className="flex-1 min-w-0">
-                    <h4 className={`font-semibold ${styles.accent} mb-1`}>
+                    <div className={`font-semibold ${styles.accent} mb-1 text-lg`}>
                         {title}
-                    </h4>
+                    </div>
                     <p className="text-sm text-gray-600 mb-3">
                         {description}
                     </p>

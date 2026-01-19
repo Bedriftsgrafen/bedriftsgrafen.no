@@ -8,7 +8,7 @@ export function Footer() {
         <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
           {/* Partners */}
           <div>
-            <h3 className="text-white font-semibold mb-3">Samarbeid</h3>
+            <h2 className="text-white font-semibold mb-3">Samarbeid</h2>
             <div className="space-y-2 text-sm">
               <a href={`mailto:${CONTACT_EMAIL}`} className="text-gray-400 hover:text-blue-400 flex items-center gap-2 transition-colors">
                 Annonsere her?
@@ -21,7 +21,7 @@ export function Footer() {
 
           {/* About */}
           <div>
-            <h3 className="text-white font-semibold mb-3">Om Bedriftsgrafen</h3>
+            <h2 className="text-white font-semibold mb-3">Om Bedriftsgrafen</h2>
             <p className="text-sm text-gray-400">
               Gratis analyse av norske bedrifter basert på åpne data fra Brønnøysundregistrene.
             </p>
@@ -38,10 +38,10 @@ export function Footer() {
 
           {/* Data Source */}
           <div>
-            <h3 className="text-white font-semibold mb-3 flex items-center gap-2">
+            <h2 className="text-white font-semibold mb-3 flex items-center gap-2">
               <Database className="h-4 w-4" />
               Datakilde
-            </h3>
+            </h2>
             <p className="text-sm text-gray-400">
               Data hentet fra{' '}
               <a
@@ -75,7 +75,7 @@ export function Footer() {
 
           {/* Contact */}
           <div>
-            <h3 className="text-white font-semibold mb-3">Kontakt</h3>
+            <h2 className="text-white font-semibold mb-3">Kontakt</h2>
             <div className="space-y-2">
               <a
                 href={`mailto:${CONTACT_EMAIL}`}

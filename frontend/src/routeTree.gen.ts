@@ -25,27 +25,29 @@ const UtforskRoute = UtforskRouteImport.update({
   id: '/utforsk',
   path: '/utforsk',
   getParentRoute: () => rootRouteImport,
-} as any)
+} as any).lazy(() => import('./routes/utforsk.lazy').then((d) => d.Route))
 const SammenlignRoute = SammenlignRouteImport.update({
   id: '/sammenlign',
   path: '/sammenlign',
   getParentRoute: () => rootRouteImport,
-} as any)
+} as any).lazy(() => import('./routes/sammenlign.lazy').then((d) => d.Route))
 const OmRoute = OmRouteImport.update({
   id: '/om',
   path: '/om',
   getParentRoute: () => rootRouteImport,
-} as any)
+} as any).lazy(() => import('./routes/om.lazy').then((d) => d.Route))
 const NyetableringerRoute = NyetableringerRouteImport.update({
   id: '/nyetableringer',
   path: '/nyetableringer',
   getParentRoute: () => rootRouteImport,
-} as any)
+} as any).lazy(() =>
+  import('./routes/nyetableringer.lazy').then((d) => d.Route),
+)
 const KonkurserRoute = KonkurserRouteImport.update({
   id: '/konkurser',
   path: '/konkurser',
   getParentRoute: () => rootRouteImport,
-} as any)
+} as any).lazy(() => import('./routes/konkurser.lazy').then((d) => d.Route))
 const KartRoute = KartRouteImport.update({
   id: '/kart',
   path: '/kart',
@@ -55,7 +57,7 @@ const BransjerRoute = BransjerRouteImport.update({
   id: '/bransjer',
   path: '/bransjer',
   getParentRoute: () => rootRouteImport,
-} as any)
+} as any).lazy(() => import('./routes/bransjer.lazy').then((d) => d.Route))
 const SplatRoute = SplatRouteImport.update({
   id: '/$',
   path: '/$',

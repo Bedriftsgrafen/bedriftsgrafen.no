@@ -12,16 +12,18 @@ module.exports = {
             // URLs to audit - key user-facing pages
             // Note: Excluding /kart (requires backend), /bedrift/:orgnr (dynamic)
             url: [
-                'http://localhost:4173/',             // Home/search
-                'http://localhost:4173/search',       // Search with results
-                'http://localhost:4173/om',           // About page
-                'http://localhost:4173/bransjer',     // Industries
-                'http://localhost:4173/konkurser',    // Bankruptcies
-                'http://localhost:4173/nyetableringer', // New establishments
-                'http://localhost:4173/utforsk',      // Explore
+                'http://localhost:5174/',             // Home/search
+                'http://localhost:5174/search',       // Search with results
+                'http://localhost:5174/om',           // About page
+                'http://localhost:5174/bransjer',     // Industries
+                'http://localhost:5174/konkurser',    // Bankruptcies
+                'http://localhost:5174/nyetableringer', // New establishments
+                'http://localhost:5174/utforsk',      // Explore
             ],
-            // Start the Vite preview server for auditing built assets
-            staticDistDir: './frontend/dist',
+            // Start Vite preview server (handles SPA routing with fallback to index.html)
+            startServerCommand: 'npm run preview --prefix frontend -- --port 5174 --strictPort',
+            startServerReadyPattern: 'Local:',
+            startServerReadyTimeout: 30000,
             numberOfRuns: 3, // Run 3 times and take median for accuracy
             settings: {
                 // Throttle to simulate real-world conditions

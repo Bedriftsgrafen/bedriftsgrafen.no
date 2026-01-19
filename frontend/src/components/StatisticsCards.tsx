@@ -67,7 +67,7 @@ export function StatisticsCards() {
       title: 'Bedriftspopulasjonen',
       value: totalCount ?? stats.total_companies,
       icon: Building2,
-      color: 'text-blue-600',
+      color: 'text-blue-700',
       bgColor: 'bg-blue-50',
       onClick: () => focusSearch('company'),
       tooltip: 'Søk i alle norske bedrifter'
@@ -85,7 +85,7 @@ export function StatisticsCards() {
       title: 'Geografisk Innsikt',
       value: ((stats.geocoded_count / stats.total_companies) * 100).toFixed(1) + '%',
       icon: MapPin,
-      color: 'text-red-600',
+      color: 'text-red-700',
       bgColor: 'bg-red-50',
       href: '/kart',
       tooltip: 'Se bedriftskartet og geografisk spredning'
@@ -94,7 +94,7 @@ export function StatisticsCards() {
       title: 'Verdiskaping',
       value: stats.total_ebitda,
       icon: TrendingUp,
-      color: 'text-emerald-600',
+      color: 'text-emerald-700',
       bgColor: 'bg-emerald-50',
       isCurrency: true,
       href: '/bransjer',
@@ -104,7 +104,7 @@ export function StatisticsCards() {
       title: 'Næringslivets Puls',
       value: stats.new_companies_30d,
       icon: Zap,
-      color: 'text-teal-600',
+      color: 'text-teal-700',
       bgColor: 'bg-teal-50',
       href: '/nyetableringer',
       tooltip: 'Nye selskaper stiftet de siste 30 dagene'
@@ -113,7 +113,7 @@ export function StatisticsCards() {
       title: 'Finansiell Robusthet',
       value: stats.solid_company_percentage.toFixed(1) + '%',
       icon: ShieldCheck,
-      color: 'text-indigo-600',
+      color: 'text-indigo-700',
       bgColor: 'bg-indigo-50',
       href: '/bransjer',
       tooltip: 'Andel selskaper med over 20% egenkapitalandel (Siste regnskapsår)'

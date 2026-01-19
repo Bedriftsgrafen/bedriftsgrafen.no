@@ -145,7 +145,7 @@ export function SavedFiltersSection({
                 )}
                 <button
                   onClick={() => onDeleteFilter(filter.id)}
-                  className="p-1 text-purple-400 hover:text-red-600 hover:bg-red-50 rounded transition-colors opacity-0 group-hover:opacity-100"
+                  className="p-1 text-purple-400 hover:text-red-700 hover:bg-red-50 rounded transition-colors opacity-0 group-hover:opacity-100"
                   title="Slett filter"
                   aria-label="Slett filter"
                 >

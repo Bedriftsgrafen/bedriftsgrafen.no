@@ -202,7 +202,7 @@ export function MapFilterBar({
                         <button
                             onClick={onClear}
                             type="button"
-                            className="mt-6 p-2 text-gray-500 hover:text-red-600 hover:bg-red-50 rounded-md border border-gray-200 transition-colors"
+                            className="mt-6 p-2 text-gray-500 hover:text-red-700 hover:bg-red-50 rounded-md border border-gray-200 transition-colors"
                             title="Nullstill"
                         >
                             <RotateCcw className="h-5 w-5" aria-hidden="true" />

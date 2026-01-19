@@ -52,6 +52,7 @@ function ToastItem({ toast, onClose }: { toast: Toast; onClose: () => void }) {
       <button
         onClick={onClose}
         className="shrink-0 p-1 hover:bg-black/5 rounded transition-colors"
+        aria-label="Lukk varsel"
       >
         <X className="h-4 w-4" />
       </button>

@@ -103,7 +103,7 @@ function HomePage() {
                         </button>
                     </div>
 
-                    <h2 className="text-2xl font-bold mb-2 flex items-center gap-2 justify-center relative z-10">
+                    <h1 className="text-2xl font-bold mb-2 flex items-center gap-2 justify-center relative z-10">
                         {searchMode === 'company' ? (
                             <>
                                 <Search className="h-6 w-6" />
@@ -115,7 +115,7 @@ function HomePage() {
                                 Finn roller til personer
                             </>
                         )}
-                    </h2>
+                    </h1>
                     <p className="text-white/90 text-center mb-6 relative z-10">
                         {searchMode === 'company'
                             ? 'Søk på bedriftsnavn, organisasjonsnummer, bransje eller sted'

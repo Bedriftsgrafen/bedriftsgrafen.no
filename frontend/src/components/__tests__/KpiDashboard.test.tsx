@@ -59,11 +59,11 @@ describe('KpiDashboard', () => {
 
         // Likviditetsgrad 200% should be green
         const liquidityValue = screen.getByText('200.0%')
-        expect(liquidityValue).toHaveClass('text-green-600')
+        expect(liquidityValue).toHaveClass('text-green-700')
 
         // EBITDA margin 11% should be green
         const ebitdaValue = screen.getByText('11.0%')
-        expect(ebitdaValue).toHaveClass('text-green-600')
+        expect(ebitdaValue).toHaveClass('text-green-700')
     })
 
     it('renders detailed financial table', () => {

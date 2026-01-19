@@ -197,49 +197,49 @@ describe('formatters', () => {
 
         describe('likviditetsgrad1', () => {
             it('returns green for values >= 2', () => {
-                expect(getKpiColor('likviditetsgrad1', 2)).toBe('text-green-600')
-                expect(getKpiColor('likviditetsgrad1', 3)).toBe('text-green-600')
+                expect(getKpiColor('likviditetsgrad1', 2)).toBe('text-green-700')
+                expect(getKpiColor('likviditetsgrad1', 3)).toBe('text-green-700')
             })
 
             it('returns yellow for values >= 1 and < 2', () => {
-                expect(getKpiColor('likviditetsgrad1', 1)).toBe('text-yellow-600')
-                expect(getKpiColor('likviditetsgrad1', 1.5)).toBe('text-yellow-600')
+                expect(getKpiColor('likviditetsgrad1', 1)).toBe('text-yellow-800')
+                expect(getKpiColor('likviditetsgrad1', 1.5)).toBe('text-yellow-800')
             })
 
             it('returns red for values < 1', () => {
-                expect(getKpiColor('likviditetsgrad1', 0.5)).toBe('text-red-600')
-                expect(getKpiColor('likviditetsgrad1', 0)).toBe('text-red-600')
+                expect(getKpiColor('likviditetsgrad1', 0.5)).toBe('text-red-700')
+                expect(getKpiColor('likviditetsgrad1', 0)).toBe('text-red-700')
             })
         })
 
         describe('ebitda_margin', () => {
             it('returns green for values >= 0.1', () => {
-                expect(getKpiColor('ebitda_margin', 0.1)).toBe('text-green-600')
-                expect(getKpiColor('ebitda_margin', 0.2)).toBe('text-green-600')
+                expect(getKpiColor('ebitda_margin', 0.1)).toBe('text-green-700')
+                expect(getKpiColor('ebitda_margin', 0.2)).toBe('text-green-700')
             })
 
             it('returns yellow for values >= 0.05 and < 0.1', () => {
-                expect(getKpiColor('ebitda_margin', 0.05)).toBe('text-yellow-600')
-                expect(getKpiColor('ebitda_margin', 0.08)).toBe('text-yellow-600')
+                expect(getKpiColor('ebitda_margin', 0.05)).toBe('text-yellow-800')
+                expect(getKpiColor('ebitda_margin', 0.08)).toBe('text-yellow-800')
             })
 
             it('returns red for values < 0.05', () => {
-                expect(getKpiColor('ebitda_margin', 0.02)).toBe('text-red-600')
-                expect(getKpiColor('ebitda_margin', -0.1)).toBe('text-red-600')
+                expect(getKpiColor('ebitda_margin', 0.02)).toBe('text-red-700')
+                expect(getKpiColor('ebitda_margin', -0.1)).toBe('text-red-700')
             })
         })
 
         describe('egenkapitalandel', () => {
             it('returns green for values >= 0.3', () => {
-                expect(getKpiColor('egenkapitalandel', 0.3)).toBe('text-green-600')
+                expect(getKpiColor('egenkapitalandel', 0.3)).toBe('text-green-700')
             })
 
             it('returns yellow for values >= 0.2 and < 0.3', () => {
-                expect(getKpiColor('egenkapitalandel', 0.2)).toBe('text-yellow-600')
+                expect(getKpiColor('egenkapitalandel', 0.2)).toBe('text-yellow-800')
             })
 
             it('returns red for values < 0.2', () => {
-                expect(getKpiColor('egenkapitalandel', 0.1)).toBe('text-red-600')
+                expect(getKpiColor('egenkapitalandel', 0.1)).toBe('text-red-700')
             })
         })
 

@@ -142,25 +142,25 @@ export function getKpiColor(key: string, value: number | null): string {
 
   switch (key) {
     case 'likviditetsgrad1':
-      if (value >= 2) return 'text-green-600'
-      if (value >= 1) return 'text-yellow-600'
-      return 'text-red-600'
+      if (value >= 2) return 'text-green-700'
+      if (value >= 1) return 'text-yellow-800'
+      return 'text-red-700'
 
     case 'ebitda_margin':
     case 'resultatgrad':
-      if (value >= 0.1) return 'text-green-600'
-      if (value >= 0.05) return 'text-yellow-600'
-      return 'text-red-600'
+      if (value >= 0.1) return 'text-green-700'
+      if (value >= 0.05) return 'text-yellow-800'
+      return 'text-red-700'
 
     case 'egenkapitalandel':
-      if (value >= 0.3) return 'text-green-600'
-      if (value >= 0.2) return 'text-yellow-600'
-      return 'text-red-600'
+      if (value >= 0.3) return 'text-green-700'
+      if (value >= 0.2) return 'text-yellow-800'
+      return 'text-red-700'
 
     case 'totalkapitalrentabilitet':
-      if (value >= 0.1) return 'text-green-600'
-      if (value >= 0.05) return 'text-yellow-600'
-      return 'text-red-600'
+      if (value >= 0.1) return 'text-green-700'
+      if (value >= 0.05) return 'text-yellow-800'
+      return 'text-red-700'
 
     default:
       return 'text-gray-700'
