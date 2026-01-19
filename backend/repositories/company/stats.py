@@ -159,8 +159,23 @@ class StatsMixin:
                 "by_organisasjonsform": [],
             }
 
-    async def count(self) -> int:
-        """Count all companies using actual COUNT."""
+    async def count(self, fast: bool = False) -> int:
+        """
+        Count all companies.
+        If fast=True, uses pg_class estimate for instant results on large tables.
+        """
+        if fast:
+            try:
+                result = await self.db.execute(
+                    text("SELECT reltuples::bigint AS estimate FROM pg_class WHERE relname='bedrifter'")
+                )
+                count = result.scalar()
+                if count and count > 0:
+                    return int(count)
+            except Exception as e:
+                logger.warning(f"Fast count estimate failed: {e}")
+
+        # Fallback to actual COUNT(*)
         result = await self.db.execute(text("SELECT COUNT(*) FROM bedrifter"))
         count = result.scalar()
         return int(count) if count else 0
@@ -172,6 +187,7 @@ class StatsMixin:
             count = result.scalar()
             return int(count) if count else 0
         except Exception:
+            # Fallback (slow)
             result = await self.db.execute(select(func.sum(models.Company.antall_ansatte)))
             count = result.scalar()
             return int(count) if count else 0
@@ -206,11 +222,14 @@ class StatsMixin:
             return int(count) if count else 0
 
     async def get_geocoded_count(self) -> int:
-        """Get count of geocoded companies."""
+        """
+        Get count of geocoded companies.
+        Optimized to hit idx_bedrifter_geocoded index.
+        """
         try:
-            result = await self.db.execute(
-                select(func.count(models.Company.orgnr)).filter(models.Company.latitude.isnot(None))
-            )
+            # Explicit SQL to ensure we hit the partial index with IS NOT NULL
+            stmt = text("SELECT COUNT(orgnr) FROM bedrifter WHERE latitude IS NOT NULL")
+            result = await self.db.execute(stmt)
             count = result.scalar()
             return int(count) if count else 0
         except Exception as e:

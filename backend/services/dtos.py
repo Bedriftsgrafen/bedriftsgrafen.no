@@ -5,6 +5,7 @@ DTOs provide type-safe input validation and encapsulation for complex service me
 
 from datetime import date
 
+from typing import Annotated
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 
@@ -43,58 +44,57 @@ class CompanyFilterDTO(BaseModel):
     """
 
     # Pagination
-    skip: int = Field(0, ge=0, description="Number of records to skip")
-    limit: int = Field(100, ge=1, le=1000, description="Maximum records to return")
+    skip: Annotated[int, Field(ge=0, description="Number of records to skip")] = 0
+    limit: Annotated[int, Field(ge=1, le=1000, description="Maximum records to return")] = 100
 
     # Text search
-    name: str | None = Field(None, description="Search by company name or organization number")
+    name: Annotated[str | None, Field(description="Search by company name or organization number")] = None
 
     # Basic filters
-    organisasjonsform: list[str] | None = Field(None, description="Filter by organization forms (AS, ASA, etc.)")
-    naeringskode: str | None = Field(None, description="Filter by industry code (NACE)")
-    municipality: str | None = Field(None, description="Filter by municipality (kommune) name")
-    municipality_code: str | None = Field(
-        None, min_length=4, max_length=4, pattern=r"^\d{4}$", description="Filter by 4-digit municipality code"
-    )
-    county: str | None = Field(None, description="Filter by county (fylke) - uses 2-digit code prefix")
+    organisasjonsform: Annotated[list[str] | None, Field(description="Filter by organization forms (AS, ASA, etc.)")] = None
+    naeringskode: Annotated[str | None, Field(description="Filter by industry code (NACE)")] = None
+    municipality: Annotated[str | None, Field(description="Filter by municipality (kommune) name")] = None
+    municipality_code: Annotated[str | None, Field(
+        min_length=4, max_length=4, pattern=r"^\d{4}$", description="Filter by 4-digit municipality code"
+    )] = None
+    county: Annotated[str | None, Field(description="Filter by county (fylke) - uses 2-digit code prefix")] = None
 
     # Employee range
-    min_employees: int | None = Field(None, ge=0, description="Minimum number of employees")
-    max_employees: int | None = Field(None, ge=0, description="Maximum number of employees")
+    min_employees: Annotated[int | None, Field(ge=0, description="Minimum number of employees")] = None
+    max_employees: Annotated[int | None, Field(ge=0, description="Maximum number of employees")] = None
 
     # Date range
-    founded_from: date | None = Field(None, description="Minimum founding date")
-    founded_to: date | None = Field(None, description="Maximum founding date")
+    founded_from: Annotated[date | None, Field(description="Minimum founding date")] = None
+    founded_to: Annotated[date | None, Field(description="Maximum founding date")] = None
 
-    bankrupt_from: date | None = Field(None, description="Minimum bankruptcy date")
-    bankrupt_to: date | None = Field(None, description="Maximum bankruptcy date")
+    bankrupt_from: Annotated[date | None, Field(description="Minimum bankruptcy date")] = None
+    bankrupt_to: Annotated[date | None, Field(description="Maximum bankruptcy date")] = None
 
     # Status flags
-    is_bankrupt: bool | None = Field(None, description="Filter by bankruptcy status")
-    in_liquidation: bool | None = Field(None, description="Filter by liquidation status")
-    in_forced_liquidation: bool | None = Field(None, description="Filter by forced liquidation status")
-    has_accounting: bool | None = Field(None, description="Filter by existence of accounting data")
+    is_bankrupt: Annotated[bool | None, Field(description="Filter by bankruptcy status")] = None
+    in_liquidation: Annotated[bool | None, Field(description="Filter by liquidation status")] = None
+    in_forced_liquidation: Annotated[bool | None, Field(description="Filter by forced liquidation status")] = None
+    has_accounting: Annotated[bool | None, Field(description="Filter by existence of accounting data")] = None
 
     # Financial filters (grouped as ranges)
-    revenue_range: RangeFilter | None = Field(None, description="Revenue range filter")
-    profit_range: RangeFilter | None = Field(None, description="Profit range filter")
-    equity_range: RangeFilter | None = Field(None, description="Equity range filter")
-    operating_profit_range: RangeFilter | None = Field(None, description="Operating profit range filter")
-    liquidity_ratio_range: RangeFilter | None = Field(None, description="Liquidity ratio range filter")
-    equity_ratio_range: RangeFilter | None = Field(None, description="Equity ratio range filter")
+    revenue_range: Annotated[RangeFilter | None, Field(description="Revenue range filter")] = None
+    profit_range: Annotated[RangeFilter | None, Field(description="Profit range filter")] = None
+    equity_range: Annotated[RangeFilter | None, Field(description="Equity range filter")] = None
+    operating_profit_range: Annotated[RangeFilter | None, Field(description="Operating profit range filter")] = None
+    liquidity_ratio_range: Annotated[RangeFilter | None, Field(description="Liquidity ratio range filter")] = None
+    equity_ratio_range: Annotated[RangeFilter | None, Field(description="Equity ratio range filter")] = None
 
     # Exclusion filters
-    exclude_org_form: list[str] | None = Field(
-        None, description="Exclude specific organization forms (e.g., KBO for konkursbo)"
-    )
+    exclude_org_form: Annotated[list[str] | None, Field(
+        description="Exclude specific organization forms (e.g., KBO for konkursbo)"
+    )] = None
 
     # Sorting
-    sort_by: str = Field(
-        "navn",
+    sort_by: Annotated[str, Field(
         pattern="^(navn|orgnr|organisasjonsform|antall_ansatte|stiftelsesdato|konkursdato|naeringskode|revenue|profit|operating_profit|operating_margin|kommune)$",
         description="Field to sort by",
-    )
-    sort_order: str = Field("asc", pattern="^(asc|desc)$", description="Sort order (ascending or descending)")
+    )] = "navn"
+    sort_order: Annotated[str, Field(pattern="^(asc|desc)$", description="Sort order (ascending or descending)")] = "asc"
 
     @model_validator(mode="after")
     def validate_employee_range(self):
@@ -108,6 +108,13 @@ class CompanyFilterDTO(BaseModel):
                 f"min_employees ({self.min_employees}) cannot be greater than max_employees ({self.max_employees})"
             )
         return self
+
+    def is_empty(self) -> bool:
+        """Check if all filter parameters are at their default values"""
+        # Exclude skip, limit, sort_by, sort_order from empty check
+        exclude = {"skip", "limit", "sort_by", "sort_order"}
+        data = self.model_dump(exclude=exclude)
+        return not any(v is not None for v in data.values())
 
     @model_validator(mode="after")
     def validate_founded_date_range(self):

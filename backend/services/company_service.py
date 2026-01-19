@@ -332,6 +332,10 @@ class CompanyService:
             logger.warning(f"On-demand geocoding failed for {company.orgnr}: {e}")
 
     async def get_statistics(self) -> dict:
+        """
+        Get high-level dashboard statistics.
+        Refactored to prioritize materialized views and fast estimations.
+        """
         # Check cache first (cache key "dashboard_stats")
         cached_stats = await search_cache.get("dashboard_stats")
         if cached_stats:
@@ -344,52 +348,56 @@ class CompanyService:
             if cached_stats:
                 return cached_stats
 
-            # Fast queries using pg_class estimates and indices
-            total_companies = await self.company_repo.count()
-            total_reports = await self.accounting_repo.count()
+            # 1. Start background tasks for specific renewal metrics
+            # These are either unindexed (avg_board_age) or from specific tables (roles)
+            renewal_tasks = [
+                self.company_repo.get_geocoded_count(),
+                self.company_repo.get_new_companies_30d(),
+                self.role_repo.count_total_roles(),
+                self.role_repo.get_average_board_age(),
+            ]
 
-            # Financial stats from materialized view (should be fast)
+            # 2. Basic aggregates (Prioritize company_totals view)
+            # This is much faster than count(*) on bedrifter + complicated joins
+            try:
+                # We use the existing get_aggregate_stats logic with empty filters
+                # as it already has a fast path for company_totals
+                agg_stats = await self.get_aggregate_stats(CompanyFilterDTO())
+                total_companies = agg_stats.get("total_count", 0)
+                total_employees = agg_stats.get("total_employees", 0)
+            except Exception as e:
+                logger.warning(f"Fast aggregate stats failed, falling back to estimates: {e}")
+                total_companies = await self.company_repo.count(fast=True)
+                total_employees = await self.company_repo.get_total_employees()
+
+            # 3. Financial aggregates (from latest_accountings view)
             financial_stats = await self.accounting_repo.get_aggregated_stats()
 
-            # These queries can be slow - run with timeout
-            try:
-                total_employees = await asyncio.wait_for(self.company_repo.get_total_employees(), timeout=10.0)
-            except asyncio.TimeoutError:
-                logger.warning("get_total_employees timed out, using cached/estimated value")
-                total_employees = 0
+            # 4. Other dashboard_stats (pre-computed table)
+            total_reports = await self.accounting_repo.count()
+            new_companies_ytd = await self.company_repo.get_new_companies_ytd()
+            bankruptcies = await self.company_repo.get_bankruptcies_count()
 
+            # 5. Await renewal metrics with safety timeouts
             try:
-                new_companies_ytd = await asyncio.wait_for(self.company_repo.get_new_companies_ytd(), timeout=10.0)
-            except asyncio.TimeoutError:
-                logger.warning("get_new_companies_ytd timed out, using cached/estimated value")
-                new_companies_ytd = 0
+                # Group tasks: geocoded_count, new_30d, total_roles, avg_age
+                results = await asyncio.gather(*renewal_tasks, return_exceptions=True)
+                
+                # Helper to safely extract results or fall back to default
+                def get_val(idx: int, default_val: Any) -> Any:
+                    val = results[idx]
+                    if isinstance(val, Exception):
+                        logger.warning(f"Metric task {idx} failed: {val}")
+                        return default_val
+                    return val
 
-            try:
-                bankruptcies = await asyncio.wait_for(self.company_repo.get_bankruptcies_count(), timeout=10.0)
-            except asyncio.TimeoutError:
-                logger.warning("get_bankruptcies_count timed out, using cached/estimated value")
-                bankruptcies = 0
-
-            # New metrics for Jan 2026 renewal
-            try:
-                geocoded_count = await asyncio.wait_for(self.company_repo.get_geocoded_count(), timeout=5.0)
-            except Exception:
-                geocoded_count = 0
-
-            try:
-                new_companies_30d = await asyncio.wait_for(self.company_repo.get_new_companies_30d(), timeout=5.0)
-            except Exception:
-                new_companies_30d = 0
-
-            try:
-                total_roles = await asyncio.wait_for(self.role_repo.count_total_roles(), timeout=5.0)
-            except Exception:
-                total_roles = 0
-
-            try:
-                avg_board_age = await asyncio.wait_for(self.role_repo.get_average_board_age(), timeout=5.0)
-            except Exception:
-                avg_board_age = 0.0
+                geocoded_count = get_val(0, 0)
+                new_companies_30d = get_val(1, 0)
+                total_roles = get_val(2, 0)
+                avg_board_age = get_val(3, 0.0)
+            except Exception as e:
+                logger.error(f"Critical error gathering renewal metrics: {e}")
+                geocoded_count, new_companies_30d, total_roles, avg_board_age = 0, 0, 0, 0.0
 
             stats = {
                 "total_companies": total_companies,

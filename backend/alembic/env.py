@@ -106,17 +106,32 @@ def run_migrations_online() -> None:
             poolclass=pool.NullPool,
         )
 
-        async with connectable.begin() as connection:
+        async with connectable.connect() as connection:
+            # Check if we should run without transaction (from command line -x)
+            cmd_line_args = context.get_x_argument(as_dictionary=True)
+            use_txn = cmd_line_args.get("commit_as_transaction", "True") != "False"
+
+            if not use_txn:
+                await connection.execution_options(isolation_level="AUTOCOMMIT")
 
             def do_configure(sync_connection):
                 context.configure(
                     connection=sync_connection,
                     target_metadata=target_metadata,
                     include_object=include_object,
+                    transactional_ddl=use_txn,
                 )
 
             await connection.run_sync(do_configure)
-            await connection.run_sync(lambda conn: context.run_migrations())
+
+            def run_migrations():
+                if use_txn:
+                    with context.begin_transaction():
+                        context.run_migrations()
+                else:
+                    context.run_migrations()
+
+            await connection.run_sync(lambda conn: run_migrations())
 
         await connectable.dispose()
 

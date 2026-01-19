@@ -36,6 +36,11 @@ class Company(Base):
         Index("ix_bedrifter_search_vector", "search_vector", postgresql_using="gin"),
         # Performance Indexes restoration
         Index("ix_bedrifter_konkursdato", "konkursdato"),
+        Index(
+            "idx_bedrifter_geocoded",
+            "orgnr",
+            postgresql_where=sa_text("latitude IS NOT NULL"),
+        ),
         Index("ix_bedrifter_geocoding_attempts", "geocoding_attempts"),
         # Functional / Partial Indexes
         Index(

@@ -33,7 +33,7 @@ def test_filtered_geography_stats_advanced_filters_sql(repo):
     filters = FilterParams(
         naeringskode="62",
         organisasjonsform=["AS"],
-        min_revenue=10.0,  # 10M MNOK
+        min_revenue=10000000,  # 10M MNOK
         min_employees=5,
     )
 

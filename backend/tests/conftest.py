@@ -43,8 +43,8 @@ for table in models.Base.metadata.tables.values():
     table.indexes = set()
     
 # Register missing functions for SQLite
-from sqlalchemy import event
-from sqlalchemy.engine import Engine
+from sqlalchemy import event  # noqa: E402
+from sqlalchemy.engine import Engine  # noqa: E402
 
 @event.listens_for(Engine, "connect")
 def register_sqlite_functions(dbapi_connection, connection_record):
