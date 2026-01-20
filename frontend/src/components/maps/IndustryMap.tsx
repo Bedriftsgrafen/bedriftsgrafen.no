@@ -42,7 +42,7 @@ const COUNTIES = [
 
 const METRIC_LABELS: Readonly<Record<string, string>> = {
     company_count: 'Antall bedrifter',
-    new_last_year: 'Nye siste år',
+    new_last_year: 'Nye selskaper',
     bankrupt_count: 'Konkurser',
 } as const;
 
@@ -501,7 +501,7 @@ export function IndustryMap({
     return (
         <div className="flex flex-col md:flex-row h-full rounded-xl overflow-hidden border border-slate-200 shadow-xl bg-white">
             <div className="flex-1 order-1 md:order-2 relative bg-slate-50 min-h-[400px]">
-                <div className="absolute top-4 right-4 z-[1000]">
+                <div className="absolute top-4 right-4 z-1000">
                     <button
                         onClick={() => refetch()}
                         className="bg-white/90 backdrop-blur-sm rounded-full shadow-lg p-2.5 hover:bg-white hover:scale-110 transition-all active:scale-95 disabled:opacity-50 border border-slate-100"
@@ -553,7 +553,7 @@ export function IndustryMap({
                 />
 
                 {isLoading && (
-                    <div className="absolute inset-0 bg-white/40 backdrop-blur-[1px] flex items-center justify-center z-[1001] animate-in fade-in">
+                    <div className="absolute inset-0 bg-white/40 backdrop-blur-[1px] flex items-center justify-center z-1001 animate-in fade-in">
                         <div className="flex flex-col items-center gap-3 bg-white p-6 rounded-2xl shadow-2xl border border-slate-100" style={{ pointerEvents: 'auto' }}>
                             <div className="animate-spin rounded-full h-10 w-10 border-[3px] border-blue-600 border-t-transparent" />
                             <p className="text-xs font-black text-slate-400 uppercase tracking-widest">Henter data...</p>

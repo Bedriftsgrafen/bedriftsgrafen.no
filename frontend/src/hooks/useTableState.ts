@@ -41,17 +41,14 @@ export function useTableState<TFilters extends Record<string, unknown>, TSortFie
     }, [])
 
     const handleSort = useCallback((field: TSortField) => {
-        setSortBy(prevField => {
-            if (prevField === field) {
-                setSortOrder(prev => prev === 'asc' ? 'desc' : 'asc')
-                return prevField
-            } else {
-                setSortOrder('desc')
-                return field
-            }
-        })
-        resetPage()
-    }, [resetPage])
+        if (sortBy === field) {
+            setSortOrder(prev => prev === 'asc' ? 'desc' : 'asc')
+        } else {
+            setSortBy(field)
+            setSortOrder('desc')
+        }
+        setPage(1)
+    }, [sortBy])
 
     const setFilter = useCallback(<K extends keyof TFilters>(key: K, value: TFilters[K]) => {
         setFilters(prev => ({ ...prev, [key]: value }))
