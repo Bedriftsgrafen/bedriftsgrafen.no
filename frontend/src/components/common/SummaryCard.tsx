@@ -35,12 +35,12 @@ export const SummaryCard = memo(function SummaryCard({
     className = ''
 }: SummaryCardProps) {
     return (
-        <div className={`bg-white rounded-xl border border-slate-200 p-4 flex items-center gap-4 transition-all duration-200 hover:border-slate-300 shadow-sm ${className}`}>
-            <div className={`shrink-0 p-2.5 rounded-xl shadow-sm ${COLOR_CLASSES[color]}`}>
+        <div className={`bg-white rounded-xl border border-slate-200 p-4 flex items-center gap-4 transition-all duration-300 hover:border-slate-300 hover:shadow-xl hover:-translate-y-1 group ${className}`}>
+            <div className={`shrink-0 p-2.5 rounded-xl shadow-sm transition-transform duration-300 group-hover:scale-110 ${COLOR_CLASSES[color]}`}>
                 {icon}
             </div>
             <div className="flex-1 min-w-0 flex flex-col justify-center">
-                <p className="text-[10px] text-slate-500 uppercase font-bold tracking-wider mb-0.5">{label}</p>
+                <p className="text-[10px] text-slate-400 uppercase font-bold tracking-wider mb-0.5">{label}</p>
                 {loading ? (
                     <div className="h-8 w-24 bg-slate-100 animate-pulse rounded-lg" />
                 ) : (

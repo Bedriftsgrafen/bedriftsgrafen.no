@@ -148,6 +148,7 @@ backups/
 # Project-Specific Data
 # -----------------------------------------------------------------------------
 # Data downloads and imports
+data/
 database/lastned
 enheter_alle.json
 backend/enheter_alle.json

@@ -11,6 +11,7 @@ from dependencies.company_filters import CompanyQueryParams
 from exceptions import BrregApiException
 from limiter import limiter
 from repositories.accounting_repository import AccountingRepository
+from repositories.company_filter_builder import FilterParams
 from schemas.companies import (
     AccountingWithKpis,
     CompanyBase,
@@ -252,29 +253,9 @@ class MarkersResponse(BaseModel):
 @limiter.limit("10/second")
 async def get_company_markers(
     request: Request,
-    naeringskode: str | None = Query(
-        None,
-        min_length=1,
-        max_length=12,
-        pattern=r"^([A-U]|[\d.]+)$",
-        description="NACE code filter (section letter, 2-digit division, or 5-digit subclass)",
-    ),
     bbox: str | None = Query(None, description="Bounding box: west,south,east,north"),
-    county: str | None = Query(None, description="2-digit county code filter"),
-    municipality: str | None = Query(None, description="Municipality name filter"),
-    municipality_code: str | None = Query(
-        None,
-        min_length=2,
-        max_length=4,
-        pattern=r"^\d{2,4}$",
-        description="2-digit county or 4-digit municipality code",
-    ),
-    org_form: list[str] | None = Query(None, description="Organization forms to filter by"),
-    revenue_min: float | None = Query(None, description="Minimum revenue (MNOK)"),
-    revenue_max: float | None = Query(None, description="Maximum revenue (MNOK)"),
-    employee_min: int | None = Query(None, description="Minimum number of employees"),
-    employee_max: int | None = Query(None, description="Maximum number of employees"),
     limit: int = Query(5000, le=10000, description="Max markers to return"),
+    params: CompanyQueryParams = Depends(),
     db: AsyncSession = Depends(get_db),
 ):
     """
@@ -299,17 +280,9 @@ async def get_company_markers(
     # Use repository for query
     repo = CompanyRepository(db)
     rows, total = await repo.get_map_markers(
-        naeringskode=naeringskode,
-        county=county,
-        municipality=municipality,
-        municipality_code=municipality_code,
+        filters=FilterParams.from_dto(params.to_dto()),
         bbox=parsed_bbox,
         limit=limit,
-        organisasjonsform=org_form,
-        min_revenue=revenue_min,
-        max_revenue=revenue_max,
-        min_employees=employee_min,
-        max_employees=employee_max,
     )
 
     # Build markers

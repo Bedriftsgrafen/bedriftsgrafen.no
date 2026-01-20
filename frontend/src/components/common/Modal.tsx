@@ -43,7 +43,7 @@ export function Modal({
     if (!isOpen) return null
 
     return (
-        <div className="fixed inset-0 bg-black/50 z-[1000] flex items-start justify-center p-4 overflow-y-auto pt-20">
+        <div className="fixed inset-0 bg-black/50 z-2000 flex items-start justify-center p-4 overflow-y-auto pt-20">
             <div
                 ref={modalRef}
                 className={`relative bg-white rounded-xl shadow-2xl ${width} ${maxWidth} flex flex-col my-auto`}

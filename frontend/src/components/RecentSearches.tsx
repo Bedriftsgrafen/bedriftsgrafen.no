@@ -16,15 +16,15 @@ export const RecentSearches = memo(function RecentSearches({ onSelectSearch }: R
   }
 
   return (
-    <div className="bg-white rounded-xl shadow-md border border-gray-200 mb-8">
-      <div className="p-4 border-b border-blue-100 bg-blue-50 flex items-center justify-between">
+    <div className="bg-white rounded-xl shadow-md border border-slate-200 mb-8 overflow-hidden">
+      <div className="p-4 border-b border-slate-200 bg-linear-to-br from-slate-50 to-white flex items-center justify-between">
         <div className="flex items-center gap-2">
           <Clock className="h-5 w-5 text-blue-600" />
-          <h2 className="font-semibold text-gray-900">Siste søk</h2>
+          <h2 className="font-semibold text-slate-900">Siste søk</h2>
         </div>
         <button
           onClick={clearRecentSearches}
-          className="text-sm px-3 py-1.5 bg-red-50 text-red-700 hover:bg-red-100 hover:text-red-800 border border-red-200 rounded-lg transition-colors font-medium"
+          className="text-xs px-3 py-1.5 bg-slate-100 text-slate-600 hover:bg-red-50 hover:text-red-700 rounded-xl transition-all font-bold active:scale-95 uppercase tracking-wider"
         >
           Tøm
         </button>
@@ -34,7 +34,7 @@ export const RecentSearches = memo(function RecentSearches({ onSelectSearch }: R
           <button
             key={search.query}
             onClick={() => onSelectSearch(search.query)}
-            className="group flex items-center gap-2 px-3 py-1.5 bg-blue-50 hover:bg-blue-100 text-blue-700 rounded-full transition-colors text-sm"
+            className="group flex items-center gap-2 px-3 py-1.5 bg-slate-50 hover:bg-blue-50 text-slate-600 hover:text-blue-700 rounded-xl border border-slate-100 hover:border-blue-100 transition-all text-sm font-medium active:scale-95 shadow-sm hover:shadow-md"
             title={`Søkt ${formatDistanceToNow(search.timestamp)}${search.resultCount !== undefined ? ` • ${search.resultCount} treff` : ''}`}
           >
             <Search className="h-3.5 w-3.5" />

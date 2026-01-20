@@ -26,7 +26,9 @@ export interface SavedFilter {
     employeeMin: number | null
     employeeMax: number | null
     municipality: string
-    county: string  // Added: was missing from saved filters
+    municipalityCode: string
+    county: string
+    countyCode: string
     foundedFrom: string | null  // ISO date string for serialization
     foundedTo: string | null
     bankruptFrom: string | null

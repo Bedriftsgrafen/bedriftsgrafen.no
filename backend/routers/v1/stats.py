@@ -9,6 +9,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 import models
 from constants.nace import get_nace_name
 from database import get_db
+from dependencies.company_filters import CompanyQueryParams
 from schemas.benchmark import IndustryBenchmarkResponse
 from schemas.stats import GeoAveragesResponse, GeoStatResponse, IndustryStatResponse
 from services.stats_service import GeoLevel, GeoMetric, StatsService
@@ -171,6 +172,7 @@ async def get_industry_benchmark(
 @router.get("/geography", response_model=list[GeoStatResponse])
 async def get_geography_stats(
     level: GeoLevel = Query("county", description="Geographic level: county or municipality"),
+    metric: GeoMetric = Query("company_count", description="Metric to aggregate"),
     nace: str | None = Query(
         None,
         min_length=1,
@@ -178,15 +180,10 @@ async def get_geography_stats(
         pattern=r"^([A-U]|\d{2}|\d{2}\.\d{3})$",
         description="NACE code: section letter (A-U), 2nd-digit division, or 5-digit subclass",
     ),
-    metric: GeoMetric = Query("company_count", description="Metric to aggregate"),
     county_code: str | None = Query(
         None, min_length=2, max_length=10, pattern=r"^\d{2}$", description="Filter by county code (2 digits)"
     ),
-    org_form: list[str] | None = Query(None, description="Organization forms to filter by"),
-    revenue_min: float | None = Query(None, description="Minimum revenue (MNOK)"),
-    revenue_max: float | None = Query(None, description="Maximum revenue (MNOK)"),
-    employee_min: int | None = Query(None, description="Minimum number of employees"),
-    employee_max: int | None = Query(None, description="Maximum number of employees"),
+    params: CompanyQueryParams = Depends(),
     db: AsyncSession = Depends(get_db),
 ) -> list[GeoStatResponse]:
     """
@@ -196,15 +193,13 @@ async def get_geography_stats(
     - level=municipality: Returns data per kommune (356 regions)
     - county_code: Filter municipalities to a specific county
     """
-    filters = FilterParams(
-        naeringskode=nace,
-        county=county_code,
-        organisasjonsform=org_form,
-        min_revenue=revenue_min,
-        max_revenue=revenue_max,
-        min_employees=employee_min,
-        max_employees=employee_max,
-    )
+    # Build filters, overlaying legacy individual params if provided
+    filters = FilterParams.from_dto(params.to_dto())
+    if nace:
+        filters.naeringskode = nace
+    if county_code:
+        filters.county = county_code
+
     service = StatsService(db)
     return await service.get_geography_stats(level=level, metric=metric, filters=filters)
 
@@ -212,6 +207,7 @@ async def get_geography_stats(
 @router.get("/geography/averages", response_model=GeoAveragesResponse)
 async def get_geography_averages(
     level: GeoLevel = Query("county", description="Geographic level for averages"),
+    metric: GeoMetric = Query("company_count", description="Metric to average"),
     nace: str | None = Query(
         None,
         min_length=1,
@@ -219,26 +215,20 @@ async def get_geography_averages(
         pattern=r"^([A-U]|\d{2}|\d{2}\.\d{3})$",
         description="NACE code: section letter (A-U), 2nd-digit division, or 5-digit subclass",
     ),
-    metric: GeoMetric = Query("company_count", description="Metric to average"),
     county_code: str | None = Query(
         None, min_length=2, max_length=10, pattern=r"^\d{2}$", description="County code (2 digits)"
     ),
-    org_form: list[str] | None = Query(None, description="Organization forms to filter by"),
-    revenue_min: float | None = Query(None, description="Minimum revenue (MNOK)"),
-    revenue_max: float | None = Query(None, description="Maximum revenue (MNOK)"),
-    employee_min: int | None = Query(None, description="Minimum number of employees"),
-    employee_max: int | None = Query(None, description="Maximum number of employees"),
+    params: CompanyQueryParams = Depends(),
     db: AsyncSession = Depends(get_db),
 ) -> GeoAveragesResponse:
     """Get national and county averages for comparison."""
-    filters = FilterParams(
-        naeringskode=nace,
-        organisasjonsform=org_form,
-        min_revenue=revenue_min,
-        max_revenue=revenue_max,
-        min_employees=employee_min,
-        max_employees=employee_max,
-    )
+    # Build filters, overlaying legacy individual params if provided
+    filters = FilterParams.from_dto(params.to_dto())
+    if nace:
+        filters.naeringskode = nace
+    if county_code:
+        filters.county = county_code
+
     service = StatsService(db)
     return await service.get_geography_averages(
         level=level, metric=metric, filters=filters, county_code_context=county_code

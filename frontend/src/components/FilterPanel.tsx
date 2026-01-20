@@ -1,18 +1,16 @@
-import { Filter, ChevronDown, ChevronUp, Check, X } from 'lucide-react'
+import { Filter, ChevronDown, Check } from 'lucide-react'
 import { useState, useMemo, useRef, useEffect, useCallback } from 'react'
 import { useFilterStore } from '../store/filterStore'
 import { useResetPagination } from '../hooks/useResetPagination'
 import { useSavedFiltersStore, type SavedFilter } from '../store/savedFiltersStore'
 import { toast } from '../store/toastStore'
-import { ORGANIZATION_FORMS } from '../constants/organizationForms'
 import {
-  RangeInput,
-  SavedFiltersSection,
-  StatusFilters,
-  OrganizationFormFilter,
-  ActiveFilterChips
+  ActiveFilterChips,
+  BasisFilters,
+  FinancialFilters,
+  StatusAndDateFilters,
+  SavedFiltersSection
 } from './filter'
-import { MNOK_MULTIPLIER } from '../utils/financials'
 
 export function FilterPanel() {
   const [isExpanded, setIsExpanded] = useState(false)
@@ -79,7 +77,9 @@ export function FilterPanel() {
       employeeMin: s.employeeMin,
       employeeMax: s.employeeMax,
       municipality: s.municipality,
+      municipalityCode: s.municipalityCode,
       county: s.county,
+      countyCode: s.countyCode,
       foundedFrom: s.foundedFrom,
       foundedTo: s.foundedTo,
       isBankrupt: s.isBankrupt,
@@ -121,15 +121,6 @@ export function FilterPanel() {
   }, [])
 
   // Handlers (using draft state)
-  const handleOrganizationFormToggle = useCallback((value: string) => {
-    setDraftFilters(prev => ({
-      ...prev,
-      organizationForms: prev.organizationForms.includes(value)
-        ? prev.organizationForms.filter(f => f !== value)
-        : [...prev.organizationForms, value]
-    }))
-  }, [])
-
   const handleRangeChange = useCallback((field: string, isMin: boolean, value: string, multiplier: number = 1) => {
     const num = value ? parseFloat(value) * multiplier : null
     const fieldKey = `${field}${isMin ? 'Min' : 'Max'}` as keyof typeof draftFilters
@@ -163,6 +154,7 @@ export function FilterPanel() {
     setDraftFilters(prev => ({ ...prev, [key]: value }))
   }, [])
 
+
   const applyFilters = useCallback(() => {
     resetPagination()
     setAllFilters({ ...draftFilters })
@@ -194,7 +186,9 @@ export function FilterPanel() {
     employeeMin: draftFilters.employeeMin,
     employeeMax: draftFilters.employeeMax,
     municipality: draftFilters.municipality,
+    municipalityCode: draftFilters.municipalityCode,
     county: draftFilters.county || '',
+    countyCode: draftFilters.countyCode || '',
     foundedFrom: draftFilters.foundedFrom?.toISOString() ?? null,
     foundedTo: draftFilters.foundedTo?.toISOString() ?? null,
     isBankrupt: draftFilters.isBankrupt,
@@ -248,7 +242,9 @@ export function FilterPanel() {
       employeeMin: filter.filters.employeeMin ?? null,
       employeeMax: filter.filters.employeeMax ?? null,
       municipality: filter.filters.municipality ?? '',
+      municipalityCode: filter.filters.municipalityCode ?? '',
       county: filter.filters.county ?? '',
+      countyCode: filter.filters.countyCode ?? '',
       foundedFrom: filter.filters.foundedFrom ? new Date(filter.filters.foundedFrom) : null,
       foundedTo: filter.filters.foundedTo ? new Date(filter.filters.foundedTo) : null,
       isBankrupt: filter.filters.isBankrupt ?? null,
@@ -296,11 +292,13 @@ export function FilterPanel() {
             setIsExpanded(!isExpanded)
           }
         }}
-        className="w-full p-5 flex items-center justify-between bg-blue-50/50 hover:bg-blue-50 transition-colors cursor-pointer select-none"
+        className="w-full p-6 flex items-center justify-between bg-linear-to-br from-slate-50 to-white hover:from-slate-100 hover:to-slate-50 transition-all duration-300 cursor-pointer select-none border-b border-transparent"
         aria-expanded={isExpanded}
       >
         {headerControls}
-        {isExpanded ? <ChevronUp className="h-5 w-5 text-gray-400" /> : <ChevronDown className="h-5 w-5 text-gray-400" />}
+        <div className={`p-1 rounded-full transition-all duration-300 ${isExpanded ? 'bg-blue-100 text-blue-600 rotate-180' : 'bg-slate-100 text-slate-400'}`}>
+          <ChevronDown className="h-4 w-4" />
+        </div>
       </div>
 
       {/* Collapsible Content */}
@@ -320,174 +318,27 @@ export function FilterPanel() {
             onDeleteFilter={(id) => { deleteFilter(id); if (editingFilterId === id) setEditingFilterId(null) }}
           />
 
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-x-12 gap-y-8">
-            {/* Column 1: Core Filters */}
-            <section className="space-y-6">
-              <h3 className="text-sm font-bold text-gray-400 uppercase tracking-wider border-b pb-2">Basis</h3>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-x-12 gap-y-10">
+            <BasisFilters
+              draftFilters={draftFilters}
+              setDraftFilters={setDraftFilters}
+              searchInputRef={searchInputRef}
+              applyFilters={applyFilters}
+            />
 
-              {/* Sorting - Now bound to draftFilters */}
-              <div className="space-y-2">
-                <label className="block text-sm font-medium text-gray-700">Sortering</label>
-                <div className="grid grid-cols-5 gap-2">
-                  <select
-                    value={draftFilters.sortBy}
-                    onChange={(e) => setDraftFilters(prev => ({ ...prev, sortBy: e.target.value }))}
-                    className="col-span-3 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none text-sm bg-white"
-                  >
-                    <option value="navn">Navn</option>
-                    <option value="antall_ansatte">Antall ansatte</option>
-                    <option value="revenue">Omsetning</option>
-                    <option value="profit">Årsresultat</option>
-                    <option value="operating_profit">Driftsresultat</option>
-                    <option value="stiftelsesdato">Stiftelsesdato</option>
-                  </select>
-                  <select
-                    value={draftFilters.sortOrder}
-                    onChange={(e) => setDraftFilters(prev => ({ ...prev, sortOrder: e.target.value as 'asc' | 'desc' }))}
-                    className="col-span-2 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none text-sm bg-white"
-                  >
-                    <option value="asc">Stigende</option>
-                    <option value="desc">Synkende</option>
-                  </select>
-                </div>
-              </div>
+            <FinancialFilters
+              draftFilters={draftFilters}
+              handleRangeChange={handleRangeChange}
+              handleHasAccountingChange={handleHasAccountingChange}
+            />
 
-              {/* Search */}
-              <div className="space-y-2">
-                <label className="block text-sm font-medium text-gray-700">
-                  Fritekst-søk <span className="text-[10px] text-gray-400 font-normal ml-1">('/')</span>
-                </label>
-                <div className="relative">
-                  <input
-                    ref={searchInputRef}
-                    type="text"
-                    placeholder="Søk navn eller org.nr..."
-                    value={draftFilters.searchQuery}
-                    onChange={(e) => setDraftFilters(prev => ({ ...prev, searchQuery: e.target.value }))}
-                    onKeyDown={(e) => e.key === 'Enter' && applyFilters()}
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none transition-all pr-10"
-                  />
-                  {draftFilters.searchQuery && (
-                    <button
-                      onClick={() => setDraftFilters(prev => ({ ...prev, searchQuery: '' }))}
-                      className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-300 hover:text-gray-500"
-                      aria-label="Tøm søkefelt"
-                    >
-                      <X className="h-4 w-4" />
-                    </button>
-                  )}
-                </div>
-              </div>
-
-              <OrganizationFormFilter
-                selectedForms={draftFilters.organizationForms}
-                options={ORGANIZATION_FORMS}
-                onToggle={handleOrganizationFormToggle}
-                onSelectAll={() => setDraftFilters(prev => ({ ...prev, organizationForms: ORGANIZATION_FORMS.map(f => f.value) }))}
-                onClearAll={() => setDraftFilters(prev => ({ ...prev, organizationForms: [] }))}
-              />
-
-              <div className="space-y-2">
-                <label className="block text-sm font-medium text-gray-700">Næringskode</label>
-                <input
-                  type="text"
-                  placeholder="F.eks. 62.100"
-                  value={draftFilters.naeringskode}
-                  onChange={(e) => setDraftFilters(prev => ({ ...prev, naeringskode: e.target.value }))}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none text-sm"
-                />
-              </div>
-
-              <div className="space-y-2">
-                <label className="block text-sm font-medium text-gray-700">Kommune</label>
-                <input
-                  type="text"
-                  placeholder="F.eks. Oslo"
-                  value={draftFilters.municipality}
-                  onChange={(e) => setDraftFilters(prev => ({ ...prev, municipality: e.target.value }))}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none text-sm"
-                />
-              </div>
-            </section>
-
-            {/* Column 2: Financials */}
-            <section className="space-y-6">
-              <h3 className="text-sm font-bold text-gray-400 uppercase tracking-wider border-b pb-2">Økonomi</h3>
-
-              <div className="space-y-3">
-                <label className="block text-sm font-medium text-gray-700">Regnskapsdata</label>
-                <div className="flex gap-4 p-1 bg-gray-50 rounded-lg">
-                  {[{ value: 'all', label: 'Alle' }, { value: 'yes', label: 'Med' }, { value: 'no', label: 'Uten' }]
-                    .map(opt => (
-                      <button
-                        key={opt.value}
-                        type="button"
-                        onClick={() => handleHasAccountingChange(opt.value)}
-                        className={`flex-1 py-1.5 text-xs font-medium rounded-md transition-all ${draftFilters.hasAccounting === (opt.value === 'yes' ? true : opt.value === 'no' ? false : null)
-                          ? 'bg-white shadow-sm text-blue-600 ring-1 ring-gray-200'
-                          : 'text-gray-500 hover:text-gray-700'
-                          }`}
-                      >
-                        {opt.label}
-                      </button>
-                    ))}
-                </div>
-              </div>
-
-              <RangeInput label="Omsetning (mill. kr)" fieldName="revenue" minValue={draftFilters.revenueMin} maxValue={draftFilters.revenueMax} onChange={handleRangeChange} multiplier={MNOK_MULTIPLIER} />
-              <RangeInput label="Årsresultat (mill. kr)" fieldName="profit" minValue={draftFilters.profitMin} maxValue={draftFilters.profitMax} onChange={handleRangeChange} multiplier={MNOK_MULTIPLIER} />
-              <RangeInput label="Egenkapital (mill. kr)" fieldName="equity" minValue={draftFilters.equityMin} maxValue={draftFilters.equityMax} onChange={handleRangeChange} multiplier={MNOK_MULTIPLIER} />
-              <RangeInput label="Driftsresultat (mill. kr)" fieldName="operatingProfit" minValue={draftFilters.operatingProfitMin} maxValue={draftFilters.operatingProfitMax} onChange={handleRangeChange} multiplier={MNOK_MULTIPLIER} />
-            </section>
-
-            {/* Column 3: Advanced & Meta */}
-            <section className="space-y-6">
-              <h3 className="text-sm font-bold text-gray-400 uppercase tracking-wider border-b pb-2">Status & Dato</h3>
-
-              <RangeInput label="Ansatte" fieldName="employee" minValue={draftFilters.employeeMin} maxValue={draftFilters.employeeMax} onChange={handleRangeChange} />
-              <RangeInput label="Likviditetsgrad" fieldName="liquidityRatio" minValue={draftFilters.liquidityRatioMin} maxValue={draftFilters.liquidityRatioMax} onChange={handleRangeChange} step="0.1" />
-              <RangeInput label="EK-andel (0-1)" fieldName="equityRatio" minValue={draftFilters.equityRatioMin} maxValue={draftFilters.equityRatioMax} onChange={handleRangeChange} step="0.1" />
-
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <label className="block text-sm font-medium text-gray-700">Stiftelsesdato</label>
-                  <input
-                    type="date"
-                    value={draftFilters.foundedFrom?.toISOString().split('T')[0] || ''}
-                    onChange={(e) => handleDateChange(true, e.target.value)}
-                    className="w-full px-2 py-1.5 border border-gray-300 rounded focus:ring-1 focus:ring-blue-500 outline-none text-xs"
-                  />
-                  <input
-                    type="date"
-                    value={draftFilters.foundedTo?.toISOString().split('T')[0] || ''}
-                    onChange={(e) => handleDateChange(false, e.target.value)}
-                    className="w-full px-2 py-1.5 border border-gray-300 rounded focus:ring-1 focus:ring-blue-500 outline-none text-xs"
-                  />
-                </div>
-                <div className="space-y-2">
-                  <label className="block text-sm font-medium text-gray-700">Konkursdato</label>
-                  <input
-                    type="date"
-                    value={draftFilters.bankruptFrom?.toISOString().split('T')[0] || ''}
-                    onChange={(e) => handleBankruptDateChange(true, e.target.value)}
-                    className="w-full px-2 py-1.5 border border-gray-300 rounded focus:ring-1 focus:ring-blue-500 outline-none text-xs"
-                  />
-                  <input
-                    type="date"
-                    value={draftFilters.bankruptTo?.toISOString().split('T')[0] || ''}
-                    onChange={(e) => handleBankruptDateChange(false, e.target.value)}
-                    className="w-full px-2 py-1.5 border border-gray-300 rounded focus:ring-1 focus:ring-blue-500 outline-none text-xs"
-                  />
-                </div>
-              </div>
-
-              <StatusFilters
-                isBankrupt={draftFilters.isBankrupt}
-                inLiquidation={draftFilters.inLiquidation}
-                inForcedLiquidation={draftFilters.inForcedLiquidation}
-                onStatusChange={handleStatusChange}
-              />
-            </section>
+            <StatusAndDateFilters
+              draftFilters={draftFilters}
+              handleRangeChange={handleRangeChange}
+              handleDateChange={handleDateChange}
+              handleBankruptDateChange={handleBankruptDateChange}
+              handleStatusChange={handleStatusChange}
+            />
           </div>
 
           {/* Active Chips Dashboard */}

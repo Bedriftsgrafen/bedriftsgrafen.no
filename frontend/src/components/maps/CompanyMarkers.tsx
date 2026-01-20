@@ -36,12 +36,31 @@ interface CompanyMarkersProps {
     municipalityName?: string | null;
     municipalityCode?: string | null;
     onCompanyClick?: (orgnr: string) => void;
-    // Extra filters
+    // Extra analytical filters
     organizationForms?: string[];
     revenueMin?: number | null;
     revenueMax?: number | null;
+    profitMin?: number | null;
+    profitMax?: number | null;
+    equityMin?: number | null;
+    equityMax?: number | null;
+    operatingProfitMin?: number | null;
+    operatingProfitMax?: number | null;
+    liquidityRatioMin?: number | null;
+    liquidityRatioMax?: number | null;
+    equityRatioMin?: number | null;
+    equityRatioMax?: number | null;
     employeeMin?: number | null;
     employeeMax?: number | null;
+    foundedFrom?: string | null;
+    foundedTo?: string | null;
+    bankruptFrom?: string | null;
+    bankruptTo?: string | null;
+    isBankrupt?: boolean | null;
+    inLiquidation?: boolean | null;
+    inForcedLiquidation?: boolean | null;
+    hasAccounting?: boolean | null;
+    query?: string | null;
 }
 
 // Minimum zoom level to show markers (lowered for earlier visibility)
@@ -208,8 +227,27 @@ export function CompanyMarkers({
     organizationForms,
     revenueMin,
     revenueMax,
+    profitMin,
+    profitMax,
+    equityMin,
+    equityMax,
+    operatingProfitMin,
+    operatingProfitMax,
+    liquidityRatioMin,
+    liquidityRatioMax,
+    equityRatioMin,
+    equityRatioMax,
     employeeMin,
-    employeeMax
+    employeeMax,
+    foundedFrom,
+    foundedTo,
+    bankruptFrom,
+    bankruptTo,
+    isBankrupt,
+    inLiquidation,
+    inForcedLiquidation,
+    hasAccounting,
+    query
 }: CompanyMarkersProps) {
     const map = useMap();
     const { bounds, zoom } = useMapBounds();
@@ -221,26 +259,70 @@ export function CompanyMarkers({
 
     // Fetch markers from API
     const { data, isLoading, isError } = useQuery({
-        queryKey: ['company-markers', naceCode, countyCode, municipalityCode || municipalityName, organizationForms, revenueMin, revenueMax, employeeMin, employeeMax],
+        queryKey: [
+            'company-markers',
+            naceCode,
+            countyCode,
+            municipalityCode || municipalityName,
+            organizationForms,
+            revenueMin, revenueMax,
+            profitMin, profitMax,
+            equityMin, equityMax,
+            operatingProfitMin, operatingProfitMax,
+            liquidityRatioMin, liquidityRatioMax,
+            equityRatioMin, equityRatioMax,
+            employeeMin, employeeMax,
+            foundedFrom, foundedTo,
+            bankruptFrom, bankruptTo,
+            isBankrupt,
+            inLiquidation,
+            inForcedLiquidation,
+            hasAccounting,
+            query
+        ],
         queryFn: async () => {
-            const params: Record<string, string | number | string[]> = {};
+            const params: Record<string, string | number | boolean | string[] | null | undefined> = {};
             if (naceCode) params.naeringskode = naceCode;
+            if (query) params.name = query;
             if (countyCode) params.county = countyCode;
             if (municipalityCode) params.municipality_code = municipalityCode;
             if (municipalityName) params.municipality = municipalityName;
 
-            // Add extra filters if present
-            if (organizationForms && organizationForms.length > 0) params.org_form = organizationForms;
-            if (revenueMin !== null && revenueMin !== undefined) params.revenue_min = revenueMin;
-            if (revenueMax !== null && revenueMax !== undefined) params.revenue_max = revenueMax;
-            if (employeeMin !== null && employeeMin !== undefined) params.employee_min = employeeMin;
-            if (employeeMax !== null && employeeMax !== undefined) params.employee_max = employeeMax;
+            // Basic filters
+            if (organizationForms?.length) params.organisasjonsform = organizationForms;
+
+            // Ranges
+            const ranges = [
+                ['revenue', revenueMin, revenueMax],
+                ['profit', profitMin, profitMax],
+                ['equity', equityMin, equityMax],
+                ['operating_profit', operatingProfitMin, operatingProfitMax],
+                ['liquidity_ratio', liquidityRatioMin, liquidityRatioMax],
+                ['equity_ratio', equityRatioMin, equityRatioMax],
+                ['employee', employeeMin, employeeMax]
+            ];
+
+            ranges.forEach(([name, min, max]) => {
+                if (min !== null && min !== undefined) params[`${name}_min`] = min;
+                if (max !== null && max !== undefined) params[`${name}_max`] = max;
+            });
+
+            // Specific Dates
+            if (foundedFrom) params.founded_from = foundedFrom;
+            if (foundedTo) params.founded_to = foundedTo;
+            if (bankruptFrom) params.bankrupt_from = bankruptFrom;
+            if (bankruptTo) params.bankrupt_to = bankruptTo;
+
+            // Status flags (explicitly check for boolean)
+            if (isBankrupt !== null) params.is_bankrupt = isBankrupt;
+            if (inLiquidation !== null) params.in_liquidation = inLiquidation;
+            if (inForcedLiquidation !== null) params.in_forced_liquidation = inForcedLiquidation;
+            if (hasAccounting !== null) params.has_accounting = hasAccounting;
 
             const { data } = await apiClient.get<MarkersResponse>('/v1/companies/markers', {
                 params,
-                // Handle array params correctly for FastAPI (multiple Query params)
                 paramsSerializer: {
-                    indexes: null // Result: org_form=AS&org_form=ASA
+                    indexes: null
                 }
             });
             return data;

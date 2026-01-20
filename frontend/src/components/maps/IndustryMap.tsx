@@ -65,8 +65,27 @@ interface IndustryMapProps {
     organizationForms?: string[];
     revenueMin?: number | null;
     revenueMax?: number | null;
+    profitMin?: number | null;
+    profitMax?: number | null;
+    equityMin?: number | null;
+    equityMax?: number | null;
+    operatingProfitMin?: number | null;
+    operatingProfitMax?: number | null;
+    liquidityRatioMin?: number | null;
+    liquidityRatioMax?: number | null;
+    equityRatioMin?: number | null;
+    equityRatioMax?: number | null;
     employeeMin?: number | null;
     employeeMax?: number | null;
+    foundedFrom?: string | null;
+    foundedTo?: string | null;
+    bankruptFrom?: string | null;
+    bankruptTo?: string | null;
+    isBankrupt?: boolean | null;
+    inLiquidation?: boolean | null;
+    inForcedLiquidation?: boolean | null;
+    hasAccounting?: boolean | null;
+    query?: string | null;
 }
 
 // ============================================================================
@@ -86,8 +105,27 @@ export function IndustryMap({
     organizationForms,
     revenueMin,
     revenueMax,
+    profitMin,
+    profitMax,
+    equityMin,
+    equityMax,
+    operatingProfitMin,
+    operatingProfitMax,
+    liquidityRatioMin,
+    liquidityRatioMax,
+    equityRatioMin,
+    equityRatioMax,
     employeeMin,
-    employeeMax
+    employeeMax,
+    foundedFrom,
+    foundedTo,
+    bankruptFrom,
+    bankruptTo,
+    isBankrupt,
+    inLiquidation,
+    inForcedLiquidation,
+    hasAccounting,
+    query
 }: IndustryMapProps) {
     const navigate = useNavigate();
 
@@ -130,17 +168,63 @@ export function IndustryMap({
 
     // Fetch geographic stats
     const { data: geoStats, isLoading, isError, refetch, isRefetching } = useQuery<GeoStat[]>({
-        queryKey: ['geographyStats', level, selectedNace, metric, selectedCounty, organizationForms, revenueMin, revenueMax, employeeMin, employeeMax],
+        queryKey: [
+            'geographyStats',
+            level,
+            selectedNace,
+            metric,
+            selectedCounty,
+            organizationForms,
+            revenueMin, revenueMax,
+            profitMin, profitMax,
+            equityMin, equityMax,
+            operatingProfitMin, operatingProfitMax,
+            liquidityRatioMin, liquidityRatioMax,
+            equityRatioMin, equityRatioMax,
+            employeeMin, employeeMax,
+            foundedFrom, foundedTo,
+            bankruptFrom, bankruptTo,
+            isBankrupt,
+            inLiquidation,
+            inForcedLiquidation,
+            hasAccounting,
+            query
+        ],
         queryFn: async () => {
             const params = new URLSearchParams({ level, metric });
             if (selectedNace) params.set('nace', selectedNace);
+            if (query) params.set('name', query);
             if (level === 'municipality' && selectedCounty) params.set('county_code', selectedCounty);
 
-            organizationForms?.forEach(form => params.append('org_form', form));
-            if (revenueMin != null) params.set('revenue_min', revenueMin.toString());
-            if (revenueMax != null) params.set('revenue_max', revenueMax.toString());
-            if (employeeMin != null) params.set('employee_min', employeeMin.toString());
-            if (employeeMax != null) params.set('employee_max', employeeMax.toString());
+            organizationForms?.forEach(form => params.append('organisasjonsform', form));
+
+            // Ranges
+            const ranges = [
+                ['revenue', revenueMin, revenueMax],
+                ['profit', profitMin, profitMax],
+                ['equity', equityMin, equityMax],
+                ['operating_profit', operatingProfitMin, operatingProfitMax],
+                ['liquidity_ratio', liquidityRatioMin, liquidityRatioMax],
+                ['equity_ratio', equityRatioMin, equityRatioMax],
+                ['employee', employeeMin, employeeMax]
+            ];
+
+            ranges.forEach(([name, min, max]) => {
+                if (min != null) params.set(`${name}_min`, min.toString());
+                if (max != null) params.set(`${name}_max`, max.toString());
+            });
+
+            // Dates
+            if (foundedFrom) params.set('founded_from', foundedFrom);
+            if (foundedTo) params.set('founded_to', foundedTo);
+            if (bankruptFrom) params.set('bankrupt_from', bankruptFrom);
+            if (bankruptTo) params.set('bankrupt_to', bankruptTo);
+
+            // Boolean Flags
+            if (isBankrupt !== null && isBankrupt !== undefined) params.set('is_bankrupt', isBankrupt.toString());
+            if (inLiquidation !== null && inLiquidation !== undefined) params.set('in_liquidation', inLiquidation.toString());
+            if (inForcedLiquidation !== null && inForcedLiquidation !== undefined) params.set('in_forced_liquidation', inForcedLiquidation.toString());
+            if (hasAccounting !== null && hasAccounting !== undefined) params.set('has_accounting', hasAccounting.toString());
 
             const { data } = await apiClient.get<GeoStat[]>(`/v1/stats/geography?${params}`);
             return data;
@@ -234,17 +318,63 @@ export function IndustryMap({
     }, [level]);
 
     const { data: averages } = useQuery<GeoAverages>({
-        queryKey: ['geographyAverages', level, selectedNace, metric, selectedCounty, organizationForms, revenueMin, revenueMax, employeeMin, employeeMax],
+        queryKey: [
+            'geographyAverages',
+            level,
+            selectedNace,
+            metric,
+            selectedCounty,
+            organizationForms,
+            revenueMin, revenueMax,
+            profitMin, profitMax,
+            equityMin, equityMax,
+            operatingProfitMin, operatingProfitMax,
+            liquidityRatioMin, liquidityRatioMax,
+            equityRatioMin, equityRatioMax,
+            employeeMin, employeeMax,
+            foundedFrom, foundedTo,
+            bankruptFrom, bankruptTo,
+            isBankrupt,
+            inLiquidation,
+            inForcedLiquidation,
+            hasAccounting,
+            query
+        ],
         queryFn: async () => {
             const params = new URLSearchParams({ level, metric });
             if (selectedNace) params.set('nace', selectedNace);
+            if (query) params.set('name', query);
             if (level === 'municipality' && selectedCounty) params.set('county_code', selectedCounty);
 
-            organizationForms?.forEach(form => params.append('org_form', form));
-            if (revenueMin != null) params.set('revenue_min', revenueMin.toString());
-            if (revenueMax != null) params.set('revenue_max', revenueMax.toString());
-            if (employeeMin != null) params.set('employee_min', employeeMin.toString());
-            if (employeeMax != null) params.set('employee_max', employeeMax.toString());
+            organizationForms?.forEach(form => params.append('organisasjonsform', form));
+
+            // Ranges
+            const ranges = [
+                ['revenue', revenueMin, revenueMax],
+                ['profit', profitMin, profitMax],
+                ['equity', equityMin, equityMax],
+                ['operating_profit', operatingProfitMin, operatingProfitMax],
+                ['liquidity_ratio', liquidityRatioMin, liquidityRatioMax],
+                ['equity_ratio', equityRatioMin, equityRatioMax],
+                ['employee', employeeMin, employeeMax]
+            ];
+
+            ranges.forEach(([name, min, max]) => {
+                if (min != null) params.set(`${name}_min`, min.toString());
+                if (max != null) params.set(`${name}_max`, max.toString());
+            });
+
+            // Dates
+            if (foundedFrom) params.set('founded_from', foundedFrom);
+            if (foundedTo) params.set('founded_to', foundedTo);
+            if (bankruptFrom) params.set('bankrupt_from', bankruptFrom);
+            if (bankruptTo) params.set('bankrupt_to', bankruptTo);
+
+            // Boolean Flags
+            if (isBankrupt !== null && isBankrupt !== undefined) params.set('is_bankrupt', isBankrupt.toString());
+            if (inLiquidation !== null && inLiquidation !== undefined) params.set('in_liquidation', inLiquidation.toString());
+            if (inForcedLiquidation !== null && inForcedLiquidation !== undefined) params.set('in_forced_liquidation', inForcedLiquidation.toString());
+            if (hasAccounting !== null && hasAccounting !== undefined) params.set('has_accounting', hasAccounting.toString());
 
             const { data } = await apiClient.get<GeoAverages>(`/v1/stats/geography/averages?${params}`);
             return data;
@@ -414,8 +544,27 @@ export function IndustryMap({
                     organizationForms={organizationForms}
                     revenueMin={revenueMin}
                     revenueMax={revenueMax}
+                    profitMin={profitMin}
+                    profitMax={profitMax}
+                    equityMin={equityMin}
+                    equityMax={equityMax}
+                    operatingProfitMin={operatingProfitMin}
+                    operatingProfitMax={operatingProfitMax}
+                    liquidityRatioMin={liquidityRatioMin}
+                    liquidityRatioMax={liquidityRatioMax}
+                    equityRatioMin={equityRatioMin}
+                    equityRatioMax={equityRatioMax}
                     employeeMin={employeeMin}
                     employeeMax={employeeMax}
+                    foundedFrom={foundedFrom}
+                    foundedTo={foundedTo}
+                    bankruptFrom={bankruptFrom}
+                    bankruptTo={bankruptTo}
+                    isBankrupt={isBankrupt}
+                    inLiquidation={inLiquidation}
+                    inForcedLiquidation={inForcedLiquidation}
+                    hasAccounting={hasAccounting}
+                    query={query}
                 />
 
                 {isLoading && (

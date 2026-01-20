@@ -29,7 +29,7 @@ export const CompanyCard = memo(function CompanyCard({ company, onClick }: Compa
     return (
         <div
             onClick={onClick}
-            className="bg-white rounded-lg border border-gray-200 p-4 hover:shadow-md hover:border-blue-300 transition-all cursor-pointer group"
+            className="bg-white rounded-xl border border-slate-200 p-4 hover:shadow-xl hover:border-blue-200 transition-all duration-300 cursor-pointer group active:scale-[0.98]"
             role="button"
             tabIndex={0}
             onKeyDown={(e) => e.key === 'Enter' && onClick()}
@@ -53,7 +53,7 @@ export const CompanyCard = memo(function CompanyCard({ company, onClick }: Compa
                     />
                     <ComparisonButton orgnr={company.orgnr} navn={company.navn ?? 'Ukjent'} compact />
                     <span
-                        className="px-2 py-0.5 text-xs font-medium bg-blue-100 text-blue-700 rounded"
+                        className="px-2 py-0.5 text-[10px] font-bold bg-slate-100 text-slate-600 rounded-lg group-hover:bg-blue-100 group-hover:text-blue-700 transition-colors uppercase tracking-wider"
                         title={orgFormLabel}
                     >
                         {company.organisasjonsform}
@@ -63,7 +63,7 @@ export const CompanyCard = memo(function CompanyCard({ company, onClick }: Compa
 
             {/* Industry */}
             {industry && (
-                <p className="text-xs text-gray-600 truncate mb-3" title={industry}>
+                <p className="text-[11px] font-medium text-slate-500 truncate mb-3" title={industry}>
                     {industry}
                 </p>
             )}

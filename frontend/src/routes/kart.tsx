@@ -1,5 +1,5 @@
 import { createFileRoute } from '@tanstack/react-router'
-import { useState, useMemo, useCallback } from 'react'
+import { useMemo, useState, useCallback, useEffect } from 'react'
 import { Map as MapIcon } from 'lucide-react'
 import { z } from 'zod'
 import { SEOHead } from '../components/layout'
@@ -9,9 +9,14 @@ import { CompanyModalOverlay } from '../components/company/CompanyModalOverlay'
 import { MapGuide } from '../components/maps/MapGuide'
 import { MapFilterBar } from '../components/maps/MapFilterBar'
 import { useNavigate, useSearch } from '@tanstack/react-router'
+import { MapFilterValues } from '../types/map'
+import { COUNTIES } from '../constants/explorer'
+import { MUNICIPALITIES } from '../constants/municipalityCodes'
 import { mnokToNok } from '../utils/financials'
+import { useFilterStore, FilterValues } from '../store/filterStore'
+import { defaultMapFilters } from '../types/map'
 
-// Search params schema for optional NACE filter
+// Search params schema for all map filters
 const searchSchema = z.object({
     nace: z.string().optional(),
     county: z.string().optional(),
@@ -19,11 +24,19 @@ const searchSchema = z.object({
     municipality: z.string().optional(),
     municipality_code: z.string().optional(),
     org_form: z.union([z.string(), z.array(z.string())]).optional(),
+    q: z.string().optional(),
     revenue_min: z.coerce.number().optional(),
     revenue_max: z.coerce.number().optional(),
+    profit_min: z.coerce.number().optional(),
+    profit_max: z.coerce.number().optional(),
     employee_min: z.coerce.number().optional(),
     employee_max: z.coerce.number().optional(),
+    is_bankrupt: z.coerce.boolean().optional(),
+    has_accounting: z.coerce.boolean().optional(),
+    in_liquidation: z.coerce.boolean().optional(),
 })
+
+type SearchSchema = z.infer<typeof searchSchema>
 
 export const Route = createFileRoute('/kart')({
     validateSearch: searchSchema,
@@ -35,65 +48,94 @@ function KartPage() {
     const navigate = useNavigate({ from: '/kart' })
     const search = useSearch({ from: '/kart' })
 
-    // Derived state from URL search params
-    const selectedNace = search.nace || null
-    const selectedCountyCode = search.county_code || null
-    const selectedCountyName = search.county || null
-    const selectedMunicipalityCode = search.municipality_code || null
-    const selectedMunicipalityName = search.municipality || null
-    const selectedOrgForms = useMemo(() => {
-        if (!search.org_form) return []
-        return Array.isArray(search.org_form) ? search.org_form : [search.org_form]
-    }, [search.org_form])
-
-    // Normalize financials: URL has MNOK, but IndustryMap/CompanyMarkers expect NOK
-    const revenueMin = useMemo(() => mnokToNok(search.revenue_min), [search.revenue_min])
-    const revenueMax = useMemo(() => mnokToNok(search.revenue_max), [search.revenue_max])
-    const employeeMin = search.employee_min || null
-    const employeeMax = search.employee_max || null
-
     const [selectedCompanyOrgnr, setSelectedCompanyOrgnr] = useState<string | null>(null)
 
-    // Handlers to update URL search params
-    const handleNaceChange = useCallback((nace: string | null) => {
-        navigate({ search: (prev) => ({ ...prev, nace: nace || undefined }) })
-    }, [navigate])
+    // Read filter state from store
+    const { naeringskode, searchQuery, setSearchQuery } = useFilterStore()
 
-    const handleCountyChange = useCallback((name: string, code: string) => {
+    // Sync search query between store and URL
+    useEffect(() => {
+        if (search.q !== undefined && search.q !== searchQuery) {
+            setSearchQuery(search.q || '')
+        }
+    }, [search.q, searchQuery, setSearchQuery])
+
+    // Map search params to MapFilterValues
+    const filters = useMemo((): MapFilterValues => ({
+        ...defaultMapFilters,
+        query: search.q || searchQuery || null,
+        naceCode: search.nace || naeringskode || null,
+        countyCode: search.county_code || null,
+        municipalityCode: search.municipality_code || null,
+        organizationForms: !search.org_form ? [] : (Array.isArray(search.org_form) ? search.org_form : [search.org_form as string]),
+        revenueMin: search.revenue_min != null ? (mnokToNok(search.revenue_min) ?? null) : null,
+        revenueMax: search.revenue_max != null ? (mnokToNok(search.revenue_max) ?? null) : null,
+        profitMin: search.profit_min != null ? (mnokToNok(search.profit_min) ?? null) : null,
+        profitMax: search.profit_max != null ? (mnokToNok(search.profit_max) ?? null) : null,
+        employeeMin: search.employee_min || null,
+        employeeMax: search.employee_max || null,
+        isBankrupt: search.is_bankrupt ?? null,
+        hasAccounting: search.has_accounting ?? null,
+        inLiquidation: search.in_liquidation ?? null,
+    }), [search, naeringskode, searchQuery])
+
+    // Handlers to update URL search params and filterStore
+    const handleFilterChange = useCallback((updates: Partial<MapFilterValues>) => {
+        // Sync with filterStore for consistent views across tabs
+        const storeUpdates: Partial<FilterValues> = {}
+        if ('query' in updates) storeUpdates.searchQuery = updates.query || ''
+        if ('naceCode' in updates) storeUpdates.naeringskode = updates.naceCode || ''
+        if ('countyCode' in updates) storeUpdates.countyCode = updates.countyCode || ''
+        if ('municipalityCode' in updates) storeUpdates.municipalityCode = updates.municipalityCode || ''
+        if ('revenueMin' in updates) storeUpdates.revenueMin = updates.revenueMin
+        if ('revenueMax' in updates) storeUpdates.revenueMax = updates.revenueMax
+        if ('employeeMin' in updates) storeUpdates.employeeMin = updates.employeeMin
+        if ('employeeMax' in updates) storeUpdates.employeeMax = updates.employeeMax
+        if ('profitMin' in updates) storeUpdates.profitMin = updates.profitMin
+        if ('profitMax' in updates) storeUpdates.profitMax = updates.profitMax
+        if ('organizationForms' in updates) storeUpdates.organizationForms = updates.organizationForms || []
+        if ('isBankrupt' in updates) storeUpdates.isBankrupt = updates.isBankrupt
+
+        if (Object.keys(storeUpdates).length > 0) {
+            useFilterStore.setState(storeUpdates)
+        }
+
         navigate({
-            search: (prev) => ({
-                ...prev,
-                county: name || undefined,
-                county_code: code || undefined,
-                municipality: undefined,
-                municipality_code: undefined
-            })
+            search: (prev: SearchSchema): SearchSchema => {
+                const newSearch = { ...prev }
+
+                if ('query' in updates) newSearch.q = updates.query || undefined
+                if ('naceCode' in updates) newSearch.nace = updates.naceCode || undefined
+                if ('countyCode' in updates) {
+                    newSearch.county_code = updates.countyCode || undefined
+                    newSearch.municipality_code = undefined
+                    newSearch.county = updates.countyCode ? COUNTIES.find(c => c.code === updates.countyCode)?.name : undefined
+                    newSearch.municipality = undefined
+                }
+                if ('municipalityCode' in updates) {
+                    newSearch.municipality_code = updates.municipalityCode || undefined
+                    newSearch.municipality = updates.municipalityCode ? MUNICIPALITIES.find(m => m.code === updates.municipalityCode)?.name : undefined
+                }
+                if ('organizationForms' in updates) newSearch.org_form = (updates.organizationForms && updates.organizationForms.length > 0) ? updates.organizationForms : undefined
+
+                // Convert back to MNOK for URL
+                if ('revenueMin' in updates) newSearch.revenue_min = updates.revenueMin != null ? updates.revenueMin / 1_000_000 : undefined
+                if ('revenueMax' in updates) newSearch.revenue_max = updates.revenueMax != null ? updates.revenueMax / 1_000_000 : undefined
+                if ('profitMin' in updates) newSearch.profit_min = updates.profitMin != null ? updates.profitMin / 1_000_000 : undefined
+                if ('profitMax' in updates) newSearch.profit_max = updates.profitMax != null ? updates.profitMax / 1_000_000 : undefined
+                if ('employeeMin' in updates) newSearch.employee_min = updates.employeeMin ?? undefined
+                if ('employeeMax' in updates) newSearch.employee_max = updates.employeeMax ?? undefined
+                if ('isBankrupt' in updates) newSearch.is_bankrupt = updates.isBankrupt ?? undefined
+                if ('hasAccounting' in updates) newSearch.has_accounting = updates.hasAccounting ?? undefined
+                if ('inLiquidation' in updates) newSearch.in_liquidation = updates.inLiquidation ?? undefined
+
+                return newSearch
+            }
         })
-    }, [navigate])
-
-    const handleMunicipalityChange = useCallback((name: string, code: string) => {
-        navigate({
-            search: (prev) => ({
-                ...prev,
-                municipality: name || undefined,
-                municipality_code: code || undefined
-            })
-        })
-    }, [navigate])
-
-    const handleOrgFormsChange = useCallback((forms: string[]) => {
-        navigate({ search: (prev) => ({ ...prev, org_form: forms.length > 0 ? forms : undefined }) })
-    }, [navigate])
-
-    const handleRevenueChange = useCallback((val: number | null) => {
-        navigate({ search: (prev) => ({ ...prev, revenue_min: val ?? undefined }) })
-    }, [navigate])
-
-    const handleEmployeeChange = useCallback((val: number | null) => {
-        navigate({ search: (prev) => ({ ...prev, employee_min: val ?? undefined }) })
     }, [navigate])
 
     const handleClearFilters = useCallback(() => {
+        useFilterStore.getState().clearFilters()
         navigate({ search: {} })
     }, [navigate])
 
@@ -119,35 +161,51 @@ function KartPage() {
 
             {/* Enhanced Filter Bar */}
             <MapFilterBar
-                selectedNace={selectedNace}
-                onNaceChange={handleNaceChange}
-                selectedCountyCode={selectedCountyCode}
-                onCountyChange={handleCountyChange}
-                selectedMunicipalityCode={selectedMunicipalityCode}
-                onMunicipalityChange={handleMunicipalityChange}
-                selectedOrgForms={selectedOrgForms}
-                onOrgFormsChange={handleOrgFormsChange}
-                revenueMin={search.revenue_min ?? null}
-                onRevenueChange={handleRevenueChange}
-                employeeMin={search.employee_min ?? null}
-                onEmployeeChange={handleEmployeeChange}
+                filters={filters}
+                onChange={handleFilterChange}
                 onClear={handleClearFilters}
+                className="relative z-500"
             />
 
-            <div className="rounded-xl overflow-hidden border border-gray-200 shadow-sm h-[600px] relative">
+            <div className="rounded-2xl overflow-hidden border border-gray-100 shadow-sm h-[600px] relative">
                 <IndustryMap
-                    selectedNace={selectedNace}
+                    selectedNace={filters.naceCode}
                     metric="company_count"
                     onCompanyClick={setSelectedCompanyOrgnr}
-                    countyFromExplorer={selectedCountyName || undefined}
-                    countyCodeFromExplorer={selectedCountyCode || undefined}
-                    municipalityFromExplorer={selectedMunicipalityName || undefined}
-                    municipalityCodeFromExplorer={selectedMunicipalityCode || undefined}
-                    organizationForms={selectedOrgForms}
-                    revenueMin={revenueMin}
-                    revenueMax={revenueMax}
-                    employeeMin={employeeMin}
-                    employeeMax={employeeMax}
+                    onRegionClick={(_name, code, level) => {
+                        if (level === 'county') {
+                            handleFilterChange({ countyCode: code, municipalityCode: null })
+                        } else {
+                            handleFilterChange({ municipalityCode: code })
+                        }
+                    }}
+                    countyFromExplorer={search.county}
+                    countyCodeFromExplorer={filters.countyCode || undefined}
+                    municipalityFromExplorer={search.municipality}
+                    municipalityCodeFromExplorer={filters.municipalityCode || undefined}
+                    organizationForms={filters.organizationForms}
+                    revenueMin={filters.revenueMin}
+                    revenueMax={filters.revenueMax}
+                    profitMin={filters.profitMin}
+                    profitMax={filters.profitMax}
+                    equityMin={filters.equityMin}
+                    equityMax={filters.equityMax}
+                    operatingProfitMin={filters.operatingProfitMin}
+                    operatingProfitMax={filters.operatingProfitMax}
+                    liquidityRatioMin={filters.liquidityRatioMin}
+                    liquidityRatioMax={filters.liquidityRatioMax}
+                    equityRatioMin={filters.equityRatioMin}
+                    equityRatioMax={filters.equityRatioMax}
+                    employeeMin={filters.employeeMin}
+                    employeeMax={filters.employeeMax}
+                    foundedFrom={filters.foundedFrom}
+                    foundedTo={filters.foundedTo}
+                    bankruptFrom={filters.bankruptFrom}
+                    bankruptTo={filters.bankruptTo}
+                    isBankrupt={filters.isBankrupt}
+                    inLiquidation={filters.inLiquidation}
+                    inForcedLiquidation={filters.inForcedLiquidation}
+                    hasAccounting={filters.hasAccounting}
                 />
             </div>
 

@@ -13,6 +13,7 @@ from sqlalchemy.orm import defer
 import models
 from exceptions import CompanyNotFoundException, DatabaseException
 from repositories.company.base import DETAIL_VIEW_OPTIONS
+from repositories.company_filter_builder import FilterParams
 
 logger = logging.getLogger(__name__)
 
@@ -311,60 +312,26 @@ class LookupsMixin:
 
     async def get_map_markers(
         self,
-        naeringskode: str | None = None,
-        county: str | None = None,
-        municipality: str | None = None,
-        municipality_code: str | None = None,
+        filters: FilterParams,
         bbox: tuple[float, float, float, float] | None = None,
         limit: int = 5000,
-        organisasjonsform: list[str] | None = None,
-        min_revenue: float | None = None,
-        max_revenue: float | None = None,
-        min_employees: int | None = None,
-        max_employees: int | None = None,
     ) -> tuple[list[tuple], int]:
         """Get companies with coordinates for map display.
 
         Args:
-            naeringskode: Optional NACE code prefix to filter by
-            county: Optional county code (2-digit kommunenummer prefix)
-            municipality: Optional municipality name (case-insensitive)
-            municipality_code: Optional 4-digit municipality code
+            filters: Filter parameters (NACE, org form, revenue, employees, status, dates, etc.)
             bbox: Optional bounding box as (west, south, east, north)
             limit: Maximum number of markers to return
-            organisasjonsform: Optional list of organization forms
-            min_revenue: Optional min revenue (MNOK)
-            max_revenue: Optional max revenue (MNOK)
-            min_employees: Optional min employees
-            max_employees: Optional max employees
 
         Returns:
             Tuple of (list of marker tuples, total count)
             Each marker tuple: (orgnr, navn, latitude, longitude, naeringskode, antall_ansatte)
         """
-        from repositories.company_filter_builder import CompanyFilterBuilder, FilterParams
-
-        # Construct FilterParams
-        filters = FilterParams(
-            naeringskode=naeringskode,
-            organisasjonsform=organisasjonsform,
-            min_revenue=min_revenue,
-            max_revenue=max_revenue,
-            min_employees=min_employees,
-            max_employees=max_employees,
-            municipality=municipality,
-            municipality_code=municipality_code,
-            county=county,
-        )
+        from repositories.company_filter_builder import CompanyFilterBuilder
 
         builder = CompanyFilterBuilder(filters)
-        # Apply all non-financial filters
-        builder.apply_nace_filter()
-        builder.apply_org_form_filter()
-        builder.apply_employee_filter()
-        builder.apply_location_filter()
-        builder.apply_status_filters()  # Exclude bankrupt by default if desired? No, keeper filter logic
-        builder.apply_exclude_org_form_filter()
+        # Apply all filters including financials, status, dates, etc.
+        builder.apply_all(include_financial=True)
 
         # Build query
         query = select(
@@ -381,6 +348,10 @@ class LookupsMixin:
             )
         )
 
+        # Join with financials if needed by filter builder
+        if builder.needs_financial_join:
+            query = query.outerjoin(models.LatestFinancials, models.Company.orgnr == models.LatestFinancials.orgnr)
+
         # Apply bounding box
         if bbox:
             west, south, east, north = bbox
@@ -395,12 +366,6 @@ class LookupsMixin:
 
         # Apply accumulated filters from builder
         query = builder.apply_to_query(query)
-
-        # Apply financial filters (requires join)
-        if filters.has_financial_filters():
-            query = query.outerjoin(models.LatestFinancials, models.Company.orgnr == models.LatestFinancials.orgnr)
-            builder.apply_financial_filters()
-            query = builder.apply_to_query(query)
 
         # Get total count BEFORE limit
         count_query = select(func.count()).select_from(query.subquery())
