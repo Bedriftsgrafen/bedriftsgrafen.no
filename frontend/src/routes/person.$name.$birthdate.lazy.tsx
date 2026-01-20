@@ -3,12 +3,14 @@ import { User, Building2, ExternalLink, ShieldCheck, Briefcase, AlertTriangle } 
 import { SEOHead, Breadcrumbs } from '../components/layout'
 import { usePersonRolesQuery } from '../hooks/queries/usePersonRolesQuery'
 import { useSlowLoadingToast } from '../hooks/useSlowLoadingToast'
+import { Button } from '../components/common/Button'
+import logo1881 from '../img/1881-logo.png'
 
 export const Route = createLazyFileRoute('/person/$name/$birthdate')({
     component: PersonProfilePage,
 })
 
-function PersonProfilePage() {
+export function PersonProfilePage() {
     const { name, birthdate } = Route.useParams()
     const decodedName = decodeURIComponent(name)
     const normalizedBirthdate = birthdate === 'unknown' ? null : birthdate
@@ -39,24 +41,42 @@ function PersonProfilePage() {
             <div className="max-w-4xl mx-auto py-8 px-4">
                 <div className="bg-white rounded-2xl shadow-xl overflow-hidden mb-8">
                     <div className="bg-linear-to-br from-blue-900 via-blue-800 to-indigo-900 p-8 text-white">
-                        <div className="flex items-center gap-6">
-                            <div className="p-4 bg-white/10 rounded-2xl backdrop-blur-sm border border-white/20">
-                                <User className="h-12 w-12" />
-                            </div>
-                            <div>
-                                <h1 className="text-3xl font-bold mb-1">{decodedName}</h1>
-                                <div className="flex items-center gap-4 text-blue-100/90">
-                                    {normalizedBirthdate && (
-                                        <span className="flex items-center gap-1.5 text-sm">
-                                            Født: {normalizedBirthdate}
+                        <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
+                            <div className="flex items-center gap-6">
+                                <div className="p-4 bg-white/10 rounded-2xl backdrop-blur-sm border border-white/20">
+                                    <User className="h-12 w-12" />
+                                </div>
+                                <div>
+                                    <h1 className="text-3xl font-bold mb-1">{decodedName}</h1>
+                                    <div className="flex items-center gap-4 text-blue-100/90">
+                                        {normalizedBirthdate && (
+                                            <span className="flex items-center gap-1.5 text-sm">
+                                                Født: {normalizedBirthdate}
+                                            </span>
+                                        )}
+                                        <span className="flex items-center gap-1.5 text-sm px-2 py-0.5 bg-blue-500/30 rounded-full border border-blue-400/30">
+                                            <ShieldCheck className="h-4 w-4" />
+                                            Kun næringsvirksomhet
                                         </span>
-                                    )}
-                                    <span className="flex items-center gap-1.5 text-sm px-2 py-0.5 bg-blue-500/30 rounded-full border border-blue-400/30">
-                                        <ShieldCheck className="h-4 w-4" />
-                                        Kun næringsvirksomhet
-                                    </span>
+                                    </div>
                                 </div>
                             </div>
+                            <Button
+                                variant="outline"
+                                size="sm"
+                                leftIcon={<img src={logo1881} alt="" className="h-4 w-auto" />}
+                                onClick={() =>
+                                    window.open(
+                                        `https://www.1881.no/?query=${encodeURIComponent(decodedName)}&type=person`,
+                                        '_blank',
+                                        'noopener,noreferrer'
+                                    )
+                                }
+                                className="bg-white/10 border-white/20 text-white hover:bg-white/20 self-start md:self-center"
+                                aria-label={`Søk etter ${decodedName} på 1881.no`}
+                            >
+                                Søk på 1881
+                            </Button>
                         </div>
                     </div>
 
