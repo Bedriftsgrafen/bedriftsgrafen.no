@@ -43,11 +43,7 @@ class RepairService:
         """Backfill registration dates from raw_data for companies missing them."""
         logger.info(f"Repair: Backfilling registration dates (limit={limit})...")
 
-        stmt = (
-            select(models.Company)
-            .where(models.Company.registreringsdato_enhetsregisteret.is_(None))
-            .limit(limit)
-        )
+        stmt = select(models.Company).where(models.Company.registreringsdato_enhetsregisteret.is_(None)).limit(limit)
         result = await self.db.execute(stmt)
         companies = result.scalars().all()
 
@@ -61,7 +57,7 @@ class RepairService:
 
             # Parse dates from stored raw_data
             fields = self.update_service.company_repo._parse_company_fields(company.raw_data)
-            
+
             if fields.get("registreringsdato_enhetsregisteret"):
                 company.registreringsdato_enhetsregisteret = fields["registreringsdato_enhetsregisteret"]
                 company.registreringsdato_foretaksregisteret = fields.get("registreringsdato_foretaksregisteret")

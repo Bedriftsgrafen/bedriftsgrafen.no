@@ -56,13 +56,13 @@ class CrudMixin:
         # Parse register flags
         mva_raw = company_data.get("registrertIMvaregisteret")
         registrert_i_mvaregisteret = bool(mva_raw)
-        
+
         frivillig_raw = company_data.get("registrertIFrivillighetsregisteret")
         registrert_i_frivillighetsregisteret = bool(frivillig_raw)
-        
+
         stiftelse_raw = company_data.get("registrertIStiftelsesregisteret")
         registrert_i_stiftelsesregisteret = bool(stiftelse_raw)
-        
+
         parti_raw = company_data.get("registrertIPartiregisteret")
         registrert_i_partiregisteret = bool(parti_raw)
 

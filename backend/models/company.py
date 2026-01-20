@@ -160,7 +160,9 @@ class Company(Base):
             ),
         ),
         Index("idx_bedrifter_reg_enhetsregisteret_desc", sa_text("registreringsdato_enhetsregisteret DESC NULLS LAST")),
-        Index("idx_bedrifter_reg_foretaksregisteret_desc", sa_text("registreringsdato_foretaksregisteret DESC NULLS LAST")),
+        Index(
+            "idx_bedrifter_reg_foretaksregisteret_desc", sa_text("registreringsdato_foretaksregisteret DESC NULLS LAST")
+        ),
     )
 
     orgnr: Mapped[str] = mapped_column(String, primary_key=True, index=True)

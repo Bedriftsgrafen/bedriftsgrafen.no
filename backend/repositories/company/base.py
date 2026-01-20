@@ -77,6 +77,13 @@ class CompanyWithFinancials:
         self.naeringskode = company.naeringskode
         self.antall_ansatte = company.antall_ansatte
         self.stiftelsesdato = company.stiftelsesdato
+        self.registreringsdato_enhetsregisteret = company.registreringsdato_enhetsregisteret
+        self.registreringsdato_foretaksregisteret = company.registreringsdato_foretaksregisteret
+        self.registrert_i_foretaksregisteret = company.registrert_i_foretaksregisteret
+        self.registrert_i_mvaregisteret = company.registrert_i_mvaregisteret
+        self.registrert_i_frivillighetsregisteret = company.registrert_i_frivillighetsregisteret
+        self.registrert_i_stiftelsesregisteret = company.registrert_i_stiftelsesregisteret
+        self.registrert_i_partiregisteret = company.registrert_i_partiregisteret
         self.konkurs = company.konkurs
         self.under_avvikling = company.under_avvikling
         self.under_tvangsavvikling = company.under_tvangsavvikling

@@ -100,7 +100,7 @@ class CompanyFilterDTO(BaseModel):
     sort_by: Annotated[
         str,
         Field(
-            pattern="^(navn|orgnr|organisasjonsform|antall_ansatte|stiftelsesdato|konkursdato|naeringskode|revenue|profit|operating_profit|operating_margin|kommune)$",
+            pattern="^(navn|orgnr|organisasjonsform|antall_ansatte|stiftelsesdato|registreringsdato_enhetsregisteret|konkursdato|naeringskode|revenue|profit|operating_profit|operating_margin|kommune)$",
             description="Field to sort by",
         ),
     ] = "navn"
@@ -138,8 +138,14 @@ class CompanyFilterDTO(BaseModel):
     @model_validator(mode="after")
     def validate_registered_date_range(self):
         """Ensure registered_from <= registered_to when both are provided"""
-        if self.registered_from is not None and self.registered_to is not None and self.registered_from > self.registered_to:
-            raise ValueError(f"registered_from ({self.registered_from}) cannot be after registered_to ({self.registered_to})")
+        if (
+            self.registered_from is not None
+            and self.registered_to is not None
+            and self.registered_from > self.registered_to
+        ):
+            raise ValueError(
+                f"registered_from ({self.registered_from}) cannot be after registered_to ({self.registered_to})"
+            )
         return self
 
     def _unpack_range_filters(self, params: dict) -> None:

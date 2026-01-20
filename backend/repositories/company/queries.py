@@ -174,16 +174,23 @@ class QueryMixin:
         else:
             # Standard ordering
             if sort_order == "desc":
-                base_query = base_query.order_by(sort_column_obj.desc().nullslast())
+                base_query = base_query.order_by(
+                    sort_column_obj.desc().nullslast(),
+                    models.Company.stiftelsesdato.desc().nullslast(),
+                    models.Company.navn.asc(),
+                )
             else:
-                base_query = base_query.order_by(sort_column_obj.asc().nullslast())
+                base_query = base_query.order_by(
+                    sort_column_obj.asc().nullslast(),
+                    models.Company.stiftelsesdato.asc().nullslast(),
+                    models.Company.navn.asc(),
+                )
 
         base_query = base_query.limit(limit).offset(skip)
 
         result = await self.db.execute(base_query)
         rows = result.fetchall()
         orgnrs = [row[0] for row in rows]
-
         if not orgnrs:
             return []
 
@@ -253,10 +260,19 @@ class QueryMixin:
         }
         sort_column = extended_sort_map.get(sort_by, models.Company.navn)
 
+        # Apply stable ordering
         if sort_order == "desc":
-            query = query.order_by(sort_column.desc().nullslast())
+            query = query.order_by(
+                sort_column.desc().nullslast(),
+                models.Company.stiftelsesdato.desc().nullslast(),
+                models.Company.navn.asc(),
+            )
         else:
-            query = query.order_by(sort_column.asc().nullslast())
+            query = query.order_by(
+                sort_column.asc().nullslast(),
+                models.Company.stiftelsesdato.asc().nullslast(),
+                models.Company.navn.asc(),
+            )
 
         query = query.offset(skip).limit(limit)
 
