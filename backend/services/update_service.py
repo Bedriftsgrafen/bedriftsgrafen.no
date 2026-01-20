@@ -350,6 +350,12 @@ class UpdateService:
                     result.api_errors += 1
                     if fetch_result.error and "Invalid" not in fetch_result.error:
                         result.errors.append(f"{fetch_result.orgnr}: {fetch_result.error}")
+                        # Report to SyncError for later retry by repair worker
+                        await self.report_sync_error(
+                            orgnr=fetch_result.orgnr,
+                            entity_type="company",
+                            error_message=fetch_result.error,
+                        )
                 continue
 
             try:

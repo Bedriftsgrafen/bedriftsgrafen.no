@@ -55,6 +55,8 @@ class FilterParams:
     founded_to: date | None = None
     bankrupt_from: date | None = None
     bankrupt_to: date | None = None
+    registered_from: date | None = None
+    registered_to: date | None = None
 
     # Status
     is_bankrupt: bool | None = None
@@ -95,6 +97,8 @@ class FilterParams:
             founded_to=dto.founded_to,
             bankrupt_from=dto.bankrupt_from,
             bankrupt_to=dto.bankrupt_to,
+            registered_from=dto.registered_from,
+            registered_to=dto.registered_to,
             is_bankrupt=dto.is_bankrupt,
             in_liquidation=dto.in_liquidation,
             in_forced_liquidation=dto.in_forced_liquidation,
@@ -151,6 +155,8 @@ class FilterParams:
                 self.founded_to,
                 self.bankrupt_from,
                 self.bankrupt_to,
+                self.registered_from,
+                self.registered_to,
                 self.is_bankrupt,
                 self.in_liquidation,
                 self.in_forced_liquidation,
@@ -176,6 +182,8 @@ class FilterParams:
                 self.founded_to,
                 self.bankrupt_from,
                 self.bankrupt_to,
+                self.registered_from,
+                self.registered_to,
                 self.is_bankrupt,
                 self.in_liquidation,
                 self.in_forced_liquidation,
@@ -368,6 +376,12 @@ class CompanyFilterBuilder:
             self._clauses.append(models.Company.konkursdato >= self._f.bankrupt_from)
         if self._f.bankrupt_to:
             self._clauses.append(models.Company.konkursdato <= self._f.bankrupt_to)
+
+        # Registration date range
+        if self._f.registered_from:
+            self._clauses.append(models.Company.registreringsdato_enhetsregisteret >= self._f.registered_from)
+        if self._f.registered_to:
+            self._clauses.append(models.Company.registreringsdato_enhetsregisteret <= self._f.registered_to)
 
         return self
 

@@ -34,9 +34,11 @@ def include_object(object, name, type_, reflected, compare_to):
         "industry_subclass_stats",
         "county_stats",
         "municipality_stats",
-        "municipality_stats",
         "latest_financials",
         "latest_accountings",
+        "orgform_counts",
+        "dashboard_stats",
+        "system_state",
     ]:
         return False
     return True

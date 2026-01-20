@@ -35,6 +35,13 @@ class CompanyBase(BaseModel):
     konkursdato: date | None = None
     under_avvikling: bool | None = None
     under_tvangsavvikling: bool | None = None
+    registrert_i_foretaksregisteret: bool | None = None
+    registrert_i_mvaregisteret: bool | None = None
+    registrert_i_frivillighetsregisteret: bool | None = None
+    registrert_i_stiftelsesregisteret: bool | None = None
+    registrert_i_partiregisteret: bool | None = None
+    registreringsdato_enhetsregisteret: date | None = None
+    registreringsdato_foretaksregisteret: date | None = None
 
     vedtektsfestet_formaal: str | None = None
 

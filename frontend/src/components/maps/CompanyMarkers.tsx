@@ -56,6 +56,8 @@ interface CompanyMarkersProps {
     foundedTo?: string | null;
     bankruptFrom?: string | null;
     bankruptTo?: string | null;
+    registeredFrom?: string | null;
+    registeredTo?: string | null;
     isBankrupt?: boolean | null;
     inLiquidation?: boolean | null;
     inForcedLiquidation?: boolean | null;
@@ -243,6 +245,8 @@ export function CompanyMarkers({
     foundedTo,
     bankruptFrom,
     bankruptTo,
+    registeredFrom,
+    registeredTo,
     isBankrupt,
     inLiquidation,
     inForcedLiquidation,
@@ -274,6 +278,7 @@ export function CompanyMarkers({
             employeeMin, employeeMax,
             foundedFrom, foundedTo,
             bankruptFrom, bankruptTo,
+            registeredFrom, registeredTo,
             isBankrupt,
             inLiquidation,
             inForcedLiquidation,
@@ -312,6 +317,8 @@ export function CompanyMarkers({
             if (foundedTo) params.founded_to = foundedTo;
             if (bankruptFrom) params.bankrupt_from = bankruptFrom;
             if (bankruptTo) params.bankrupt_to = bankruptTo;
+            if (registeredFrom) params.registered_from = registeredFrom;
+            if (registeredTo) params.registered_to = registeredTo;
 
             // Status flags (explicitly check for boolean)
             if (isBankrupt !== null) params.is_bankrupt = isBankrupt;

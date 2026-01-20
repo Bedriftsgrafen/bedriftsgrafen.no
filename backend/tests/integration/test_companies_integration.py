@@ -34,6 +34,8 @@ def test_get_company_success(MockServiceClass, MockNaceService):
     mock_company.naeringskode = "62.000"
     mock_company.naeringskoder = ["62.000"]
     mock_company.stiftelsesdato = None
+    mock_company.registreringsdato_enhetsregisteret = None
+    mock_company.registreringsdato_foretaksregisteret = None
     mock_company.hjemmeside = None
     mock_company.postadresse = {}
     mock_company.forretningsadresse = {}

@@ -141,8 +141,10 @@ class TestAuditSubunits:
         mock_company.orgnr = "123456789"
         repair_service.repair = True
 
+        mock_scalars = MagicMock()
+        mock_scalars.all.return_value = [mock_company]
         mock_result = MagicMock()
-        mock_result.scalars.return_value.all.return_value = [mock_company]
+        mock_result.scalars.return_value = mock_scalars
 
         # API returns 3 subunits, local count is 1
         repair_service.brreg_api.fetch_subunits = AsyncMock(
@@ -171,8 +173,10 @@ class TestBackfillRoles:
     @pytest.mark.asyncio
     async def test_backfill_roles_no_companies_need_polling(self, repair_service, mock_db):
         # Arrange: No companies with NULL last_polled_roles
+        mock_scalars = MagicMock()
+        mock_scalars.all.return_value = []
         mock_result = MagicMock()
-        mock_result.scalars.return_value.all.return_value = []
+        mock_result.scalars.return_value = mock_scalars
         mock_db.execute.return_value = mock_result
 
         # Act
@@ -218,11 +222,13 @@ class TestRunAllRepairs:
         repair_service.fix_ghost_parents = AsyncMock()
         repair_service.audit_subunits = AsyncMock()
         repair_service.backfill_roles = AsyncMock()
+        repair_service.backfill_registration_dates = AsyncMock()
 
         # Act
         await repair_service.run_all_repairs(limit=50)
 
-        # Assert: All three phases were called
+        # Assert: All four phases were called
         repair_service.fix_ghost_parents.assert_called_once_with(limit=50)
         repair_service.audit_subunits.assert_called_once_with(limit=50)
         repair_service.backfill_roles.assert_called_once_with(limit=50)
+        repair_service.backfill_registration_dates.assert_called_once_with(limit=50)

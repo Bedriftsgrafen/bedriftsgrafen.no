@@ -38,6 +38,8 @@ def test_search_by_municipality_code(MockServiceClass):
     mock_company.naeringskode = "62.000"
     mock_company.naeringskoder = ["62.000"]
     mock_company.stiftelsesdato = None
+    mock_company.registreringsdato_enhetsregisteret = None
+    mock_company.registreringsdato_foretaksregisteret = None
     mock_company.latitude = 60.0
     mock_company.longitude = 10.0
     mock_company.postadresse = {}

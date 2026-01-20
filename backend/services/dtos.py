@@ -73,6 +73,10 @@ class CompanyFilterDTO(BaseModel):
     bankrupt_from: Annotated[date | None, Field(description="Minimum bankruptcy date")] = None
     bankrupt_to: Annotated[date | None, Field(description="Maximum bankruptcy date")] = None
 
+    # Registration dates
+    registered_from: Annotated[date | None, Field(description="Minimum registration date")] = None
+    registered_to: Annotated[date | None, Field(description="Maximum registration date")] = None
+
     # Status flags
     is_bankrupt: Annotated[bool | None, Field(description="Filter by bankruptcy status")] = None
     in_liquidation: Annotated[bool | None, Field(description="Filter by liquidation status")] = None
@@ -131,6 +135,13 @@ class CompanyFilterDTO(BaseModel):
             raise ValueError(f"founded_from ({self.founded_from}) cannot be after founded_to ({self.founded_to})")
         return self
 
+    @model_validator(mode="after")
+    def validate_registered_date_range(self):
+        """Ensure registered_from <= registered_to when both are provided"""
+        if self.registered_from is not None and self.registered_to is not None and self.registered_from > self.registered_to:
+            raise ValueError(f"registered_from ({self.registered_from}) cannot be after registered_to ({self.registered_to})")
+        return self
+
     def _unpack_range_filters(self, params: dict) -> None:
         """Unpack range filters into individual min/max parameters (in-place)
 
@@ -174,6 +185,8 @@ class CompanyFilterDTO(BaseModel):
             "founded_to": self.founded_to,
             "bankrupt_from": self.bankrupt_from,
             "bankrupt_to": self.bankrupt_to,
+            "registered_from": self.registered_from,
+            "registered_to": self.registered_to,
             "is_bankrupt": self.is_bankrupt,
             "in_liquidation": self.in_liquidation,
             "in_forced_liquidation": self.in_forced_liquidation,
@@ -209,6 +222,8 @@ class CompanyFilterDTO(BaseModel):
             "founded_to": self.founded_to,
             "bankrupt_from": self.bankrupt_from,
             "bankrupt_to": self.bankrupt_to,
+            "registered_from": self.registered_from,
+            "registered_to": self.registered_to,
             "is_bankrupt": self.is_bankrupt,
             "in_liquidation": self.in_liquidation,
             "in_forced_liquidation": self.in_forced_liquidation,

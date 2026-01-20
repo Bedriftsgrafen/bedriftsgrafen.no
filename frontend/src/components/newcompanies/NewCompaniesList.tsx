@@ -17,13 +17,13 @@ import { useCompanyCountQuery } from '../../hooks/queries/useCompanyCountQuery'
 
 interface NewCompaniesListProps {
     onSelectCompany: (orgnr: string) => void
-    foundedFrom: string
+    registeredFrom: string
 }
 
-type SortField = 'navn' | 'stiftelsesdato' | 'antall_ansatte' | 'naeringskode'
+type SortField = 'navn' | 'registreringsdato_enhetsregisteret' | 'antall_ansatte' | 'naeringskode'
 
 
-export function NewCompaniesList({ onSelectCompany, foundedFrom }: NewCompaniesListProps) {
+export function NewCompaniesList({ onSelectCompany, registeredFrom }: NewCompaniesListProps) {
     const {
         page,
         searchQuery, setSearchQuery,
@@ -34,7 +34,7 @@ export function NewCompaniesList({ onSelectCompany, foundedFrom }: NewCompaniesL
         activeFilterCount, hasActiveFilters,
         nextPage, prevPage
     } = useTableState<{ nace: string, county: string, municipality: string }, SortField>({
-        initialSortBy: 'stiftelsesdato',
+        initialSortBy: 'registreringsdato_enhetsregisteret',
         initialFilters: { nace: '', county: '', municipality: '' }
     })
 
@@ -43,7 +43,7 @@ export function NewCompaniesList({ onSelectCompany, foundedFrom }: NewCompaniesL
     const { data: companies, isLoading, error } = useCompaniesQuery({
         skip: (page - 1) * itemsPerPage,
         limit: itemsPerPage,
-        founded_from: foundedFrom,
+        registered_from: registeredFrom,
         organisasjonsform: ['AS'],
         exclude_org_form: ['KBO'],
         sort_by: sortBy,
@@ -55,7 +55,7 @@ export function NewCompaniesList({ onSelectCompany, foundedFrom }: NewCompaniesL
 
     // Fetch total count with filters
     const { data: totalCount } = useCompanyCountQuery({
-        founded_from: foundedFrom,
+        registered_from: registeredFrom,
         organisasjonsform: ['AS'], // API expects array
         exclude_org_form: ['KBO'],
         naeringskode: filters.nace || undefined,
@@ -208,8 +208,8 @@ export function NewCompaniesList({ onSelectCompany, foundedFrom }: NewCompaniesL
                                 Org.nr
                             </th>
                             <SortableHeader
-                                field="stiftelsesdato"
-                                label="Stiftet"
+                                field="registreringsdato_enhetsregisteret"
+                                label="Registrert"
                                 currentSort={sortBy}
                                 sortOrder={sortOrder}
                                 onSort={handleSort}
@@ -256,7 +256,7 @@ export function NewCompaniesList({ onSelectCompany, foundedFrom }: NewCompaniesL
                                     </td>
                                     <td className="px-4 py-3">
                                         <span className="text-xs bg-green-100 text-green-700 px-2 py-0.5 rounded-full font-medium">
-                                            {company.stiftelsesdato || '—'}
+                                            {company.registreringsdato_enhetsregisteret || company.stiftelsesdato || '—'}
                                         </span>
                                     </td>
                                     <td className="px-4 py-3 text-right text-sm text-gray-600">

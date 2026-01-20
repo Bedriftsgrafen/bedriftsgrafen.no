@@ -151,7 +151,7 @@ function NyetableringerPage() {
         queryKey: ['newCompaniesCount', foundedFrom],
         queryFn: async () => {
             const res = await fetch(
-                `${API_BASE}/v1/companies/count?founded_from=${foundedFrom}&organisasjonsform=AS&exclude_org_form=KBO`
+                `${API_BASE}/v1/companies/count?registered_from=${foundedFrom}&organisasjonsform=AS&exclude_org_form=KBO`
             )
             if (!res.ok) throw new Error('Failed to fetch count')
             return res.json()
@@ -164,7 +164,7 @@ function NyetableringerPage() {
         queryKey: ['newCompaniesStats', foundedFrom],
         queryFn: async () => {
             const res = await fetch(
-                `${API_BASE}/v1/companies/stats?founded_from=${foundedFrom}&organisasjonsform=AS&exclude_org_form=KBO`
+                `${API_BASE}/v1/companies/stats?registered_from=${foundedFrom}&organisasjonsform=AS&exclude_org_form=KBO`
             )
             if (!res.ok) throw new Error('Failed to fetch stats')
             return res.json()
@@ -263,7 +263,7 @@ function NyetableringerPage() {
 
             {/* Content */}
             {activeTab === 'list' && (
-                <NewCompaniesList onSelectCompany={setSelectedCompanyOrgnr} foundedFrom={foundedFrom} />
+                <NewCompaniesList onSelectCompany={setSelectedCompanyOrgnr} registeredFrom={foundedFrom} />
             )}
 
             {activeTab === 'stats' && (

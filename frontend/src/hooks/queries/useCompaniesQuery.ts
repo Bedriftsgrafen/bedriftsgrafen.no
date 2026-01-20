@@ -16,6 +16,8 @@ export interface UseCompaniesQueryParams {
   founded_to?: string
   bankrupt_from?: string
   bankrupt_to?: string
+  registered_from?: string
+  registered_to?: string
   is_bankrupt?: boolean | null
   in_liquidation?: boolean | null
   in_forced_liquidation?: boolean | null
@@ -69,7 +71,9 @@ export function useCompaniesQuery({
   sort_by,
   sort_order,
   exclude_org_form,
-  municipality_code
+  municipality_code,
+  registered_from,
+  registered_to
 }: UseCompaniesQueryParams = {}) {
   return useQuery({
     queryKey: [
@@ -80,7 +84,7 @@ export function useCompaniesQuery({
           name, organisasjonsform, naeringskode,
           employees: { min: min_employees, max: max_employees },
           location: { municipality, municipality_code, county },
-          dates: { founded_from, founded_to },
+          dates: { founded_from, founded_to, registered_from, registered_to },
           status: { is_bankrupt, in_liquidation, in_forced_liquidation },
           financials: {
             revenue: { min: min_revenue, max: max_revenue },
@@ -115,6 +119,8 @@ export function useCompaniesQuery({
 
       if (founded_from) params.founded_from = founded_from
       if (founded_to) params.founded_to = founded_to
+      if (registered_from) params.registered_from = registered_from
+      if (registered_to) params.registered_to = registered_to
 
       if (is_bankrupt !== null && is_bankrupt !== undefined) params.is_bankrupt = is_bankrupt
       if (in_liquidation !== null && in_liquidation !== undefined) params.in_liquidation = in_liquidation

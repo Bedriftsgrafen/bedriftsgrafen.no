@@ -13,7 +13,7 @@ import { ErrorState } from '../common/ErrorState';
 // Types
 // ============================================================================
 
-type SortField = 'stiftelsesdato' | 'konkursdato' | 'navn' | 'revenue' | 'kommune' | 'antall_ansatte';
+type SortField = 'registreringsdato_enhetsregisteret' | 'stiftelsesdato' | 'konkursdato' | 'navn' | 'revenue' | 'kommune' | 'antall_ansatte';
 type SortOrder = 'asc' | 'desc';
 
 interface CompanyListModalProps {
@@ -50,7 +50,7 @@ export const CompanyListModal = ({
     // Sorting state - default depends on filter type
     const getDefaultSort = (): { field: SortField; order: SortOrder } => {
         switch (filterType) {
-            case 'new': return { field: 'stiftelsesdato', order: 'desc' };
+            case 'new': return { field: 'registreringsdato_enhetsregisteret', order: 'desc' };
             case 'bankrupt': return { field: 'konkursdato', order: 'desc' };
             default: return { field: 'revenue', order: 'desc' };
         }
@@ -88,10 +88,10 @@ export const CompanyListModal = ({
 
     if (filterType === 'new') {
         const oneYearAgo = getOneYearAgo();
-        queryParams.founded_from = oneYearAgo;
+        queryParams.registered_from = oneYearAgo;
         queryParams.exclude_org_form = ['KBO'];
 
-        countParams.founded_from = oneYearAgo;
+        countParams.registered_from = oneYearAgo;
         countParams.exclude_org_form = ['KBO'];
     } else if (filterType === 'bankrupt') {
         const oneYearAgo = getOneYearAgo();
@@ -136,7 +136,7 @@ export const CompanyListModal = ({
                 <tr>
                     <SortableHeader field="navn" label="Selskap" currentSort={sortField} sortOrder={sortOrder} onSort={handleSort} />
                     <SortableHeader field="kommune" label="Kommune" className="hidden sm:table-cell" currentSort={sortField} sortOrder={sortOrder} onSort={handleSort} />
-                    <SortableHeader field="stiftelsesdato" label="Stiftet" currentSort={sortField} sortOrder={sortOrder} onSort={handleSort} />
+                    <SortableHeader field="registreringsdato_enhetsregisteret" label="Registrert" currentSort={sortField} sortOrder={sortOrder} onSort={handleSort} />
                     <th className="px-4 py-3 text-left text-xs font-medium text-gray-600 uppercase hidden md:table-cell">
                         Formål
                     </th>
@@ -164,7 +164,7 @@ export const CompanyListModal = ({
                             {company.forretningsadresse?.kommune || '—'}
                         </td>
                         <td className="px-4 py-3 text-sm text-gray-600">
-                            {formatDate(company.stiftelsesdato)}
+                            {formatDate(company.registreringsdato_enhetsregisteret || company.stiftelsesdato)}
                         </td>
                         <td className="px-4 py-3 text-sm text-gray-600 hidden md:table-cell" title={company.vedtektsfestet_formaal || undefined}>
                             {truncateText(company.vedtektsfestet_formaal, 40)}

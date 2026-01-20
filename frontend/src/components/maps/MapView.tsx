@@ -39,6 +39,8 @@ interface MapViewProps {
     foundedTo?: string | null;
     bankruptFrom?: string | null;
     bankruptTo?: string | null;
+    registeredFrom?: string | null;
+    registeredTo?: string | null;
     isBankrupt?: boolean | null;
     inLiquidation?: boolean | null;
     inForcedLiquidation?: boolean | null;
@@ -78,6 +80,8 @@ export const MapView: React.FC<MapViewProps> = ({
     foundedTo,
     bankruptFrom,
     bankruptTo,
+    registeredFrom,
+    registeredTo,
     isBankrupt,
     inLiquidation,
     inForcedLiquidation,
@@ -133,6 +137,8 @@ export const MapView: React.FC<MapViewProps> = ({
                 foundedTo={foundedTo}
                 bankruptFrom={bankruptFrom}
                 bankruptTo={bankruptTo}
+                registeredFrom={registeredFrom}
+                registeredTo={registeredTo}
                 isBankrupt={isBankrupt}
                 inLiquidation={inLiquidation}
                 inForcedLiquidation={inForcedLiquidation}

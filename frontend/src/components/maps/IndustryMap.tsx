@@ -81,6 +81,8 @@ interface IndustryMapProps {
     foundedTo?: string | null;
     bankruptFrom?: string | null;
     bankruptTo?: string | null;
+    registeredFrom?: string | null;
+    registeredTo?: string | null;
     isBankrupt?: boolean | null;
     inLiquidation?: boolean | null;
     inForcedLiquidation?: boolean | null;
@@ -121,6 +123,8 @@ export function IndustryMap({
     foundedTo,
     bankruptFrom,
     bankruptTo,
+    registeredFrom,
+    registeredTo,
     isBankrupt,
     inLiquidation,
     inForcedLiquidation,
@@ -184,6 +188,7 @@ export function IndustryMap({
             employeeMin, employeeMax,
             foundedFrom, foundedTo,
             bankruptFrom, bankruptTo,
+            registeredFrom, registeredTo,
             isBankrupt,
             inLiquidation,
             inForcedLiquidation,
@@ -219,6 +224,8 @@ export function IndustryMap({
             if (foundedTo) params.set('founded_to', foundedTo);
             if (bankruptFrom) params.set('bankrupt_from', bankruptFrom);
             if (bankruptTo) params.set('bankrupt_to', bankruptTo);
+            if (registeredFrom) params.set('registered_from', registeredFrom);
+            if (registeredTo) params.set('registered_to', registeredTo);
 
             // Boolean Flags
             if (isBankrupt !== null && isBankrupt !== undefined) params.set('is_bankrupt', isBankrupt.toString());
@@ -334,6 +341,7 @@ export function IndustryMap({
             employeeMin, employeeMax,
             foundedFrom, foundedTo,
             bankruptFrom, bankruptTo,
+            registeredFrom, registeredTo,
             isBankrupt,
             inLiquidation,
             inForcedLiquidation,
@@ -369,6 +377,8 @@ export function IndustryMap({
             if (foundedTo) params.set('founded_to', foundedTo);
             if (bankruptFrom) params.set('bankrupt_from', bankruptFrom);
             if (bankruptTo) params.set('bankrupt_to', bankruptTo);
+            if (registeredFrom) params.set('registered_from', registeredFrom);
+            if (registeredTo) params.set('registered_to', registeredTo);
 
             // Boolean Flags
             if (isBankrupt !== null && isBankrupt !== undefined) params.set('is_bankrupt', isBankrupt.toString());
@@ -533,6 +543,8 @@ export function IndustryMap({
                     foundedTo={foundedTo}
                     bankruptFrom={bankruptFrom}
                     bankruptTo={bankruptTo}
+                    registeredFrom={registeredFrom}
+                    registeredTo={registeredTo}
                     isBankrupt={isBankrupt}
                     inLiquidation={inLiquidation}
                     inForcedLiquidation={inForcedLiquidation}

@@ -159,6 +159,8 @@ class Company(Base):
                 "((konkurs = false) AND (under_avvikling = false) AND (under_tvangsavvikling = false))"
             ),
         ),
+        Index("idx_bedrifter_reg_enhetsregisteret_desc", sa_text("registreringsdato_enhetsregisteret DESC NULLS LAST")),
+        Index("idx_bedrifter_reg_foretaksregisteret_desc", sa_text("registreringsdato_foretaksregisteret DESC NULLS LAST")),
     )
 
     orgnr: Mapped[str] = mapped_column(String, primary_key=True, index=True)
@@ -168,6 +170,8 @@ class Company(Base):
     antall_ansatte: Mapped[int | None] = mapped_column(Integer, nullable=True)
     hjemmeside: Mapped[str | None] = mapped_column(Text, nullable=True)
     stiftelsesdato: Mapped[date | None] = mapped_column(Date, nullable=True)
+    registreringsdato_enhetsregisteret: Mapped[date | None] = mapped_column(Date, nullable=True, index=True)
+    registreringsdato_foretaksregisteret: Mapped[date | None] = mapped_column(Date, nullable=True, index=True)
 
     # Address data (stored as JSONB for flexibility)
     postadresse: Mapped[dict | None] = mapped_column(JSONB, nullable=True)
@@ -179,6 +183,10 @@ class Company(Base):
     under_avvikling: Mapped[bool] = mapped_column(Boolean, default=False)
     under_tvangsavvikling: Mapped[bool] = mapped_column(Boolean, default=False)
     registrert_i_foretaksregisteret: Mapped[bool] = mapped_column(Boolean, default=False, index=True)
+    registrert_i_mvaregisteret: Mapped[bool] = mapped_column(Boolean, default=False, index=True)
+    registrert_i_frivillighetsregisteret: Mapped[bool] = mapped_column(Boolean, default=False, index=True)
+    registrert_i_stiftelsesregisteret: Mapped[bool] = mapped_column(Boolean, default=False, index=True)
+    registrert_i_partiregisteret: Mapped[bool] = mapped_column(Boolean, default=False, index=True)
 
     # Formal purpose as text
     vedtektsfestet_formaal: Mapped[str | None] = mapped_column(Text, nullable=True)
@@ -193,7 +201,7 @@ class Company(Base):
     geocoded_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
 
     # Search vector
-    search_vector: Mapped[Any] = mapped_column(TSVECTOR)
+    search_vector: Mapped[Any] = mapped_column(TSVECTOR, nullable=True)
 
     # Metadata
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())

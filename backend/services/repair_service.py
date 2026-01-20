@@ -36,7 +36,40 @@ class RepairService:
         await self.fix_ghost_parents(limit=limit)
         await self.audit_subunits(limit=limit)
         await self.backfill_roles(limit=limit)
+        await self.backfill_registration_dates(limit=limit)
         logger.info("Scheduled data repair session complete.")
+
+    async def backfill_registration_dates(self, limit: int = 100) -> None:
+        """Backfill registration dates from raw_data for companies missing them."""
+        logger.info(f"Repair: Backfilling registration dates (limit={limit})...")
+
+        stmt = (
+            select(models.Company)
+            .where(models.Company.registreringsdato_enhetsregisteret.is_(None))
+            .limit(limit)
+        )
+        result = await self.db.execute(stmt)
+        companies = result.scalars().all()
+
+        if not companies:
+            return
+
+        success_count = 0
+        for company in companies:
+            if not company.raw_data:
+                continue
+
+            # Parse dates from stored raw_data
+            fields = self.update_service.company_repo._parse_company_fields(company.raw_data)
+            
+            if fields.get("registreringsdato_enhetsregisteret"):
+                company.registreringsdato_enhetsregisteret = fields["registreringsdato_enhetsregisteret"]
+                company.registreringsdato_foretaksregisteret = fields.get("registreringsdato_foretaksregisteret")
+                success_count += 1
+
+        if self.repair and success_count > 0:
+            await self.db.commit()
+            logger.info(f"Successfully backfilled {success_count} companies.")
 
     async def fix_ghost_parents(self, limit: int = 100) -> None:
         """Phase 1: Find subunits referencing non-existent parent companies."""

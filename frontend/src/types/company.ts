@@ -42,6 +42,13 @@ export interface Company {
   konkursdato?: string
   under_avvikling?: boolean
   under_tvangsavvikling?: boolean
+  registrert_i_foretaksregisteret?: boolean
+  registrert_i_mvaregisteret?: boolean
+  registrert_i_frivillighetsregisteret?: boolean
+  registrert_i_stiftelsesregisteret?: boolean
+  registrert_i_partiregisteret?: boolean
+  registreringsdato_enhetsregisteret?: string
+  registreringsdato_foretaksregisteret?: string
   vedtektsfestet_formaal?: string
   // Latest financial data (if available)
   latest_revenue?: number | null

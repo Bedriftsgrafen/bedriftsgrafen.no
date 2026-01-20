@@ -41,6 +41,8 @@ class CompanyQueryParams:
         founded_to: date | None = Query(None, description="Maximum founding date"),
         bankrupt_from: date | None = Query(None, description="Minimum bankruptcy date"),
         bankrupt_to: date | None = Query(None, description="Maximum bankruptcy date"),
+        registered_from: date | None = Query(None, description="Minimum registration date"),
+        registered_to: date | None = Query(None, description="Maximum registration date"),
         # Status flags
         is_bankrupt: bool | None = Query(None, description="Filter by bankruptcy status"),
         in_liquidation: bool | None = Query(None, description="Filter by liquidation status"),
@@ -74,6 +76,8 @@ class CompanyQueryParams:
         self.founded_to = founded_to
         self.bankrupt_from = bankrupt_from
         self.bankrupt_to = bankrupt_to
+        self.registered_from = registered_from
+        self.registered_to = registered_to
         self.is_bankrupt = is_bankrupt
         self.in_liquidation = in_liquidation
         self.in_forced_liquidation = in_forced_liquidation
@@ -113,6 +117,8 @@ class CompanyQueryParams:
             founded_to=self.founded_to,
             bankrupt_from=self.bankrupt_from,
             bankrupt_to=self.bankrupt_to,
+            registered_from=self.registered_from,
+            registered_to=self.registered_to,
             is_bankrupt=self.is_bankrupt,
             in_liquidation=self.in_liquidation,
             in_forced_liquidation=self.in_forced_liquidation,

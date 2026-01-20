@@ -66,6 +66,8 @@ async def test_get_company_detail(mock_company_service):
     mock_company.organisasjonsform = "AS"
     mock_company.naeringskode = "62.010"
     mock_company.stiftelsesdato = None
+    mock_company.registreringsdato_enhetsregisteret = None
+    mock_company.registreringsdato_foretaksregisteret = None
     mock_company.hjemmeside = None
     mock_company.postadresse = None
     mock_company.forretningsadresse = None

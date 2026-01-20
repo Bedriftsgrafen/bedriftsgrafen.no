@@ -25,6 +25,8 @@ export interface UseCompanyCountQueryParams {
     founded_to?: string
     bankrupt_from?: string
     bankrupt_to?: string
+    registered_from?: string
+    registered_to?: string
     is_bankrupt?: boolean
     in_forced_liquidation?: boolean
     has_accounting?: boolean

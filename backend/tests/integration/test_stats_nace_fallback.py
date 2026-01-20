@@ -32,9 +32,13 @@ def test_geography_stats_nace_fallback(MockServiceClass):
     # Service should be called with NO truncation in the router (truncation happens in service)
     # Actually, the router passes '62.100' and the service truncates it to '62'
     # Since we mocked the SERVICE, we check the call to it
-    mock_service.get_geography_stats.assert_called_once_with(
-        level="county", metric="company_count", nace="62.100", county_code=None
-    )
+    mock_service.get_geography_stats.assert_called_once()
+    actual_args = mock_service.get_geography_stats.call_args.kwargs
+    assert actual_args["level"] == "county"
+    assert actual_args["metric"] == "company_count"
+    assert "filters" in actual_args
+    assert actual_args["filters"].naeringskode == "62.100"
+    assert actual_args["filters"].county is None
 
 
 @patch("routers.v1.stats.StatsService")
@@ -55,9 +59,13 @@ def test_geography_averages_nace_fallback(MockServiceClass):
 
     # Assert
     assert response.status_code == 200
-    mock_service.get_geography_averages.assert_called_once_with(
-        level="county", metric="company_count", nace="62.100", county_code=None
-    )
+    mock_service.get_geography_averages.assert_called_once()
+    actual_args = mock_service.get_geography_averages.call_args.kwargs
+    assert actual_args["level"] == "county"
+    assert actual_args["metric"] == "company_count"
+    assert "filters" in actual_args
+    assert actual_args["filters"].naeringskode == "62.100"
+    assert actual_args["filters"].county is None
 
 
 def test_invalid_nace_pattern():
