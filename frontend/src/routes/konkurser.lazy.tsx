@@ -292,7 +292,7 @@ function KonkurserPage() {
                         onClear={handleClearFilters}
                         className="relative z-500"
                     />
-                    <div className="rounded-2xl overflow-hidden border border-gray-100 shadow-sm h-[600px] relative">
+                    <div className="rounded-2xl overflow-hidden border border-gray-100 shadow-sm h-[900px] md:h-[600px] relative">
                         <IndustryMap
                             metric="bankrupt_count"
                             onCompanyClick={setSelectedCompanyOrgnr}

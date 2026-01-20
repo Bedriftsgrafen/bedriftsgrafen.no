@@ -489,35 +489,8 @@ export function IndustryMap({
     const metricLabel = showPerCapita ? 'Bedrifter pr 1000 innb.' : (METRIC_LABELS[metric] || 'Verdi');
 
     return (
-        <div className="flex flex-col md:flex-row h-[600px] rounded-xl overflow-hidden border border-slate-200 shadow-xl bg-white">
-            <MapSidebar
-                level={level}
-                setLevel={(l) => { setLevel(l); if (l === 'county') setSelectedCounty(''); }}
-                showPerCapita={showPerCapita}
-                setShowPerCapita={setShowPerCapita}
-                selectedRegionData={selectedRegionData}
-                hoveredRegion={hoveredRegion}
-                maxValue={maxValue}
-                metricLabel={metricLabel}
-                averages={averages}
-                onCloseRegion={() => setSelectedRegion(null)}
-                onShowCompanies={(name, code) => {
-                    if (onSearchClick) onSearchClick(name, code, selectedNace || null);
-                    else {
-                        const normalizedName = formatMunicipalityName(name);
-                        const isCounty = code.length === 2;
-                        sessionStorage.setItem('mapFilter', JSON.stringify({
-                            county: isCounty ? code : '',
-                            municipality: isCounty ? '' : normalizedName,
-                            municipality_code: isCounty ? '' : code,
-                            nace: selectedNace,
-                        }));
-                        navigate({ to: '/bransjer', search: { nace: selectedNace || undefined } });
-                    }
-                }}
-            />
-
-            <div className="flex-1 relative bg-slate-50">
+        <div className="flex flex-col md:flex-row h-full rounded-xl overflow-hidden border border-slate-200 shadow-xl bg-white">
+            <div className="flex-1 order-1 md:order-2 relative bg-slate-50 min-h-[400px]">
                 <div className="absolute top-4 right-4 z-[1000]">
                     <button
                         onClick={() => refetch()}
@@ -576,6 +549,34 @@ export function IndustryMap({
                     </div>
                 )}
             </div>
+
+            <MapSidebar
+                className="order-2 md:order-1"
+                level={level}
+                setLevel={(l) => { setLevel(l); if (l === 'county') setSelectedCounty(''); }}
+                showPerCapita={showPerCapita}
+                setShowPerCapita={setShowPerCapita}
+                selectedRegionData={selectedRegionData}
+                hoveredRegion={hoveredRegion}
+                maxValue={maxValue}
+                metricLabel={metricLabel}
+                averages={averages}
+                onCloseRegion={() => setSelectedRegion(null)}
+                onShowCompanies={(name, code) => {
+                    if (onSearchClick) onSearchClick(name, code, selectedNace || null);
+                    else {
+                        const normalizedName = formatMunicipalityName(name);
+                        const isCounty = code.length === 2;
+                        sessionStorage.setItem('mapFilter', JSON.stringify({
+                            county: isCounty ? code : '',
+                            municipality: isCounty ? '' : normalizedName,
+                            municipality_code: isCounty ? '' : code,
+                            nace: selectedNace,
+                        }));
+                        navigate({ to: '/bransjer', search: { nace: selectedNace || undefined } });
+                    }
+                }}
+            />
         </div>
     );
 }

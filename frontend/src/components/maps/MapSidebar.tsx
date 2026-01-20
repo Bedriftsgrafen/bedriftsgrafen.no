@@ -24,6 +24,7 @@ interface MapSidebarProps {
     averages?: GeoAverages;
     onCloseRegion?: () => void;
     onShowCompanies?: (name: string, code: string) => void;
+    className?: string;
 }
 
 export const MapSidebar: React.FC<MapSidebarProps> = ({
@@ -37,10 +38,14 @@ export const MapSidebar: React.FC<MapSidebarProps> = ({
     metricLabel,
     averages,
     onCloseRegion,
-    onShowCompanies
+    onShowCompanies,
+    className
 }) => {
     return (
-        <div className="w-full md:w-80 bg-slate-50 border-r border-slate-200 flex flex-col h-full overflow-y-auto shrink-0 shadow-inner">
+        <div className={clsx(
+            "w-full md:w-80 bg-slate-50 border-r border-slate-200 flex flex-col h-auto md:h-full overflow-y-auto shrink-0 shadow-inner",
+            className
+        )}>
             <div className="p-4 space-y-6">
                 {/* Header & Controls */}
                 <section>
