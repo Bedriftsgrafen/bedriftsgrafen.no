@@ -1,6 +1,6 @@
 import { Building2, Copy, Check, Share2, X, Star, GitCompareArrows } from 'lucide-react'
 import type { CompanyWithAccounting } from '../../types'
-import { formatDate } from '../../utils/formatters'
+import { formatDate, getLinkedInSearchUrl, getBrregEnhetsregisteretUrl } from '../../utils/formatters'
 import { getOrganizationFormLabel } from '../../utils/organizationForms'
 import { ErrorMessage } from '../ErrorMessage'
 import { useFavoritesStore } from '../../store/favoritesStore'
@@ -60,6 +60,7 @@ export function CompanyModalHeader({
       }
     }
   }
+
 
   return (
     <div className="p-6 border-b border-gray-200 flex justify-between items-start">
@@ -147,11 +148,53 @@ export function CompanyModalHeader({
 
         <button
           onClick={onShare}
-          className="p-2 hover:bg-gray-100 rounded-lg transition-colors text-gray-600"
+          className="p-2 hover:bg-gray-100 rounded-lg transition-colors text-gray-400 hover:text-gray-600"
           title="Del bedriftsprofil"
         >
           <Share2 className="h-5 w-5" />
         </button>
+
+        {company && (
+          <a
+            href={getBrregEnhetsregisteretUrl(company.orgnr)}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="p-2 hover:bg-gray-100 rounded-lg transition-colors text-gray-400 hover:text-gray-700"
+            title="Se i Enhetsregisteret (Brreg)"
+            aria-label="Se i Enhetsregisteret (Brreg)"
+          >
+            <svg className="h-5 w-5" viewBox="0 0 38 32" fill="currentColor" xmlns="http://www.w3.org/2000/svg">
+              <rect y="0" width="10.36" height="3.453" />
+              <rect x="13.816" y="0" width="10.362" height="3.453" />
+              <rect x="27.632" y="0" width="10.362" height="3.453" />
+              <rect y="6.907" width="10.36" height="3.455" />
+              <rect x="13.816" y="6.907" width="10.362" height="3.455" />
+              <rect x="27.632" y="6.907" width="10.362" height="3.455" />
+              <rect y="13.816" width="10.36" height="3.454" />
+              <rect x="13.816" y="13.816" width="10.362" height="3.454" />
+              <rect y="20.723" width="10.36" height="3.453" />
+              <rect x="13.816" y="20.723" width="10.362" height="3.453" />
+              <rect y="27.632" width="10.36" height="3.453" />
+              <rect x="13.816" y="27.632" width="10.362" height="3.453" />
+            </svg>
+          </a>
+        )}
+
+        {company && (
+          <a
+            href={getLinkedInSearchUrl(company.navn, 'company')}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="p-2 hover:bg-gray-100 rounded-lg transition-colors text-gray-400 hover:text-[#0A66C2]"
+            title={`Søk etter ${company.navn} på LinkedIn`}
+            aria-label={`Søk etter ${company.navn} på LinkedIn`}
+          >
+            <svg className="h-5 w-5 fill-current" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+              <path d="M19 0h-14c-2.76 0-5 2.24-5 5v14c0 2.76 2.24 5 5 5h14c2.76 0 5-2.24 5-5v-14c0-2.76-2.24-5-5-5zM8 19H5V10h3v9zM6.5 8.25c-.97 0-1.75-.78-1.75-1.75s.78-1.75 1.75-1.75 1.75.78 1.75 1.75-.78 1.75-1.75 1.75zM19 19h-3v-4.74c0-1.42-.6-1.93-1.38-1.93-.73 0-1.27.35-1.62 1.03V19h-3V10h2.76v1.23h.04c.38-.72 1.17-1.47 2.52-1.47 1.86 0 3.08 1.17 3.08 3.56V19z" />
+            </svg>
+          </a>
+        )}
+
         <button
           onClick={onClose}
           className="p-2 hover:bg-gray-100 rounded-lg transition-colors"

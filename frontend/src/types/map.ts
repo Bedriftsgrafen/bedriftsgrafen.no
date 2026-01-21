@@ -35,6 +35,7 @@ export interface MapFilterValues {
     inLiquidation: boolean | null;
     inForcedLiquidation: boolean | null;
     hasAccounting: boolean | null;
+    showPerCapita: boolean;
 }
 
 export const defaultMapFilters: MapFilterValues = {
@@ -65,4 +66,5 @@ export const defaultMapFilters: MapFilterValues = {
     inLiquidation: null,
     inForcedLiquidation: null,
     hasAccounting: null,
+    showPerCapita: false,
 };

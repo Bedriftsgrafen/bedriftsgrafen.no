@@ -4,8 +4,8 @@ import { z } from 'zod'
 // Search params schema - now includes tab for state persistence
 const searchSchema = z.object({
     nace: z.string().optional(),
-    tab: z.enum(['stats', 'search', 'map']).optional(),
-    orgnr: z.string().optional(),
+    tab: z.enum(['stats', 'search', 'map', 'toplist']).optional(),
+    orgnr: z.preprocess((val) => (typeof val === 'string' ? val.replace(/"/g, '') : val), z.string().optional()),
     // Map filters
     county: z.string().optional(),
     county_code: z.string().optional(),

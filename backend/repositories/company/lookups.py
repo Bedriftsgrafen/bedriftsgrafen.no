@@ -269,7 +269,7 @@ class LookupsMixin:
             # Phase 2: Fetch full company data for these orgnrs
             companies_query = (
                 select(models.Company)
-                .options(defer(models.Company.search_vector), defer(models.Company.raw_data))
+                .options(defer(models.Company.search_vector))
                 .filter(models.Company.orgnr.in_(orgnrs))
             )
 

@@ -5,12 +5,13 @@ import 'leaflet/dist/leaflet.css';
 import { useQuery } from '@tanstack/react-query';
 import { useNavigate } from '@tanstack/react-router';
 import { apiClient } from '../../utils/apiClient';
-import { formatNumber } from '../../utils/formatters';
+import { formatNumber, cleanOrgnr } from '../../utils/formatters';
 import { formatMunicipalityName } from '../../constants/municipalities';
 import { MapSidebar } from './MapSidebar';
 import { MapView } from './MapView';
 import { RefreshCw } from 'lucide-react';
 import clsx from 'clsx';
+import { MapFilterValues } from '../../types/map';
 import { LoadingState } from '../common/LoadingState';
 import { ErrorState } from '../common/ErrorState';
 
@@ -88,6 +89,11 @@ interface IndustryMapProps {
     inForcedLiquidation?: boolean | null;
     hasAccounting?: boolean | null;
     query?: string | null;
+
+    // Direct filter props for Sidebar consolidation
+    filters?: MapFilterValues;
+    onFilterChange?: (updates: Partial<MapFilterValues>) => void;
+    onClearFilters?: () => void;
 }
 
 // ============================================================================
@@ -129,7 +135,10 @@ export function IndustryMap({
     inLiquidation,
     inForcedLiquidation,
     hasAccounting,
-    query
+    query,
+    filters,
+    onFilterChange,
+    onClearFilters
 }: IndustryMapProps) {
     const navigate = useNavigate();
 
@@ -166,7 +175,7 @@ export function IndustryMap({
         return null;
     });
 
-    const [showPerCapita, setShowPerCapita] = useState(false);
+
 
     const prevExplorerPropsRef = useRef({ countyFromExplorer, countyCodeFromExplorer, municipalityCodeFromExplorer, municipalityFromExplorer });
 
@@ -394,9 +403,9 @@ export function IndustryMap({
 
     const getValue = useCallback((stat?: GeoStat) => {
         if (!stat) return 0;
-        if (showPerCapita) return stat.companies_per_capita || 0;
+        if (filters?.showPerCapita) return stat.companies_per_capita || 0;
         return stat.value;
-    }, [showPerCapita]);
+    }, [filters?.showPerCapita]);
 
     const selectedRegionData = useMemo(() => {
         if (!selectedRegion) return null;
@@ -435,11 +444,11 @@ export function IndustryMap({
     }, [statsMap, maxValue, level, getValue, selectedRegion]);
 
     const generateTooltip = useCallback((name: string, value: number, population?: number) => {
-        const label = showPerCapita ? `${(METRIC_LABELS[metric] || 'Verdi').toLowerCase()} per 1000 innb.` : (METRIC_LABELS[metric]?.toLowerCase() || '');
-        const formattedValue = showPerCapita ? value.toFixed(1) : formatNumber(value);
-        const popText = showPerCapita && population ? `<span class="text-xs text-gray-400">(${formatNumber(population)} innb.)</span><br/>` : '';
+        const label = filters?.showPerCapita ? `${(METRIC_LABELS[metric] || 'Verdi').toLowerCase()} per 1000 innb.` : (METRIC_LABELS[metric]?.toLowerCase() || '');
+        const formattedValue = filters?.showPerCapita ? value.toFixed(1) : formatNumber(value);
+        const popText = filters?.showPerCapita && population ? `<span class="text-xs text-gray-400">(${formatNumber(population)} innb.)</span><br/>` : '';
         return `<strong>${name}</strong><br/>${formattedValue} ${label}<br/>${popText}<em>Klikk for detaljer</em>`;
-    }, [showPerCapita, metric]);
+    }, [filters?.showPerCapita, metric]);
 
     const onEachFeature = useCallback((feature: Feature<Geometry, RegionProperties>, layer: L.Layer) => {
         const code = feature.properties.kommunenummer || feature.properties.fylkesnummer || feature.properties.id;
@@ -496,7 +505,7 @@ export function IndustryMap({
         </div>
     );
 
-    const metricLabel = showPerCapita ? 'Bedrifter pr 1000 innb.' : (METRIC_LABELS[metric] || 'Verdi');
+    const metricLabel = filters?.showPerCapita ? 'Bedrifter pr 1000 innb.' : (METRIC_LABELS[metric] || 'Verdi');
 
     return (
         <div className="flex flex-col md:flex-row h-full rounded-xl overflow-hidden border border-slate-200 shadow-xl bg-white">
@@ -521,7 +530,14 @@ export function IndustryMap({
                     selectedRegionCode={selectedRegion?.code || null}
                     style={style}
                     onEachFeature={onEachFeature}
-                    onCompanyClick={(orgnr: string) => onCompanyClick ? onCompanyClick(orgnr) : navigate({ to: '/bedrift/$orgnr', params: { orgnr } })}
+                    onCompanyClick={(orgnr: string) => {
+                        const clean = cleanOrgnr(orgnr) || orgnr;
+                        if (onCompanyClick) {
+                            onCompanyClick(clean);
+                        } else {
+                            navigate({ to: '/bedrift/$orgnr', params: { orgnr: clean } });
+                        }
+                    }}
                     municipalityName={level === 'municipality' && selectedRegionData && selectedRegionData.code.length === 4 ? selectedRegionData.name : undefined}
                     municipalityCode={level === 'municipality' && selectedRegionData && selectedRegionData.code.length === 4 ? selectedRegionData.code : undefined}
                     organizationForms={organizationForms}
@@ -565,9 +581,11 @@ export function IndustryMap({
             <MapSidebar
                 className="order-2 md:order-1"
                 level={level}
-                setLevel={(l) => { setLevel(l); if (l === 'county') setSelectedCounty(''); }}
-                showPerCapita={showPerCapita}
-                setShowPerCapita={setShowPerCapita}
+                setLevel={(l) => {
+                    setLevel(l);
+                    if (l === 'county') setSelectedCounty('');
+                    if (onFilterChange) onFilterChange({ municipalityCode: null });
+                }}
                 selectedRegionData={selectedRegionData}
                 hoveredRegion={hoveredRegion}
                 maxValue={maxValue}
@@ -588,6 +606,38 @@ export function IndustryMap({
                         navigate({ to: '/bransjer', search: { nace: selectedNace || undefined } });
                     }
                 }}
+                filters={filters || {
+                    query: query || null,
+                    naceCode: selectedNace || null,
+                    countyCode: countyCodeFromExplorer || null,
+                    municipalityCode: municipalityCodeFromExplorer || null,
+                    organizationForms: organizationForms || [],
+                    revenueMin: revenueMin || null,
+                    revenueMax: revenueMax || null,
+                    profitMin: profitMin || null,
+                    profitMax: profitMax || null,
+                    equityMin: equityMin || null,
+                    equityMax: equityMax || null,
+                    operatingProfitMin: operatingProfitMin || null,
+                    operatingProfitMax: operatingProfitMax || null,
+                    liquidityRatioMin: liquidityRatioMin || null,
+                    liquidityRatioMax: liquidityRatioMax || null,
+                    equityRatioMin: equityRatioMin || null,
+                    equityRatioMax: equityRatioMax || null,
+                    employeeMin: employeeMin || null,
+                    employeeMax: employeeMax || null,
+                    foundedFrom: foundedFrom || null,
+                    foundedTo: foundedTo || null,
+                    bankruptFrom: bankruptFrom || null,
+                    bankruptTo: bankruptTo || null,
+                    isBankrupt: isBankrupt || null,
+                    inLiquidation: inLiquidation || null,
+                    inForcedLiquidation: inForcedLiquidation || null,
+                    hasAccounting: hasAccounting || null,
+                    showPerCapita: false,
+                }}
+                onFilterChange={onFilterChange || (() => { })}
+                onClearFilters={onClearFilters || (() => { })}
             />
         </div>
     );

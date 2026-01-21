@@ -4,19 +4,20 @@ import { SEOHead } from '../components/layout'
 import { useDocumentTitle } from '../hooks/useDocumentTitle'
 import { IndustryDashboard } from '../components/dashboard/IndustryDashboard'
 import { IndustryMap } from '../components/maps/IndustryMap'
+import { IndustryTopList } from '../components/dashboard/IndustryTopList'
 import { CompanyModalOverlay } from '../components/company/CompanyModalOverlay'
 import { useMemo, useCallback, useEffect } from 'react'
-import { BarChart3, Search, Map } from 'lucide-react'
+import { BarChart3, Search, Map, Award } from 'lucide-react'
 import { TabButton } from '../components/common'
-import { MapFilterBar } from '../components/maps/MapFilterBar'
 import { MapFilterValues, defaultMapFilters } from '../types/map'
 import { COUNTIES } from '../constants/explorer'
 import { MUNICIPALITIES } from '../constants/municipalityCodes'
 import { useFilterStore, FilterValues } from '../store/filterStore'
 import { formatMunicipalityName } from '../constants/municipalities'
+import { cleanOrgnr } from '../utils/formatters'
 
 // Tab type for type safety
-type BransjerTab = 'stats' | 'search' | 'map'
+type BransjerTab = 'stats' | 'search' | 'map' | 'toplist'
 
 
 export const Route = createLazyFileRoute('/bransjer')({
@@ -150,12 +151,13 @@ function BransjerPage() {
         })
     }, [navigate])
 
-    const selectedCompanyOrgnr = orgnr ?? null
+    const selectedCompanyOrgnr = cleanOrgnr(orgnr)
 
-    const setSelectedCompanyOrgnr = useCallback((orgnr: string | null) => {
+    const setSelectedCompanyOrgnr = useCallback((newOrgnr: string | null) => {
+        const clean = cleanOrgnr(newOrgnr)
         navigate({
             to: '/bransjer',
-            search: (prev) => ({ ...prev, orgnr: orgnr ?? undefined }),
+            search: (prev) => ({ ...prev, orgnr: clean ?? undefined }),
             replace: true,
         })
     }, [navigate])
@@ -208,6 +210,12 @@ function BransjerPage() {
                     onClick={() => setActiveTab('map')}
                 />
                 <TabButton
+                    active={activeTab === 'toplist'}
+                    icon={<Award size={18} />}
+                    label="Topplister"
+                    onClick={() => setActiveTab('toplist')}
+                />
+                <TabButton
                     active={activeTab === 'search'}
                     icon={<Search size={18} />}
                     label="Søk bedrifter"
@@ -216,17 +224,14 @@ function BransjerPage() {
             </div>
 
             {/* Content */}
-            {activeTab === 'stats' && <IndustryDashboard initialNace={nace} />}
+            {activeTab === 'stats' && <IndustryDashboard initialNace={nace} onSelectCompany={setSelectedCompanyOrgnr} />}
             {activeTab === 'map' && (
                 <div className="space-y-4">
-                    <MapFilterBar
-                        filters={filters}
-                        onChange={handleFilterChange}
-                        onClear={handleClearFilters}
-                        className="relative z-1010"
-                    />
-                    <div className="rounded-2xl overflow-hidden border border-gray-100 shadow-sm h-[900px] md:h-[600px] relative">
+                    <div className="rounded-2xl overflow-hidden border border-gray-100 shadow-sm h-[900px] md:h-[800px] relative">
                         <IndustryMap
+                            filters={filters}
+                            onFilterChange={handleFilterChange}
+                            onClearFilters={handleClearFilters}
                             selectedNace={filters.naceCode || naeringskode || undefined}
                             metric="company_count"
                             onSearchClick={handleMapSearchClick}
@@ -270,6 +275,7 @@ function BransjerPage() {
                     </div>
                 </div>
             )}
+            {activeTab === 'toplist' && <IndustryTopList naceCode={nace} onSelectCompany={setSelectedCompanyOrgnr} />}
             {activeTab === 'search' && <ExplorerLayout onSelectCompany={setSelectedCompanyOrgnr} />}
 
             {/* Company Modal Overlay - rendered when clicking company */}
@@ -277,6 +283,7 @@ function BransjerPage() {
                 <CompanyModalOverlay
                     orgnr={selectedCompanyOrgnr}
                     onClose={() => setSelectedCompanyOrgnr(null)}
+                    onSelectCompany={setSelectedCompanyOrgnr}
                 />
             )}
         </>

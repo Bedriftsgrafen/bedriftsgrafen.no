@@ -4,6 +4,70 @@ export function formatNumber(num: number | null | undefined): string {
   return new Intl.NumberFormat('nb-NO').format(Math.round(num))
 }
 
+/**
+ * Strips any literal quote characters from an organization number.
+ * Useful for handling URL parameters that might be serialized with quotes.
+ */
+export function cleanOrgnr(orgnr: string | null | undefined): string | null {
+  if (!orgnr) return null
+  return orgnr.toString().replace(/"/g, '')
+}
+
+/**
+ * Removes common organization suffixes (AS, ASA, etc.) from a company name.
+ * Useful for improving search results on external platforms like LinkedIn.
+ */
+export function cleanCompanyNameForSearch(name: string | null | undefined): string {
+  if (!name) return ''
+
+  // List of suffixes to remove, sorted by length descending to avoid partial matches
+  const suffixes = [
+    'aksjeselskap', 'allmennaksjeselskap', 'enkeltpersonforetak',
+    'forening', 'stiftelse', 'borettslag',
+    'asa', 'ans', 'da', 'enk', 'nuf', 'iks', 'as', 'ks', 'sa', 'kf', 'ba', 'brl', 'sf', 'sti'
+  ]
+
+  const regex = new RegExp(`\\s+(${suffixes.join('|')})$`, 'i')
+  return name.replace(regex, '').trim()
+}
+
+/**
+ * Generates a LinkedIn search URL for a company or person.
+ */
+export function getLinkedInSearchUrl(name: string | null | undefined, type: 'company' | 'person'): string {
+  if (!name) return '#'
+
+  const query = type === 'company' ? cleanCompanyNameForSearch(name) : name
+  const path = type === 'company' ? 'companies' : 'people'
+
+  return `https://www.linkedin.com/search/results/${path}/?keywords=${encodeURIComponent(query)}`
+}
+
+/**
+ * Generates a URL for the official Enhetsregisteret entry at Brønnøysundregistrene.
+ */
+export function getBrregEnhetsregisteretUrl(orgnr: string | null | undefined): string {
+  if (!orgnr) return '#'
+  return `https://data.brreg.no/enhetsregisteret/oppslag/enheter/${orgnr.replace(/\s/g, '')}`
+}
+
+/**
+ * Generates a 1881.no person search URL.
+ */
+export function get1881SearchUrl(name: string | null | undefined): string {
+  if (!name) return '#'
+  return `https://www.1881.no/?query=${encodeURIComponent(name)}&type=person`
+}
+
+/**
+ * Generates a URL for the Brreg konsern (group) view.
+ */
+export function getBrregKonsernUrl(orgnr: string | null | undefined): string {
+  if (!orgnr) return '#'
+  // Use virksomhet.brreg.no which handles konsern display properly via search with orgnr
+  return `https://virksomhet.brreg.no/nb/oppslag/enheter?orgnr=${orgnr.replace(/\s/g, '')}`
+}
+
 // Format currency with smart abbreviations (mill, mrd)
 export function formatCurrency(num: number | null | undefined): string {
   if (num === null || num === undefined) return '—'

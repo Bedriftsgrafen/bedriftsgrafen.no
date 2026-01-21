@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 38 32" fill="currentColor">
+  <!-- Brreg brick pattern icon -->
+  <rect y="0" width="10.36" height="3.453"/>
+  <rect x="13.816" y="0" width="10.362" height="3.453"/>
+  <rect x="27.632" y="0" width="10.362" height="3.453"/>
+  <rect y="6.907" width="10.36" height="3.455"/>
+  <rect x="13.816" y="6.907" width="10.362" height="3.455"/>
+  <rect x="27.632" y="6.907" width="10.362" height="3.455"/>
+  <rect y="13.816" width="10.36" height="3.454"/>
+  <rect x="13.816" y="13.816" width="10.362" height="3.454"/>
+  <rect y="20.723" width="10.36" height="3.453"/>
+  <rect x="13.816" y="20.723" width="10.362" height="3.453"/>
+  <rect y="27.632" width="10.36" height="3.453"/>
+  <rect x="13.816" y="27.632" width="10.362" height="3.453"/>
+</svg>

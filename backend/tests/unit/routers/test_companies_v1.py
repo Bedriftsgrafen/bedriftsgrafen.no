@@ -85,6 +85,22 @@ async def test_get_company_detail(mock_company_service):
     mock_company.siste_regnskap = None
     mock_company.last_polled_regnskap = None
 
+    # String fields required by CompanyWithAccounting (must be explicit to avoid MagicMock auto-creation)
+    mock_company.telefon = None
+    mock_company.mobil = None
+    mock_company.epostadresse = None
+    mock_company.siste_innsendte_aarsregnskap = None
+    mock_company.institusjonell_sektor = None
+
+    # Additional fields
+    mock_company.regnskap = []
+    mock_company.roller = []
+    mock_company.updated_at = None
+    mock_company.geocoded_at = None
+    mock_company.latest_revenue = 0
+    mock_company.latest_profit = 0
+    mock_company.latest_operating_margin = 0
+
     # Configure mock return
     mock_company_service.get_company_with_accounting = AsyncMock(return_value=mock_company)
 

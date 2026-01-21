@@ -59,6 +59,13 @@ def test_search_by_municipality_code(MockServiceClass):
     mock_company.regnskap = []
     mock_company.roller = []
 
+    # String fields required by schema (must be explicit to avoid MagicMock auto-creation)
+    mock_company.telefon = None
+    mock_company.mobil = None
+    mock_company.epostadresse = None
+    mock_company.siste_innsendte_aarsregnskap = None
+    mock_company.institusjonell_sektor = None
+
     mock_service.get_companies.return_value = [mock_company]
 
     # Act

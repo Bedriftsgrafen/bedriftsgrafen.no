@@ -4,19 +4,12 @@ This document consolidates feature ideas and strategic plans for the future deve
 
 ## Priority 1: High Impact / Quick Wins (1-3 days each)
 
-### Advanced Purpose Search (Formål)
-- **Goal**: Full-text search within `vedtektsfestet_formaal`.
-- **Status**: Backend column and storage logic exist.
-- **Action**: Update the `search_vector` TSVECTOR database trigger to include the `vedtektsfestet_formaal` column. This enables searches like "frisør", "kunstig intelligens", or "gravemaskin".
+---
 
-### Immediacy Filters (Shortcut Support)
-- **Goal**: Add `period=30d` and `period=90d` filters to `/nyetableringer` and `/konkurser` routes.
-- **Why**: Supports the "Market Pulse" strategy by allowing users to see the absolute latest activity without manual date picking.
-
-### Sidebar Map Layout 🗺️
+### ~~Sidebar Map Layout~~ ✅ (Jan 21, 2026)
 - **Goal**: Redesign the Map view to use a sidebar + map layout (Desktop).
 - **Why**: Norway's geography is tall and narrow. A sidebar (30% width) for controls and stats, and a map (70% width) filling the vertical height, optimizes space and provides a better UX.
-- **Tech**: Refactor `IndustryMap.tsx` and move filters to a dedicated sidebar.
+- **Status**: **IMPLEMENTED**. All filters moved to a modular, vertically-scrollable sidebar. MapGuide is now collapsible.
 
 ### Subunit Map View (Avdelinger)
 - **Goal**: Add a "Map" toggle to the "Avdelinger" tab in the company profile.
@@ -91,7 +84,6 @@ This document consolidates feature ideas and strategic plans for the future deve
 
 - **Export to Excel/PDF**: Move beyond CSV to professional PDF reports for due diligence.
 - **Alerts/Notifications**: "Varsle meg når [Selskap] leverer nytt regnskap".
-- **Structured Data (JSON-LD)**: Improve SEO by exposing `Organization` schema to search engines.
 - **Rate Limiting & API for Third Parties**: Commercialize the data via a public API.
 
 ---
@@ -108,3 +100,9 @@ This document consolidates feature ideas and strategic plans for the future deve
 - **[x] "Look in Map" Button**: Seamless transition from list view to geographic visualization.
 - **[x] Full CSV Export**: Streamed export of filtered company datasets.
 - **[x] Subunit List View**: Display all avdelinger/underenheter for a company.
+- **[x] Advanced Purpose Search**: Full-text search within company purpose descriptions.
+- **[x] Immediacy Filters**: Quick-toggle 30d/90d shortcuts for latest company activity.
+- **[x] Industry Top Lists (Topplister)**: Ranked view of top 100 performers within a sector.
+- **[x] Professional Network Links**: Standardized LinkedIn, 1881, and internal role navigation.
+- **[x] Sidebar Map Layout**: Consolidated all map filters into a modular, vertical sidebar. MapGuide is now collapsible for mobile.
+- **[x] Mobile Map Optimization**: Fixed sidebar scrolling and improved map/filter distribution on small screens.

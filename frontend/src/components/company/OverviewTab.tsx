@@ -1,9 +1,10 @@
-import { Building2, MapPin, Users, Calendar, Globe, Briefcase, ChevronRight, AlertTriangle, ExternalLink } from 'lucide-react'
+import { Building2, MapPin, Users, Calendar, Briefcase, ChevronRight, AlertTriangle, ExternalLink } from 'lucide-react'
 import { useMemo } from 'react'
 import type { CompanyWithAccounting, Naeringskode } from '../../types'
-import { formatDate } from '../../utils/formatters'
+import { formatDate, getBrregEnhetsregisteretUrl } from '../../utils/formatters'
 import { getOrganizationFormLabel } from '../../utils/organizationForms'
 import { LocationMap } from '../common/LocationMap'
+import { ContactCard } from './ContactCard'
 import { AffiliateBanner } from '../ads/AffiliateBanner'
 import { AFFILIATIONS } from '../../constants/affiliations'
 
@@ -40,7 +41,7 @@ export function OverviewTab({ company, onOpenIndustry }: OverviewTabProps) {
                 </div>
               )}
               <a
-                href={`https://data.brreg.no/enhetsregisteret/oppslag/enheter/${company.orgnr}`}
+                href={getBrregEnhetsregisteretUrl(company.orgnr)}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="text-sm text-red-700 hover:text-red-900 underline mt-1 inline-flex items-center gap-1"
@@ -57,10 +58,35 @@ export function OverviewTab({ company, onOpenIndustry }: OverviewTabProps) {
         <div className="space-y-6">
           {/* Key Info */}
           <div className="bg-white rounded-lg border border-gray-200 p-6 shadow-sm">
-            <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
-              <Building2 className="h-5 w-5 text-blue-600" />
-              Bedriftsinformasjon
-            </h3>
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
+                <Building2 className="h-5 w-5 text-blue-600" />
+                Bedriftsinformasjon
+              </h3>
+              <a
+                href={getBrregEnhetsregisteretUrl(company.orgnr)}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-xs text-gray-500 hover:text-gray-700 flex items-center gap-1"
+                title="Åpne i Enhetsregisteret (Brreg)"
+              >
+                <svg className="h-3.5 w-3.5" viewBox="0 0 38 32" fill="currentColor" xmlns="http://www.w3.org/2000/svg">
+                  <rect y="0" width="10.36" height="3.453" />
+                  <rect x="13.816" y="0" width="10.362" height="3.453" />
+                  <rect x="27.632" y="0" width="10.362" height="3.453" />
+                  <rect y="6.907" width="10.36" height="3.455" />
+                  <rect x="13.816" y="6.907" width="10.362" height="3.455" />
+                  <rect x="27.632" y="6.907" width="10.362" height="3.455" />
+                  <rect y="13.816" width="10.36" height="3.454" />
+                  <rect x="13.816" y="13.816" width="10.362" height="3.454" />
+                  <rect y="20.723" width="10.36" height="3.453" />
+                  <rect x="13.816" y="20.723" width="10.362" height="3.453" />
+                  <rect y="27.632" width="10.36" height="3.453" />
+                  <rect x="13.816" y="27.632" width="10.362" height="3.453" />
+                </svg>
+                Brreg
+              </a>
+            </div>
             <div className="space-y-4">
               <div className="flex items-start gap-3">
                 <Building2 className="h-5 w-5 text-gray-400 mt-0.5" />
@@ -190,22 +216,6 @@ export function OverviewTab({ company, onOpenIndustry }: OverviewTabProps) {
                 </div>
               </div>
 
-              {company.hjemmeside && (
-                <div className="flex items-start gap-3">
-                  <Globe className="h-5 w-5 text-gray-400 mt-0.5" />
-                  <div>
-                    <div className="text-sm font-medium text-gray-900">Nettside</div>
-                    <a
-                      href={company.hjemmeside.startsWith('http') ? company.hjemmeside : `https://${company.hjemmeside}`}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="text-sm text-blue-600 hover:underline"
-                    >
-                      {company.hjemmeside}
-                    </a>
-                  </div>
-                </div>
-              )}
             </div>
           </div>
         </div>
@@ -269,6 +279,16 @@ export function OverviewTab({ company, onOpenIndustry }: OverviewTabProps) {
                 />
               </div>
             )}
+
+            {/* Contact Card - below map */}
+            <div className="mt-6">
+              <ContactCard
+                telefon={company.telefon}
+                mobil={company.mobil}
+                epostadresse={company.epostadresse}
+                hjemmeside={company.hjemmeside}
+              />
+            </div>
           </div>
         </div>
       </div>

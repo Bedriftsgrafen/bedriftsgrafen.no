@@ -7,13 +7,13 @@ import { useDocumentTitle } from '../hooks/useDocumentTitle'
 import { IndustryMap } from '../components/maps/IndustryMap'
 import { CompanyModalOverlay } from '../components/company/CompanyModalOverlay'
 import { MapGuide } from '../components/maps/MapGuide'
-import { MapFilterBar } from '../components/maps/MapFilterBar'
 import { useNavigate, useSearch } from '@tanstack/react-router'
 import { MapFilterValues } from '../types/map'
 import { COUNTIES } from '../constants/explorer'
 import { MUNICIPALITIES } from '../constants/municipalityCodes'
 import { mnokToNok } from '../utils/financials'
 import { useFilterStore, FilterValues } from '../store/filterStore'
+import { cleanOrgnr } from '../utils/formatters'
 import { defaultMapFilters } from '../types/map'
 
 // Search params schema for all map filters
@@ -48,7 +48,10 @@ function KartPage() {
     const navigate = useNavigate({ from: '/kart' })
     const search = useSearch({ from: '/kart' })
 
-    const [selectedCompanyOrgnr, setSelectedCompanyOrgnr] = useState<string | null>(null)
+    const [selectedCompanyOrgnr, _setSelectedCompanyOrgnr] = useState<string | null>(null)
+    const setSelectedCompanyOrgnr = useCallback((orgnr: string | null) => {
+        _setSelectedCompanyOrgnr(cleanOrgnr(orgnr))
+    }, [])
 
     // Read filter state from store
     const { naeringskode, searchQuery, setSearchQuery } = useFilterStore()
@@ -159,16 +162,13 @@ function KartPage() {
 
             <MapGuide />
 
-            {/* Enhanced Filter Bar */}
-            <MapFilterBar
-                filters={filters}
-                onChange={handleFilterChange}
-                onClear={handleClearFilters}
-                className="relative z-500"
-            />
 
-            <div className="rounded-2xl overflow-hidden border border-gray-100 shadow-sm h-[900px] md:h-[600px] relative">
+
+            <div className="rounded-2xl overflow-hidden border border-gray-100 shadow-sm h-[900px] md:h-[800px] relative">
                 <IndustryMap
+                    filters={filters}
+                    onFilterChange={handleFilterChange}
+                    onClearFilters={handleClearFilters}
                     selectedNace={filters.naceCode}
                     metric="company_count"
                     onCompanyClick={setSelectedCompanyOrgnr}
@@ -214,6 +214,7 @@ function KartPage() {
                 <CompanyModalOverlay
                     orgnr={selectedCompanyOrgnr}
                     onClose={() => setSelectedCompanyOrgnr(null)}
+                    onSelectCompany={setSelectedCompanyOrgnr}
                 />
             )}
         </>

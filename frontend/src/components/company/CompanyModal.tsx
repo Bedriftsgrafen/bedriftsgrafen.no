@@ -30,6 +30,7 @@ interface CompanyModalProps {
   onImport: (orgnr: string) => void
   isImporting: boolean
   onOpenIndustry?: (naceCode: string, description: string) => void
+  onSelectCompany?: (orgnr: string) => void
 }
 
 export function CompanyModal({
@@ -49,7 +50,8 @@ export function CompanyModal({
   onRetryKpi,
   onImport,
   isImporting,
-  onOpenIndustry
+  onOpenIndustry,
+  onSelectCompany
 }: CompanyModalProps) {
   const [activeTab, setActiveTab] = useState<TabType>('oversikt')
 
@@ -132,7 +134,7 @@ export function CompanyModal({
               )}
 
               {activeTab === 'roller' && (
-                <RolesTab orgnr={company.orgnr} />
+                <RolesTab orgnr={company.orgnr} onCompanyClick={onSelectCompany} />
               )}
             </>
           ) : null}

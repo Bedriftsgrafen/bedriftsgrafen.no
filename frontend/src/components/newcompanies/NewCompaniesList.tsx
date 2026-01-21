@@ -3,8 +3,8 @@
  * Features: sortable columns, employee count, bransje/kommune filters
  */
 
-import { useMemo } from 'react'
-import { ChevronLeft, ChevronRight, Search, Filter, X } from 'lucide-react'
+import { useState, useMemo, useCallback, MouseEvent } from 'react'
+import { ChevronLeft, ChevronRight, Search, Filter, X, Copy, Check } from 'lucide-react'
 import { SortableHeader } from '../common/SortableHeader'
 import { formatNumber } from '../../utils/formatters'
 import { RegionSelect } from '../common/RegionSelect'
@@ -64,6 +64,21 @@ export function NewCompaniesList({ onSelectCompany, registeredFrom }: NewCompani
     })
 
     const totalPages = totalCount ? Math.ceil(totalCount / itemsPerPage) : 1
+
+    const [copiedOrgnr, setCopiedOrgnr] = useState<string | null>(null)
+
+    const handleCopyOrgnr = useCallback((orgnr: string, e: MouseEvent) => {
+        e.stopPropagation()
+        navigator.clipboard.writeText(orgnr)
+        setCopiedOrgnr(orgnr)
+        setTimeout(() => setCopiedOrgnr(null), 2000)
+    }, [])
+
+    const handleNaceClick = useCallback((nace: string, e: MouseEvent) => {
+        e.stopPropagation()
+        setFilter('nace', nace)
+        if (!showFilters) setShowFilters(true)
+    }, [setFilter, setShowFilters, showFilters])
 
 
     // Render sort indicator inline
@@ -252,7 +267,20 @@ export function NewCompaniesList({ onSelectCompany, registeredFrom }: NewCompani
                                         <span className="font-medium text-gray-900">{company.navn}</span>
                                     </td>
                                     <td className="px-4 py-3 text-sm text-gray-600 font-mono">
-                                        {company.orgnr}
+                                        <div className="flex items-center gap-2 group/copy">
+                                            {company.orgnr}
+                                            <button
+                                                onClick={(e) => handleCopyOrgnr(company.orgnr, e)}
+                                                className={`p-1 rounded hover:bg-white transition-all ${copiedOrgnr === company.orgnr ? 'opacity-100 text-green-600' : 'opacity-0 group-hover/copy:opacity-100 text-gray-400'}`}
+                                                title="Kopier org.nr"
+                                            >
+                                                {copiedOrgnr === company.orgnr ? (
+                                                    <Check className="h-3 w-3" />
+                                                ) : (
+                                                    <Copy className="h-3 w-3" />
+                                                )}
+                                            </button>
+                                        </div>
                                     </td>
                                     <td className="px-4 py-3">
                                         <span className="text-xs bg-green-100 text-green-700 px-2 py-0.5 rounded-full font-medium">
@@ -263,7 +291,15 @@ export function NewCompaniesList({ onSelectCompany, registeredFrom }: NewCompani
                                         {company.antall_ansatte ?? '—'}
                                     </td>
                                     <td className="px-4 py-3 text-sm text-gray-600">
-                                        {company.naeringskode || '—'}
+                                        {company.naeringskode ? (
+                                            <button
+                                                onClick={(e) => handleNaceClick(company.naeringskode!, e)}
+                                                className="hover:text-green-600 hover:underline transition-colors"
+                                                title={`Filtrer på bransje ${company.naeringskode}`}
+                                            >
+                                                {company.naeringskode}
+                                            </button>
+                                        ) : '—'}
                                     </td>
                                     <td className="px-4 py-3 text-sm text-gray-600">
                                         {company.forretningsadresse?.kommune || '—'}

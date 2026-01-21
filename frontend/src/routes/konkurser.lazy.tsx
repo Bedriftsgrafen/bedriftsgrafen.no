@@ -6,14 +6,13 @@ import { SEOHead } from '../components/layout'
 import { useDocumentTitle } from '../hooks/useDocumentTitle'
 import { BankruptcyList } from '../components/bankruptcy'
 import { IndustryMap } from '../components/maps/IndustryMap'
-import { MapFilterBar } from '../components/maps/MapFilterBar'
 import { MapFilterValues, defaultMapFilters } from '../types/map'
 import { CompanyModalOverlay } from '../components/company/CompanyModalOverlay'
 import { CompanyListModal } from '../components/dashboard/CompanyListModal'
 import { SummaryCard, TabButton } from '../components/common'
 import { IndustryBreakdownStats } from '../components/dashboard/IndustryBreakdownStats'
 import { TrendChart } from '../components/dashboard/TrendChart'
-import { formatNumber, formatCurrency } from '../utils/formatters'
+import { formatNumber, formatCurrency, cleanOrgnr } from '../utils/formatters'
 import { getStartingDate } from '../utils/dates'
 import { API_BASE } from '../utils/apiClient'
 import { PeriodSelector } from '../components/common/PeriodSelector'
@@ -51,7 +50,10 @@ function KonkurserPage() {
     const navigate = Route.useNavigate()
     useDocumentTitle('Konkurser | Bedriftsgrafen.no')
     const [activeTab, setActiveTab] = useState<'list' | 'stats' | 'map'>('list')
-    const [selectedCompanyOrgnr, setSelectedCompanyOrgnr] = useState<string | null>(null)
+    const [selectedCompanyOrgnr, _setSelectedCompanyOrgnr] = useState<string | null>(null)
+    const setSelectedCompanyOrgnr = useCallback((orgnr: string | null) => {
+        _setSelectedCompanyOrgnr(cleanOrgnr(orgnr))
+    }, [])
     const [selectedIndustry, setSelectedIndustry] = useState<{ code: string; name: string } | null>(null)
 
     // Read filter state from store
@@ -286,14 +288,11 @@ function KonkurserPage() {
 
             {activeTab === 'map' && (
                 <div className="space-y-4">
-                    <MapFilterBar
-                        filters={mapFilters}
-                        onChange={handleFilterChange}
-                        onClear={handleClearFilters}
-                        className="relative z-500"
-                    />
-                    <div className="rounded-2xl overflow-hidden border border-gray-100 shadow-sm h-[900px] md:h-[600px] relative">
+                    <div className="rounded-2xl overflow-hidden border border-gray-100 shadow-sm h-[900px] md:h-[800px] relative">
                         <IndustryMap
+                            filters={mapFilters}
+                            onFilterChange={handleFilterChange}
+                            onClearFilters={handleClearFilters}
                             metric="bankrupt_count"
                             onCompanyClick={setSelectedCompanyOrgnr}
                             selectedNace={mapFilters.naceCode}
@@ -332,6 +331,7 @@ function KonkurserPage() {
                 <CompanyModalOverlay
                     orgnr={selectedCompanyOrgnr}
                     onClose={() => setSelectedCompanyOrgnr(null)}
+                    onSelectCompany={setSelectedCompanyOrgnr}
                 />
             )}
 

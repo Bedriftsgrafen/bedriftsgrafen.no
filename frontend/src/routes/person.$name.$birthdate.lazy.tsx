@@ -4,7 +4,9 @@ import { SEOHead, Breadcrumbs } from '../components/layout'
 import { usePersonRolesQuery } from '../hooks/queries/usePersonRolesQuery'
 import { useSlowLoadingToast } from '../hooks/useSlowLoadingToast'
 import { Button } from '../components/common/Button'
+import { Linkedin } from 'lucide-react'
 import logo1881 from '../img/1881-logo.png'
+import { get1881SearchUrl, getLinkedInSearchUrl } from '../utils/formatters'
 
 export const Route = createLazyFileRoute('/person/$name/$birthdate')({
     component: PersonProfilePage,
@@ -61,22 +63,28 @@ export function PersonProfilePage() {
                                     </div>
                                 </div>
                             </div>
-                            <Button
-                                variant="outline"
-                                size="sm"
-                                leftIcon={<img src={logo1881} alt="" className="h-4 w-auto" />}
-                                onClick={() =>
-                                    window.open(
-                                        `https://www.1881.no/?query=${encodeURIComponent(decodedName)}&type=person`,
-                                        '_blank',
-                                        'noopener,noreferrer'
-                                    )
-                                }
-                                className="bg-white/10 border-white/20 text-white hover:bg-white/20 self-start md:self-center"
-                                aria-label={`Søk etter ${decodedName} på 1881.no`}
-                            >
-                                Søk på 1881
-                            </Button>
+                            <div className="flex flex-wrap gap-3">
+                                <Button
+                                    variant="outline"
+                                    size="sm"
+                                    leftIcon={<img src={logo1881} alt="" className="h-4 w-auto" />}
+                                    onClick={() => window.open(get1881SearchUrl(decodedName), '_blank', 'noopener,noreferrer')}
+                                    className="bg-white/10 border-white/20 text-white hover:bg-white/20 self-start md:self-center"
+                                    aria-label={`Søk etter ${decodedName} på 1881.no`}
+                                >
+                                    Søk på 1881
+                                </Button>
+                                <Button
+                                    variant="outline"
+                                    size="sm"
+                                    leftIcon={<Linkedin className="h-4 w-4" />}
+                                    onClick={() => window.open(getLinkedInSearchUrl(decodedName, 'person'), '_blank', 'noopener,noreferrer')}
+                                    className="bg-white/10 border-white/20 text-white hover:bg-white/20 self-start md:self-center"
+                                    aria-label={`Søk etter ${decodedName} på LinkedIn`}
+                                >
+                                    LinkedIn
+                                </Button>
+                            </div>
                         </div>
                     </div>
 

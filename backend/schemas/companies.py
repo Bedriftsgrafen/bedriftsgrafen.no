@@ -27,6 +27,10 @@ class CompanyBase(BaseModel):
     antall_ansatte: int | None = None
     stiftelsesdato: date | None = None
     hjemmeside: str | None = None
+    # Contact info (from raw_data)
+    telefon: str | None = None
+    mobil: str | None = None
+    epostadresse: str | None = None
     postadresse: dict[str, Any] | None = None
     forretningsadresse: dict[str, Any] | None = None
 
@@ -44,6 +48,13 @@ class CompanyBase(BaseModel):
     registreringsdato_foretaksregisteret: date | None = None
 
     vedtektsfestet_formaal: str | None = None
+
+    # Capital info (from raw_data)
+    aksjekapital: float | None = None
+    antall_aksjer: int | None = None
+    er_i_konsern: bool | None = None
+    siste_innsendte_aarsregnskap: str | None = None
+    institusjonell_sektor: str | None = None
 
     latest_profit: float | None = None
     latest_revenue: float | None = None

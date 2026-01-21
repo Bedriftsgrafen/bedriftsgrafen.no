@@ -44,7 +44,18 @@ async def test_get_by_orgnr(repo, mock_db_session):
 
 @pytest.mark.asyncio
 async def test_create_batch(repo, mock_db_session):
-    units = [models.SubUnit(), models.SubUnit()]
+    # Subunits must have parent_orgnr to pass the filter in create_batch
+    unit1 = models.SubUnit()
+    unit1.orgnr = "111111111"
+    unit1.navn = "Test Unit 1"
+    unit1.parent_orgnr = "999999999"
+
+    unit2 = models.SubUnit()
+    unit2.orgnr = "222222222"
+    unit2.navn = "Test Unit 2"
+    unit2.parent_orgnr = "999999999"
+
+    units = [unit1, unit2]
 
     count = await repo.create_batch(units)
 

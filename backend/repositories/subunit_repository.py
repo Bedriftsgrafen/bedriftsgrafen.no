@@ -101,6 +101,12 @@ class SubUnitRepository:
         if not subunits:
             return 0
 
+        # Filter out subunits without parent_orgnr (required by DB constraint)
+        valid_subunits = [s for s in subunits if s.parent_orgnr]
+        if not valid_subunits:
+            logger.warning(f"All {len(subunits)} subunits filtered out due to missing parent_orgnr")
+            return 0
+
         try:
             # Prepare values for bulk insert
             values = [
@@ -115,7 +121,7 @@ class SubUnitRepository:
                     "postadresse": s.postadresse,
                     "stiftelsesdato": s.stiftelsesdato,
                 }
-                for s in subunits
+                for s in valid_subunits
             ]
 
             stmt = insert(models.SubUnit).values(values)
@@ -140,8 +146,8 @@ class SubUnitRepository:
 
             if commit:
                 await self.db.commit()
-            logger.info(f"Saved {len(subunits)} subunits to database")
-            return len(subunits)
+            logger.info(f"Saved {len(valid_subunits)} subunits to database")
+            return len(valid_subunits)
 
         except Exception as e:
             logger.error(f"Error saving subunits batch: {e}")

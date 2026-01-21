@@ -85,11 +85,14 @@ function CompanyPage() {
         setSelectedYear(year)
     }, [setSelectedYear])
 
-    const handleOpenIndustry = useCallback((naceCode: string, _description: string) => {
-        // Navigate to bransjer page with NACE filter for better UX integration
-        const naceDivision = naceCode.substring(0, 2) // Get 2-digit NACE division
-        navigate({ to: '/bransjer', search: { nace: naceDivision } })
-    }, [navigate])
+    const handleOpenIndustry = useCallback((naceCode: string, description: string) => {
+        // Open local industry modal with full code instead of navigating away
+        setIndustryModal({
+            isOpen: true,
+            naceCode,
+            description
+        })
+    }, [])
 
     const handleCloseIndustry = useCallback(() => {
         setIndustryModal({
@@ -98,6 +101,10 @@ function CompanyPage() {
             description: null
         })
     }, [])
+
+    const handleSelectCompany = useCallback((newOrgnr: string) => {
+        navigate({ to: '/bedrift/$orgnr', params: { orgnr: newOrgnr } })
+    }, [navigate])
 
     return (
         <>
@@ -137,6 +144,7 @@ function CompanyPage() {
                 onImport={(o) => fetchMutation.mutate({ orgnr: o })}
                 isImporting={fetchMutation.isPending}
                 onOpenIndustry={handleOpenIndustry}
+                onSelectCompany={handleSelectCompany}
             />
 
             <IndustryModal

@@ -15,10 +15,12 @@ import { useFetchCompanyMutation } from '../../hooks/mutations/useFetchCompanyMu
 import { useCompanyModal } from '../../hooks/useCompanyModal'
 import { useUiStore } from '../../store/uiStore'
 import { ExternalLink } from 'lucide-react'
+import { cleanOrgnr } from '../../utils/formatters'
 
 interface CompanyModalOverlayProps {
     orgnr: string
     onClose: () => void
+    onSelectCompany?: (orgnr: string) => void
 }
 
 interface IndustryModalState {
@@ -27,7 +29,8 @@ interface IndustryModalState {
     description: string | null
 }
 
-export function CompanyModalOverlay({ orgnr, onClose }: CompanyModalOverlayProps) {
+export function CompanyModalOverlay({ orgnr: rawOrgnr, onClose, onSelectCompany }: CompanyModalOverlayProps) {
+    const orgnr = cleanOrgnr(rawOrgnr) || rawOrgnr
     const navigate = useNavigate()
     const selectedYear = useUiStore(s => s.selectedYear)
     const setSelectedYear = useUiStore(s => s.setSelectedYear)
@@ -77,10 +80,13 @@ export function CompanyModalOverlay({ orgnr, onClose }: CompanyModalOverlayProps
         setSelectedYear(year)
     }
 
-    const handleOpenIndustry = (naceCode: string, _description: string) => {
-        const naceDivision = naceCode.substring(0, 2)
-        navigate({ to: '/bransjer', search: { nace: naceDivision } })
-        onClose()
+    const handleOpenIndustry = (naceCode: string, description: string) => {
+        // Open local industry modal with full code instead of navigating to 2-digit division
+        setIndustryModal({
+            isOpen: true,
+            naceCode,
+            description
+        })
     }
 
     const handleCloseIndustry = () => {
@@ -127,6 +133,7 @@ export function CompanyModalOverlay({ orgnr, onClose }: CompanyModalOverlayProps
                 onImport={(o) => fetchMutation.mutate({ orgnr: o })}
                 isImporting={fetchMutation.isPending}
                 onOpenIndustry={handleOpenIndustry}
+                onSelectCompany={onSelectCompany}
             />
 
             <IndustryModal
@@ -134,6 +141,7 @@ export function CompanyModalOverlay({ orgnr, onClose }: CompanyModalOverlayProps
                 naceCode={industryModal.naceCode}
                 naceDescription={industryModal.description}
                 onClose={handleCloseIndustry}
+                onSelectCompany={onSelectCompany}
             />
         </>
     )

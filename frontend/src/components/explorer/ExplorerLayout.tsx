@@ -18,7 +18,7 @@ import { useFilterStore, type FilterValues } from '../../store/filterStore'
 import { useExplorerStore } from '../../store/explorerStore'
 import { isNumericSortField } from '../../constants/explorer'
 import { ComparisonBar, ComparisonModal } from '../comparison'
-import { formatNumber } from '../../utils/formatters'
+import { formatNumber, cleanOrgnr } from '../../utils/formatters'
 
 /** Props for ExplorerLayout */
 interface ExplorerLayoutProps {
@@ -108,16 +108,17 @@ export const ExplorerLayout = memo(function ExplorerLayout({ onSelectCompany }: 
     // Handlers - memoized for stable references
     const handleSelectCompany = useCallback(
         (orgnr: string) => {
+            const clean = cleanOrgnr(orgnr)
             // Validate orgnr format (9 digits)
-            if (!/^\d{9}$/.test(orgnr)) {
+            if (!clean || !/^\d{9}$/.test(clean)) {
                 console.error('Invalid orgnr format:', orgnr)
                 return
             }
             // Use prop callback if provided (enables modal behavior), otherwise navigate
             if (onSelectCompany) {
-                onSelectCompany(orgnr)
+                onSelectCompany(clean)
             } else {
-                navigate({ to: '/bedrift/$orgnr', params: { orgnr } })
+                navigate({ to: '/bedrift/$orgnr', params: { orgnr: clean } })
             }
         },
         [navigate, onSelectCompany]

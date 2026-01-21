@@ -163,6 +163,11 @@ class Company(Base):
         Index(
             "idx_bedrifter_reg_foretaksregisteret_desc", sa_text("registreringsdato_foretaksregisteret DESC NULLS LAST")
         ),
+        # Functional index for county-level map filtering
+        Index(
+            "ix_bedrifter_fylkesnummer",
+            func.left(Column("forretningsadresse", JSONB)["kommunenummer"].astext, 2),
+        ),
     )
 
     orgnr: Mapped[str] = mapped_column(String, primary_key=True, index=True)
@@ -249,6 +254,46 @@ class Company(Base):
             return self.raw_data["oppdatert"]
         return None
 
+    # Contact info from raw_data
+    @property
+    def telefon(self) -> str | None:
+        return self.raw_data.get("telefon") if self.raw_data else None
+
+    @property
+    def mobil(self) -> str | None:
+        return self.raw_data.get("mobil") if self.raw_data else None
+
+    @property
+    def epostadresse(self) -> str | None:
+        return self.raw_data.get("epostadresse") if self.raw_data else None
+
+    # Capital info from raw_data
+    @property
+    def aksjekapital(self) -> float | None:
+        if self.raw_data and "kapital" in self.raw_data:
+            return self.raw_data["kapital"].get("belop")
+        return None
+
+    @property
+    def antall_aksjer(self) -> int | None:
+        if self.raw_data and "kapital" in self.raw_data:
+            return self.raw_data["kapital"].get("antallAksjer")
+        return None
+
+    @property
+    def er_i_konsern(self) -> bool | None:
+        return self.raw_data.get("erIKonsern") if self.raw_data else None
+
+    @property
+    def siste_innsendte_aarsregnskap(self) -> str | None:
+        return self.raw_data.get("sisteInnsendteAarsregnskap") if self.raw_data else None
+
+    @property
+    def institusjonell_sektor(self) -> str | None:
+        if self.raw_data and "institusjonellSektorkode" in self.raw_data:
+            return self.raw_data["institusjonellSektorkode"].get("beskrivelse")
+        return None
+
 
 class SubUnit(Base):
     """
@@ -315,6 +360,19 @@ class Role(Base):
     """
 
     __tablename__ = "roller"
+    __table_args__ = (
+        # Optimization for specific person lookups
+        Index("ix_roller_person_navn_foedselsdato", "person_navn", "foedselsdato"),
+        # Optimization for searches by birthdate/age
+        Index("ix_roller_foedselsdato", "foedselsdato"),
+        # Trigram index for fuzzy person search (ILIKE %name%)
+        Index(
+            "ix_roller_person_navn_trgm",
+            "person_navn",
+            postgresql_using="gin",
+            postgresql_ops={"person_navn": "gin_trgm_ops"},
+        ),
+    )
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, index=True)
     orgnr: Mapped[str] = mapped_column(String, ForeignKey("bedrifter.orgnr"), index=True, nullable=False)

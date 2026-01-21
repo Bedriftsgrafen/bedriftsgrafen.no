@@ -2,11 +2,14 @@ import React, { useState, useMemo, useCallback, useEffect } from 'react'
 import { Users, Briefcase, Building2, AlertCircle, Loader, RefreshCw, Crown, User, UserCheck, ChevronDown, Calendar, ExternalLink } from 'lucide-react'
 import { useRolesQuery, type Role } from '../../hooks/queries/useRolesQuery'
 import { Link } from '@tanstack/react-router'
+import { getLinkedInSearchUrl, get1881SearchUrl } from '../../utils/formatters'
+import logo1881 from '../../img/1881-logo.png'
 import { AffiliateBanner } from '../ads/AffiliateBanner'
 import { AFFILIATIONS } from '../../constants/affiliations'
 
 interface RolesTabProps {
     orgnr: string
+    onCompanyClick?: (orgnr: string) => void
 }
 
 // Role type configuration with icons, colors, and display labels
@@ -66,7 +69,7 @@ function groupRoles(roles: Role[]): { groups: [string, Role[]][]; activeCount: n
     return { groups: sorted, activeCount }
 }
 
-function RoleCard({ role }: { role: Role }) {
+function RoleCard({ role, onCompanyClick }: { role: Role, onCompanyClick?: (orgnr: string) => void }) {
     const [isExpanded, setIsExpanded] = useState(false)
     const config = getRoleConfig(role.type_kode)
     const Icon = config.icon
@@ -134,25 +137,71 @@ function RoleCard({ role }: { role: Role }) {
                             <span>Rekkefølge: {role.rekkefoelge}</span>
                         </div>
                     )}
-                    {/* Link to person profile */}
-                    {personProfileParams && (
-                        <Link
-                            to="/person/$name/$birthdate"
-                            params={personProfileParams}
-                            onClick={(e) => e.stopPropagation()}
-                            className="mt-2 flex items-center gap-2 px-3 py-2 bg-blue-50 text-blue-700 rounded-lg hover:bg-blue-100 transition-colors text-xs font-medium group"
-                        >
-                            <ExternalLink className="h-3 w-3 group-hover:scale-110 transition-transform" />
-                            Se alle roller for {role.person_navn}
-                        </Link>
-                    )}
+                    {/* Links to profiles */}
+                    <div className="mt-2 flex flex-wrap gap-2">
+                        {role.enhet_orgnr && onCompanyClick && (
+                            <button
+                                onClick={(e) => {
+                                    e.stopPropagation()
+                                    onCompanyClick(role.enhet_orgnr!)
+                                }}
+                                className="flex items-center gap-2 px-3 py-2 bg-blue-50 text-blue-700 rounded-lg hover:bg-blue-100 transition-colors text-xs font-medium group"
+                                title={`Se bedriftsprofil for ${role.enhet_navn || 'revisor'}`}
+                            >
+                                <Building2 className="h-3 w-3 group-hover:scale-110 transition-transform" />
+                                Se {role.type_kode === 'REVI' ? 'revisorselskap' : 'bedrift'}
+                            </button>
+                        )}
+
+                        {personProfileParams && (
+                            <Link
+                                to="/person/$name/$birthdate"
+                                params={personProfileParams}
+                                onClick={(e) => e.stopPropagation()}
+                                className="flex items-center gap-2 px-3 py-2 bg-blue-50 text-blue-700 rounded-lg hover:bg-blue-100 transition-colors text-xs font-medium group"
+                            >
+                                <ExternalLink className="h-3 w-3 group-hover:scale-110 transition-transform" />
+                                Se alle roller
+                            </Link>
+                        )}
+
+                        {role.person_navn && (
+                            <a
+                                href={getLinkedInSearchUrl(role.person_navn, 'person')}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                onClick={(e) => e.stopPropagation()}
+                                className="flex items-center gap-2 px-3 py-2 bg-gray-50 text-gray-700 rounded-lg hover:bg-[#0A66C2] hover:text-white transition-all text-xs font-medium group"
+                                title={`Søk etter ${role.person_navn} på LinkedIn`}
+                            >
+                                <svg className="h-3 w-3 fill-current" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                                    <path d="M19 0h-14c-2.76 0-5 2.24-5 5v14c0 2.76 2.24 5 5 5h14c2.76 0 5-2.24 5-5v-14c0-2.76-2.24-5-5-5zM8 19H5V10h3v9zM6.5 8.25c-.97 0-1.75-.78-1.75-1.75s.78-1.75 1.75-1.75 1.75.78 1.75 1.75-.78 1.75-1.75 1.75zM19 19h-3v-4.74c0-1.42-.6-1.93-1.38-1.93-.73 0-1.27.35-1.62 1.03V19h-3V10h2.76v1.23h.04c.38-.72 1.17-1.47 2.52-1.47 1.86 0 3.08 1.17 3.08 3.56V19z" />
+                                </svg>
+                                LinkedIn
+                            </a>
+                        )}
+
+                        {role.person_navn && (
+                            <a
+                                href={get1881SearchUrl(role.person_navn)}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                onClick={(e) => e.stopPropagation()}
+                                className="flex items-center gap-2 px-3 py-2 bg-gray-50 text-gray-700 rounded-lg hover:bg-orange-500 hover:text-white transition-all text-xs font-medium group"
+                                title={`Søk etter ${role.person_navn} på 1881.no`}
+                            >
+                                <img src={logo1881} alt="" className="h-3 w-auto" />
+                                1881
+                            </a>
+                        )}
+                    </div>
                 </div>
             )}
         </div>
     )
 }
 
-function RoleSection({ title, roles, icon: Icon }: { title: string; roles: Role[]; icon: typeof Users }) {
+function RoleSection({ title, roles, icon: Icon, onCompanyClick }: { title: string; roles: Role[]; icon: typeof Users, onCompanyClick?: (orgnr: string) => void }) {
     return (
         <div className="space-y-2">
             <h4 className="flex items-center gap-2 text-sm font-semibold text-gray-700">
@@ -162,14 +211,14 @@ function RoleSection({ title, roles, icon: Icon }: { title: string; roles: Role[
             </h4>
             <div className="grid gap-2 sm:grid-cols-2">
                 {roles.map((role, idx) => (
-                    <RoleCard key={`${role.type_kode}-${role.person_navn}-${idx}`} role={role} />
+                    <RoleCard key={`${role.type_kode}-${role.person_navn}-${idx}`} role={role} onCompanyClick={onCompanyClick} />
                 ))}
             </div>
         </div>
     )
 }
 
-export function RolesTab({ orgnr }: RolesTabProps) {
+export function RolesTab({ orgnr, onCompanyClick }: RolesTabProps) {
     const [isManualFetching, setIsManualFetching] = useState(false)
     const [cooldown, setCooldown] = useState(false)
     const [fetchError, setFetchError] = useState<string | null>(null)
@@ -285,6 +334,7 @@ export function RolesTab({ orgnr }: RolesTabProps) {
                         title={config.sectionTitle}
                         roles={rolesInGroup}
                         icon={config.icon}
+                        onCompanyClick={onCompanyClick}
                     />
                 )
             })}

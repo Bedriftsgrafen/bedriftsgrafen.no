@@ -2,7 +2,7 @@ import { useState, useCallback } from 'react';
 import { X, ChevronLeft, ChevronRight, Building2, ExternalLink } from 'lucide-react';
 import { useNavigate } from '@tanstack/react-router';
 import { getOneYearAgo } from '../../utils/dates';
-import { formatNumber, formatCurrency, formatDate } from '../../utils/formatters';
+import { formatNumber, formatCurrency, formatDate, cleanOrgnr } from '../../utils/formatters';
 import { useCompaniesQuery, UseCompaniesQueryParams } from '../../hooks/queries/useCompaniesQuery';
 import { useCompanyCountQuery, UseCompanyCountQueryParams } from '../../hooks/queries/useCompanyCountQuery';
 import { SortableHeader } from '../common/SortableHeader';
@@ -21,6 +21,7 @@ interface CompanyListModalProps {
     naceName: string;
     filterType: 'all' | 'new' | 'bankrupt';
     onClose: () => void;
+    onSelectCompany?: (orgnr: string) => void;
 }
 
 // ============================================================================
@@ -42,6 +43,7 @@ export const CompanyListModal = ({
     naceName,
     filterType,
     onClose,
+    onSelectCompany,
 }: CompanyListModalProps) => {
     const navigate = useNavigate();
     const [page, setPage] = useState(1);
@@ -59,9 +61,14 @@ export const CompanyListModal = ({
     const [sortOrder, setSortOrder] = useState<SortOrder>(getDefaultSort().order);
 
     const handleCompanyClick = useCallback((orgnr: string) => {
+        const clean = cleanOrgnr(orgnr) || orgnr;
         onClose();
-        navigate({ to: '/bedrift/$orgnr', params: { orgnr } });
-    }, [navigate, onClose]);
+        if (onSelectCompany) {
+            onSelectCompany(clean);
+        } else {
+            navigate({ to: '/bedrift/$orgnr', params: { orgnr: clean } });
+        }
+    }, [navigate, onClose, onSelectCompany]);
 
     const handleSort = (field: SortField) => {
         if (sortField === field) {
@@ -271,10 +278,12 @@ export const CompanyListModal = ({
         <div
             className="fixed inset-0 bg-black/50 z-50 flex items-start justify-center p-4 overflow-y-auto"
             onClick={onClose}
+            onMouseDown={(e) => e.stopPropagation()}
         >
             <div
                 className="bg-white rounded-xl shadow-2xl w-full max-w-4xl my-8"
                 onClick={(e) => e.stopPropagation()}
+                onMouseDown={(e) => e.stopPropagation()}
             >
                 {/* Header */}
                 <div className="flex items-center justify-between p-4 border-b border-gray-200">

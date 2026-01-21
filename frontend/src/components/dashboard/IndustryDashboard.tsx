@@ -225,9 +225,10 @@ const IndustryColumnPicker = memo(function IndustryColumnPicker({ visibleColumns
 
 interface IndustryDashboardProps {
     initialNace?: string;
+    onSelectCompany?: (orgnr: string) => void;
 }
 
-export const IndustryDashboard = ({ initialNace }: IndustryDashboardProps) => {
+export const IndustryDashboard = ({ initialNace, onSelectCompany }: IndustryDashboardProps) => {
     const [sortBy, setSortBy] = useState<SortField>('company_count');
     const [sortOrder, setSortOrder] = useState<SortOrder>('desc');
     const [selectedIndustry, setSelectedIndustry] = useState<SelectedIndustry | null>(null);
@@ -269,8 +270,15 @@ export const IndustryDashboard = ({ initialNace }: IndustryDashboardProps) => {
         // Only open if: initialNace exists, data loaded, and we haven't handled this nace yet
         if (initialNace && industries && handledNaceRef.current !== initialNace) {
             handledNaceRef.current = initialNace;
+
+            // Find division (first 2 digits) to provide a better generic name if it's a specific code
+            const divisionCode = initialNace.substring(0, 2);
+            const division = industries.find(i => i.nace_division === divisionCode);
             const industry = industries.find(i => i.nace_division === initialNace);
-            const naceName = industry?.nace_name || `NACE ${initialNace}`;
+
+            const naceName = industry?.nace_name
+                || (division ? `NACE ${initialNace} (${division.nace_name})` : `NACE ${initialNace}`);
+
             // Defer setState to next microtask to satisfy lint rule
             queueMicrotask(() => {
                 setSelectedIndustry({ naceCode: initialNace, naceName, filterType: 'all' });
@@ -467,6 +475,7 @@ export const IndustryDashboard = ({ initialNace }: IndustryDashboardProps) => {
                     naceName={selectedIndustry.naceName}
                     filterType={selectedIndustry.filterType}
                     onClose={handleCloseModal}
+                    onSelectCompany={onSelectCompany}
                 />
             )}
         </>

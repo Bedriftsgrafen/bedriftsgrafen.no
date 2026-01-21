@@ -193,10 +193,10 @@ function HomePage() {
                         <div className="mt-4 flex flex-wrap gap-2 justify-center text-xs text-white/70 relative z-10 animate-in fade-in slide-in-from-top-1">
                             <span className="font-semibold text-white/90">Tips:</span>
                             <span>Prøv å søke etter formål som</span>
-                            <button onClick={() => { setSearchQuery('bærekraft'); handleSearch('bærekraft'); }} className="underline hover:text-white transition-colors">"bærekraft"</button>,
+                            <button onClick={() => { setSearchQuery('Equinor'); handleSearch('Equinor'); }} className="underline hover:text-white transition-colors">"Equinor"</button>,
                             <button onClick={() => { setSearchQuery('ai'); handleSearch('ai'); }} className="underline hover:text-white transition-colors">"ai"</button>
                             <span>eller</span>
-                            <button onClick={() => { setSearchQuery('regnskap'); handleSearch('regnskap'); }} className="underline hover:text-white transition-colors">"regnskap"</button>
+                            <button onClick={() => { setSearchQuery('993144169 '); handleSearch('993144169'); }} className="underline hover:text-white transition-colors">"993144169"</button>
                         </div>
                     )}
                 </div>

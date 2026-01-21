@@ -37,6 +37,10 @@ export interface Company {
   antall_ansatte?: number
   stiftelsesdato?: string
   hjemmeside?: string
+  // Contact info (from raw_data)
+  telefon?: string
+  mobil?: string
+  epostadresse?: string
   // Status flags
   konkurs?: boolean
   konkursdato?: string
@@ -50,6 +54,12 @@ export interface Company {
   registreringsdato_enhetsregisteret?: string
   registreringsdato_foretaksregisteret?: string
   vedtektsfestet_formaal?: string
+  // Capital info (from raw_data)
+  aksjekapital?: number
+  antall_aksjer?: number
+  er_i_konsern?: boolean
+  siste_innsendte_aarsregnskap?: string
+  institusjonell_sektor?: string
   // Latest financial data (if available)
   latest_revenue?: number | null
   latest_profit?: number | null

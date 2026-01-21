@@ -56,6 +56,13 @@ def test_get_company_success(MockServiceClass, MockNaceService):
     mock_company.last_polled_regnskap = None
     mock_company.geocoded_at = None
 
+    # String fields required by CompanyWithAccounting (must be explicit to avoid MagicMock auto-creation)
+    mock_company.telefon = None
+    mock_company.mobil = None
+    mock_company.epostadresse = None
+    mock_company.siste_innsendte_aarsregnskap = None
+    mock_company.institusjonell_sektor = None
+
     # Async mock return
     async def get_comp(*args, **kwargs):
         return mock_company

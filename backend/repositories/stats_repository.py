@@ -174,8 +174,11 @@ class StatsRepository:
                     case(
                         (
                             and_(
-                                models.LatestAccountings.salgsinntekter > 0,
+                                models.LatestAccountings.salgsinntekter >= 50000,
                                 models.LatestAccountings.driftsresultat.isnot(None),
+                                (
+                                    models.LatestAccountings.driftsresultat / models.LatestAccountings.salgsinntekter
+                                ).between(-1.0, 1.0),
                             ),
                             (models.LatestAccountings.driftsresultat / models.LatestAccountings.salgsinntekter) * 100,
                         ),

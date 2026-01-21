@@ -228,7 +228,8 @@ describe('RolesTab - Role Card Expansion', () => {
     })
 
     it('expands role card on click', () => {
-        render(<RolesTab orgnr="123456789" />, { wrapper: createTestWrapper() })
+        const mockOnCompanyClick = vi.fn()
+        render(<RolesTab orgnr="123456789" onCompanyClick={mockOnCompanyClick} />, { wrapper: createTestWrapper() })
 
         // Initially, birthdate should not be visible
         expect(screen.queryByText(/Født:/)).not.toBeInTheDocument()
@@ -244,7 +245,8 @@ describe('RolesTab - Role Card Expansion', () => {
     })
 
     it('shows person profile link when expanded', () => {
-        render(<RolesTab orgnr="123456789" />, { wrapper: createTestWrapper() })
+        const mockOnCompanyClick = vi.fn()
+        render(<RolesTab orgnr="123456789" onCompanyClick={mockOnCompanyClick} />, { wrapper: createTestWrapper() })
 
         // Click on Ola Nordmann's card
         const olaCard = screen.getByText('Ola Nordmann').closest('div[class*="cursor-pointer"]')
@@ -253,7 +255,7 @@ describe('RolesTab - Role Card Expansion', () => {
         }
 
         // Should show link to person profile
-        expect(screen.getByText(/Se alle roller for Ola Nordmann/)).toBeInTheDocument()
+        expect(screen.getByText(/Se alle roller/)).toBeInTheDocument()
     })
 })
 

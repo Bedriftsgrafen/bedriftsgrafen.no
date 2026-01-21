@@ -1,5 +1,5 @@
 import { useState, useMemo, useCallback } from 'react'
-import { TrendingUp, Users, Wallet, Activity, MapPin, Globe } from 'lucide-react'
+import { TrendingUp, Users, Wallet, Activity, MapPin, Globe, ChevronDown } from 'lucide-react'
 import { useBenchmarkQuery } from '../../hooks/queries/useBenchmarkQuery'
 import { formatCurrency, formatNumber, formatPercentValue } from '../../utils/formatters'
 import type { CompanyWithAccounting } from '../../types'
@@ -22,6 +22,8 @@ type ComparisonScope = 'national' | 'municipal'
 
 export function IndustryBenchmark({ company }: IndustryBenchmarkProps) {
     const [scope, setScope] = useState<ComparisonScope>('national')
+    const [selectedNaceCode, setSelectedNaceCode] = useState(company.naeringskode)
+
 
     // Extract municipality code from company address
     const municipalityCode = useMemo(() => {
@@ -36,7 +38,7 @@ export function IndustryBenchmark({ company }: IndustryBenchmarkProps) {
     const effectiveMunicipalityCode = scope === 'municipal' && municipalityCode ? municipalityCode : null
 
     const { data: benchmark, isLoading, isError, error } = useBenchmarkQuery(
-        company.naeringskode,
+        selectedNaceCode || company.naeringskode,
         company.orgnr,
         effectiveMunicipalityCode
     )
@@ -96,10 +98,11 @@ export function IndustryBenchmark({ company }: IndustryBenchmarkProps) {
 
     const naceLevel = getNaceLevel(benchmark.nace_code)
     const hasMunicipalOption = !!municipalityCode
+    const hasMultipleNace = (company.naeringskoder?.length ?? 0) > 1
 
-    // Get the actual NACE description from company data (more accurate than lookup)
-    const primaryNace = company.naeringskoder?.[0]
-    const naceDescription = primaryNace?.beskrivelse || benchmark.nace_name || 'bransjen'
+    // Get the actual NACE description for the SELECTED code
+    const selectedNaceData = company.naeringskoder?.find(nk => nk.kode === selectedNaceCode)
+    const naceDescription = selectedNaceData?.beskrivelse || benchmark.nace_name || 'bransjen'
 
     return (
         <div className="mb-8" role="region" aria-label="Bransjesammenligning">
@@ -132,34 +135,57 @@ export function IndustryBenchmark({ company }: IndustryBenchmarkProps) {
                     </div>
                 </div>
 
+                <div className="flex flex-col sm:flex-row items-center gap-3">
+                    {/* NACE Selector for companies with multiple industries */}
+                    {hasMultipleNace && (
+                        <div className="relative inline-block w-full sm:w-auto">
+                            <select
+                                value={selectedNaceCode || ''}
+                                onChange={(e) => setSelectedNaceCode(e.target.value)}
+                                className="appearance-none w-full bg-white border border-gray-200 text-gray-700 py-2 px-4 pr-10 rounded-lg leading-tight focus:outline-none focus:bg-white focus:border-blue-500 text-sm font-medium shadow-sm cursor-pointer hover:border-blue-300 transition-all"
+                                aria-label="Velg bransje for sammenligning"
+                            >
+                                {company.naeringskoder?.map((nk) => (
+                                    <option key={nk.kode} value={nk.kode}>
+                                        {nk.kode} - {nk.beskrivelse}
+                                    </option>
+                                ))}
+                            </select>
+                            <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-3 text-gray-500">
+                                <ChevronDown className="h-4 w-4" />
+                            </div>
+                        </div>
+                    )}
 
-                {/* Scope Toggle */}
-                {hasMunicipalOption && (
-                    <div className="flex bg-gray-100 rounded-lg p-1 text-sm">
-                        <button
-                            onClick={handleSetNational}
-                            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md transition-colors ${scope === 'national'
-                                ? 'bg-white text-blue-700 shadow-sm font-medium'
-                                : 'text-gray-600 hover:text-gray-900'
-                                }`}
-                            aria-pressed={scope === 'national'}
-                        >
-                            <Globe className="h-3.5 w-3.5" />
-                            Nasjonal
-                        </button>
-                        <button
-                            onClick={handleSetMunicipal}
-                            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md transition-colors ${scope === 'municipal'
-                                ? 'bg-white text-blue-700 shadow-sm font-medium'
-                                : 'text-gray-600 hover:text-gray-900'
-                                }`}
-                            aria-pressed={scope === 'municipal'}
-                        >
-                            <MapPin className="h-3.5 w-3.5" />
-                            {municipalityName || 'Kommune'}
-                        </button>
-                    </div>
-                )}
+
+                    {/* Scope Toggle */}
+                    {hasMunicipalOption && (
+                        <div className="flex bg-gray-100 rounded-lg p-1 text-sm">
+                            <button
+                                onClick={handleSetNational}
+                                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md transition-colors ${scope === 'national'
+                                    ? 'bg-white text-blue-700 shadow-sm font-medium'
+                                    : 'text-gray-600 hover:text-gray-900'
+                                    }`}
+                                aria-pressed={scope === 'national'}
+                            >
+                                <Globe className="h-3.5 w-3.5" />
+                                Nasjonal
+                            </button>
+                            <button
+                                onClick={handleSetMunicipal}
+                                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md transition-colors ${scope === 'municipal'
+                                    ? 'bg-white text-blue-700 shadow-sm font-medium'
+                                    : 'text-gray-600 hover:text-gray-900'
+                                    }`}
+                                aria-pressed={scope === 'municipal'}
+                            >
+                                <MapPin className="h-3.5 w-3.5" />
+                                {municipalityName || 'Kommune'}
+                            </button>
+                        </div>
+                    )}
+                </div>
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">

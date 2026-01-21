@@ -9,6 +9,7 @@ import { KpiCardSkeleton } from '../skeletons/KpiCardSkeleton'
 import { ChartSkeleton } from '../skeletons/ChartSkeleton'
 import { EmptyState } from '../EmptyState'
 import { YearSelector } from './YearSelector'
+import { CapitalInfoCard } from './CapitalInfoCard'
 import { AffiliateBanner } from '../ads/AffiliateBanner'
 import { CONTACT_EMAIL } from '../../constants/contact'
 import { AFFILIATIONS } from '../../constants/affiliations'
@@ -109,7 +110,16 @@ export const FinancialsTab = React.memo(function FinancialsTab({
 
   return (
     <div className="space-y-8 animate-fade-in pb-8">
-      {/* Smart Affiliate Targeting - Moved to top for better visibility */}
+      {/* Capital Info Card - Company capital and corporate structure */}
+      <CapitalInfoCard
+        aksjekapital={company.aksjekapital}
+        antallAksjer={company.antall_aksjer}
+        sisteRegnskapsaar={company.siste_innsendte_aarsregnskap}
+        erIKonsern={company.er_i_konsern}
+        institusjonellSektor={company.institusjonell_sektor}
+      />
+
+      {/* Smart Affiliate Targeting */}
       {adConfig && (
         <div className="mb-2">
           <AffiliateBanner
