@@ -12,8 +12,19 @@ from database import AsyncSessionLocal, engine
 logger = logging.getLogger(__name__)
 
 # Tables to vacuum during maintenance (allowlist for safety)
+# Regular tables that accumulate data and need periodic VACUUM ANALYZE
 MAINTENANCE_TABLES = frozenset(
-    ["bedrifter", "underenheter", "roller", "regnskap", "municipality_population", "system_state"]
+    [
+        "bedrifter",  # Companies
+        "underenheter",  # SubUnits
+        "roller",  # Roles
+        "regnskap",  # Accounting statements
+        "municipality_population",  # SSB population data
+        "system_state",  # System state tracking
+        "sync_errors",  # Sync error log
+        "bulk_import_queue",  # Bulk import queue
+        "import_batches",  # Import batch tracking (plural!)
+    ]
 )
 
 
@@ -152,6 +163,16 @@ class SchedulerService:
             misfire_grace_time=300,
         )
 
+        # Clean up old bulk import queue entries weekly (Sundays at 05:00)
+        self.scheduler.add_job(
+            self.cleanup_import_queue,
+            trigger=CronTrigger(day_of_week="sun", hour=5, minute=0),
+            id="cleanup_import_queue",
+            replace_existing=True,
+            max_instances=1,
+            misfire_grace_time=300,
+        )
+
     async def start(self) -> None:
         self.scheduler.start()
         logger.info("Scheduler started", extra={"jobs": [job.id for job in self.scheduler.get_jobs()]})
@@ -161,16 +182,27 @@ class SchedulerService:
         logger.info("Scheduler shutdown")
 
     async def refresh_materialized_views(self) -> None:
-        """Refreshes materialized views used for statistics CONCURRENTLY."""
+        """Refreshes all materialized views used for statistics and caching.
+
+        Uses CONCURRENTLY to prevent table locks so reads can continue.
+        Views must have unique indexes to support concurrent refresh.
+        """
         logger.info("Starting materialized view refresh (CONCURRENTLY)...")
         try:
             async with engine.begin() as conn:
-                # Concurrent refresh prevents table locks so reads can continue
+                # Core statistics views (refreshed every 5 minutes)
                 await conn.execute(text("REFRESH MATERIALIZED VIEW CONCURRENTLY company_totals;"))
                 await conn.execute(text("REFRESH MATERIALIZED VIEW CONCURRENTLY industry_stats;"))
+                await conn.execute(text("REFRESH MATERIALIZED VIEW CONCURRENTLY industry_subclass_stats;"))
                 await conn.execute(text("REFRESH MATERIALIZED VIEW CONCURRENTLY county_stats;"))
                 await conn.execute(text("REFRESH MATERIALIZED VIEW CONCURRENTLY municipality_stats;"))
-            logger.info("Materialized view refresh completed successfully.")
+                await conn.execute(text("REFRESH MATERIALIZED VIEW CONCURRENTLY orgform_counts;"))
+
+                # Financial caching views (latest year per company)
+                await conn.execute(text("REFRESH MATERIALIZED VIEW CONCURRENTLY latest_financials;"))
+                await conn.execute(text("REFRESH MATERIALIZED VIEW CONCURRENTLY latest_accountings;"))
+
+            logger.info("Materialized view refresh completed successfully", extra={"views_refreshed": 8})
         except Exception as e:
             logger.exception("Failed to refresh materialized views", extra={"error": str(e)})
 
@@ -542,3 +574,32 @@ class SchedulerService:
                 logger.info("Weekly role backfill completed successfully.")
         except Exception as e:
             logger.exception("Failed to run role backfill", extra={"error": str(e)})
+
+    async def cleanup_import_queue(self) -> None:
+        """Weekly: Clean up old completed/failed entries from bulk_import_queue.
+
+        Removes entries older than 7 days that are in terminal states (COMPLETED, FAILED, SKIPPED)
+        to prevent table bloat and maintain query performance.
+        """
+        from datetime import datetime, timedelta
+        from sqlalchemy import delete
+        from models_import import BulkImportQueue, ImportStatus
+
+        logger.info("Starting bulk import queue cleanup...")
+        try:
+            async with AsyncSessionLocal() as db:
+                cutoff_date = datetime.now(timezone.utc) - timedelta(days=7)
+
+                # Delete old terminal-state entries
+                stmt = delete(BulkImportQueue).where(
+                    BulkImportQueue.status.in_([ImportStatus.COMPLETED, ImportStatus.FAILED, ImportStatus.SKIPPED]),
+                    BulkImportQueue.completed_at < cutoff_date,
+                )
+
+                result = await db.execute(stmt)
+                await db.commit()
+
+                deleted_count: int = result.rowcount  # type: ignore[attr-defined]
+                logger.info("Bulk import queue cleanup completed", extra={"deleted": deleted_count, "cutoff_days": 7})
+        except Exception as e:
+            logger.exception("Failed to cleanup import queue", extra={"error": str(e)})
