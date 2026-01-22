@@ -18,12 +18,25 @@ import { useCompanyCountQuery } from '../../hooks/queries/useCompanyCountQuery'
 interface BankruptcyListProps {
     onSelectCompany: (orgnr: string) => void
     bankruptFrom: string
+    initialNace?: string
+    initialCounty?: string
+    initialCountyCode?: string
+    initialMunicipality?: string
+    initialMunicipalityCode?: string
 }
 
 type SortField = 'navn' | 'konkursdato' | 'antall_ansatte' | 'naeringskode'
 
 
-export function BankruptcyList({ onSelectCompany, bankruptFrom }: BankruptcyListProps) {
+export function BankruptcyList({
+    onSelectCompany,
+    bankruptFrom,
+    initialNace = '',
+    initialCounty = '',
+    initialCountyCode = '',
+    initialMunicipality = '',
+    initialMunicipalityCode = ''
+}: BankruptcyListProps) {
     const {
         page,
         searchQuery, setSearchQuery,
@@ -33,9 +46,21 @@ export function BankruptcyList({ onSelectCompany, bankruptFrom }: BankruptcyList
         itemsPerPage,
         activeFilterCount, hasActiveFilters,
         nextPage, prevPage
-    } = useTableState<{ nace: string, county: string, municipality: string }, SortField>({
+    } = useTableState<{
+        nace: string,
+        county: string,
+        county_code: string,
+        municipality: string,
+        municipality_code: string
+    }, SortField>({
         initialSortBy: 'konkursdato',
-        initialFilters: { nace: '', county: '', municipality: '' }
+        initialFilters: {
+            nace: initialNace,
+            county: initialCounty,
+            county_code: initialCountyCode,
+            municipality: initialMunicipality,
+            municipality_code: initialMunicipalityCode
+        }
     })
 
 
@@ -49,7 +74,8 @@ export function BankruptcyList({ onSelectCompany, bankruptFrom }: BankruptcyList
         sort_order: sortOrder,
         naeringskode: filters.nace || undefined,
         county: filters.county || undefined,
-        municipality: filters.municipality || undefined
+        municipality: filters.municipality || undefined,
+        municipality_code: filters.municipality_code || undefined
     })
 
     // Fetch total count with filters
@@ -58,7 +84,8 @@ export function BankruptcyList({ onSelectCompany, bankruptFrom }: BankruptcyList
         bankrupt_from: bankruptFrom,
         naeringskode: filters.nace || undefined,
         county: filters.county || undefined,
-        municipality: filters.municipality || undefined
+        municipality: filters.municipality || undefined,
+        municipality_code: filters.municipality_code || undefined
     })
 
     const totalPages = totalCount ? Math.ceil(totalCount / itemsPerPage) : 1

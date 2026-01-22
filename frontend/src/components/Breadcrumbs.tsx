@@ -4,30 +4,42 @@ import { ChevronRight } from 'lucide-react'
 export interface BreadcrumbItem {
   label: string
   to?: string
+  className?: string
 }
 
 interface BreadcrumbsProps {
   items: BreadcrumbItem[]
+  variant?: 'default' | 'transparent'
 }
 
-export function Breadcrumbs({ items }: BreadcrumbsProps) {
+export function Breadcrumbs({ items, variant = 'default' }: BreadcrumbsProps) {
+  const isDefault = variant === 'default'
+
   return (
-    <nav aria-label="Breadcrumb" className="mb-6">
-      <ol className="flex items-center gap-1 text-sm">
+    <nav aria-label="Breadcrumb" className={isDefault ? 'mb-6 px-4 py-3' : 'mb-6'}>
+      <ol className="flex items-center gap-1 text-sm font-medium">
         {items.map((item, index) => (
-          <li key={`${item.to || 'current'}-${item.label}`} className="flex items-center gap-1">
+          <li key={`${item.to || 'current'}-${index}-${item.label}`} className="flex items-center gap-1">
             {index > 0 && (
-              <ChevronRight className="h-4 w-4 text-gray-400 shrink-0" aria-hidden="true" />
+              <ChevronRight
+                className={`h-4 w-4 shrink-0 ${isDefault ? 'text-gray-400' : 'text-white/20'}`}
+                aria-hidden="true"
+              />
             )}
             {item.to ? (
               <Link
                 to={item.to}
-                className="text-blue-600 hover:text-blue-700 hover:underline transition-colors"
+                className={item.className || (isDefault ? 'text-blue-600 hover:text-blue-700' : 'text-white/60 hover:text-white')}
               >
                 {item.label}
               </Link>
             ) : (
-              <span className="text-gray-600" aria-current="page">{item.label}</span>
+              <span
+                className={item.className || (isDefault ? 'text-gray-600' : 'text-white')}
+                aria-current="page"
+              >
+                {item.label}
+              </span>
             )}
           </li>
         ))}

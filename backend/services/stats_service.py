@@ -6,6 +6,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 import models
 from constants.counties import COUNTY_NAMES, get_county_name
+from constants.municipality_coords import MUNICIPALITY_COORDS
 from repositories.company_filter_builder import FilterParams
 from repositories.company import CompanyRepository
 from repositories.stats_repository import StatsRepository
@@ -50,7 +51,7 @@ class StatsService:
     async def _ensure_municipality_names_loaded(self) -> None:
         """Load municipality names from database (thread-safe singleton).
 
-        Note: Cache is bounded to ~356 municipalities (all Norwegian kommuner).
+        Note: Cache is bounded to ~357 municipalities (all Norwegian kommuner).
         Memory footprint: ~20KB. No TTL needed as municipality names rarely change.
         """
         if StatsService._municipality_names:
@@ -118,6 +119,8 @@ class StatsService:
                     value=val,
                     population=pop,
                     companies_per_capita=per_capita,
+                    lat=None,
+                    lng=None,
                 )
             )
         return stats
@@ -167,6 +170,9 @@ class StatsService:
 
             per_capita = (val / pop * 1000) if pop and pop > 0 else None
 
+            # Retrieve coordinates
+            coords = MUNICIPALITY_COORDS.get(clean_code)
+
             stats.append(
                 GeoStatResponse(
                     code=clean_code,
@@ -174,6 +180,8 @@ class StatsService:
                     value=val,
                     population=pop,
                     companies_per_capita=per_capita,
+                    lat=coords[0] if coords else None,
+                    lng=coords[1] if coords else None,
                 )
             )
 
@@ -218,6 +226,8 @@ class StatsService:
                             value=val,
                             population=pop,
                             companies_per_capita=per_capita,
+                            lat=None,
+                            lng=None,
                         )
                     )
                 return stats
@@ -231,6 +241,7 @@ class StatsService:
                     val = int(row.value or 0)
                     pop = pop_map.get(clean_code)
                     per_capita = (val / pop * 1000) if pop and pop > 0 else None
+                    coords = MUNICIPALITY_COORDS.get(clean_code)
                     stats.append(
                         GeoStatResponse(
                             code=clean_code,
@@ -238,6 +249,8 @@ class StatsService:
                             value=val,
                             population=pop,
                             companies_per_capita=per_capita,
+                            lat=coords[0] if coords else None,
+                            lng=coords[1] if coords else None,
                         )
                     )
                 return stats
@@ -476,4 +489,79 @@ class StatsService:
                 "industry_median": None,
                 "percentile": calc_percentile(company_op_margin, industry_stats.avg_operating_margin),
             },
+        }
+    async def get_municipality_premium_dashboard(self, municipality_code: str):
+        """
+        Consolidated premium dashboard data for a municipality.
+        Coordinates multiple repository calls in parallel for performance.
+        """
+        # Ensure name cache is loaded for fallback
+        await self._ensure_municipality_names_loaded()
+
+        # 1. Fetch all components
+        summary = await self.stats_repo.get_municipality_premium_summary(municipality_code)
+        sectors = await self.stats_repo.get_municipality_sector_distribution(municipality_code)
+
+        # Advanced rankings (Density and Revenue)
+        ranking_density = await self.stats_repo.get_municipality_rankings(municipality_code, metric="density")
+        ranking_revenue = await self.stats_repo.get_municipality_rankings(municipality_code, metric="revenue")
+
+        trend = await self.stats_repo.get_establishment_trend(municipality_code)
+
+        # 2. Fetch company lists (Top earners, Newest, and Bankruptcies)
+        # Top 5 by revenue
+        top_companies_res = await self.company_repo.get_all(
+            FilterParams(municipality_code=municipality_code),
+            limit=5,
+            sort_by="revenue",
+            sort_order="desc",
+        )
+
+        # Newest 40 (Exclude KBO at query level to ensure we get real new companies)
+        new_companies_res = await self.company_repo.get_all(
+            FilterParams(municipality_code=municipality_code, exclude_org_form=["KBO"]),
+            limit=40,
+            sort_by="stiftelsesdato",
+            sort_order="desc",
+        )
+
+        # Siste konkurser (Top 5)
+        bankrupt_res = await self.company_repo.get_all(
+            FilterParams(municipality_code=municipality_code, is_bankrupt=True),
+            limit=5,
+            sort_by="konkursdato",
+            sort_order="desc",
+        )
+
+        # Post-processing
+        from constants.counties import get_county_name
+
+        # Exclude bankrupt estates from newest companies feed
+        filtered_newest = [c for c in new_companies_res if "KONKURSBO" not in (c.navn or "").upper()]
+
+        # Get coordinates
+        coords = MUNICIPALITY_COORDS.get(municipality_code)
+
+        return {
+            "code": municipality_code,
+            "name": self._get_municipality_name(municipality_code),
+            "county_code": municipality_code[:2],
+            "county_name": get_county_name(municipality_code[:2]),
+            "lat": coords[0] if coords else None,
+            "lng": coords[1] if coords else None,
+            "population": summary["population"],
+            "population_growth_1y": summary["population_growth_1y"],
+            "company_count": summary["company_count"],
+            "business_density": (summary["company_count"] / summary["population"] * 1000)
+            if summary["population"] > 0
+            else 0,
+            "business_density_national_avg": summary["national_density"],
+            "total_revenue": None,  # Future: sum from LatestAccountings join
+            "establishment_trend": trend,
+            "top_sectors": sectors,
+            "top_companies": top_companies_res,
+            "newest_companies": filtered_newest[:5],
+            "latest_bankruptcies": bankrupt_res,
+            "ranking_in_county_density": ranking_density,
+            "ranking_in_county_revenue": ranking_revenue,
         }

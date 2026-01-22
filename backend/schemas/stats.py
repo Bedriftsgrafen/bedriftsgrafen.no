@@ -34,6 +34,8 @@ class GeoStatResponse(BaseModel):
     value: int = Field(..., description="Metric value")
     population: int | None = Field(None, description="Population count")
     companies_per_capita: float | None = Field(None, description="Companies per 1000 inhabitants")
+    lat: float | None = Field(None, description="Latitude")
+    lng: float | None = Field(None, description="Longitude")
 
     class Config:
         from_attributes = True

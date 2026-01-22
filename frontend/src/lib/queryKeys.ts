@@ -40,3 +40,10 @@ export const accountingQueryKeys = {
     year,
   ] as const,
 }
+
+export const municipalityQueryKeys = {
+  all: ['municipalities'] as const,
+  lists: () => [...municipalityQueryKeys.all, 'list'] as const,
+  dashboards: () => [...municipalityQueryKeys.all, 'dashboard'] as const,
+  dashboard: (code: string) => [...municipalityQueryKeys.dashboards(), code] as const,
+}

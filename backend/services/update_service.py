@@ -658,11 +658,51 @@ class UpdateService:
 
                     await self.db.commit()
 
-                    # Phase 1: Collect all roles for all companies in this batch
+                    # Ensure all companies for which we're syncing roles exist in the database
+                    # This prevents FK violations when inserting roles
+                    existing_orgnrs = await self.company_repo.get_existing_orgnrs(list(orgnrs_to_sync))
+                    missing_orgnrs = orgnrs_to_sync - existing_orgnrs
+
+                    if missing_orgnrs:
+                        logger.info(
+                            f"Found {len(missing_orgnrs)} missing companies for role updates. Fetching from Brreg..."
+                        )
+                        # Fetch and create missing companies
+                        semaphore = asyncio.Semaphore(CONCURRENCY_LIMIT)
+
+                        async def fetch_missing_company(orgnr: str) -> dict[str, Any] | None:
+                            async with semaphore:
+                                try:
+                                    return await self.brreg_api.fetch_company(orgnr)
+                                except Exception as e:
+                                    logger.warning(f"Failed to fetch missing company {orgnr}: {e}")
+                                    return None
+
+                        fetch_tasks = [fetch_missing_company(orgnr) for orgnr in missing_orgnrs]
+                        fetched_companies = await asyncio.gather(*fetch_tasks)
+
+                        for company_data in fetched_companies:
+                            if company_data:
+                                try:
+                                    await self.company_repo.create_or_update(company_data)
+                                except Exception as e:
+                                    logger.error(f"Failed to persist company {company_data.get('organisasjonsnummer')}: {e}")
+
+                        await self.db.commit()
+
+                        # Re-check which companies exist now
+                        existing_orgnrs = await self.company_repo.get_existing_orgnrs(list(orgnrs_to_sync))
+
+                    # Phase 1: Collect all roles for companies that exist in the database
                     all_batch_roles: list[models.Role] = []
                     processed_orgnrs: set[str] = set()
 
                     for orgnr in orgnrs_to_sync:
+                        # Skip companies that still don't exist (couldn't be fetched)
+                        if orgnr not in existing_orgnrs:
+                            logger.warning(f"Skipping role sync for {orgnr}: company not found in bedrifter table")
+                            continue
+
                         try:
                             # Use Brreg API directly to fetch current roles
                             roles_data = await self.brreg_api.fetch_roles(orgnr)

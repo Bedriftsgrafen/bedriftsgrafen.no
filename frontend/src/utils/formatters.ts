@@ -108,7 +108,7 @@ export function formatLargeNumber(value: number | null | undefined): string {
     return `${(value / 1_000_000_000_000).toFixed(1)} bill.`
   }
   if (value >= 1_000_000_000) {
-    return `${(value / 1_000_000_000).toFixed(1)} mrd.`
+    return `${(value / 1_000_000_000).toLocaleString('nb-NO', { maximumFractionDigits: 1 })} milliard`
   }
   if (value >= 1_000_000) {
     return `${(value / 1_000_000).toFixed(1)} mill.`
@@ -123,6 +123,9 @@ export function formatLargeNumber(value: number | null | undefined): string {
 export function formatLargeCurrency(value: number | null | undefined): string {
   if (value === null || value === undefined) return '-'
 
+  if (value >= 1_000_000_000) {
+    return `${(value / 1_000_000_000).toLocaleString('nb-NO', { maximumFractionDigits: 1 })} mrd. NOK`
+  }
   if (value >= 1_000_000) {
     return `${(value / 1_000_000).toLocaleString('nb-NO', { maximumFractionDigits: 1 })} MNOK`
   }

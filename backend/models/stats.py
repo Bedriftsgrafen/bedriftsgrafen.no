@@ -102,3 +102,4 @@ class MunicipalityStats(Base):
     new_last_year: Mapped[int | None] = mapped_column(Integer, nullable=True)
     bankrupt_count: Mapped[int | None] = mapped_column(Integer, nullable=True)
     total_employees: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    total_revenue: Mapped[float | None] = mapped_column(Float, nullable=True)

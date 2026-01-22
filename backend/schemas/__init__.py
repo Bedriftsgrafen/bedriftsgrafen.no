@@ -23,6 +23,11 @@ from schemas.companies import (
     Naeringskode,
 )
 
+from schemas.municipality import (
+    MunicipalityListResponse,
+    MunicipalityPremiumResponse,
+)
+
 __all__ = [
     # Brreg API schemas
     "BrregAdresse",
@@ -44,4 +49,7 @@ __all__ = [
     "FetchCompanyResponse",
     "IndustryCompaniesResponse",
     "NaceSubclass",
+    # Municipality schemas
+    "MunicipalityPremiumResponse",
+    "MunicipalityListResponse",
 ]

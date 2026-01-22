@@ -150,11 +150,19 @@ function NyetableringerPage() {
 
     // Fetch new companies count
     const { data: count } = useQuery<number>({
-        queryKey: ['newCompaniesCount', foundedFrom],
+        queryKey: ['newCompaniesCount', foundedFrom, municipality_code, county_code, nace, q],
         queryFn: async () => {
-            const res = await fetch(
-                `${API_BASE}/v1/companies/count?registered_from=${foundedFrom}&organisasjonsform=AS&exclude_org_form=KBO`
-            )
+            const params = new URLSearchParams({
+                registered_from: foundedFrom,
+                organisasjonsform: 'AS',
+                exclude_org_form: 'KBO'
+            })
+            if (municipality_code) params.set('municipality_code', municipality_code)
+            if (county_code) params.set('county_code', county_code)
+            if (nace) params.set('naeringskode', nace)
+            if (q) params.set('name', q)
+
+            const res = await fetch(`${API_BASE}/v1/companies/count?${params.toString()}`)
             if (!res.ok) throw new Error('Failed to fetch count')
             return res.json()
         },
@@ -163,11 +171,19 @@ function NyetableringerPage() {
 
     // Fetch aggregate stats
     const { data: stats } = useQuery<NewCompaniesStats>({
-        queryKey: ['newCompaniesStats', foundedFrom],
+        queryKey: ['newCompaniesStats', foundedFrom, municipality_code, county_code, nace, q],
         queryFn: async () => {
-            const res = await fetch(
-                `${API_BASE}/v1/companies/stats?registered_from=${foundedFrom}&organisasjonsform=AS&exclude_org_form=KBO`
-            )
+            const params = new URLSearchParams({
+                registered_from: foundedFrom,
+                organisasjonsform: 'AS',
+                exclude_org_form: 'KBO'
+            })
+            if (municipality_code) params.set('municipality_code', municipality_code)
+            if (county_code) params.set('county_code', county_code)
+            if (nace) params.set('naeringskode', nace)
+            if (q) params.set('name', q)
+
+            const res = await fetch(`${API_BASE}/v1/companies/stats?${params.toString()}`)
             if (!res.ok) throw new Error('Failed to fetch stats')
             return res.json()
         },
@@ -265,7 +281,13 @@ function NyetableringerPage() {
 
             {/* Content */}
             {activeTab === 'list' && (
-                <NewCompaniesList onSelectCompany={setSelectedCompanyOrgnr} registeredFrom={foundedFrom} />
+                <NewCompaniesList
+                    onSelectCompany={setSelectedCompanyOrgnr}
+                    registeredFrom={foundedFrom}
+                    initialMunicipalityCode={municipality_code}
+                    initialCountyCode={county_code}
+                    initialNace={nace}
+                />
             )}
 
             {activeTab === 'stats' && (
@@ -326,23 +348,27 @@ function NyetableringerPage() {
             )}
 
             {/* Company Modal */}
-            {selectedCompanyOrgnr && (
-                <CompanyModalOverlay
-                    orgnr={selectedCompanyOrgnr}
-                    onClose={() => setSelectedCompanyOrgnr(null)}
-                    onSelectCompany={setSelectedCompanyOrgnr}
-                />
-            )}
+            {
+                selectedCompanyOrgnr && (
+                    <CompanyModalOverlay
+                        orgnr={selectedCompanyOrgnr}
+                        onClose={() => setSelectedCompanyOrgnr(null)}
+                        onSelectCompany={setSelectedCompanyOrgnr}
+                    />
+                )
+            }
 
             {/* Industry Companies Modal */}
-            {selectedIndustry && (
-                <CompanyListModal
-                    naceCode={selectedIndustry.code}
-                    naceName={selectedIndustry.name}
-                    filterType="new"
-                    onClose={() => setSelectedIndustry(null)}
-                />
-            )}
+            {
+                selectedIndustry && (
+                    <CompanyListModal
+                        naceCode={selectedIndustry.code}
+                        naceName={selectedIndustry.name}
+                        filterType="new"
+                        onClose={() => setSelectedIndustry(null)}
+                    />
+                )
+            }
         </>
     )
 }

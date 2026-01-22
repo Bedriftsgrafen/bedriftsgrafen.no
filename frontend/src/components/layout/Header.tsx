@@ -1,4 +1,4 @@
-import { Search, AlertTriangle, Sparkles, BarChart3, Map, Info, Home } from 'lucide-react'
+import { Search, AlertTriangle, Sparkles, BarChart3, Map, Info, Home, MapPin } from 'lucide-react'
 import { Link, useRouterState } from '@tanstack/react-router'
 import logo from '../../img/bg_logo_small.webp'
 
@@ -7,6 +7,7 @@ const navItems = [
   { to: '/utforsk', label: 'Søk', icon: Search },
   { to: '/bransjer', label: 'Bransjer', icon: BarChart3 },
   { to: '/kart', label: 'Kart', icon: Map },
+  { to: '/kommuner', label: 'Kommuner', icon: MapPin },
   { to: '/nyetableringer', label: 'Nyetableringer', icon: Sparkles },
   { to: '/konkurser', label: 'Konkurser', icon: AlertTriangle },
   { to: '/om', label: 'Om', icon: Info },

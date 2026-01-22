@@ -6,7 +6,9 @@ from services.update_service import UpdateService
 
 @pytest.fixture
 def mock_db():
-    return AsyncMock()
+    db = AsyncMock()
+    db.add = MagicMock()
+    return db
 
 
 @pytest.fixture
@@ -16,6 +18,7 @@ def update_service(mock_db):
     service.subunit_repo = AsyncMock()
     service.role_repo = AsyncMock()
     service.system_repo = AsyncMock()
+    service.company_repo = AsyncMock()
     return service
 
 
@@ -82,8 +85,9 @@ async def test_fetch_role_updates_success(update_service, mock_db):
         {"type_kode": "DAGL", "person_navn": "Ola Nordmann", "foedselsdato": "1980-01-01"}
     ]
 
-    # Mock parent verification (NEW)
-    update_service._ensure_parent_companies_exist = AsyncMock(return_value={"111222333"})
+    # Mock company existence checks
+    update_service.company_repo.get_existing_orgnrs = AsyncMock(return_value={"987654321"})
+    update_service._ensure_parent_companies_exist = AsyncMock(return_value={"987654321"})
 
     # Mock CloudEvents batch response
     mock_response = MagicMock()
@@ -95,8 +99,12 @@ async def test_fetch_role_updates_success(update_service, mock_db):
 
     assert result["companies_updated"] == 1
     assert result["latest_oppdateringsid"] == 500
-    # Should perform bulk delete and insert
-    assert mock_db.execute.called
+    
+    # In fetch_role_updates:
+    # 1. commit() before company check
+    # 2. Re-check existing (no commit if none missing)
+    # 3. commit() after processing roles
+    assert mock_db.commit.call_count >= 2
     update_service.role_repo.create_batch.assert_called_once()
 
     args, kwargs = update_service.role_repo.create_batch.call_args

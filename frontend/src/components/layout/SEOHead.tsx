@@ -20,6 +20,8 @@ interface SEOHeadProps {
   description?: string
   /** Additional company data for richer structured data */
   companyData?: CompanyDataProps
+  /** Custom OG image URL */
+  ogImage?: string
 }
 
 /**
@@ -96,7 +98,8 @@ export function SEOHead({
   orgnr,
   title: customTitle,
   description: customDescription,
-  companyData
+  companyData,
+  ogImage: customOgImage
 }: SEOHeadProps) {
   const location = useLocation()
   const currentUrl = `${SEO_DEFAULTS.siteUrl}${location.pathname}`
@@ -133,7 +136,7 @@ export function SEOHead({
       <meta property="og:title" content={title} />
       <meta property="og:description" content={description} />
       <meta property="og:site_name" content="Bedriftsgrafen.no" />
-      <meta property="og:image" content={SEO_DEFAULTS.ogImage} />
+      <meta property="og:image" content={customOgImage || SEO_DEFAULTS.ogImage} />
       <meta property="og:image:width" content="1200" />
       <meta property="og:image:height" content="630" />
       <meta property="og:image:alt" content="Bedriftsgrafen.no - Analyse av norske bedrifter" />
@@ -143,7 +146,7 @@ export function SEOHead({
       <meta name="twitter:card" content="summary_large_image" />
       <meta name="twitter:title" content={title} />
       <meta name="twitter:description" content={description} />
-      <meta name="twitter:image" content={SEO_DEFAULTS.ogImage} />
+      <meta name="twitter:image" content={customOgImage || SEO_DEFAULTS.ogImage} />
 
       {/* Canonical URL */}
       <link rel="canonical" href={currentUrl} />

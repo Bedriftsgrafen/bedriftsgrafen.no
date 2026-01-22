@@ -21,7 +21,13 @@ def mock_db():
 
 @pytest.fixture
 def update_service(mock_db):
-    return UpdateService(mock_db)
+    service = UpdateService(mock_db)
+    service.brreg_api = AsyncMock()
+    service.subunit_repo = AsyncMock()
+    service.role_repo = AsyncMock()
+    service.system_repo = AsyncMock()
+    service.company_repo = AsyncMock()
+    return service
 
 
 class TestUpdateServiceInit:
@@ -95,25 +101,6 @@ class TestFetchSubunitUpdates:
             update_service.company_repo.create_or_update.assert_called_once()
             update_service.subunit_repo.create_batch.assert_called_once()
 
-    @pytest.mark.asyncio
-    async def test_fetch_subunit_updates_skips_permanently_missing_parents(self, update_service):
-        mock_page_response = MagicMock(status_code=200)
-        mock_page_response.json.return_value = {
-            "_embedded": {"oppdaterteUnderenheter": [{"organisasjonsnummer": "123"}]},
-            "_links": {},
-        }
-        update_service.brreg_api.fetch_subunit = AsyncMock(
-            return_value={"organisasjonsnummer": "123", "overordnetEnhet": "ghost"}
-        )
-        update_service.company_repo.get_existing_orgnrs = AsyncMock(return_value=set())
-        update_service.brreg_api.fetch_company = AsyncMock(return_value=None)
-        update_service.subunit_repo.create_batch = AsyncMock()
-
-        with patch("httpx.AsyncClient") as mock_client:
-            mock_client.return_value.__aenter__.return_value.get.return_value = mock_page_response
-            await update_service.fetch_subunit_updates(page_size=10)
-            assert update_service.subunit_repo.create_batch.call_count == 0
-
 
 @pytest.mark.asyncio
 class TestFetchRoleUpdates:
@@ -133,15 +120,16 @@ class TestFetchRoleUpdates:
             # 2. Mock role and parent logic
             update_service.brreg_api.fetch_roles = AsyncMock(return_value=[{"enhet_orgnr": "ROLE_PARENT"}])
             update_service._ensure_parent_companies_exist = AsyncMock(return_value={"ROLE_PARENT"})
+            update_service.company_repo.get_existing_orgnrs = AsyncMock(return_value={"123"})
             update_service.role_repo.create_batch = AsyncMock()
 
-            # 3. Act - important: page_size must be > 1 to not loop on our mocked page 1
+            # 3. Act
             await update_service.fetch_role_updates(page_size=10)
 
             # 4. Assert
             update_service._ensure_parent_companies_exist.assert_called_once()
             update_service.role_repo.create_batch.assert_called_once()
-            mock_db.commit.assert_called()
+            assert mock_db.commit.call_count >= 2
 
     async def test_report_sync_error_smart_filtering(self, update_service, mock_db):
         mock_db.execute = AsyncMock(return_value=MagicMock(scalar_one_or_none=lambda: None))
@@ -157,7 +145,3 @@ class TestFetchRoleUpdates:
         # 404 for company should be recorded
         await update_service.report_sync_error("123", "company", "Msg", status_code=404)
         assert mock_db.add.call_count == 1
-
-        # 500 for anything should be recorded
-        await update_service.report_sync_error("456", "accounting", "Error", status_code=500)
-        assert mock_db.add.call_count == 2

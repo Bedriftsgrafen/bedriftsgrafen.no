@@ -1,6 +1,7 @@
 import { Building2, MapPin, Users, Calendar, Briefcase, ChevronRight, AlertTriangle, ExternalLink } from 'lucide-react'
 import { useMemo } from 'react'
 import type { CompanyWithAccounting, Naeringskode } from '../../types'
+import { Link } from '@tanstack/react-router'
 import { formatDate, getBrregEnhetsregisteretUrl } from '../../utils/formatters'
 import { getOrganizationFormLabel } from '../../utils/organizationForms'
 import { LocationMap } from '../common/LocationMap'
@@ -239,6 +240,19 @@ export function OverviewTab({ company, onOpenIndustry }: OverviewTabProps) {
                       {company.forretningsadresse.postnummer} {company.forretningsadresse.poststed}
                     </div>
                     <div>{company.forretningsadresse.land}</div>
+                    {company.forretningsadresse.kommunenummer && (
+                      <div className="mt-3 pt-3 border-t border-slate-100">
+                        <Link
+                          to="/kommune/$code"
+                          params={{ code: `${company.forretningsadresse.kommunenummer}-${(company.forretningsadresse.kommune || 'kommune').toLowerCase().replace(' ', '-')}` }}
+                          className="inline-flex items-center gap-2 text-sm font-bold text-blue-600 hover:text-blue-700 hover:underline group"
+                        >
+                          <Users className="h-4 w-4" />
+                          Se {company.forretningsadresse.kommune} Dashboard
+                          <ChevronRight className="h-4 w-4 group-hover:translate-x-0.5 transition-transform" />
+                        </Link>
+                      </div>
+                    )}
                   </div>
                 </div>
               )}

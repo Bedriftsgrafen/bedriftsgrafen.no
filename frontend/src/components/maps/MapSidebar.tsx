@@ -1,4 +1,5 @@
 import React, { useMemo } from 'react';
+import { Link } from '@tanstack/react-router';
 import { ChevronRight, Filter, RotateCcw, Map as MapIcon } from 'lucide-react';
 import clsx from 'clsx';
 import { Legend } from './parts/Legend';
@@ -130,13 +131,26 @@ export const MapSidebar: React.FC<MapSidebarProps> = ({
                                 </div>
                             </div>
 
-                            <button
-                                onClick={() => onShowCompanies?.(selectedRegionData.name, selectedRegionData.code)}
-                                className="w-full bg-blue-600 hover:bg-blue-700 text-white py-2.5 rounded-lg text-xs font-black transition-all shadow-md active:scale-95 flex items-center justify-center gap-2"
-                            >
-                                Se bedrifter
-                                <ChevronRight className="w-4 h-4" />
-                            </button>
+                            <div className="flex flex-col gap-2">
+                                <button
+                                    onClick={() => onShowCompanies?.(selectedRegionData.name, selectedRegionData.code)}
+                                    className="w-full bg-blue-600 hover:bg-blue-700 text-white py-2.5 rounded-lg text-xs font-black transition-all shadow-md active:scale-95 flex items-center justify-center gap-2"
+                                >
+                                    Se bedrifter
+                                    <ChevronRight className="w-4 h-4" />
+                                </button>
+
+                                {level === 'municipality' && (
+                                    <Link
+                                        to="/kommune/$code"
+                                        params={{ code: `${selectedRegionData.code}-${selectedRegionData.name.toLowerCase().replace(' ', '-')}` }}
+                                        className="w-full bg-white border border-blue-200 text-blue-600 hover:bg-blue-50 py-2 rounded-lg text-xs font-bold transition-all flex items-center justify-center gap-2"
+                                    >
+                                        Åpne Dashboard
+                                        <ChevronRight className="w-3 h-3" />
+                                    </Link>
+                                )}
+                            </div>
                         </div>
                     </section>
                 )}

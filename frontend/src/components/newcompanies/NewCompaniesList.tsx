@@ -18,12 +18,25 @@ import { useCompanyCountQuery } from '../../hooks/queries/useCompanyCountQuery'
 interface NewCompaniesListProps {
     onSelectCompany: (orgnr: string) => void
     registeredFrom: string
+    initialNace?: string
+    initialCounty?: string
+    initialCountyCode?: string
+    initialMunicipality?: string
+    initialMunicipalityCode?: string
 }
 
 type SortField = 'navn' | 'registreringsdato_enhetsregisteret' | 'antall_ansatte' | 'naeringskode'
 
 
-export function NewCompaniesList({ onSelectCompany, registeredFrom }: NewCompaniesListProps) {
+export function NewCompaniesList({
+    onSelectCompany,
+    registeredFrom,
+    initialNace = '',
+    initialCounty = '',
+    initialCountyCode = '',
+    initialMunicipality = '',
+    initialMunicipalityCode = ''
+}: NewCompaniesListProps) {
     const {
         page,
         searchQuery, setSearchQuery,
@@ -33,9 +46,21 @@ export function NewCompaniesList({ onSelectCompany, registeredFrom }: NewCompani
         itemsPerPage,
         activeFilterCount, hasActiveFilters,
         nextPage, prevPage
-    } = useTableState<{ nace: string, county: string, municipality: string }, SortField>({
+    } = useTableState<{
+        nace: string,
+        county: string,
+        county_code: string,
+        municipality: string,
+        municipality_code: string
+    }, SortField>({
         initialSortBy: 'registreringsdato_enhetsregisteret',
-        initialFilters: { nace: '', county: '', municipality: '' }
+        initialFilters: {
+            nace: initialNace,
+            county: initialCounty,
+            county_code: initialCountyCode,
+            municipality: initialMunicipality,
+            municipality_code: initialMunicipalityCode
+        }
     })
 
 
@@ -48,19 +73,21 @@ export function NewCompaniesList({ onSelectCompany, registeredFrom }: NewCompani
         exclude_org_form: ['KBO'],
         sort_by: sortBy,
         sort_order: sortOrder,
-        naeringskode: filters.nace || undefined, // undefined to skip parameter
+        naeringskode: filters.nace || undefined,
         county: filters.county || undefined,
-        municipality: filters.municipality || undefined
+        municipality: filters.municipality || undefined,
+        municipality_code: filters.municipality_code || undefined
     })
 
     // Fetch total count with filters
     const { data: totalCount } = useCompanyCountQuery({
         registered_from: registeredFrom,
-        organisasjonsform: ['AS'], // API expects array
+        organisasjonsform: ['AS'],
         exclude_org_form: ['KBO'],
         naeringskode: filters.nace || undefined,
         county: filters.county || undefined,
-        municipality: filters.municipality || undefined
+        municipality: filters.municipality || undefined,
+        municipality_code: filters.municipality_code || undefined
     })
 
     const totalPages = totalCount ? Math.ceil(totalCount / itemsPerPage) : 1

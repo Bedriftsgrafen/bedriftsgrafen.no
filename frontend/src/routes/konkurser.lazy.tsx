@@ -150,11 +150,18 @@ function KonkurserPage() {
 
     // Fetch bankruptcy count for stats
     const { data: count } = useQuery<number>({
-        queryKey: ['bankruptcyCount', oneYearAgo],
+        queryKey: ['bankruptcyCount', oneYearAgo, municipality_code, county_code, nace, q],
         queryFn: async () => {
-            const res = await fetch(
-                `${API_BASE}/v1/companies/count?is_bankrupt=true&bankrupt_from=${oneYearAgo}`
-            )
+            const params = new URLSearchParams({
+                is_bankrupt: 'true',
+                bankrupt_from: oneYearAgo
+            })
+            if (municipality_code) params.set('municipality_code', municipality_code)
+            if (county_code) params.set('county_code', county_code)
+            if (nace) params.set('naeringskode', nace)
+            if (q) params.set('name', q)
+
+            const res = await fetch(`${API_BASE}/v1/companies/count?${params.toString()}`)
             if (!res.ok) throw new Error('Failed to fetch count')
             return res.json()
         },
@@ -163,11 +170,18 @@ function KonkurserPage() {
 
     // Fetch aggregate stats
     const { data: stats } = useQuery<BankruptcyStats>({
-        queryKey: ['bankruptcyStats', oneYearAgo],
+        queryKey: ['bankruptcyStats', oneYearAgo, municipality_code, county_code, nace, q],
         queryFn: async () => {
-            const res = await fetch(
-                `${API_BASE}/v1/companies/stats?is_bankrupt=true&bankrupt_from=${oneYearAgo}`
-            )
+            const params = new URLSearchParams({
+                is_bankrupt: 'true',
+                bankrupt_from: oneYearAgo
+            })
+            if (municipality_code) params.set('municipality_code', municipality_code)
+            if (county_code) params.set('county_code', county_code)
+            if (nace) params.set('naeringskode', nace)
+            if (q) params.set('name', q)
+
+            const res = await fetch(`${API_BASE}/v1/companies/stats?${params.toString()}`)
             if (!res.ok) throw new Error('Failed to fetch stats')
             return res.json()
         },
@@ -266,7 +280,13 @@ function KonkurserPage() {
 
             {/* Content */}
             {activeTab === 'list' && (
-                <BankruptcyList onSelectCompany={setSelectedCompanyOrgnr} bankruptFrom={oneYearAgo} />
+                <BankruptcyList
+                    onSelectCompany={setSelectedCompanyOrgnr}
+                    bankruptFrom={oneYearAgo}
+                    initialMunicipalityCode={municipality_code}
+                    initialCountyCode={county_code}
+                    initialNace={nace}
+                />
             )}
 
             {activeTab === 'stats' && (
