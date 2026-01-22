@@ -29,12 +29,25 @@ This document consolidates feature ideas and strategic plans for the future deve
 - **Why**: High virality potential and makes financial analysis accessible.
 
 ### "Local Heroes" (Municipality Dashboards) 🏘️
-- **Goal**: Dedicated landing pages for every Norwegian municipality (e.g., `/kommune/oslo`).
+- **Goal**: Dedicated landing pages for every Norwegian municipality (e.g., `/kommune/0301`).
 - **Features**:
   - "Top 10 Most Profitable" in the area.
   - "Newest Establishments" (last 30 days).
   - SEO-optimized content ("Se oversikt over bedrifter i [Kommune]").
 - **Tech**: New route structure `/kommune/[id]` with aggregated local queries.
+- **Status**: **BACKEND IMPLEMENTED** (Sitemap & Repository support added).
+
+### County (Fylker) Dashboards 📍
+- **Goal**: Dedicated landing pages for Norwegian counties (e.g., `/fylke/46`).
+- **Why**: High-volume SEO terms ("Bedrifter i Vestland").
+- **Tech**: `/fylke/[id]` route mapping to `COUNTY_CODES`.
+
+### Industry Landing Pages (NACE) 🏗️
+- **Goal**: Dedicated SEO pages for industry sectors (e.g., `/bransje/41` for Byggevirksomhet).
+- **Features**:
+  - Industry-specific benchmarks and growth trends.
+  - "Top performers" in the sector.
+- **Why**: Captures professional search traffic for specific business sectors.
 
 ### Hierarchical Org Charts 🌳
 - **Goal**: Visualize the parent-child relationship between main entities and subunits.

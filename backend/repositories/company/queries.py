@@ -210,6 +210,23 @@ class QueryMixin:
             for c in companies
         ]
 
+    async def get_paginated_orgnrs(self, offset: int, limit: int) -> list[tuple[str, str | None]]:
+        """
+        Fetch paginated orgnrs and their update timestamps from raw_data.
+        Optimized for sitemap generation to avoid large object overhead.
+        """
+        stmt = (
+            select(
+                models.Company.orgnr,
+                models.Company.raw_data["oppdatert"].astext.label("updated_at"),
+            )
+            .order_by(models.Company.orgnr)
+            .offset(offset)
+            .limit(limit)
+        )
+        result = await self.db.execute(stmt)
+        return [(row.orgnr, row.updated_at) for row in result]
+
     async def _get_all_with_financial_join(
         self,
         filters: FilterParams,

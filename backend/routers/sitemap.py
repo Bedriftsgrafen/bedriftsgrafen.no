@@ -8,23 +8,36 @@ For 1.1M+ companies, uses Sitemap Index pattern:
 """
 
 import math
-from datetime import datetime
+import urllib.parse
+from datetime import datetime, timedelta
+from typing import Any, Dict
 
 from fastapi import APIRouter, Depends, Path, Request
 from fastapi.responses import Response
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from constants.org_forms import COMMERCIAL_ORG_FORMS, NON_COMMERCIAL_ORG_FORMS
 from database import get_db
 from limiter import limiter
-from models import Company, Role
+from models import Company
+from repositories.company.repository import CompanyRepository
+from repositories.role_repository import RoleRepository
+from repositories.stats_repository import StatsRepository
 
 router: APIRouter = APIRouter(tags=["SEO"])
 
 # Constants for sitemap pagination
 URLS_PER_SITEMAP = 50000  # Google limit per file
 BULK_FETCH_SIZE = 10000  # DB fetch batch size for memory efficiency
+
+# Simple in-memory cache for total counts to avoid DB hammering
+_cache: Dict[str, Any] = {
+    "total_companies": None,
+    "total_people": None,
+    "municipalities": None,  # List of (code, lastmod)
+    "expiry": None,
+}
+CACHE_TTL = timedelta(hours=6)
 
 STATIC_ROUTES = [
     "",  # Homepage
@@ -38,38 +51,36 @@ STATIC_ROUTES = [
 ]
 
 
-async def get_total_company_count(db: AsyncSession) -> int:
-    """Get total count of companies in database"""
-    stmt = select(func.count(Company.orgnr))
-    result = await db.execute(stmt)
-    return result.scalar() or 0
+def format_date(dt: Any) -> str:
+    """Format datetime or string date to sitemap-compliant ISO string (YYYY-MM-DD)"""
+    if dt is None:
+        return datetime.now().strftime("%Y-%m-%d")
+    if isinstance(dt, datetime):
+        return dt.strftime("%Y-%m-%d")
+    if isinstance(dt, str):
+        # Brreg format often contains T
+        return dt.split("T")[0]
+    return datetime.now().strftime("%Y-%m-%d")
 
 
-async def get_total_person_count(db: AsyncSession) -> int:
-    """
-    Get total count of unique people with commercial roles.
-    Follows Enhetsregisterloven § 22 filtering logic.
-    """
-    # Build subquery for commercial filtering to match RoleRepository
-    commercial_stmt = (
-        select(Role.person_navn, Role.foedselsdato)
-        .join(Company, Role.orgnr == Company.orgnr)
-        .where(Role.person_navn.is_not(None))
-        .where(
-            (Company.registrert_i_foretaksregisteret == True)  # noqa: E712
-            | (
-                Company.organisasjonsform.in_(list(COMMERCIAL_ORG_FORMS))
-                & ~Company.organisasjonsform.in_(list(NON_COMMERCIAL_ORG_FORMS))
-                & (Company.organisasjonsform != "STI")
-            )
-        )
-        .group_by(Role.person_navn, Role.foedselsdato)
-    )
+async def get_cached_counts(db: AsyncSession):
+    """Get total counts with 6-hour caching"""
+    now = datetime.now()
+    if _cache["expiry"] is None or now > _cache["expiry"]:
+        # Refresh cache
+        company_stmt = select(func.count(Company.orgnr))
+        company_result = await db.execute(company_stmt)
+        _cache["total_companies"] = company_result.scalar() or 0
 
-    # Count the unique pairs
-    stmt = select(func.count()).select_from(commercial_stmt.subquery())
-    result = await db.execute(stmt)
-    return result.scalar() or 0
+        role_repo = RoleRepository(db)
+        _cache["total_people"] = await role_repo.count_commercial_people()
+
+        stats_repo = StatsRepository(db)
+        _cache["municipalities"] = await stats_repo.get_municipality_codes_with_updates()
+
+        _cache["expiry"] = now + CACHE_TTL
+
+    return _cache["total_companies"], _cache["total_people"], _cache["municipalities"]
 
 
 def calculate_sitemap_pages(total_count: int, offset: int = 0) -> int:
@@ -84,11 +95,10 @@ async def get_sitemap_index(request: Request, db: AsyncSession = Depends(get_db)
     Main Sitemap Index.
     Lists paginated sitemaps for both companies and people.
     """
-    total_companies = await get_total_company_count(db)
-    total_people = await get_total_person_count(db)
+    total_companies, total_people, municipalities = await get_cached_counts(db)
 
-    # Calculate pages (static routes included in company_1.xml)
-    num_company_pages = calculate_sitemap_pages(total_companies, offset=len(STATIC_ROUTES))
+    # Calculate pages
+    num_company_pages = calculate_sitemap_pages(total_companies, offset=len(STATIC_ROUTES) + len(municipalities))
     num_person_pages = calculate_sitemap_pages(total_people)
 
     today = datetime.now().strftime("%Y-%m-%d")
@@ -142,8 +152,11 @@ async def get_paginated_sitemap(
     xml_content += '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n'
 
     if sitemap_type == "company":
-        # Handle static routes on page 1
+        _, _, municipalities = await get_cached_counts(db)
+
+        # Handle static routes + municipalities on page 1
         if page == 1:
+            # Add Static Routes
             for route in STATIC_ROUTES:
                 xml_content += "  <url>\n"
                 xml_content += f"    <loc>https://bedriftsgrafen.no/{route}</loc>\n"
@@ -151,18 +164,29 @@ async def get_paginated_sitemap(
                 xml_content += "    <changefreq>daily</changefreq>\n"
                 xml_content += "    <priority>1.0</priority>\n"
                 xml_content += "  </url>\n"
-            limit = URLS_PER_SITEMAP - len(STATIC_ROUTES)
+
+            # Add Municipality Dashboards with real lastmod
+            for code, lastmod in municipalities:
+                xml_content += "  <url>\n"
+                xml_content += f"    <loc>https://bedriftsgrafen.no/kommune/{code}</loc>\n"
+                xml_content += f"    <lastmod>{format_date(lastmod)}</lastmod>\n"
+                xml_content += "    <changefreq>daily</changefreq>\n"
+                xml_content += "    <priority>0.9</priority>\n"
+                xml_content += "  </url>\n"
+
+            limit = URLS_PER_SITEMAP - len(STATIC_ROUTES) - len(municipalities)
             offset = 0
         else:
             limit = URLS_PER_SITEMAP
-            offset = (page - 1) * URLS_PER_SITEMAP - len(STATIC_ROUTES)
+            offset = (page - 1) * URLS_PER_SITEMAP - len(STATIC_ROUTES) - len(municipalities)
 
-        stmt = select(Company.orgnr).order_by(Company.orgnr).offset(offset).limit(limit)
-        result = await db.execute(stmt)
-        for orgnr in result.scalars():
+        company_repo = CompanyRepository(db)
+        companies = await company_repo.get_paginated_orgnrs(offset=offset, limit=limit)
+
+        for orgnr, updated_at in companies:
             xml_content += "  <url>\n"
             xml_content += f"    <loc>https://bedriftsgrafen.no/bedrift/{orgnr}</loc>\n"
-            xml_content += f"    <lastmod>{today}</lastmod>\n"
+            xml_content += f"    <lastmod>{format_date(updated_at)}</lastmod>\n"
             xml_content += "    <changefreq>weekly</changefreq>\n"
             xml_content += "    <priority>0.8</priority>\n"
             xml_content += "  </url>\n"
@@ -171,33 +195,15 @@ async def get_paginated_sitemap(
         offset = (page - 1) * URLS_PER_SITEMAP
         limit = URLS_PER_SITEMAP
 
-        # Commercial filtering matching get_total_person_count
-        person_stmt = (
-            select(Role.person_navn, Role.foedselsdato)
-            .join(Company, Role.orgnr == Company.orgnr)
-            .where(Role.person_navn.is_not(None))
-            .where(
-                (Company.registrert_i_foretaksregisteret == True)  # noqa: E712
-                | (
-                    Company.organisasjonsform.in_(list(COMMERCIAL_ORG_FORMS))
-                    & ~Company.organisasjonsform.in_(list(NON_COMMERCIAL_ORG_FORMS))
-                    & (Company.organisasjonsform != "STI")
-                )
-            )
-            .group_by(Role.person_navn, Role.foedselsdato)
-            .order_by(Role.person_navn)
-            .offset(offset)
-            .limit(limit)
-        )
+        role_repo = RoleRepository(db)
+        people = await role_repo.get_paginated_commercial_people(offset=offset, limit=limit)
 
-        result = await db.execute(person_stmt)
-        for name, birthdate in result.all():
+        for name, birthdate, last_update in people:
             birthdate_str = birthdate.isoformat() if birthdate else "none"
-            # URL friendly escaping would be better but simple f-string for now as per current pattern
-            # Frontend route: person/$name/$birthdate
+            safe_name = urllib.parse.quote(name)
             xml_content += "  <url>\n"
-            xml_content += f"    <loc>https://bedriftsgrafen.no/person/{name}/{birthdate_str}</loc>\n"
-            xml_content += f"    <lastmod>{today}</lastmod>\n"
+            xml_content += f"    <loc>https://bedriftsgrafen.no/person/{safe_name}/{birthdate_str}</loc>\n"
+            xml_content += f"    <lastmod>{format_date(last_update)}</lastmod>\n"
             xml_content += "    <changefreq>monthly</changefreq>\n"
             xml_content += "    <priority>0.6</priority>\n"
             xml_content += "  </url>\n"

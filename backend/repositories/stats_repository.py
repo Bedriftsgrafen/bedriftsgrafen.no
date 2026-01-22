@@ -1,4 +1,5 @@
 import logging
+from datetime import datetime
 from typing import Literal, Sequence, Any
 
 from sqlalchemy import func, select, and_, case
@@ -434,3 +435,28 @@ class StatsRepository:
         rows = result.all()
 
         return [{"label": r.month.strftime("%b %y") if r.month else "Ukjent", "value": r.count} for r in rows]
+
+    async def get_all_municipality_codes(self) -> Sequence[str]:
+        """Fetch all municipality codes that have companies or population data."""
+        # Use MunicipalityStats as it represents active municipalities in our system
+        query = select(models.MunicipalityStats.municipality_code).distinct()
+        result = await self.db.execute(query)
+        return result.scalars().all()
+
+    async def get_municipality_codes_with_updates(self) -> list[tuple[str, datetime | None]]:
+        """Fetch municipality codes with their latest data update timestamp."""
+        # Latest population update or company update in that municipality
+        query = (
+            select(
+                models.MunicipalityStats.municipality_code,
+                func.max(models.MunicipalityPopulation.updated_at).label("latest_update"),
+            )
+            .join(
+                models.MunicipalityPopulation,
+                models.MunicipalityStats.municipality_code == models.MunicipalityPopulation.municipality_code,
+                isouter=True,
+            )
+            .group_by(models.MunicipalityStats.municipality_code)
+        )
+        result = await self.db.execute(query)
+        return [(row.municipality_code, row.latest_update) for row in result]

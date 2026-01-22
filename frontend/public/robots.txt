@@ -1,10 +1,28 @@
 # bedriftsgrafen.no robots.txt
+# Optimized for 1.1M+ Norwegian company records
 
 User-agent: *
 Allow: /
+Allow: /api/sitemap_index.xml
+Allow: /api/sitemaps/
 
-# Sitemap index (contains paginated sitemaps for all companies)
+# Disallow dynamic search/filter pages to prevent "infinite crawl"
+Disallow: /utforsk?*
+Disallow: /bransjer?*
+Disallow: /konkurser?*
+Disallow: /nyetableringer?*
+
+# Disallow internal tools and map view (heavy/interactive)
+Disallow: /sammenlign
+Disallow: /kart
+
+# Disallow raw API endpoints except sitemaps
+Disallow: /api/
+Allow: /api/sitemap_index.xml
+Allow: /api/sitemaps/
+
+# Sitemap index (contains paginated sitemaps)
 Sitemap: https://bedriftsgrafen.no/api/sitemap_index.xml
 
-# Crawl-delay for politeness (optional)
+# Crawl-delay for politeness
 Crawl-delay: 1

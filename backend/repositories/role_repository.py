@@ -293,3 +293,70 @@ class RoleRepository:
         except Exception as e:
             logger.error(f"Error calculating average board age: {e}")
             return 0.0
+
+    async def count_commercial_people(self) -> int:
+        """
+        Count total unique people with commercial roles.
+        Used for sitemap generation.
+        """
+        from constants.org_forms import COMMERCIAL_ORG_FORMS, NON_COMMERCIAL_ORG_FORMS
+
+        try:
+            # Subquery for commercial filtering
+            commercial_stmt = (
+                select(models.Role.person_navn, models.Role.foedselsdato)
+                .join(models.Company, models.Role.orgnr == models.Company.orgnr)
+                .where(models.Role.person_navn.is_not(None))
+                .where(
+                    (models.Company.registrert_i_foretaksregisteret == True)  # noqa: E712
+                    | (
+                        models.Company.organisasjonsform.in_(list(COMMERCIAL_ORG_FORMS))
+                        & ~models.Company.organisasjonsform.in_(list(NON_COMMERCIAL_ORG_FORMS))
+                        & (models.Company.organisasjonsform != "STI")
+                    )
+                )
+                .group_by(models.Role.person_navn, models.Role.foedselsdato)
+            )
+
+            stmt = select(func.count()).select_from(commercial_stmt.subquery())
+            result = await self.db.execute(stmt)
+            return result.scalar() or 0
+        except Exception as e:
+            logger.error(f"Error counting commercial people: {e}")
+            return 0
+
+    async def get_paginated_commercial_people(self, offset: int, limit: int) -> list[tuple[str, date | None, datetime]]:
+        """
+        Fetch paginated unique people with commercial roles.
+        Used for sitemap generation.
+        """
+        from constants.org_forms import COMMERCIAL_ORG_FORMS, NON_COMMERCIAL_ORG_FORMS
+
+        try:
+            stmt = (
+                select(
+                    models.Role.person_navn,
+                    models.Role.foedselsdato,
+                    func.max(models.Role.updated_at).label("latest_update"),
+                )
+                .join(models.Company, models.Role.orgnr == models.Company.orgnr)
+                .where(models.Role.person_navn.is_not(None))
+                .where(
+                    (models.Company.registrert_i_foretaksregisteret == True)  # noqa: E712
+                    | (
+                        models.Company.organisasjonsform.in_(list(COMMERCIAL_ORG_FORMS))
+                        & ~models.Company.organisasjonsform.in_(list(NON_COMMERCIAL_ORG_FORMS))
+                        & (models.Company.organisasjonsform != "STI")
+                    )
+                )
+                .group_by(models.Role.person_navn, models.Role.foedselsdato)
+                .order_by(models.Role.person_navn)
+                .offset(offset)
+                .limit(limit)
+            )
+
+            result = await self.db.execute(stmt)
+            return [(row.person_navn, row.foedselsdato, row.latest_update) for row in result]
+        except Exception as e:
+            logger.error(f"Error fetching paginated commercial people: {e}")
+            return []
