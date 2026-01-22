@@ -9,6 +9,7 @@ from services.stats_service import StatsService
 
 router = APIRouter(prefix="/v1/municipality", tags=["municipality"])
 
+
 @router.get("/", response_model=list[MunicipalityListResponse])
 async def list_municipalities(
     db: AsyncSession = Depends(get_db),
@@ -20,7 +21,7 @@ async def list_municipalities(
     service = StatsService(db)
     # Reuse existing geography stats method for simplicity
     stats = await service.get_municipality_stats(metric="company_count")
-    
+
     return [
         MunicipalityListResponse(
             code=s.code,
@@ -29,10 +30,11 @@ async def list_municipalities(
             company_count=s.value,
             population=s.population,
             lat=s.lat,
-            lng=s.lng
+            lng=s.lng,
         )
         for s in stats
     ]
+
 
 @router.get("/{code}", response_model=MunicipalityPremiumResponse)
 async def get_municipality_dashboard(
@@ -45,10 +47,10 @@ async def get_municipality_dashboard(
     """
     service = StatsService(db)
     dashboard = await service.get_municipality_premium_dashboard(code)
-    
+
     if not dashboard or not dashboard.get("population"):
-         # Check if municipality exists (has population or companies)
-         if not dashboard.get("company_count"):
-             raise HTTPException(status_code=404, detail=f"Municipality {code} not found")
-    
+        # Check if municipality exists (has population or companies)
+        if not dashboard.get("company_count"):
+            raise HTTPException(status_code=404, detail=f"Municipality {code} not found")
+
     return MunicipalityPremiumResponse.model_validate(dashboard)

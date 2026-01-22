@@ -5,14 +5,15 @@ Revises: 2f729230c375
 Create Date: 2026-01-21 15:07:00.107759
 
 """
+
 from typing import Sequence, Union
 
 from alembic import op
 
 
 # revision identifiers, used by Alembic.
-revision: str = '09bf64606e67'
-down_revision: Union[str, Sequence[str], None] = '2f729230c375'
+revision: str = "09bf64606e67"
+down_revision: Union[str, Sequence[str], None] = "2f729230c375"
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
 
@@ -44,7 +45,9 @@ def upgrade() -> None:
     # Create indexes for fast lookups
     op.execute("CREATE INDEX idx_municipality_stats_code ON municipality_stats (municipality_code);")
     op.execute("CREATE INDEX idx_municipality_stats_nace ON municipality_stats (nace_division);")
-    op.execute("CREATE UNIQUE INDEX idx_municipality_stats_pk ON municipality_stats (municipality_code, nace_division);")
+    op.execute(
+        "CREATE UNIQUE INDEX idx_municipality_stats_pk ON municipality_stats (municipality_code, nace_division);"
+    )
     op.execute("CREATE INDEX idx_municipality_stats_county ON municipality_stats (LEFT(municipality_code, 2));")
 
 
@@ -71,5 +74,7 @@ def downgrade() -> None:
     """)
     op.execute("CREATE INDEX idx_municipality_stats_code ON municipality_stats (municipality_code);")
     op.execute("CREATE INDEX idx_municipality_stats_nace ON municipality_stats (nace_division);")
-    op.execute("CREATE UNIQUE INDEX idx_municipality_stats_pk ON municipality_stats (municipality_code, nace_division);")
+    op.execute(
+        "CREATE UNIQUE INDEX idx_municipality_stats_pk ON municipality_stats (municipality_code, nace_division);"
+    )
     op.execute("CREATE INDEX idx_municipality_stats_county ON municipality_stats (LEFT(municipality_code, 2));")

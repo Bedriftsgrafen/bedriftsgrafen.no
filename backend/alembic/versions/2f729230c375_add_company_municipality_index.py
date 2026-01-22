@@ -5,14 +5,15 @@ Revises: t8u9v0w1x2y3
 Create Date: 2026-01-21 14:16:54.341081
 
 """
+
 from typing import Sequence, Union
 
 from alembic import op
 
 
 # revision identifiers, used by Alembic.
-revision: str = '2f729230c375'
-down_revision: Union[str, Sequence[str], None] = 't8u9v0w1x2y3'
+revision: str = "2f729230c375"
+down_revision: Union[str, Sequence[str], None] = "t8u9v0w1x2y3"
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
 

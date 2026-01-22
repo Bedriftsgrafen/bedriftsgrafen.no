@@ -99,7 +99,7 @@ async def test_fetch_role_updates_success(update_service, mock_db):
 
     assert result["companies_updated"] == 1
     assert result["latest_oppdateringsid"] == 500
-    
+
     # In fetch_role_updates:
     # 1. commit() before company check
     # 2. Re-check existing (no commit if none missing)

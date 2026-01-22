@@ -9,23 +9,21 @@ from services.stats_service import StatsService
 
 router = APIRouter(prefix="/v1/og", tags=["seo"])
 
+
 @router.get("/municipality/{code}.svg")
-async def get_municipality_og_svg(
-    code: str,
-    db: AsyncSession = Depends(get_db)
-):
+async def get_municipality_og_svg(code: str, db: AsyncSession = Depends(get_db)):
     """Generates a dynamic SVG OpenGraph card for a municipality."""
     service = StatsService(db)
     dashboard = await service.get_municipality_premium_dashboard(code)
-    
+
     if not dashboard:
         return Response(status_code=404)
-        
+
     name = dashboard["name"]
     pop = f"{dashboard['population']:,}".replace(",", " ")
-    growth = f"{dashboard['population_growth_1y']:+.1f}%" if dashboard['population_growth_1y'] else "Ny"
+    growth = f"{dashboard['population_growth_1y']:+.1f}%" if dashboard["population_growth_1y"] else "Ny"
     count = f"{dashboard['company_count']:,}".replace(",", " ")
-    
+
     # Simple, high-impact SVG card
     svg = f"""
     <svg width="1200" height="630" viewBox="0 0 1200 630" xmlns="http://www.w3.org/2000/svg">
@@ -65,5 +63,5 @@ async def get_municipality_og_svg(
         <rect x="0" y="620" width="1200" height="10" fill="#3b82f6" />
     </svg>
     """
-    
+
     return Response(content=textwrap.dedent(svg), media_type="image/svg+xml")

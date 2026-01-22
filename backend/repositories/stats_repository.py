@@ -225,6 +225,7 @@ class StatsRepository:
         Used when advanced filters (org form, revenue, etc.) are present.
         """
         from repositories.company_filter_builder import CompanyFilterBuilder
+
         # Determine geographic column
         if level == "county":
             geo_col = func.left(models.Company.forretningsadresse["kommunenummer"].astext, 2).label("code")
@@ -272,42 +273,43 @@ class StatsRepository:
         - National density comparison
         """
         # 1. Fetch population (latest and previous year for growth)
-        pop_query = select(models.MunicipalityPopulation).where(
-            models.MunicipalityPopulation.municipality_code == municipality_code
-        ).order_by(models.MunicipalityPopulation.year.desc()).limit(2)
-        
+        pop_query = (
+            select(models.MunicipalityPopulation)
+            .where(models.MunicipalityPopulation.municipality_code == municipality_code)
+            .order_by(models.MunicipalityPopulation.year.desc())
+            .limit(2)
+        )
+
         pop_res = await self.db.execute(pop_query)
         pop_rows = pop_res.scalars().all()
-        
+
         latest_pop = pop_rows[0].population if pop_rows else 0
         prev_pop = pop_rows[1].population if len(pop_rows) > 1 else None
         pop_growth = ((latest_pop - prev_pop) / prev_pop * 100) if prev_pop else None
-        
+
         # 2. Fetch basic company stats (aggregated from MunicipalityStats)
         stats_query = select(
             func.sum(models.MunicipalityStats.company_count).label("company_count"),
             func.sum(models.MunicipalityStats.total_employees).label("total_employees"),
-            func.sum(models.MunicipalityStats.new_last_year).label("new_last_year")
+            func.sum(models.MunicipalityStats.new_last_year).label("new_last_year"),
         ).where(models.MunicipalityStats.municipality_code == municipality_code)
-        
+
         stats_res = await self.db.execute(stats_query)
         stats_row = stats_res.one_or_none()
-        
+
         # 3. Get national density (all companies / all population)
         # Performance: This could be cached or pre-calculated in a real scenario
-        national_stats_query = select(
-            func.sum(models.MunicipalityStats.company_count).label("total_companies")
-        )
+        national_stats_query = select(func.sum(models.MunicipalityStats.company_count).label("total_companies"))
         national_pop_query = select(func.sum(models.MunicipalityPopulation.population)).where(
             models.MunicipalityPopulation.year == (pop_rows[0].year if pop_rows else 2024)
         )
-        
+
         n_stats_res = await self.db.execute(national_stats_query)
         n_pop_res = await self.db.execute(national_pop_query)
-        
+
         total_n_companies = n_stats_res.scalar() or 0
-        total_n_pop = n_pop_res.scalar() or 1 # avoid div zero
-        national_density = (total_n_companies / total_n_pop * 1000)
+        total_n_pop = n_pop_res.scalar() or 1  # avoid div zero
+        national_density = total_n_companies / total_n_pop * 1000
 
         return {
             "population": latest_pop,
@@ -316,81 +318,92 @@ class StatsRepository:
             "total_employees": stats_row.total_employees if stats_row else 0,
             "new_last_year": stats_row.new_last_year if stats_row else 0,
             "national_density": national_density,
-            "year": pop_rows[0].year if pop_rows else None
+            "year": pop_rows[0].year if pop_rows else None,
         }
 
     async def get_municipality_sector_distribution(self, municipality_code: str, limit: int = 10):
         """Get industry distribution for a municipality."""
         from constants.nace import get_nace_name
-        
-        query = select(
-            models.MunicipalityStats.nace_division,
-            models.MunicipalityStats.company_count,
-            models.MunicipalityStats.total_employees
-        ).where(
-            models.MunicipalityStats.municipality_code == municipality_code
-        ).order_by(models.MunicipalityStats.company_count.desc()).limit(limit)
-        
+
+        query = (
+            select(
+                models.MunicipalityStats.nace_division,
+                models.MunicipalityStats.company_count,
+                models.MunicipalityStats.total_employees,
+            )
+            .where(models.MunicipalityStats.municipality_code == municipality_code)
+            .order_by(models.MunicipalityStats.company_count.desc())
+            .limit(limit)
+        )
+
         result = await self.db.execute(query)
         rows = result.all()
-        
+
         total_count = sum(r.company_count for r in rows) or 1
-        
+
         return [
             {
                 "nace_division": r.nace_division,
                 "nace_name": get_nace_name(r.nace_division),
                 "company_count": r.company_count,
-                "percentage_of_total": (r.company_count / total_count * 100) if total_count else 0
+                "percentage_of_total": (r.company_count / total_count * 100) if total_count else 0,
             }
             for r in rows
         ]
 
-    async def get_municipality_rankings(self, municipality_code: str, metric: Literal["density", "revenue"] = "density"):
+    async def get_municipality_rankings(
+        self, municipality_code: str, metric: Literal["density", "revenue"] = "density"
+    ):
         """Get rankings for various metrics within the county."""
         from sqlalchemy import Float, cast
+
         county_code = municipality_code[:2]
         latest_year = await self.get_latest_population_year() or 2024
-        
+
         if metric == "density":
             # Subquery for all municipalities in the county with density
-            muni_data = select(
-                models.MunicipalityStats.municipality_code,
-                (cast(func.sum(models.MunicipalityStats.company_count), Float) / 
-                 cast(models.MunicipalityPopulation.population, Float) * 1000).label("value")
-            ).join(
-                models.MunicipalityPopulation,
-                and_(
-                    models.MunicipalityStats.municipality_code == models.MunicipalityPopulation.municipality_code,
-                    models.MunicipalityPopulation.year == latest_year
+            muni_data = (
+                select(
+                    models.MunicipalityStats.municipality_code,
+                    (
+                        cast(func.sum(models.MunicipalityStats.company_count), Float)
+                        / cast(models.MunicipalityPopulation.population, Float)
+                        * 1000
+                    ).label("value"),
                 )
-            ).where(
-                func.left(models.MunicipalityStats.municipality_code, 2) == county_code
-            ).group_by(
-                models.MunicipalityStats.municipality_code,
-                models.MunicipalityPopulation.population
-            ).subquery()
+                .join(
+                    models.MunicipalityPopulation,
+                    and_(
+                        models.MunicipalityStats.municipality_code == models.MunicipalityPopulation.municipality_code,
+                        models.MunicipalityPopulation.year == latest_year,
+                    ),
+                )
+                .where(func.left(models.MunicipalityStats.municipality_code, 2) == county_code)
+                .group_by(models.MunicipalityStats.municipality_code, models.MunicipalityPopulation.population)
+                .subquery()
+            )
         else:
             # Rank by total revenue
-            muni_data = select(
-                models.MunicipalityStats.municipality_code,
-                func.sum(models.MunicipalityStats.total_revenue).label("value")
-            ).where(
-                func.left(models.MunicipalityStats.municipality_code, 2) == county_code
-            ).group_by(
-                models.MunicipalityStats.municipality_code
-            ).subquery()
-        
+            muni_data = (
+                select(
+                    models.MunicipalityStats.municipality_code,
+                    func.sum(models.MunicipalityStats.total_revenue).label("value"),
+                )
+                .where(func.left(models.MunicipalityStats.municipality_code, 2) == county_code)
+                .group_by(models.MunicipalityStats.municipality_code)
+                .subquery()
+            )
+
         # Rank by metric
         rank_query = select(
             muni_data.c.municipality_code,
             func.rank().over(order_by=muni_data.c.value.desc()).label("rank"),
-            func.count().over().label("total")
+            func.count().over().label("total"),
         ).select_from(muni_data)
-        
+
         result = await self.db.execute(rank_query)
         ranks = result.all()
-        
+
         for r in ranks:
             if r.municipality_code == municipality_code:
                 return {"rank": r.rank, "out_of": r.total}
@@ -399,26 +412,25 @@ class StatsRepository:
     async def get_establishment_trend(self, municipality_code: str, months: int = 12):
         """Get monthly registration counts for the last X months."""
         from datetime import date, timedelta
-        
+
         start_date = date.today().replace(day=1) - timedelta(days=30 * months)
-        
-        query = select(
-            func.date_trunc('month', models.Company.stiftelsesdato).label("month"),
-            func.count(models.Company.orgnr).label("count")
-        ).where(
-            and_(
-                models.Company.forretningsadresse["kommunenummer"].astext == municipality_code,
-                models.Company.stiftelsesdato >= start_date
+
+        query = (
+            select(
+                func.date_trunc("month", models.Company.stiftelsesdato).label("month"),
+                func.count(models.Company.orgnr).label("count"),
             )
-        ).group_by("month").order_by("month")
-        
+            .where(
+                and_(
+                    models.Company.forretningsadresse["kommunenummer"].astext == municipality_code,
+                    models.Company.stiftelsesdato >= start_date,
+                )
+            )
+            .group_by("month")
+            .order_by("month")
+        )
+
         result = await self.db.execute(query)
         rows = result.all()
-        
-        return [
-            {
-                "label": r.month.strftime("%b %y") if r.month else "Ukjent",
-                "value": r.count
-            }
-            for r in rows
-        ]
+
+        return [{"label": r.month.strftime("%b %y") if r.month else "Ukjent", "value": r.count} for r in rows]

@@ -490,6 +490,7 @@ class StatsService:
                 "percentile": calc_percentile(company_op_margin, industry_stats.avg_operating_margin),
             },
         }
+
     async def get_municipality_premium_dashboard(self, municipality_code: str):
         """
         Consolidated premium dashboard data for a municipality.

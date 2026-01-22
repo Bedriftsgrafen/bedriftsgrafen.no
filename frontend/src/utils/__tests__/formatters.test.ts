@@ -65,7 +65,7 @@ describe('formatters', () => {
 
     describe('formatLargeNumber', () => {
         it('formats billions', () => {
-            expect(formatLargeNumber(1500000000)).toBe('1.5 mrd.')
+            expect(formatLargeNumber(1500000000)).toBe('1,5 milliard')
         })
 
         it('formats millions', () => {
@@ -89,7 +89,7 @@ describe('formatters', () => {
         })
 
         it('handles exact boundaries', () => {
-            expect(formatLargeNumber(1000000000)).toBe('1.0 mrd.')
+            expect(formatLargeNumber(1000000000)).toBe('1 milliard')
             expect(formatLargeNumber(1000000)).toBe('1.0 mill.')
             expect(formatLargeNumber(1000)).toBe('1.0 k')
         })

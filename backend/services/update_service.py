@@ -686,7 +686,9 @@ class UpdateService:
                                 try:
                                     await self.company_repo.create_or_update(company_data)
                                 except Exception as e:
-                                    logger.error(f"Failed to persist company {company_data.get('organisasjonsnummer')}: {e}")
+                                    logger.error(
+                                        f"Failed to persist company {company_data.get('organisasjonsnummer')}: {e}"
+                                    )
 
                         await self.db.commit()
 
