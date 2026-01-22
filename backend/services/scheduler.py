@@ -2,9 +2,9 @@ import logging
 import shutil
 from datetime import datetime, timedelta, timezone
 
-from apscheduler.schedulers.asyncio import AsyncIOScheduler  # type: ignore
-from apscheduler.triggers.cron import CronTrigger  # type: ignore
-from apscheduler.triggers.interval import IntervalTrigger  # type: ignore
+from apscheduler.schedulers.asyncio import AsyncIOScheduler
+from apscheduler.triggers.cron import CronTrigger
+from apscheduler.triggers.interval import IntervalTrigger
 from sqlalchemy import text
 
 from database import AsyncSessionLocal, engine
