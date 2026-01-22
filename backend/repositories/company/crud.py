@@ -8,6 +8,7 @@ from datetime import datetime, timezone
 from typing import Any
 
 from sqlalchemy import update
+from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.ext.asyncio import AsyncSession
 
 import models
@@ -147,20 +148,20 @@ class CrudMixin:
             fields["orgnr"] = orgnr  # Ensure PK is in fields
 
             # Prepare UPSERT statement
-            from sqlalchemy.dialects.postgresql import insert
-
-            stmt: Any = insert(models.Company).values(**fields)
+            insert_stmt = insert(models.Company).values(**fields)
 
             # On conflict (PK orgnr), update all fields except PK and creation metadata
-            update_dict = {k: getattr(stmt.excluded, k) for k in fields.keys() if k not in ["orgnr", "created_at"]}
+            update_dict = {
+                k: getattr(insert_stmt.excluded, k) for k in fields.keys() if k not in ["orgnr", "created_at"]
+            }
 
-            stmt = stmt.on_conflict_do_update(
+            upsert_stmt = insert_stmt.on_conflict_do_update(
                 index_elements=["orgnr"],
                 set_=update_dict,
             ).returning(models.Company)
 
             # Execute UPSERT
-            result = await self.db.execute(stmt)
+            result = await self.db.execute(upsert_stmt)
             company = result.scalar_one()
 
             if autocommit:

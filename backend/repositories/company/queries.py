@@ -5,7 +5,7 @@ Contains get_all, stream_all, and related query methods with optimization logic.
 
 import logging
 from typing import cast
-from sqlalchemy import select
+from sqlalchemy import select, Select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 import models
@@ -41,24 +41,7 @@ class QueryMixin:
         financial_sort = sort_by in ("revenue", "profit", "operating_profit", "operating_margin")
 
         # Check for financial filters presence
-        financial_filters_present = any(
-            [
-                filters.min_revenue,
-                filters.max_revenue,
-                filters.min_profit,
-                filters.max_profit,
-                filters.min_equity,
-                filters.max_equity,
-                filters.min_operating_profit,
-                filters.max_operating_profit,
-                filters.min_liquidity_ratio,
-                filters.max_liquidity_ratio,
-                filters.min_equity_ratio,
-                filters.max_equity_ratio,
-            ]
-        )
-
-        needs_financial_join_for_filter = financial_sort or financial_filters_present
+        needs_financial_join_for_filter = financial_sort or filters.has_financial_filters()
 
         if needs_financial_join_for_filter:
             return await self._get_all_with_financial_join(
@@ -290,14 +273,14 @@ class QueryMixin:
             for row in rows
         ]
 
-    def _apply_filters_no_join(self, query, filters: FilterParams):
+    def _apply_filters_no_join(self, query: Select, filters: FilterParams) -> tuple[Select, bool]:
         """Apply filters using CompanyFilterBuilder (no financial join)."""
         builder = CompanyFilterBuilder(filters)
         builder.apply_all(include_financial=True)
         query = builder.apply_to_query(query)
         return query, builder.needs_financial_join
 
-    def _apply_filters(self, query, filters: FilterParams):
+    def _apply_filters(self, query: Select, filters: FilterParams) -> tuple[Select, bool]:
         """Apply filters using CompanyFilterBuilder (with optional financial join)."""
         builder = CompanyFilterBuilder(filters)
         builder.apply_all(include_financial=False)

@@ -177,32 +177,32 @@ class AccountingRepository:
             }
 
             # Use PostgreSQL's INSERT...ON CONFLICT for atomic upsert
-            stmt: Any = insert(models.Accounting).values(**insert_data)
+            insert_stmt = insert(models.Accounting).values(**insert_data)
 
             # On conflict (duplicate orgnr, periode_til), update all non-generated fields
             # Generated columns (likviditetsgrad1, ebitda_margin, egenkapitalandel) are excluded
-            stmt = stmt.on_conflict_do_update(
+            upsert_stmt = insert_stmt.on_conflict_do_update(
                 constraint="regnskap_orgnr_periode_unique",
                 set_={
-                    "aar": stmt.excluded.aar,
-                    "periode_fra": stmt.excluded.periode_fra,
-                    "total_inntekt": stmt.excluded.total_inntekt,
-                    "aarsresultat": stmt.excluded.aarsresultat,
-                    "driftsresultat": stmt.excluded.driftsresultat,
-                    "salgsinntekter": stmt.excluded.salgsinntekter,
-                    "egenkapital": stmt.excluded.egenkapital,
-                    "omloepsmidler": stmt.excluded.omloepsmidler,
-                    "kortsiktig_gjeld": stmt.excluded.kortsiktig_gjeld,
-                    "avskrivninger": stmt.excluded.avskrivninger,
-                    "anleggsmidler": stmt.excluded.anleggsmidler,
-                    "langsiktig_gjeld": stmt.excluded.langsiktig_gjeld,
-                    "gjeldsgrad": stmt.excluded.gjeldsgrad,
-                    "raw_data": stmt.excluded.raw_data,
+                    "aar": insert_stmt.excluded.aar,
+                    "periode_fra": insert_stmt.excluded.periode_fra,
+                    "total_inntekt": insert_stmt.excluded.total_inntekt,
+                    "aarsresultat": insert_stmt.excluded.aarsresultat,
+                    "driftsresultat": insert_stmt.excluded.driftsresultat,
+                    "salgsinntekter": insert_stmt.excluded.salgsinntekter,
+                    "egenkapital": insert_stmt.excluded.egenkapital,
+                    "omloepsmidler": insert_stmt.excluded.omloepsmidler,
+                    "kortsiktig_gjeld": insert_stmt.excluded.kortsiktig_gjeld,
+                    "avskrivninger": insert_stmt.excluded.avskrivninger,
+                    "anleggsmidler": insert_stmt.excluded.anleggsmidler,
+                    "langsiktig_gjeld": insert_stmt.excluded.langsiktig_gjeld,
+                    "gjeldsgrad": insert_stmt.excluded.gjeldsgrad,
+                    "raw_data": insert_stmt.excluded.raw_data,
                 },
             ).returning(models.Accounting)
 
             # Execute UPSERT and return full object
-            result = await self.db.execute(stmt)
+            result = await self.db.execute(upsert_stmt)
             accounting = result.scalar_one()
 
             if autocommit:
