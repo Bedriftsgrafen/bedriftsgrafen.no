@@ -12,12 +12,12 @@ This separation ensures:
 
 import asyncio
 import logging
-import os
-from datetime import date, datetime, timedelta
+from datetime import date, datetime, timedelta, timezone
 from typing import Any
 
 import httpx
-from aiolimiter import AsyncLimiter
+
+
 from pydantic import ValidationError
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -29,6 +29,7 @@ from repositories.system_repository import SystemRepository
 import models
 from schemas.brreg import FetchResult, UpdateBatchResult
 from services.brreg_api_service import BrregApiService
+from services.rate_limits import BRREG_RATE_LIMITER
 
 logger = logging.getLogger(__name__)
 
@@ -37,11 +38,6 @@ CONCURRENCY_LIMIT = 10
 
 # Chunk size for database commits (commit after N records)
 DB_COMMIT_CHUNK_SIZE = 50
-
-# Rate limiting for Brreg API (requests per second)
-# Conservative default to avoid triggering their rate limiter
-API_RATE_LIMIT = int(os.getenv("BRREG_API_RATE_LIMIT", "5"))
-rate_limiter = AsyncLimiter(API_RATE_LIMIT, 1)
 
 
 class UpdateService:
@@ -97,7 +93,7 @@ class UpdateService:
             if existing:
                 existing.error_message = error_message
                 existing.attempt_count += 1
-                existing.last_retry_at = datetime.utcnow()
+                existing.last_retry_at = datetime.now(timezone.utc)
             else:
                 new_error = models.SyncError(
                     orgnr=orgnr,
@@ -293,7 +289,7 @@ class UpdateService:
                 )
 
             # Rate limit first, then acquire semaphore for concurrency control
-            async with rate_limiter:
+            async with BRREG_RATE_LIMITER:
                 async with semaphore:
                     try:
                         company_data = await self.brreg_api.fetch_company(orgnr)

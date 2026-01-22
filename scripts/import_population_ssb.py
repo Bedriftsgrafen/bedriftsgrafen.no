@@ -6,7 +6,7 @@ Import Population Statistics from SSB (Table 07459)
 import asyncio
 import logging
 import sys
-from datetime import datetime
+from datetime import datetime, timezone
 
 import httpx
 from sqlalchemy.dialects.postgresql import insert as pg_insert
@@ -84,7 +84,7 @@ async def import_population():
         stmt = pg_insert(MunicipalityPopulation).values(records)
         stmt = stmt.on_conflict_do_update(
             index_elements=["municipality_code", "year"],
-            set_={"population": stmt.excluded.population, "updated_at": datetime.utcnow()},
+            set_={"population": stmt.excluded.population, "updated_at": datetime.now(timezone.utc)},
         )
 
         await session.execute(stmt)

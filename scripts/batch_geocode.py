@@ -15,7 +15,7 @@ import asyncio
 import logging
 import os
 import sys
-from datetime import datetime
+from datetime import datetime, timezone
 
 from sqlalchemy import func, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -118,7 +118,7 @@ async def geocode_batch(session: AsyncSession, batch_size: int = 100, dry_run: b
                     await session.execute(
                         update(Company)
                         .where(Company.orgnr == company.orgnr)
-                        .values(latitude=lat, longitude=lon, geocoded_at=datetime.utcnow())
+                        .values(latitude=lat, longitude=lon, geocoded_at=datetime.now(timezone.utc))
                     )
 
                 stats["success"] += 1

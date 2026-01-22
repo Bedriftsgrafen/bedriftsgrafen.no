@@ -66,8 +66,8 @@ async def process_batch():
                 item.company_fetched = 1 if process_result['company_fetched'] else 0
                 item.financials_count = process_result['financials_count']
             
-            from datetime import datetime
-            item.completed_at = datetime.utcnow()
+            from datetime import datetime, timezone
+            item.completed_at = datetime.now(timezone.utc)
             await db.commit()
             
             print(f"Processed {item.orgnr}: {item.status}")

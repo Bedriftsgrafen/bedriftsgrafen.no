@@ -1,5 +1,5 @@
 import enum
-from datetime import datetime
+from datetime import datetime, timezone
 
 from sqlalchemy import DateTime, Integer, String, Text
 from sqlalchemy import Enum as SQLEnum
@@ -31,7 +31,7 @@ class BulkImportQueue(Base):
     priority: Mapped[int] = mapped_column(Integer, default=0, index=True)  # Higher = more important
 
     # Timestamps
-    queued_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
+    queued_at: Mapped[datetime] = mapped_column(DateTime, default=lambda: datetime.now(timezone.utc))
     started_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
     completed_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
 
@@ -55,7 +55,7 @@ class ImportBatch(Base):
     batch_name: Mapped[str] = mapped_column(String, index=True)
 
     # Timestamps
-    started_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
+    started_at: Mapped[datetime] = mapped_column(DateTime, default=lambda: datetime.now(timezone.utc))
     completed_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
 
     # Statistics

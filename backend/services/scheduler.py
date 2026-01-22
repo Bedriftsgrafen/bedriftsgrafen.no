@@ -1,14 +1,20 @@
 import logging
 import shutil
+from datetime import datetime, timedelta, timezone
 
-from apscheduler.schedulers.asyncio import AsyncIOScheduler
-from apscheduler.triggers.cron import CronTrigger
-from apscheduler.triggers.interval import IntervalTrigger
+from apscheduler.schedulers.asyncio import AsyncIOScheduler  # type: ignore
+from apscheduler.triggers.cron import CronTrigger  # type: ignore
+from apscheduler.triggers.interval import IntervalTrigger  # type: ignore
 from sqlalchemy import text
 
 from database import AsyncSessionLocal, engine
 
 logger = logging.getLogger(__name__)
+
+# Tables to vacuum during maintenance (allowlist for safety)
+MAINTENANCE_TABLES = frozenset(
+    ["bedrifter", "underenheter", "roller", "regnskap", "municipality_population", "system_state"]
+)
 
 
 class SchedulerService:
@@ -19,12 +25,16 @@ class SchedulerService:
         self._setup_jobs()
 
     def _setup_jobs(self) -> None:
+        now = datetime.now(timezone.utc)
+
         # Refresh materialized views every 5 minutes
         self.scheduler.add_job(
             self.refresh_materialized_views,
             trigger=IntervalTrigger(minutes=5),
             id="refresh_views",
             replace_existing=True,
+            max_instances=1,
+            misfire_grace_time=300,
         )
 
         # Sync SSB population data weekly (Sundays at 03:00)
@@ -33,6 +43,8 @@ class SchedulerService:
             trigger=CronTrigger(day_of_week="sun", hour=3, minute=0),
             id="sync_ssb_population",
             replace_existing=True,
+            max_instances=1,
+            misfire_grace_time=300,
         )
 
         # Geocode companies without coordinates (every 1 hour)
@@ -41,6 +53,8 @@ class SchedulerService:
             trigger=IntervalTrigger(hours=1),
             id="geocode_companies",
             replace_existing=True,
+            max_instances=1,
+            misfire_grace_time=300,
         )
 
         # Update company metadata incrementally (every 15 minutes)
@@ -50,31 +64,41 @@ class SchedulerService:
             trigger=IntervalTrigger(minutes=15),
             id="company_updates",
             replace_existing=True,
+            max_instances=1,
+            misfire_grace_time=300,
         )
 
         # Sync accounting data for companies (every 5 minutes)
-        # Replaces legacy bedriftsgrafen-regnskap-sync.service
+        # Staggered: Start 2 minutes after launch
         self.scheduler.add_job(
             self.sync_accounting_batch,
-            trigger=IntervalTrigger(minutes=5),
+            trigger=IntervalTrigger(minutes=5, start_date=now + timedelta(minutes=2)),
             id="accounting_sync",
             replace_existing=True,
+            max_instances=1,
+            misfire_grace_time=300,
         )
 
         # Update subunit metadata (every 15 minutes)
+        # Staggered: Start 7 minutes after launch
         self.scheduler.add_job(
             self.run_subunit_updates,
-            trigger=IntervalTrigger(minutes=15),
+            trigger=IntervalTrigger(minutes=15, start_date=now + timedelta(minutes=7)),
             id="subunit_updates",
             replace_existing=True,
+            max_instances=1,
+            misfire_grace_time=300,
         )
 
         # Update role metadata (every 30 minutes)
+        # Staggered: Start 10 minutes after launch
         self.scheduler.add_job(
             self.run_role_updates,
-            trigger=IntervalTrigger(minutes=30),
+            trigger=IntervalTrigger(minutes=30, start_date=now + timedelta(minutes=10)),
             id="role_updates",
             replace_existing=True,
+            max_instances=1,
+            misfire_grace_time=300,
         )
 
         # Database maintenance daily at 03:00 (VACUUM ANALYZE)
@@ -83,38 +107,49 @@ class SchedulerService:
             trigger=CronTrigger(hour=3, minute=0),
             id="db_maintenance",
             replace_existing=True,
+            max_instances=1,
+            misfire_grace_time=300,
         )
 
         # Retry failed syncs every hour
+        # Staggered: Start 20 minutes after launch
         self.scheduler.add_job(
             self.retry_failed_syncs,
-            trigger=IntervalTrigger(hours=1),
+            trigger=IntervalTrigger(hours=1, start_date=now + timedelta(minutes=20)),
             id="retry_syncs",
             replace_existing=True,
+            max_instances=1,
+            misfire_grace_time=300,
         )
 
-        # Disk usage check daily at 06:00
+        # Check disk usage daily at 06:01
         self.scheduler.add_job(
             self.check_disk_usage,
             trigger=CronTrigger(hour=6, minute=1),
             id="disk_check",
             replace_existing=True,
+            max_instances=1,
+            misfire_grace_time=300,
         )
 
-        # Ghost parent repair DAILY at 04:00 (critical FK integrity)
+        # Run proactive repairs daily at 04:00
         self.scheduler.add_job(
             self.run_ghost_repair,
             trigger=CronTrigger(hour=4, minute=0),
             id="ghost_repair",
             replace_existing=True,
+            max_instances=1,
+            misfire_grace_time=300,
         )
 
-        # Role backfill weekly (Sundays at 04:30) for Role Network feature
+        # Run role backfill weekly (Sundays at 04:30)
         self.scheduler.add_job(
             self.run_role_backfill,
             trigger=CronTrigger(day_of_week="sun", hour=4, minute=30),
             id="role_backfill",
             replace_existing=True,
+            max_instances=1,
+            misfire_grace_time=300,
         )
 
     async def start(self) -> None:
@@ -299,8 +334,8 @@ class SchedulerService:
                 latest_id_str = await system_repo.get_state("subunit_update_latest_id")
                 start_id = int(latest_id_str) if latest_id_str and latest_id_str.isdigit() else None
 
-                # Catch up from Dec 1st 2025 if no state
-                since_date = date(2025, 12, 1) if not start_id else None
+                # Default lookback of 30 days if no state exists
+                since_date = (date.today() - timedelta(days=30)) if not start_id else None
 
                 result = await service.fetch_subunit_updates(since_date=since_date, start_id=start_id)
 
@@ -335,8 +370,8 @@ class SchedulerService:
                 after_id_str = await system_repo.get_state("role_update_latest_id")
                 after_id = int(after_id_str) if after_id_str and after_id_str.isdigit() else None
 
-                # Catch up from Dec 1st 2025 if no state
-                since_date = date(2025, 12, 1) if not after_id else None
+                # Default lookback of 30 days if no state exists
+                since_date = (date.today() - timedelta(days=30)) if not after_id else None
 
                 result = await service.fetch_role_updates(since_date=since_date, after_id=after_id)
 
@@ -355,18 +390,25 @@ class SchedulerService:
             logger.exception("Failed to run incremental role updates", extra={"error": str(e)})
 
     async def run_db_maintenance(self) -> None:
-        """Runs VACUUM ANALYZE on main tables for performance optimization."""
+        """Runs VACUUM ANALYZE on main tables for performance optimization.
+
+        Note: VACUUM cannot run inside a transaction, so we use autocommit mode.
+        """
         logger.info("Starting database maintenance (VACUUM ANALYZE)...")
         try:
-            async with AsyncSessionLocal() as db:
-                # Expanded table list for comprehensive maintenance
-                tables = ["bedrifter", "underenheter", "roller", "regnskap", "municipality_population", "system_state"]
-                for table in tables:
-                    await db.execute(text(f"VACUUM {table};"))
-                    await db.execute(text(f"ANALYZE {table};"))
-                logger.info(f"Database maintenance completed successfully for {len(tables)} tables.")
+            # VACUUM must run outside a transaction - use raw connection with autocommit
+            async with engine.connect() as conn:
+                # Set isolation level to autocommit for VACUUM
+                # execution_options returns a NEW connection object
+                conn = conn.execution_options(isolation_level="AUTOCOMMIT")  # type: ignore[assignment]
+                for table in MAINTENANCE_TABLES:
+                    await conn.execute(text(f"VACUUM ANALYZE {table}"))
+                logger.info(
+                    "Database maintenance completed",
+                    extra={"tables": len(MAINTENANCE_TABLES)},
+                )
         except Exception as e:
-            logger.error(f"Database maintenance failed: {e}")
+            logger.exception("Database maintenance failed", extra={"error": str(e)})
 
     async def check_disk_usage(self) -> None:
         """Checks disk usage on the root partition and logs warnings if high."""
@@ -382,16 +424,21 @@ class SchedulerService:
             logger.error(f"Disk usage check failed: {e}")
 
     async def retry_failed_syncs(self) -> None:
-        """Retry failed synchronization attempts."""
-        from sqlalchemy import select
-        from models import SyncError, SyncErrorStatus
-        from services.update_service import UpdateService
+        """Retry failed synchronization attempts.
+
+        Uses proper state management to ensure consistent error status.
+        """
         from datetime import datetime
+
+        from sqlalchemy import delete, select
+
+        from models import Role, SyncError, SyncErrorStatus
+        from services.update_service import UpdateService
 
         logger.info("Starting retry of failed syncs...")
         try:
             async with AsyncSessionLocal() as db:
-                # Fetch pending or previously retrying errors that haven't hit max attempts
+                # Fetch pending errors that haven't hit max attempts
                 stmt = select(SyncError).where(
                     SyncError.status.in_([SyncErrorStatus.PENDING, SyncErrorStatus.RETRYING]),
                     SyncError.attempt_count < 5,
@@ -407,26 +454,24 @@ class SchedulerService:
                 resolved_count = 0
 
                 for error in errors:
-                    try:
-                        error.status = SyncErrorStatus.RETRYING
-                        error.attempt_count += 1
-                        error.last_retry_at = datetime.utcnow()
-                        await db.commit()
+                    # Track attempt before trying
+                    error.attempt_count += 1
+                    error.last_retry_at = datetime.now(timezone.utc)
+                    success = False
 
-                        success = False
+                    try:
                         if error.entity_type == "company":
-                            # Use CompanyService logic via UpdateService helper
                             parent_data = await update_service.brreg_api.fetch_company(error.orgnr)
                             if parent_data:
                                 res = await update_service.company_repo.create_or_update(parent_data)
                                 if res:
                                     success = True
-                        elif error.entity_type == "role":
-                            # Re-sync roles for the company
-                            roles_data = await update_service.brreg_api.fetch_roles(error.orgnr)
-                            # We need to map to models.Role
-                            from models import Role
 
+                        elif error.entity_type == "role":
+                            # Delete old roles first to prevent duplicates
+                            await db.execute(delete(Role).where(Role.orgnr == error.orgnr))
+
+                            roles_data = await update_service.brreg_api.fetch_roles(error.orgnr)
                             roles = [
                                 Role(
                                     orgnr=error.orgnr,
@@ -441,25 +486,33 @@ class SchedulerService:
                                 )
                                 for r in roles_data
                             ]
-                            await update_service.role_repo.create_batch(roles, commit=True)
+                            if roles:
+                                await update_service.role_repo.create_batch(roles, commit=False)
                             success = True
 
-                        # Add more entity types (subunit) as needed here
+                        # Update status based on result
                         if success:
                             error.status = SyncErrorStatus.RESOLVED
-                            error.resolved_at = datetime.utcnow()
+                            error.resolved_at = datetime.now(timezone.utc)
                             resolved_count += 1
-                            logger.info(f"Successfully resolved sync error for {error.orgnr}")
-
-                        await db.commit()
+                            logger.info(f"Resolved sync error for {error.orgnr}")
+                        else:
+                            error.status = SyncErrorStatus.RETRYING
 
                     except Exception as ex:
                         logger.warning(f"Retry failed for {error.orgnr}: {ex}")
                         if error.attempt_count >= 5:
                             error.status = SyncErrorStatus.PERMANENT_FAILURE
-                        await db.commit()
+                        else:
+                            error.status = SyncErrorStatus.PENDING  # Reset to pending for next retry
 
-                logger.info(f"Retry batch completed. Resolved {resolved_count}/{len(errors)} errors.")
+                    # Commit after each error to preserve progress
+                    await db.commit()
+
+                logger.info(
+                    "Retry batch completed",
+                    extra={"resolved": resolved_count, "total": len(errors)},
+                )
 
         except Exception as e:
             logger.exception("Failed to run retry_failed_syncs", extra={"error": str(e)})

@@ -1,19 +1,17 @@
 import asyncio
 import logging
-from aiolimiter import AsyncLimiter
 from sqlalchemy import select, func, text, delete
 from sqlalchemy.ext.asyncio import AsyncSession
 import models
 from services.brreg_api_service import BrregApiService
 from services.update_service import UpdateService
+from services.rate_limits import BRREG_RATE_LIMITER
 from repositories.company.repository import CompanyRepository
 from repositories.subunit_repository import SubUnitRepository
 from repositories.role_repository import RoleRepository
 
 logger = logging.getLogger(__name__)
 
-# Global Rate Limiter: 5 requests per second to avoid Brreg 429s
-repair_limiter = AsyncLimiter(5, 1)
 # Bounded Concurrency: Max 10 simultaneous API tasks
 repair_semaphore = asyncio.Semaphore(10)
 
@@ -102,16 +100,24 @@ class RepairService:
         result = await self.db.execute(stmt)
         companies = result.scalars().all()
 
+        if not companies:
+            return
+
+        # Pre-fetch local subunit counts in one query to avoid N+1 pattern
+        count_stmt = (
+            select(models.SubUnit.parent_orgnr, func.count(models.SubUnit.orgnr))
+            .where(models.SubUnit.parent_orgnr.in_([c.orgnr for c in companies]))
+            .group_by(models.SubUnit.parent_orgnr)
+        )
+        count_res = await self.db.execute(count_stmt)
+        local_counts = {row[0]: row[1] for row in count_res.all()}
+
         for company in companies:
             async with repair_semaphore:
-                async with repair_limiter:
+                async with BRREG_RATE_LIMITER:
                     try:
                         api_subunits = await self.brreg_api.fetch_subunits(company.orgnr)
-                        local_count_stmt = select(func.count(models.SubUnit.orgnr)).where(
-                            models.SubUnit.parent_orgnr == company.orgnr
-                        )
-                        local_count_res = await self.db.execute(local_count_stmt)
-                        local_count = local_count_res.scalar() or 0
+                        local_count = local_counts.get(company.orgnr, 0)
 
                         if local_count < len(api_subunits):
                             logger.info(f"Fixing subunits for {company.orgnr}: {local_count} -> {len(api_subunits)}")
@@ -153,7 +159,7 @@ class RepairService:
 
         for company in companies:
             async with repair_semaphore:
-                async with repair_limiter:
+                async with BRREG_RATE_LIMITER:
                     try:
                         roles_data = await self.brreg_api.fetch_roles(company.orgnr)
 
@@ -186,7 +192,7 @@ class RepairService:
 
     async def _repair_company(self, orgnr: str) -> bool:
         async with repair_semaphore:
-            async with repair_limiter:
+            async with BRREG_RATE_LIMITER:
                 try:
                     data = await self.brreg_api.fetch_company(orgnr)
                     if data:
