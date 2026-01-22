@@ -65,6 +65,29 @@ async def test_create_batch(repo, mock_db_session):
 
 
 @pytest.mark.asyncio
+async def test_create_batch_with_duplicates(repo, mock_db_session):
+    # Test that duplicate orgnrs are deduplicated before insert
+    unit1 = models.SubUnit()
+    unit1.orgnr = "111111111"
+    unit1.navn = "Test Unit 1"
+    unit1.parent_orgnr = "999999999"
+
+    unit2 = models.SubUnit()
+    unit2.orgnr = "111111111"  # Same orgnr as unit1
+    unit2.navn = "Test Unit 1 Updated"
+    unit2.parent_orgnr = "999999999"
+
+    units = [unit1, unit2]
+
+    # Should not raise CardinalityViolationError because we deduplicate in create_batch
+    count = await repo.create_batch(units)
+
+    # Should return 1 because the input had two items but they were for the same orgnr
+    assert count == 1
+    assert mock_db_session.execute.called
+
+
+@pytest.mark.asyncio
 async def test_search_by_name(repo, mock_db_session):
     # Mock search result
     mock_unit = MagicMock(spec=models.SubUnit)
@@ -78,6 +101,48 @@ async def test_search_by_name(repo, mock_db_session):
     # Invalid search (too short)
     result = await repo.search_by_name("A")
     assert len(result) == 0
+
+
+@pytest.mark.asyncio
+async def test_create_batch_empty_after_filter(repo, mock_db_session):
+    # Test that empty list is returned when all subunits lack parent_orgnr
+    unit1 = models.SubUnit()
+    unit1.orgnr = "111111111"
+    unit1.navn = "Test Unit 1"
+    unit1.parent_orgnr = None  # Missing parent
+
+    count = await repo.create_batch([unit1])
+
+    # Should return 0 and not call execute
+    assert count == 0
+    assert not mock_db_session.execute.called
+
+
+@pytest.mark.asyncio
+async def test_create_batch_mixed_duplicates(repo, mock_db_session):
+    # Test mixed scenario: some unique, some duplicates
+    unit1 = models.SubUnit()
+    unit1.orgnr = "111111111"
+    unit1.navn = "Test Unit 1"
+    unit1.parent_orgnr = "999999999"
+
+    unit2 = models.SubUnit()
+    unit2.orgnr = "222222222"
+    unit2.navn = "Test Unit 2"
+    unit2.parent_orgnr = "999999999"
+
+    unit3 = models.SubUnit()
+    unit3.orgnr = "111111111"  # Duplicate of unit1
+    unit3.navn = "Test Unit 1 Updated"
+    unit3.parent_orgnr = "999999999"
+
+    units = [unit1, unit2, unit3]
+
+    count = await repo.create_batch(units)
+
+    # Should return 2 (deduplicated from 3)
+    assert count == 2
+    assert mock_db_session.execute.called
 
 
 @pytest.mark.asyncio

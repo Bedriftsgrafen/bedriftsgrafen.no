@@ -89,14 +89,19 @@ class SubUnitRepository:
     async def create_batch(self, subunits: list[models.SubUnit], commit: bool = True) -> int:
         """
         Batch create subunits (more efficient than one-by-one).
-        Uses merge to handle duplicates gracefully.
+        Automatically deduplicates by orgnr before insert (last occurrence wins).
+        Uses PostgreSQL UPSERT for atomic updates on conflict.
 
         Args:
             subunits: List of SubUnit models to create/update
             commit: Whether to commit the transaction (default True)
 
         Returns:
-            Number of subunits successfully saved
+            Number of distinct subunits successfully saved (after deduplication)
+
+        Note:
+            If multiple subunits with the same orgnr exist in the batch,
+            the last one in the list will be used ("last wins" strategy).
         """
         if not subunits:
             return 0
@@ -108,9 +113,11 @@ class SubUnitRepository:
             return 0
 
         try:
-            # Prepare values for bulk insert
-            values = [
-                {
+            # Prepare values for bulk insert - Use a dict to deduplicate by orgnr
+            # If multiple subunits with same orgnr exist in batch, the last one wins
+            values_map = {}
+            for s in valid_subunits:
+                values_map[s.orgnr] = {
                     "orgnr": s.orgnr,
                     "navn": s.navn,
                     "parent_orgnr": s.parent_orgnr,
@@ -121,8 +128,16 @@ class SubUnitRepository:
                     "postadresse": s.postadresse,
                     "stiftelsesdato": s.stiftelsesdato,
                 }
-                for s in valid_subunits
-            ]
+
+            values = list(values_map.values())
+
+            # Warn if duplicates were found (indicates upstream data quality issue)
+            if len(values) < len(valid_subunits):
+                duplicate_count = len(valid_subunits) - len(values)
+                logger.warning(
+                    f"Deduplicated {duplicate_count} duplicate subunit(s) in batch. "
+                    f"Original: {len(valid_subunits)}, Unique: {len(values)}"
+                )
 
             stmt = insert(models.SubUnit).values(values)
 
@@ -146,12 +161,13 @@ class SubUnitRepository:
 
             if commit:
                 await self.db.commit()
-            logger.info(f"Saved {len(valid_subunits)} subunits to database")
-            return len(valid_subunits)
+            logger.info(f"Saved {len(values)} subunits to database (deduplicated from {len(valid_subunits)})")
+            return len(values)
 
         except Exception as e:
-            logger.error(f"Error saving subunits batch: {e}")
-            await self.db.rollback()
+            logger.error(f"Error saving subunits batch: {e}", exc_info=True)
+            if commit:
+                await self.db.rollback()
             return 0
 
     async def delete_by_parent_orgnr(self, parent_orgnr: str, commit: bool = True) -> int:

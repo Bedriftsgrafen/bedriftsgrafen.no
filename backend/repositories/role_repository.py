@@ -87,6 +87,12 @@ class RoleRepository:
 
         Returns:
             Number of roles successfully saved
+
+        Note:
+            This method assumes the calling code has already deleted old roles
+            for the company (via delete_by_orgnr) to avoid potential duplicates.
+            Role model uses auto-increment ID primary key, so duplicates are
+            possible if the same role data is inserted multiple times.
         """
         if not roles:
             return 0
@@ -100,7 +106,7 @@ class RoleRepository:
             return len(roles)
 
         except Exception as e:
-            logger.error(f"Failed to save role batch: {e}")
+            logger.error(f"Failed to save role batch: {e}", exc_info=True)
             if commit:
                 await self.db.rollback()
             return 0
