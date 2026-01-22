@@ -16,8 +16,10 @@ Disallow: /nyetableringer?*
 Disallow: /sammenlign
 Disallow: /kart
 
-# Disallow raw API endpoints except sitemaps
-Disallow: /api/
+# Disallow raw API endpoints except sitemaps and public data
+Disallow: /api/admin/
+Disallow: /api/maintenance/
+Allow: /api/v1/
 Allow: /api/sitemap_index.xml
 Allow: /api/sitemaps/
 

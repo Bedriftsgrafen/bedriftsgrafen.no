@@ -102,7 +102,13 @@ export function SEOHead({
   ogImage: customOgImage
 }: SEOHeadProps) {
   const location = useLocation()
-  const currentUrl = `${SEO_DEFAULTS.siteUrl}${location.pathname}`
+  
+  // SEO optimization: Ensure canonical URL is strictly formatted
+  // 1. Force the primary domain (SEO_DEFAULTS.siteUrl)
+  // 2. Remove trailing slashes
+  // 3. Remove query parameters (already handled by location.pathname)
+  const cleanPath = location.pathname === '/' ? '' : location.pathname.replace(/\/$/, '')
+  const currentUrl = `${SEO_DEFAULTS.siteUrl}${cleanPath}`
 
   const title = customTitle || (companyName
     ? `${getCompanyTitle(companyName)} (${orgnr})`
