@@ -3,6 +3,7 @@
 
 User-agent: *
 Allow: /
+Allow: /sitemap.xml
 Allow: /api/sitemap_index.xml
 Allow: /api/sitemaps/
 
@@ -24,6 +25,7 @@ Allow: /api/sitemap_index.xml
 Allow: /api/sitemaps/
 
 # Sitemap index (contains paginated sitemaps)
+Sitemap: https://bedriftsgrafen.no/sitemap.xml
 Sitemap: https://bedriftsgrafen.no/api/sitemap_index.xml
 
 # Crawl-delay for politeness

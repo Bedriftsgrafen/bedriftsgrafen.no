@@ -118,6 +118,15 @@ export function SEOHead({
     ? `Utforsk finansielle nøkkeltall, regnskap og bedriftsinformasjon for ${companyName} (org.nr: ${orgnr}). Gratis data fra Brønnøysundregistrene.`
     : SEO_DEFAULTS.description)
 
+  // SEO optimization: Ensure image URL is absolute for social bots
+  const finalOgImage = useMemo(() => {
+    const rawImage = customOgImage || (orgnr ? `/api/v1/og/company/${orgnr}.svg` : SEO_DEFAULTS.ogImage)
+    if (rawImage.startsWith('/')) {
+      return `${SEO_DEFAULTS.siteUrl}${rawImage}`
+    }
+    return rawImage
+  }, [customOgImage, orgnr])
+
   // Memoize JSON-LD to avoid re-serialization on every render
   const webPageJsonLd = useMemo(
     () => JSON.stringify(generateWebPageJsonLd(title, description, currentUrl)),
@@ -142,17 +151,23 @@ export function SEOHead({
       <meta property="og:title" content={title} />
       <meta property="og:description" content={description} />
       <meta property="og:site_name" content="Bedriftsgrafen.no" />
-      <meta property="og:image" content={customOgImage || SEO_DEFAULTS.ogImage} />
+      <meta 
+        property="og:image" 
+        content={finalOgImage} 
+      />
       <meta property="og:image:width" content="1200" />
       <meta property="og:image:height" content="630" />
-      <meta property="og:image:alt" content="Bedriftsgrafen.no - Analyse av norske bedrifter" />
+      <meta property="og:image:alt" content={companyName ? `Analyse av ${companyName}` : "Bedriftsgrafen.no - Analyse av norske bedrifter"} />
       <meta property="og:locale" content="nb_NO" />
 
       {/* Twitter Card */}
       <meta name="twitter:card" content="summary_large_image" />
       <meta name="twitter:title" content={title} />
       <meta name="twitter:description" content={description} />
-      <meta name="twitter:image" content={customOgImage || SEO_DEFAULTS.ogImage} />
+      <meta 
+        name="twitter:image" 
+        content={finalOgImage} 
+      />
 
       {/* Canonical URL */}
       <link rel="canonical" href={currentUrl} />

@@ -7,6 +7,7 @@ import logging
 from typing import Any
 
 from sqlalchemy import and_, func, select, text
+from sqlalchemy.engine import Row
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import defer
 
@@ -376,3 +377,19 @@ class LookupsMixin:
         rows = list(result.all())
 
         return [tuple(r) for r in rows], total
+
+    async def get_company_og_data(self, orgnr: str) -> Row | None:
+        """Fetch minimal data needed for OG image generation efficiently."""
+        query = (
+            select(
+                models.Company.navn,
+                models.Company.naeringskode,
+                models.Company.antall_ansatte,
+                models.LatestFinancials.salgsinntekter,
+                models.LatestFinancials.aarsresultat,
+            )
+            .outerjoin(models.LatestFinancials, models.Company.orgnr == models.LatestFinancials.orgnr)
+            .where(models.Company.orgnr == orgnr)
+        )
+        result = await self.db.execute(query)
+        return result.first()

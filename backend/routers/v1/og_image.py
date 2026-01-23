@@ -1,17 +1,34 @@
 """API endpoints for Dynamic OpenGraph (OG) images."""
 
-from fastapi import APIRouter, Depends, Response
+from fastapi import APIRouter, Depends, Response, Request
 from sqlalchemy.ext.asyncio import AsyncSession
 import textwrap
 
 from database import get_db
+from limiter import limiter
 from services.stats_service import StatsService
+from services.seo_service import SEOService
 
 router = APIRouter(prefix="/v1/og", tags=["seo"])
 
 
+@router.get("/company/{orgnr}.svg")
+@limiter.limit("60/minute")
+async def get_company_og_svg(request: Request, orgnr: str, db: AsyncSession = Depends(get_db)):
+    """Generates a dynamic SVG OpenGraph card for a company."""
+    seo_service = SEOService(db)
+    data = await seo_service.get_company_og_data(orgnr)
+
+    if not data:
+        return Response(status_code=404)
+
+    svg = seo_service.generate_company_og_svg(data)
+    return Response(content=svg, media_type="image/svg+xml")
+
+
 @router.get("/municipality/{code}.svg")
-async def get_municipality_og_svg(code: str, db: AsyncSession = Depends(get_db)):
+@limiter.limit("60/minute")
+async def get_municipality_og_svg(request: Request, code: str, db: AsyncSession = Depends(get_db)):
     """Generates a dynamic SVG OpenGraph card for a municipality."""
     service = StatsService(db)
     dashboard = await service.get_municipality_premium_dashboard(code)
