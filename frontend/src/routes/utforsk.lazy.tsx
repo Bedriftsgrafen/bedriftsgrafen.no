@@ -11,9 +11,11 @@ import { useFilterParams } from '../hooks/useFilterParams'
 import { useCompaniesQuery } from '../hooks/queries/useCompaniesQuery'
 import { useCompanyCountQuery } from '../hooks/queries/useCompanyCountQuery'
 import { useUiStore } from '../store/uiStore'
+import { useExplorerStore } from '../store/explorerStore'
 import { useFilterStore } from '../store/filterStore'
 import { useSlowLoadingToast } from '../hooks/useSlowLoadingToast'
 import { ExplorerSearchBar } from '../components/explorer/ExplorerSearchBar'
+import { ViewModeToggle } from '../components/explorer'
 
 export const Route = createLazyFileRoute('/utforsk')({
     component: UtforskPage,
@@ -27,6 +29,7 @@ function UtforskPage() {
     const itemsPerPage = useUiStore(s => s.itemsPerPage)
     const currentPage = useUiStore(s => s.currentPage)
     const addRecentSearch = useUiStore(s => s.addRecentSearch)
+    const viewMode = useExplorerStore(s => s.viewMode)
 
     // Filter state
     const { filterParams, sortBy, sortOrder } = useFilterParams()
@@ -119,11 +122,16 @@ function UtforskPage() {
                             Søk, filtrer og analyser norske bedrifter.
                         </p>
 
-                        <ExplorerSearchBar
-                            initialValue={q || ''}
-                            onSearch={handleSearch}
-                            isLoading={companiesLoading}
-                        />
+                        <div className="flex flex-col md:flex-row items-center gap-4">
+                            <div className="w-full flex-1">
+                                <ExplorerSearchBar
+                                    initialValue={q || ''}
+                                    onSearch={handleSearch}
+                                    isLoading={companiesLoading}
+                                />
+                            </div>
+                            <ViewModeToggle />
+                        </div>
                     </div>
 
                     <div className="shrink-0">
@@ -147,6 +155,7 @@ function UtforskPage() {
                     itemsPerPage={itemsPerPage}
                     totalCount={totalCount}
                     countLoading={countLoading}
+                    viewMode={viewMode}
                 />
             </div>
 

@@ -103,7 +103,8 @@ class CompanyWithFinancials:
         self.postadresse = company.postadresse
         self.forretningsadresse = company.forretningsadresse
         self.data = None
-        self.naeringskoder: list[str] = []
+        # Copy naeringskoder from company property if available
+        self.naeringskoder = company.naeringskoder if hasattr(company, "naeringskoder") else []
         self.latest_revenue = latest_revenue
         self.latest_profit = latest_profit
         self.latest_operating_profit = latest_operating_profit

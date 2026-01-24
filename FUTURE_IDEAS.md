@@ -16,7 +16,7 @@ This document consolidates feature ideas and strategic plans for the future deve
 - **Why**: Visualize the physical footprint of companies with many branches (e.g., Rema 1000, Equinor).
 - **Tech**: Geocode `underenheter` table and implement `SubunitMap` component using `react-leaflet`.
 
-### ~~Smart Badges for Search Results~~ ✅ (Jan 15, 2026)
+### ~~Smart Badges for Search Results~~ ✅ (Jan 24, 2026)
 - **Goal**: Add visual badges to search results to highlight key company traits.
 - **Badges**:
   - 💎 **Solid**: Equity ratio (egenkapitalandel) >= 20%.

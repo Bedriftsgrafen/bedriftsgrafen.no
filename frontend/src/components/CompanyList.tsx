@@ -1,5 +1,5 @@
-import React, { useState, useRef, useEffect, useCallback } from 'react'
-import { Building2, Settings, RotateCcw } from 'lucide-react'
+import React, { useState, useRef, useEffect, useCallback, useMemo } from 'react'
+import { Building2, Settings, RotateCcw, Gem, Calendar, History } from 'lucide-react'
 import clsx from 'clsx'
 import { Company } from '../types'
 import { CompanyListSkeleton } from './skeletons/CompanyListSkeleton'
@@ -13,6 +13,42 @@ import { useFilterStore } from '../store/filterStore'
 import { formatDateNorwegian } from '../utils/dates'
 import { formatCurrency, formatNumber } from '../utils/formatters'
 
+/** Compact badges for the list view */
+const SmartBadgesList = ({ company }: { company: Company }) => {
+    const badges = useMemo(() => {
+        const list = []
+        if (company.latest_equity_ratio && company.latest_equity_ratio >= 0.2) {
+            list.push({ id: 'solid', icon: Gem, color: 'text-emerald-500', title: 'Solid' })
+        }
+        if (company.stiftelsesdato) {
+            const stiftelse = new Date(company.stiftelsesdato)
+            const oneYearAgo = new Date()
+            oneYearAgo.setFullYear(oneYearAgo.getFullYear() - 1)
+            if (stiftelse > oneYearAgo) {
+                list.push({ id: 'new', icon: Calendar, color: 'text-blue-500', title: 'Ny' })
+            }
+            const twentyYearsAgo = new Date()
+            twentyYearsAgo.setFullYear(twentyYearsAgo.getFullYear() - 20)
+            if (stiftelse < twentyYearsAgo) {
+                list.push({ id: 'veteran', icon: History, color: 'text-slate-500', title: 'Etablert' })
+            }
+        }
+        return list
+    }, [company.latest_equity_ratio, company.stiftelsesdato])
+
+    if (badges.length === 0) return null
+
+    return (
+        <div className="flex items-center gap-1 mt-0.5">
+            {badges.map(b => (
+                <span key={b.id} title={b.title} className="flex items-center">
+                    <b.icon className={clsx("h-3 w-3", b.color)} aria-hidden="true" />
+                </span>
+            ))}
+        </div>
+    )
+}
+
 // Extract rendering logic to pure functions
 const renderMargin = (margin: number | null | undefined) => {
     if (margin == null) return <span className="text-gray-400">—</span>
@@ -22,7 +58,13 @@ const renderMargin = (margin: number | null | undefined) => {
 
 const getCellValue = (company: Company, column: CompanyColumn): React.ReactNode => {
     switch (column) {
-        case 'navn': return company.navn || 'Ukjent navn'
+        case 'navn':
+            return (
+                <div className="flex flex-col">
+                    <span className="truncate">{company.navn || 'Ukjent navn'}</span>
+                    <SmartBadgesList company={company} />
+                </div>
+            )
         case 'orgnr': return company.orgnr
         case 'organisasjonsform':
             return <span title={getOrganizationFormLabel(company.organisasjonsform)}>{company.organisasjonsform}</span>

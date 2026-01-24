@@ -58,6 +58,7 @@ class CompanyBase(BaseModel):
 
     latest_profit: float | None = None
     latest_revenue: float | None = None
+    latest_operating_profit: float | None = None
     latest_operating_margin: float | None = None  # Operating margin as percentage
     latest_equity_ratio: float | None = None  # Equity ratio as decimal (0.0 - 1.0)
 

@@ -190,10 +190,16 @@ class CompanyService:
                     "navn": getattr(c, "navn", None),
                     "organisasjonsform": getattr(c, "organisasjonsform", None),
                     "naeringskode": getattr(c, "naeringskode", None),
+                    "naeringskoder": getattr(c, "naeringskoder", []),
+                    "antall_ansatte": getattr(c, "antall_ansatte", None),
                     "latest_revenue": getattr(c, "latest_revenue", None),
                     "latest_profit": getattr(c, "latest_profit", None),
+                    "latest_operating_profit": getattr(c, "latest_operating_profit", None),
                     "latest_operating_margin": getattr(c, "latest_operating_margin", None),
                     "latest_equity_ratio": getattr(c, "latest_equity_ratio", None),
+                    "postadresse": getattr(c, "postadresse", None),
+                    "forretningsadresse": getattr(c, "forretningsadresse", None),
+                    "vedtektsfestet_formaal": getattr(c, "vedtektsfestet_formaal", None),
                 }
             )
             # Handle date separately for type safety
