@@ -12,7 +12,13 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 import models
 from exceptions import DatabaseException
-from repositories.company.base import LIST_VIEW_OPTIONS, SEARCH_SEMAPHORE, SEARCH_SEMAPHORE_TIMEOUT
+from repositories.company.base import (
+    LIST_VIEW_OPTIONS,
+    SEARCH_SEMAPHORE,
+    SEARCH_SEMAPHORE_TIMEOUT,
+    LATEST_FINANCIAL_COLUMNS,
+    CompanyWithFinancials,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -22,7 +28,7 @@ class SearchMixin:
 
     db: AsyncSession  # Type hint for mixin
 
-    async def search_by_name(self, name: str, limit: int = 20) -> list[models.Company]:
+    async def search_by_name(self, name: str, limit: int = 20) -> list[CompanyWithFinancials]:
         """
         Search companies by name or organization number using Full-Text Search.
         Falls back to ILIKE for very short queries (< 3 chars).
@@ -36,18 +42,33 @@ class SearchMixin:
             logger.warning(f"Search semaphore timeout for query: {name}")
             raise DatabaseException("Search timed out - too many concurrent searches")
 
-    async def _search_by_name_impl(self, name: str, limit: int) -> list[models.Company]:
+    async def _search_by_name_impl(self, name: str, limit: int) -> list[CompanyWithFinancials]:
         """Implementation of search logic. Called under semaphore protection."""
         # For very short queries, use ILIKE for prefix matching
         if len(name) < 3:
             try:
-                result = await self.db.execute(
-                    select(models.Company)
+                query = (
+                    select(
+                        models.Company,
+                        *LATEST_FINANCIAL_COLUMNS,
+                    )
+                    .outerjoin(models.LatestFinancials, models.Company.orgnr == models.LatestFinancials.orgnr)
                     .options(*LIST_VIEW_OPTIONS)
                     .filter(or_(models.Company.navn.ilike(f"{name}%"), models.Company.orgnr.like(f"{name}%")))
                     .limit(limit)
                 )
-                return list(result.scalars().all())
+                result = await self.db.execute(query)
+                return [
+                    CompanyWithFinancials(
+                        company=row[0],
+                        latest_revenue=row[1],
+                        latest_profit=row[2],
+                        latest_operating_profit=row[3],
+                        latest_operating_margin=row[4],
+                        latest_equity_ratio=row[5],
+                    )
+                    for row in result.all()
+                ]
             except DBAPIError as e:
                 logger.error(f"DB error during short ILIKE search: {e}")
                 raise DatabaseException(f"Search failed for query: {name}", original_error=e)
@@ -55,19 +76,40 @@ class SearchMixin:
         # Check for exact orgnr match (fastest)
         if name.isdigit() and len(name) == 9:
             try:
-                exact_result = await self.db.execute(
-                    select(models.Company).options(*LIST_VIEW_OPTIONS).filter(models.Company.orgnr == name).limit(1)
+                query = (
+                    select(
+                        models.Company,
+                        *LATEST_FINANCIAL_COLUMNS,
+                    )
+                    .outerjoin(models.LatestFinancials, models.Company.orgnr == models.LatestFinancials.orgnr)
+                    .options(*LIST_VIEW_OPTIONS)
+                    .filter(models.Company.orgnr == name)
+                    .limit(1)
                 )
-                exact_match = exact_result.scalar_one_or_none()
-                if exact_match:
-                    return [exact_match]
+                exact_result = await self.db.execute(query)
+                row = exact_result.first()
+                if row:
+                    return [
+                        CompanyWithFinancials(
+                            company=row[0],
+                            latest_revenue=row[1],
+                            latest_profit=row[2],
+                            latest_operating_profit=row[3],
+                            latest_operating_margin=row[4],
+                            latest_equity_ratio=row[5],
+                        )
+                    ]
             except DBAPIError:
                 pass  # Fall through to FTS search
 
         # Use Full-Text Search with websearch_to_tsquery
         search_query = func.websearch_to_tsquery("norwegian", name)
         query = (
-            select(models.Company)
+            select(
+                models.Company,
+                *LATEST_FINANCIAL_COLUMNS,
+            )
+            .outerjoin(models.LatestFinancials, models.Company.orgnr == models.LatestFinancials.orgnr)
             .options(*LIST_VIEW_OPTIONS)
             .filter(models.Company.search_vector.op("@@")(search_query))
         )
@@ -85,7 +127,17 @@ class SearchMixin:
 
         try:
             result = await self.db.execute(query)
-            return list(result.scalars().all())
+            return [
+                CompanyWithFinancials(
+                    company=row[0],
+                    latest_revenue=row[1],
+                    latest_profit=row[2],
+                    latest_operating_profit=row[3],
+                    latest_operating_margin=row[4],
+                    latest_equity_ratio=row[5],
+                )
+                for row in result.all()
+            ]
         except DBAPIError as e:
             logger.error(f"DB error during full-text search: {e}")
             raise DatabaseException(f"Full-text search failed for query: {name}", original_error=e)

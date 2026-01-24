@@ -78,4 +78,43 @@ describe('CompanyCard', () => {
 
         expect(handleClick).toHaveBeenCalledTimes(1)
     })
+
+    describe('Smart Badges', () => {
+        it('renders Solid badge for high equity ratio', () => {
+            const solidCompany = { ...mockCompany, latest_equity_ratio: 0.25 }
+            render(<CompanyCard company={solidCompany} onClick={() => { }} />)
+            expect(screen.getByText('Solid')).toBeInTheDocument()
+        })
+
+        it('renders Ny badge for recently established companies', () => {
+            const recentDate = new Date()
+            recentDate.setMonth(recentDate.getMonth() - 2)
+            const newCompany = { 
+                ...mockCompany, 
+                stiftelsesdato: recentDate.toISOString().split('T')[0] 
+            }
+            render(<CompanyCard company={newCompany} onClick={() => { }} />)
+            expect(screen.getByText('Ny')).toBeInTheDocument()
+        })
+
+        it('renders Etablert badge for old companies', () => {
+            const oldCompany = { 
+                ...mockCompany, 
+                stiftelsesdato: '1990-01-01' 
+            }
+            render(<CompanyCard company={oldCompany} onClick={() => { }} />)
+            expect(screen.getByText('Etablert')).toBeInTheDocument()
+        })
+
+        it('renders multiple badges simultaneously', () => {
+            const complexCompany = { 
+                ...mockCompany, 
+                latest_equity_ratio: 0.3,
+                stiftelsesdato: '1980-01-01' 
+            }
+            render(<CompanyCard company={complexCompany} onClick={() => { }} />)
+            expect(screen.getByText('Solid')).toBeInTheDocument()
+            expect(screen.getByText('Etablert')).toBeInTheDocument()
+        })
+    })
 })

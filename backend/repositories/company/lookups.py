@@ -9,11 +9,14 @@ from typing import Any
 from sqlalchemy import and_, func, select, text
 from sqlalchemy.engine import Row
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy.orm import defer
 
 import models
 from exceptions import CompanyNotFoundException, DatabaseException
-from repositories.company.base import DETAIL_VIEW_OPTIONS
+from repositories.company.base import (
+    DETAIL_VIEW_OPTIONS,
+    LATEST_FINANCIAL_COLUMNS,
+    CompanyWithFinancials,
+)
 from repositories.company_filter_builder import FilterParams
 
 logger = logging.getLogger(__name__)
@@ -73,7 +76,7 @@ class LookupsMixin:
             logger.error(f"Database error checking existing orgnrs: {e}")
             return set()
 
-    async def get_similar_companies(self, orgnr: str, limit: int = 5) -> list[models.Company]:
+    async def get_similar_companies(self, orgnr: str, limit: int = 5) -> list[CompanyWithFinancials]:
         """Find similar companies based on industry (naeringskode) and location.
 
         Priority order (uses short-circuit queries for efficiency):
@@ -197,21 +200,35 @@ class LookupsMixin:
         if not similar_orgnrs:
             return []
 
-        # Fetch full company objects
+        # Fetch full company objects with financials
         companies_query = (
-            select(models.Company)
-            .options(defer(models.Company.search_vector))
+            select(
+                models.Company,
+                *LATEST_FINANCIAL_COLUMNS,
+            )
+            .outerjoin(models.LatestFinancials, models.Company.orgnr == models.LatestFinancials.orgnr)
             .filter(models.Company.orgnr.in_(similar_orgnrs))
         )
 
         result = await self.db.execute(companies_query)
-        companies_dict = {c.orgnr: c for c in result.scalars().all()}
+        rows = result.all()
+        companies_dict = {
+            row[0].orgnr: CompanyWithFinancials(
+                company=row[0],
+                latest_revenue=row[1],
+                latest_profit=row[2],
+                latest_operating_profit=row[3],
+                latest_operating_margin=row[4],
+                latest_equity_ratio=row[5],
+            )
+            for row in rows
+        }
 
         return [companies_dict[o] for o in similar_orgnrs if o in companies_dict]
 
     async def get_by_industry_code(
         self, nace_code: str, limit: int = 20, offset: int = 0, include_inactive: bool = False
-    ) -> tuple[list[models.Company], int]:
+    ) -> tuple[list[CompanyWithFinancials], int]:
         """Fetch companies by NACE industry code with prefix matching.
 
         Args:
@@ -267,15 +284,29 @@ class LookupsMixin:
             # Extract orgnrs
             orgnrs = [row[0] for row in rows]
 
-            # Phase 2: Fetch full company data for these orgnrs
+            # Phase 2: Fetch full company data for these orgnrs with financials
             companies_query = (
-                select(models.Company)
-                .options(defer(models.Company.search_vector))
+                select(
+                    models.Company,
+                    *LATEST_FINANCIAL_COLUMNS,
+                )
+                .outerjoin(models.LatestFinancials, models.Company.orgnr == models.LatestFinancials.orgnr)
                 .filter(models.Company.orgnr.in_(orgnrs))
             )
 
             result = await self.db.execute(companies_query)
-            companies_dict = {c.orgnr: c for c in result.scalars().all()}
+            rows = result.all()
+            companies_dict = {
+                row[0].orgnr: CompanyWithFinancials(
+                    company=row[0],
+                    latest_revenue=row[1],
+                    latest_profit=row[2],
+                    latest_operating_profit=row[3],
+                    latest_operating_margin=row[4],
+                    latest_equity_ratio=row[5],
+                )
+                for row in rows
+            }
 
             # Preserve ordering from orgnr query
             companies = [companies_dict[orgnr] for orgnr in orgnrs if orgnr in companies_dict]

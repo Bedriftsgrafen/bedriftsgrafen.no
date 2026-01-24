@@ -13,6 +13,7 @@ from repositories.company.base import (
     LIST_VIEW_OPTIONS,
     SORT_COLUMN_MAP,
     CompanyWithFinancials,
+    LATEST_FINANCIAL_COLUMNS,
 )
 from repositories.company_filter_builder import CompanyFilterBuilder, FilterParams
 
@@ -75,10 +76,7 @@ class QueryMixin:
         query = (
             select(
                 models.Company,
-                models.LatestFinancials.salgsinntekter.label("latest_revenue"),
-                models.LatestFinancials.aarsresultat.label("latest_profit"),
-                models.LatestFinancials.driftsresultat.label("latest_operating_profit"),
-                models.LatestFinancials.operating_margin.label("latest_operating_margin"),
+                *LATEST_FINANCIAL_COLUMNS,
             )
             .outerjoin(models.LatestFinancials, models.Company.orgnr == models.LatestFinancials.orgnr)
             .options(*LIST_VIEW_OPTIONS)
@@ -94,6 +92,7 @@ class QueryMixin:
             "profit": models.LatestFinancials.aarsresultat,
             "operating_profit": models.LatestFinancials.driftsresultat,
             "operating_margin": models.LatestFinancials.operating_margin,
+            "equity_ratio": models.LatestFinancials.egenkapitalandel,
         }
         sort_column = extended_sort_map.get(sort_by, models.Company.navn)
 
@@ -113,6 +112,7 @@ class QueryMixin:
                 latest_profit=row[2],
                 latest_operating_profit=row[3],
                 latest_operating_margin=row[4],
+                latest_equity_ratio=row[5],
             )
 
     async def _get_all_optimized(
@@ -190,14 +190,11 @@ class QueryMixin:
         # Phase 3: Get financial data
         fin_query = select(
             models.LatestFinancials.orgnr,
-            models.LatestFinancials.salgsinntekter,
-            models.LatestFinancials.aarsresultat,
-            models.LatestFinancials.driftsresultat,
-            models.LatestFinancials.operating_margin,
+            *LATEST_FINANCIAL_COLUMNS,
         ).filter(models.LatestFinancials.orgnr.in_(orgnrs))
 
         fin_result = await self.db.execute(fin_query)
-        fin_data = {row[0]: (row[1], row[2], row[3], row[4]) for row in fin_result.all()}
+        fin_data = {row[0]: (row[1], row[2], row[3], row[4], row[5]) for row in fin_result.all()}
 
         return [
             CompanyWithFinancials(
@@ -206,6 +203,7 @@ class QueryMixin:
                 latest_profit=fin_data[c.orgnr][1] if c.orgnr in fin_data else None,
                 latest_operating_profit=fin_data[c.orgnr][2] if c.orgnr in fin_data else None,
                 latest_operating_margin=fin_data[c.orgnr][3] if c.orgnr in fin_data else None,
+                latest_equity_ratio=fin_data[c.orgnr][4] if c.orgnr in fin_data else None,
             )
             for c in companies
         ]
@@ -241,10 +239,7 @@ class QueryMixin:
         """
         query = select(
             models.Company,
-            models.LatestFinancials.salgsinntekter.label("latest_revenue"),
-            models.LatestFinancials.aarsresultat.label("latest_profit"),
-            models.LatestFinancials.driftsresultat.label("latest_operating_profit"),
-            models.LatestFinancials.operating_margin.label("latest_operating_margin"),
+            *LATEST_FINANCIAL_COLUMNS,
         ).options(*LIST_VIEW_OPTIONS)
 
         query = query.join(models.LatestFinancials, models.Company.orgnr == models.LatestFinancials.orgnr)
@@ -257,6 +252,7 @@ class QueryMixin:
             "profit": models.LatestFinancials.aarsresultat,
             "operating_profit": models.LatestFinancials.driftsresultat,
             "operating_margin": models.LatestFinancials.operating_margin,
+            "equity_ratio": models.LatestFinancials.egenkapitalandel,
         }
         sort_column = extended_sort_map.get(sort_by, models.Company.navn)
 
@@ -286,6 +282,7 @@ class QueryMixin:
                 latest_profit=row[2],
                 latest_operating_profit=row[3],
                 latest_operating_margin=row[4],
+                latest_equity_ratio=row[5],
             )
             for row in rows
         ]

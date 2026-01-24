@@ -1,5 +1,5 @@
-import { memo } from 'react'
-import { Users, TrendingUp, PiggyBank, MapPin } from 'lucide-react'
+import { memo, useMemo } from 'react'
+import { Users, TrendingUp, PiggyBank, MapPin, Gem, Calendar, History } from 'lucide-react'
 import { Company } from '../types'
 import { getOrganizationFormLabel } from '../utils/organizationForms'
 import { ComparisonButton } from './comparison'
@@ -26,6 +26,56 @@ export const CompanyCard = memo(function CompanyCard({ company, onClick }: Compa
     const kommune = company.forretningsadresse?.kommune || company.postadresse?.kommune
     const industry = company.naeringskoder?.[0]?.beskrivelse || company.naeringskode
 
+    // Smart Badges Logic
+    const badges = useMemo(() => {
+        const list = []
+
+        // 💎 Solid Badge: Equity ratio > 20%
+        if (company.latest_equity_ratio !== null && company.latest_equity_ratio !== undefined) {
+            if (company.latest_equity_ratio >= 0.2) {
+                list.push({
+                    id: 'solid',
+                    label: 'Solid',
+                    icon: Gem,
+                    className: 'bg-emerald-50 text-emerald-700 border-emerald-100',
+                    title: `Solid økonomi (Egenkapitalandel: ${(company.latest_equity_ratio * 100).toFixed(1)}%)`
+                })
+            }
+        }
+
+        // 🆕 New Badge: Established in the last 12 months
+        if (company.stiftelsesdato) {
+            const stiftelse = new Date(company.stiftelsesdato)
+            const oneYearAgo = new Date()
+            oneYearAgo.setFullYear(oneYearAgo.getFullYear() - 1)
+
+            if (stiftelse > oneYearAgo) {
+                list.push({
+                    id: 'new',
+                    label: 'Ny',
+                    icon: Calendar,
+                    className: 'bg-blue-50 text-blue-700 border-blue-100',
+                    title: `Nyetablert (Stiftet: ${new Intl.DateTimeFormat('nb-NO').format(stiftelse)})`
+                })
+            }
+
+            // 🏛️ Established Badge: > 20 years old
+            const twentyYearsAgo = new Date()
+            twentyYearsAgo.setFullYear(twentyYearsAgo.getFullYear() - 20)
+            if (stiftelse < twentyYearsAgo) {
+                list.push({
+                    id: 'veteran',
+                    label: 'Etablert',
+                    icon: History,
+                    className: 'bg-slate-50 text-slate-700 border-slate-100',
+                    title: `Veletablert selskap (Stiftet: ${stiftelse.getFullYear()})`
+                })
+            }
+        }
+
+        return list
+    }, [company.latest_equity_ratio, company.stiftelsesdato])
+
     return (
         <div
             onClick={onClick}
@@ -35,7 +85,7 @@ export const CompanyCard = memo(function CompanyCard({ company, onClick }: Compa
             onKeyDown={(e) => e.key === 'Enter' && onClick()}
         >
             {/* Header */}
-            <div className="flex items-start justify-between gap-2 mb-3">
+            <div className="flex items-start justify-between gap-2 mb-2">
                 <div className="min-w-0 flex-1">
                     <h3 className="font-semibold text-gray-900 truncate group-hover:text-blue-600 transition-colors">
                         {company.navn || 'Ukjent navn'}
@@ -60,6 +110,22 @@ export const CompanyCard = memo(function CompanyCard({ company, onClick }: Compa
                     </span>
                 </div>
             </div>
+
+            {/* Smart Badges Row */}
+            {badges.length > 0 && (
+                <div className="flex flex-wrap gap-1.5 mb-3">
+                    {badges.map((badge) => (
+                        <div
+                            key={badge.id}
+                            title={badge.title}
+                            className={`flex items-center gap-1 px-1.5 py-0.5 rounded border text-[10px] font-bold uppercase tracking-tight ${badge.className}`}
+                        >
+                            <badge.icon className="h-3 w-3" />
+                            {badge.label}
+                        </div>
+                    ))}
+                </div>
+            )}
 
             {/* Industry */}
             {industry && (

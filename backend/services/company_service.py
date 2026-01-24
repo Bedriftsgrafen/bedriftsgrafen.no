@@ -89,7 +89,7 @@ class CompanyService:
     async def get_company_with_accounting(self, orgnr: str) -> models.Company | None:
         return await self.company_repo.get_by_orgnr(orgnr)
 
-    async def get_similar_companies(self, orgnr: str, limit: int = 5) -> list[models.Company]:
+    async def get_similar_companies(self, orgnr: str, limit: int = 5) -> list[CompanyWithFinancials]:
         """Get similar companies based on industry and location."""
         return await self.company_repo.get_similar_companies(orgnr, limit)
 
@@ -190,8 +190,15 @@ class CompanyService:
                     "navn": getattr(c, "navn", None),
                     "organisasjonsform": getattr(c, "organisasjonsform", None),
                     "naeringskode": getattr(c, "naeringskode", None),
+                    "latest_revenue": getattr(c, "latest_revenue", None),
+                    "latest_profit": getattr(c, "latest_profit", None),
+                    "latest_operating_margin": getattr(c, "latest_operating_margin", None),
+                    "latest_equity_ratio": getattr(c, "latest_equity_ratio", None),
                 }
             )
+            # Handle date separately for type safety
+            stiftelsesdato = getattr(c, "stiftelsesdato", None)
+            serializable[-1]["stiftelsesdato"] = stiftelsesdato.isoformat() if stiftelsesdato else None
 
         # cache serializable result
         await search_cache.set(key, serializable)

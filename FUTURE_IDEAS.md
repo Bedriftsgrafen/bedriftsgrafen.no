@@ -16,6 +16,14 @@ This document consolidates feature ideas and strategic plans for the future deve
 - **Why**: Visualize the physical footprint of companies with many branches (e.g., Rema 1000, Equinor).
 - **Tech**: Geocode `underenheter` table and implement `SubunitMap` component using `react-leaflet`.
 
+### ~~Smart Badges for Search Results~~ ✅ (Jan 15, 2026)
+- **Goal**: Add visual badges to search results to highlight key company traits.
+- **Badges**:
+  - 💎 **Solid**: Equity ratio (egenkapitalandel) >= 20%.
+  - 🆕 **Ny**: Established in the last 12 months.
+  - 🏛️ **Etablert**: Older than 20 years.
+- **Status**: **IMPLEMENTED**. Dynamic badges added to `CompanyCard` component.
+
 ---
 
 ## Priority 2: Core Features (4-7 days each)
@@ -27,6 +35,12 @@ This document consolidates feature ideas and strategic plans for the future deve
   - Metrics: Revenue Growth, Profit Margin, Solvency (Egenkapitalandel), and Efficiency.
   - Declare a "Winner" in each category and an "Overall Champion".
 - **Why**: High virality potential and makes financial analysis accessible.
+
+### Lead Generator (B2B Tool) 🎯
+- **Concept**: A powerful query builder for sales and marketing professionals.
+- **Filters**: "Find me [Carpenters] in [Bergen] with Revenue > [5 MNOK] and Profit > [10%]."
+- **Action**: Export filtered results to CSV (potential premium feature).
+- **Why**: Moves the platform from research to an active business enablement tool.
 
 ### "Local Heroes" (Municipality Dashboards) 🏘️
 - **Goal**: Dedicated landing pages for every Norwegian municipality (e.g., `/kommune/0301`).

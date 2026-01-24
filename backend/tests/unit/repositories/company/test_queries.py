@@ -66,7 +66,8 @@ async def test_get_all_with_financial_filter(repo, mock_db_session):
 
     # Should call _get_all_with_financial_join
     mock_row = MagicMock()
-    mock_row.__getitem__.side_effect = lambda idx: [MagicMock(), 1000, 100, 100, 10][idx]
+    # Updated to 6 elements: [company, revenue, profit, op_profit, margin, equity_ratio]
+    mock_row.__getitem__.side_effect = lambda idx: [MagicMock(), 1000, 100, 100, 10, 0.5][idx]
 
     # Mock result needs to be iterable yielding rows
     mock_result = MagicMock()
@@ -77,14 +78,15 @@ async def test_get_all_with_financial_filter(repo, mock_db_session):
 
     assert len(result) == 1
     assert result[0].latest_revenue == 1000
+    assert result[0].latest_equity_ratio == 0.5
 
 
 @pytest.mark.asyncio
 async def test_stream_all(repo, mock_db_session):
     filters = FilterParams()
 
-    # Mock stream result
-    mock_row = (MagicMock(), 100, 10, 10, 10)
+    # Mock stream result (6 elements)
+    mock_row = (MagicMock(), 100, 10, 10, 10, 0.5)
 
     # Async iterator mock
     async def async_gen():
@@ -99,5 +101,6 @@ async def test_stream_all(repo, mock_db_session):
     async for item in repo.stream_all(filters):
         count += 1
         assert item.latest_revenue == 100
+        assert item.latest_equity_ratio == 0.5
 
     assert count == 1

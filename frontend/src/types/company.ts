@@ -64,6 +64,7 @@ export interface Company {
   latest_revenue?: number | null
   latest_profit?: number | null
   latest_operating_margin?: number | null  // Operating margin as percentage
+  latest_equity_ratio?: number | null  // Equity ratio as decimal (0.0 - 1.0)
   postadresse?: Address
   forretningsadresse?: Address
   // Geocoding (from Kartverket API)

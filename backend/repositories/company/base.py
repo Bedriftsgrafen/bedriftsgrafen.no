@@ -58,6 +58,15 @@ SORT_COLUMN_SQL_MAP = {
     "profit": "aarsresultat",
 }
 
+# Shared columns from LatestFinancials for consistency
+LATEST_FINANCIAL_COLUMNS = [
+    models.LatestFinancials.salgsinntekter.label("latest_revenue"),
+    models.LatestFinancials.aarsresultat.label("latest_profit"),
+    models.LatestFinancials.driftsresultat.label("latest_operating_profit"),
+    models.LatestFinancials.operating_margin.label("latest_operating_margin"),
+    models.LatestFinancials.egenkapitalandel.label("latest_equity_ratio"),
+]
+
 
 class CompanyWithFinancials:
     """Simple wrapper to hold company + financial data together."""
@@ -69,6 +78,7 @@ class CompanyWithFinancials:
         latest_profit: float | None = None,
         latest_operating_profit: float | None = None,
         latest_operating_margin: float | None = None,
+        latest_equity_ratio: float | None = None,
     ):
         # Copy company attributes needed for list view
         self.orgnr = company.orgnr
@@ -97,6 +107,7 @@ class CompanyWithFinancials:
         self.latest_revenue = latest_revenue
         self.latest_profit = latest_profit
         self.latest_operating_profit = latest_operating_profit
+        self.latest_equity_ratio = latest_equity_ratio
 
         # Use provided margin or calculate as percentage
         if latest_operating_margin is not None:
