@@ -48,15 +48,21 @@ async def test_get_similar_companies_integration_flow(repo, mock_db):
     mock_res_p4 = MagicMock()
     mock_res_p4.fetchall.return_value = [("444444444",)]
 
-    # 6. Mock Final Fetch (get full objects)
+    # 6. Mock Final Fetch (get full objects with financials)
     mock_final_res = MagicMock()
-    # Return matched objects
+    # Return matched objects as tuples (Company, revenue, profit, op_profit, margin, equity)
     c1 = models.Company(orgnr="111111111", navn="C1")
     c2 = models.Company(orgnr="222222222", navn="C2")
     c3 = models.Company(orgnr="333333333", navn="C3")
     c4 = models.Company(orgnr="444444444", navn="C4")
 
-    mock_final_res.scalars.return_value.all.return_value = [c1, c2, c3, c4]
+    # Mock joined rows: (Company, rev, profit, op_profit, margin, equity)
+    mock_final_res.all.return_value = [
+        (c1, 1000, 100, 120, 0.1, 0.4),
+        (c2, 2000, 200, 220, 0.1, 0.4),
+        (c3, 3000, 300, 320, 0.1, 0.4),
+        (c4, 4000, 400, 420, 0.1, 0.4),
+    ]
 
     # Setup side_effect for db.execute
     # Sequence of calls:
@@ -65,7 +71,7 @@ async def test_get_similar_companies_integration_flow(repo, mock_db):
     # 3. Priority 2 (fetchall)
     # 4. Priority 3 (fetchall)
     # 5. Priority 4 (fetchall)
-    # 6. Final select (scalars)
+    # 6. Final select (all)
 
     result_mock_1 = MagicMock()
     result_mock_1.fetchone.return_value = mock_source
@@ -85,8 +91,10 @@ async def test_get_similar_companies_integration_flow(repo, mock_db):
 
     # Assert
     assert len(results) == 4
+    # Note: results now contain CompanyWithFinancials wrappers which flat-copy company attributes
     assert results[0].orgnr == "111111111"
     assert results[3].orgnr == "444444444"
+    assert results[0].latest_revenue == 1000
 
     # Verification of calls count
     # We expect 6 calls to execute
