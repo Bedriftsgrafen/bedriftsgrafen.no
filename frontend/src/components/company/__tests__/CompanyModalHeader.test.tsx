@@ -34,12 +34,9 @@ describe('CompanyModalHeader', () => {
     const defaultProps = {
         company: mockCompany,
         isLoading: false,
-        isError: false,
         copiedOrgnr: false,
         onCopyOrgnr: vi.fn(),
-        onShare: vi.fn(),
-        onClose: vi.fn(),
-        onRetry: vi.fn()
+        onShare: vi.fn()
     }
 
     it('renders correctly with company data', () => {

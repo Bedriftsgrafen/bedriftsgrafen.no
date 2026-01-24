@@ -8,6 +8,7 @@ interface ModalProps {
     children: React.ReactNode
     width?: string
     maxWidth?: string
+    padding?: boolean
 }
 
 export function Modal({
@@ -16,7 +17,8 @@ export function Modal({
     title,
     children,
     width = 'w-full',
-    maxWidth = 'max-w-4xl'
+    maxWidth = 'max-w-4xl',
+    padding = true
 }: ModalProps) {
     const modalRef = useRef<HTMLDivElement>(null)
 
@@ -65,7 +67,7 @@ export function Modal({
                     </div>
                 )}
 
-                <div className="p-6">
+                <div className={padding ? 'p-6' : ''}>
                     {children}
                 </div>
             </div>

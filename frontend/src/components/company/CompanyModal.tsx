@@ -68,74 +68,80 @@ export function CompanyModal({
       onClose={onClose}
       width="w-full"
       maxWidth="max-w-6xl"
+      padding={false}
     >
-      <div className="flex flex-col h-full">
-        {/* Header */}
+      <div className="flex flex-col h-[90vh] md:h-auto max-h-[90vh] min-h-[400px]">
+        {/* Header - Pinned */}
         <CompanyModalHeader
           company={company}
           isLoading={companyLoading}
-          isError={companyError}
           copiedOrgnr={copiedOrgnr}
           onCopyOrgnr={onCopyOrgnr}
           onShare={onShare}
-          onClose={onClose}
-          onRetry={onRetryCompany}
         />
 
-        {/* Content */}
-        <div className="p-6">
+        {/* Scrollable Area Handler */}
+        <div className="flex-1 flex flex-col min-h-0">
           {companyLoading ? (
-            <div className="space-y-4">
+            <div className="flex-1 overflow-y-auto p-4 md:p-6 space-y-4">
               <div className="h-32 bg-gray-200 rounded animate-pulse" />
               <ChartSkeleton />
             </div>
           ) : companyError ? (
-            <ErrorMessage
-              message="Kunne ikke laste bedriftsdata"
-              onRetry={onRetryCompany}
-            />
+            <div className="flex-1 overflow-y-auto p-4 md:p-6">
+              <ErrorMessage
+                message="Kunne ikke laste bedriftsdata"
+                onRetry={onRetryCompany}
+              />
+            </div>
           ) : company ? (
             <>
-              <ModalTabs
-                activeTab={activeTab}
-                onTabChange={setActiveTab}
-                hasAccountingData={company.regnskap.length > 0 && company.naeringskode !== '00.000'}
-              />
-
-              {activeTab === 'oversikt' && (
-                <>
-                  <OverviewTab company={company} onOpenIndustry={onOpenIndustry} />
-                  <SimilarCompanies
-                    orgnr={company.orgnr}
-                  />
-                </>
-              )}
-
-              {activeTab === 'okonomi' && (
-                <FinancialsTab
-                  company={company}
-                  selectedYear={selectedYear}
-                  onSelectYear={onSelectYear}
-                  kpiData={kpiData}
-                  kpiLoading={kpiLoading}
-                  kpiError={kpiError}
-                  onRetryKpi={onRetryKpi}
-                  onImport={handleImport}
-                  isImporting={isImporting}
+              {/* Tabs - Pinned */}
+              <div className="px-4 md:px-6 pt-4 md:pt-6 bg-white z-10">
+                <ModalTabs
+                  activeTab={activeTab}
+                  onTabChange={setActiveTab}
+                  hasAccountingData={company.regnskap.length > 0 && company.naeringskode !== '00.000'}
                 />
-              )}
+              </div>
 
-              {activeTab === 'sammenligning' && (
-                <IndustryBenchmark company={company} />
-              )}
+              {/* Tab Content - Scrollable */}
+              <div className="flex-1 overflow-y-auto overscroll-contain p-4 md:p-6 pt-0 md:pt-0">
+                {activeTab === 'oversikt' && (
+                  <>
+                    <OverviewTab company={company} onOpenIndustry={onOpenIndustry} />
+                    <SimilarCompanies
+                      orgnr={company.orgnr}
+                    />
+                  </>
+                )}
 
-              {activeTab === 'avdelinger' && (
-                <SubUnitsTab orgnr={company.orgnr} />
-              )}
+                {activeTab === 'okonomi' && (
+                  <FinancialsTab
+                    company={company}
+                    selectedYear={selectedYear}
+                    onSelectYear={onSelectYear}
+                    kpiData={kpiData}
+                    kpiLoading={kpiLoading}
+                    kpiError={kpiError}
+                    onRetryKpi={onRetryKpi}
+                    onImport={handleImport}
+                    isImporting={isImporting}
+                  />
+                )}
 
-              {activeTab === 'roller' && (
-                <RolesTab orgnr={company.orgnr} onCompanyClick={onSelectCompany} />
-              )}
+                {activeTab === 'sammenligning' && (
+                  <IndustryBenchmark company={company} />
+                )}
+
+                {activeTab === 'avdelinger' && (
+                  <SubUnitsTab orgnr={company.orgnr} />
+                )}
+
+                {activeTab === 'roller' && (
+                  <RolesTab orgnr={company.orgnr} onCompanyClick={onSelectCompany} />
+                )}
+              </div>
             </>
           ) : null}
         </div>
