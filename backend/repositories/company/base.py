@@ -22,7 +22,6 @@ SEARCH_SEMAPHORE_TIMEOUT = 5.0
 # Reusable query optimization options
 LIST_VIEW_OPTIONS = [
     defer(models.Company.search_vector),
-    defer(models.Company.raw_data),
     noload(models.Company.regnskap),
 ]
 
