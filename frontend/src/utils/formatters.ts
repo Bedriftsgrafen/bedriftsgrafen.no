@@ -203,6 +203,20 @@ export function formatDate(dateString: string | null | undefined): string {
   }
 }
 
+/**
+ * Normalizes text by collapsing multiple spaces and single newlines into a single space,
+ * while preserving double newlines as intentional paragraph breaks.
+ * Ideal for cleaning up legacy fixed-width data from official registers.
+ */
+export function normalizeText(text: string | null | undefined): string {
+  if (!text) return ''
+
+  return text
+    .split(/\n\s*\n/) // Split into potential paragraphs
+    .map(paragraph => paragraph.replace(/\s+/g, ' ').trim()) // Collapse all whitespace within paragraph to spaces
+    .join('\n\n') // Restore paragraph breaks
+}
+
 // Get color for KPI value (good/warning/bad)
 export function getKpiColor(key: string, value: number | null): string {
   if (value === null) return 'text-gray-400'

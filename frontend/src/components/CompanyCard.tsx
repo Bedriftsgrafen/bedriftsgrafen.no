@@ -1,6 +1,7 @@
 import { memo, useMemo } from 'react'
 import { Users, TrendingUp, PiggyBank, MapPin, Gem, Calendar, History } from 'lucide-react'
 import { Company } from '../types'
+import { normalizeText } from '../utils/formatters'
 import { getOrganizationFormLabel } from '../utils/organizationForms'
 import { ComparisonButton } from './comparison'
 import { FavoriteButton } from './FavoriteButton'
@@ -145,7 +146,7 @@ export const CompanyCard = memo(function CompanyCard({ company, onClick }: Compa
             {/* Purpose snippet if available - Important for search discovery */}
             {company.vedtektsfestet_formaal && (
                 <p className="text-[11px] text-slate-500 line-clamp-2 mb-3 leading-relaxed italic border-l-2 border-slate-100 pl-2">
-                    {company.vedtektsfestet_formaal}
+                    {normalizeText(company.vedtektsfestet_formaal)}
                 </p>
             )}
 

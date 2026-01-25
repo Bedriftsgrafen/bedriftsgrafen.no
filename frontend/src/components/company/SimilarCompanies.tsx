@@ -69,13 +69,13 @@ export function SimilarCompanies({ orgnr }: SimilarCompaniesProps) {
               <p className="font-medium text-gray-900 text-sm truncate group-hover:text-blue-700">
                 {company.navn}
               </p>
-              <p className="text-[10px] text-gray-500 mt-1 truncate">
+              <div className="text-[10px] text-gray-500 mt-1 truncate" title={formatNace(company.naeringskode)}>
                 {hasRevenue ? (
                   formatLargeCurrency(company.latest_revenue)
                 ) : (
                   formatNace(company.naeringskode) || 'Ukjent bransje'
                 )}
-              </p>
+              </div>
 
               {kommune && (
                 <p className="text-xs text-gray-400 mt-0.5 flex items-center gap-1">

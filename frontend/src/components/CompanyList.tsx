@@ -11,7 +11,7 @@ import { getOrganizationFormLabel } from '../utils/organizationForms'
 import { useUiStore, COLUMN_CONFIG, type CompanyColumn } from '../store/uiStore'
 import { useFilterStore } from '../store/filterStore'
 import { formatDateNorwegian } from '../utils/dates'
-import { formatCurrency, formatNumber } from '../utils/formatters'
+import { formatCurrency, formatNumber, normalizeText } from '../utils/formatters'
 import { formatNace } from '../utils/nace'
 
 /** Compact badges for the list view */
@@ -70,9 +70,15 @@ const getCellValue = (company: Company, column: CompanyColumn): React.ReactNode 
         case 'organisasjonsform':
             return <span title={getOrganizationFormLabel(company.organisasjonsform)}>{company.organisasjonsform}</span>
         case 'naeringskode':
-            return company.naeringskoder?.[0]
-                ? `${company.naeringskoder[0].kode} - ${company.naeringskoder[0].beskrivelse}`
-                : formatNace(company.naeringskode) || '-'
+            return (
+                <div className="max-w-[200px] truncate" title={company.naeringskoder?.[0]
+                    ? `${company.naeringskoder[0].kode} - ${company.naeringskoder[0].beskrivelse}`
+                    : formatNace(company.naeringskode) || '-'}>
+                    {company.naeringskoder?.[0]
+                        ? `${company.naeringskoder[0].kode} - ${company.naeringskoder[0].beskrivelse}`
+                        : formatNace(company.naeringskode) || '-'}
+                </div>
+            )
         case 'antall_ansatte': return company.antall_ansatte ?? '-'
         case 'stiftelsesdato': return formatDateNorwegian(company.stiftelsesdato || null)
         case 'kommune': return company.forretningsadresse?.kommune || company.postadresse?.kommune || '-'
@@ -81,8 +87,8 @@ const getCellValue = (company: Company, column: CompanyColumn): React.ReactNode 
         case 'operating_margin': return renderMargin(company.latest_operating_margin)
         case 'vedtektsfestet_formaal':
             return (
-                <div className="max-w-md truncate" title={company.vedtektsfestet_formaal || ''}>
-                    {company.vedtektsfestet_formaal || <span className="text-gray-400">—</span>}
+                <div className="max-w-md truncate" title={normalizeText(company.vedtektsfestet_formaal) || ''}>
+                    {normalizeText(company.vedtektsfestet_formaal) || <span className="text-gray-400">—</span>}
                 </div>
             )
         default: {

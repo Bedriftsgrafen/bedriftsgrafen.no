@@ -2,7 +2,7 @@ import { useState, useCallback } from 'react';
 import { X, ChevronLeft, ChevronRight, Building2, ExternalLink } from 'lucide-react';
 import { useNavigate } from '@tanstack/react-router';
 import { getOneYearAgo } from '../../utils/dates';
-import { formatNumber, formatCurrency, formatDate, cleanOrgnr } from '../../utils/formatters';
+import { formatNumber, formatCurrency, formatDate, cleanOrgnr, normalizeText } from '../../utils/formatters';
 import { useCompaniesQuery, UseCompaniesQueryParams } from '../../hooks/queries/useCompaniesQuery';
 import { useCompanyCountQuery, UseCompanyCountQueryParams } from '../../hooks/queries/useCompanyCountQuery';
 import { SortableHeader } from '../common/SortableHeader';
@@ -30,8 +30,9 @@ interface CompanyListModalProps {
 
 const truncateText = (text: string | null | undefined, maxLen: number = 50): string => {
     if (!text) return '—';
-    if (text.length <= maxLen) return text;
-    return text.slice(0, maxLen).trim() + '…';
+    const clean = normalizeText(text);
+    if (clean.length <= maxLen) return clean;
+    return clean.slice(0, maxLen).trim() + '…';
 };
 
 // ============================================================================

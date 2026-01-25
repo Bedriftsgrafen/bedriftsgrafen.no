@@ -2,7 +2,7 @@ import { Building2, Building, MapPin, Users, Calendar, Briefcase, ChevronRight, 
 import { useMemo } from 'react'
 import type { CompanyWithAccounting, Naeringskode } from '../../types'
 import { Link } from '@tanstack/react-router'
-import { formatDate, getBrregEnhetsregisteretUrl } from '../../utils/formatters'
+import { formatDate, getBrregEnhetsregisteretUrl, normalizeText } from '../../utils/formatters'
 import { getOrganizationFormLabel } from '../../utils/organizationForms'
 import { formatNace, getNaceCode } from '../../utils/nace'
 import { LocationMap } from '../common/LocationMap'
@@ -102,7 +102,7 @@ export function OverviewTab({ company, onOpenIndustry }: OverviewTabProps) {
 
               <div className="flex items-start gap-3">
                 <Briefcase className="h-5 w-5 text-gray-400 mt-0.5" />
-                <div className="flex-1">
+                <div className="flex-1 min-w-0">
                   <div className="text-sm font-medium text-gray-900">Næringskode(r)</div>
                   <div className="text-sm">
                     {company.naeringskoder && company.naeringskoder.length > 0 ? (
@@ -111,23 +111,23 @@ export function OverviewTab({ company, onOpenIndustry }: OverviewTabProps) {
                           <button
                             key={i}
                             onClick={() => onOpenIndustry?.(nk.kode, nk.beskrivelse)}
-                            className="w-full text-left group flex items-center justify-between py-1.5 px-2 -mx-2 rounded-lg border border-transparent hover:border-blue-200 hover:bg-blue-50 transition-all"
+                            className="w-full text-left group flex items-center justify-between py-1.5 px-2 -mx-2 rounded-lg border border-transparent hover:border-blue-200 hover:bg-blue-50 transition-all min-w-0"
                             title={`Se andre bedrifter med næringskode ${nk.kode}`}
                           >
-                            <span className="text-blue-600 group-hover:text-blue-700 group-hover:underline">
+                            <span className="text-blue-600 group-hover:text-blue-700 group-hover:underline truncate flex-1">
                               <span className="font-medium">{nk.kode}</span> {nk.beskrivelse}
                             </span>
-                            <ChevronRight className="h-4 w-4 text-blue-400 group-hover:text-blue-600 group-hover:translate-x-0.5 transition-all" />
+                            <ChevronRight className="h-4 w-4 text-blue-400 group-hover:text-blue-600 group-hover:translate-x-0.5 transition-all shrink-0" />
                           </button>
                         ))}
                       </div>
                     ) : company.naeringskode ? (
                     <button
                         onClick={() => onOpenIndustry?.(getNaceCode(company.naeringskode)!, getNaceCode(company.naeringskode)!)}
-                        className="flex items-center gap-2 group"
+                        className="flex items-center gap-2 group min-w-0"
                     >
-                        <Building className="h-4 w-4 text-blue-500" />
-                        <span className="text-gray-600 group-hover:text-blue-600">{formatNace(company.naeringskode)}</span>
+                        <Building className="h-4 w-4 text-blue-500 shrink-0" />
+                        <span className="text-gray-600 group-hover:text-blue-600 truncate">{formatNace(company.naeringskode)}</span>
                     </button>
                     ) : (
                       <span className="text-gray-600">Ikke registrert</span>
@@ -139,10 +139,10 @@ export function OverviewTab({ company, onOpenIndustry }: OverviewTabProps) {
               {company.vedtektsfestet_formaal && (
                 <div className="flex items-start gap-3">
                   <Briefcase className="h-5 w-5 text-gray-400 mt-0.5" />
-                  <div>
+                  <div className="flex-1">
                     <div className="text-sm font-medium text-gray-900">Vedtektsfestet formål</div>
-                    <div className="text-sm text-gray-600 whitespace-pre-wrap">
-                      {company.vedtektsfestet_formaal}
+                    <div className="text-sm text-gray-600 leading-relaxed whitespace-pre-line">
+                      {normalizeText(company.vedtektsfestet_formaal)}
                     </div>
                   </div>
                 </div>

@@ -6,7 +6,8 @@ import {
     formatDistanceToNow,
     getKpiDescription,
     formatDate,
-    getKpiColor
+    getKpiColor,
+    normalizeText
 } from '../formatters'
 
 describe('formatters', () => {
@@ -245,6 +246,36 @@ describe('formatters', () => {
 
         it('returns default color for unknown KPIs', () => {
             expect(getKpiColor('unknown_kpi', 0.5)).toBe('text-gray-700')
+        })
+    })
+
+    describe('normalizeText', () => {
+        it('collapses multiple spaces into one', () => {
+            expect(normalizeText('Hello    world')).toBe('Hello world')
+        })
+
+        it('collapses single newlines into spaces', () => {
+            expect(normalizeText('Line 1\nLine 2')).toBe('Line 1 Line 2')
+        })
+
+        it('preserves double newlines as paragraph breaks', () => {
+            expect(normalizeText('Para 1\n\nPara 2')).toBe('Para 1\n\nPara 2')
+        })
+
+        it('handles a mix of fixed-width artifacts and paragraphs', () => {
+            const input = 'This is some text\nwith weird breaks\n\nAnd a second\nparagraph.'
+            const expected = 'This is some text with weird breaks\n\nAnd a second paragraph.'
+            expect(normalizeText(input)).toBe(expected)
+        })
+
+        it('trims leading and trailing whitespace', () => {
+            expect(normalizeText('   Hello world   ')).toBe('Hello world')
+        })
+
+        it('handles null/undefined/empty', () => {
+            expect(normalizeText(null)).toBe('')
+            expect(normalizeText(undefined)).toBe('')
+            expect(normalizeText('')).toBe('')
         })
     })
 })

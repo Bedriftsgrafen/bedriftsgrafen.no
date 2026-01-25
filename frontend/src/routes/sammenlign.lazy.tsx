@@ -86,9 +86,9 @@ function ComparisonCard({
 
                     {/* Basic info */}
                     <div className="space-y-4">
-                        <div className="flex items-center gap-2 text-sm">
+                        <div className="flex items-center gap-2 text-sm min-w-0">
                             <Building2 className="h-4 w-4 text-slate-300 shrink-0" />
-                            <span className="truncate text-slate-600 font-medium" title={formatNace(item.company.naeringskode)}>
+                            <span className="truncate text-slate-600 font-medium flex-1" title={formatNace(item.company.naeringskode)}>
                                 {formatNace(item.company.naeringskode) || 'Ukjent bransje'}
                             </span>
                         </div>
