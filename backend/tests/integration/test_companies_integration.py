@@ -26,7 +26,7 @@ def test_get_company_success(MockServiceClass):
     # Arrange
     mock_service = MockServiceClass.return_value
     mock_service._enrich_nace_codes = AsyncMock()
-    
+
     mock_company = MagicMock(spec=Company)
     mock_company.orgnr = "123456789"
     mock_company.navn = "Test AS"
