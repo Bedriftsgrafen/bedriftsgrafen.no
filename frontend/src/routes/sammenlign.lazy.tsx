@@ -1,12 +1,13 @@
 import { createLazyFileRoute, Link } from '@tanstack/react-router'
 import { useEffect, useState, useRef, startTransition, useMemo, useCallback } from 'react'
-import { Building2, Users, TrendingUp, TrendingDown, Wallet, X, ArrowLeft, Share2 } from 'lucide-react'
+import { Building2, Users, TrendingUp, TrendingDown, Wallet, X, ArrowLeft, Share2, Crown, Swords, LayoutGrid } from 'lucide-react'
 import { SEOHead } from '../components/layout'
 import { apiClient } from '../utils/apiClient'
 import { formatLargeNumber } from '../utils/formatters'
 import { formatNace } from '../utils/nace'
 import type { CompanyWithAccounting } from '../types'
 import { useComparisonStore } from '../store/comparisonStore'
+import { calculateComparisonMetrics, type MetricMax } from '../utils/comparison'
 
 export const Route = createLazyFileRoute('/sammenlign')({
     component: ComparisonPage,
@@ -20,18 +21,35 @@ interface ComparisonData {
     error: string | null
 }
 
-function ComparisonCard({ item, onRemove }: { item: ComparisonData; onRemove?: (orgnr: string) => void }) {
+function ComparisonCard({ 
+    item, 
+    onRemove, 
+    isWinner, 
+    maxValues,
+    battleMode
+}: { 
+    item: ComparisonData; 
+    onRemove?: (orgnr: string) => void;
+    isWinner: { revenue: boolean; profit: boolean; equity: boolean; employees: boolean };
+    maxValues: MetricMax;
+    battleMode: boolean;
+}) {
     const accounting = useMemo(() => {
         if (!item.company?.regnskap || item.company.regnskap.length === 0) return null
         return [...item.company.regnskap].sort((a, b) => b.aar - a.aar)[0]
     }, [item.company])
 
+    const getRelativeWidth = (value: number | null | undefined, max: number) => {
+        if (!value || max <= 0) return '0%'
+        return `${Math.min(100, (Math.abs(value) / max) * 100)}%`
+    }
+
     return (
-        <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-5 space-y-4 relative">
+        <div className={`bg-white rounded-2xl border ${battleMode && Object.values(isWinner).some(Boolean) ? 'border-blue-200 shadow-md' : 'border-slate-200 shadow-sm'} p-6 space-y-5 relative transition-all duration-300`}>
             {onRemove && (
                 <button
                     onClick={() => onRemove(item.orgnr)}
-                    className="absolute top-3 right-3 p-1.5 hover:bg-gray-100 rounded-lg transition-colors"
+                    className="absolute top-4 right-4 p-1.5 hover:bg-gray-100 rounded-lg transition-colors z-10"
                     title="Fjern fra sammenligning"
                     aria-label="Fjern fra sammenligning"
                 >
@@ -43,10 +61,13 @@ function ComparisonCard({ item, onRemove }: { item: ComparisonData; onRemove?: (
                 <div className="animate-pulse space-y-3">
                     <div className="h-6 bg-gray-200 rounded w-3/4" />
                     <div className="h-4 bg-gray-200 rounded w-1/2" />
-                    <div className="h-24 bg-gray-200 rounded" />
+                    <div className="h-32 bg-gray-200 rounded" />
                 </div>
             ) : item.error ? (
-                <div className="text-red-500 text-sm">{item.error}</div>
+                <div className="py-12 text-center">
+                    <X className="h-10 w-10 text-red-200 mx-auto mb-2" />
+                    <div className="text-red-500 text-sm font-medium">{item.error}</div>
+                </div>
             ) : item.company ? (
                 <>
                     {/* Company header */}
@@ -54,82 +75,139 @@ function ComparisonCard({ item, onRemove }: { item: ComparisonData; onRemove?: (
                         <Link
                             to="/bedrift/$orgnr"
                             params={{ orgnr: item.orgnr }}
-                            className="font-semibold text-gray-900 hover:text-blue-600 line-clamp-2 transition-colors"
+                            className="text-lg font-bold text-gray-900 hover:text-blue-600 line-clamp-2 transition-colors leading-tight"
                         >
                             {item.company.navn}
                         </Link>
-                        <p className="text-sm text-gray-500">
+                        <p className="text-[10px] font-black text-gray-400 uppercase tracking-[0.15em] mt-1">
                             {item.company.organisasjonsform} • {item.orgnr}
                         </p>
                     </div>
 
                     {/* Basic info */}
-                    <div className="space-y-2">
+                    <div className="space-y-4">
                         <div className="flex items-center gap-2 text-sm">
-                            <Building2 className="h-4 w-4 text-gray-400" />
-                            <span className="truncate" title={formatNace(item.company.naeringskode)}>
+                            <Building2 className="h-4 w-4 text-slate-300 shrink-0" />
+                            <span className="truncate text-slate-600 font-medium" title={formatNace(item.company.naeringskode)}>
                                 {formatNace(item.company.naeringskode) || 'Ukjent bransje'}
                             </span>
                         </div>
-                        <div className="flex items-center gap-2 text-sm">
-                            <Users className="h-4 w-4 text-gray-400" />
-                            <span className="text-gray-600">
-                                {item.company.antall_ansatte ?? '-'} ansatte
-                            </span>
+                        <div className="space-y-1.5">
+                            <div className="flex items-center justify-between text-sm">
+                                <div className="flex items-center gap-2 text-slate-500">
+                                    <Users className="h-4 w-4 text-slate-300 shrink-0" />
+                                    <span>Ansatte</span>
+                                </div>
+                                <div className="flex items-center gap-1.5">
+                                    <span className={`font-bold ${battleMode && isWinner.employees ? 'text-blue-600' : 'text-slate-900'}`}>
+                                        {item.company.antall_ansatte ?? '-'}
+                                    </span>
+                                    {battleMode && isWinner.employees && <Crown className="h-3.5 w-3.5 text-amber-500 fill-amber-500" />}
+                                </div>
+                            </div>
+                            {battleMode && (
+                                <div className="w-full bg-slate-100 rounded-full h-1 overflow-hidden">
+                                    <div 
+                                        className={`h-full rounded-full transition-all duration-1000 ${isWinner.employees ? 'bg-blue-500' : 'bg-slate-300'}`}
+                                        style={{ width: getRelativeWidth(item.company.antall_ansatte, maxValues.employees) }}
+                                    />
+                                </div>
+                            )}
                         </div>
                     </div>
 
                     {/* Financial data */}
                     {accounting ? (
-                        <div className="space-y-3 pt-3 border-t border-gray-100">
-                            <p className="text-xs text-gray-400">
-                                Regnskap {accounting.aar}
+                        <div className="space-y-5 pt-5 border-t border-slate-100">
+                            <p className="text-[9px] font-black text-slate-400 uppercase tracking-[0.2em]">
+                                REGNSKAP {accounting.aar}
                             </p>
 
                             {/* Revenue */}
-                            <div className="flex items-center justify-between">
-                                <div className="flex items-center gap-2 text-sm text-gray-600">
-                                    <TrendingUp className="h-4 w-4 text-blue-500" />
-                                    Omsetning
+                            <div className="space-y-1.5">
+                                <div className="flex items-center justify-between text-sm">
+                                    <div className="flex items-center gap-2 text-slate-500">
+                                        <TrendingUp className="h-4 w-4 text-blue-400 shrink-0" />
+                                        <span>Omsetning</span>
+                                    </div>
+                                    <div className="flex items-center gap-1.5">
+                                        <span className={`font-bold ${battleMode && isWinner.revenue ? 'text-blue-600' : 'text-slate-900'}`}>
+                                            {formatLargeNumber(accounting.salgsinntekter)}
+                                        </span>
+                                        {battleMode && isWinner.revenue && <Crown className="h-3.5 w-3.5 text-amber-500 fill-amber-500" />}
+                                    </div>
                                 </div>
-                                <span className="font-semibold text-gray-900">
-                                    {formatLargeNumber(accounting.salgsinntekter)}
-                                </span>
+                                {battleMode && (
+                                    <div className="w-full bg-slate-100 rounded-full h-1 overflow-hidden">
+                                        <div 
+                                            className={`h-full rounded-full transition-all duration-1000 ${isWinner.revenue ? 'bg-blue-500' : 'bg-slate-300'}`}
+                                            style={{ width: getRelativeWidth(accounting.salgsinntekter, maxValues.revenue) }}
+                                        />
+                                    </div>
+                                )}
                             </div>
 
                             {/* Result */}
-                            <div className="flex items-center justify-between">
-                                <div className="flex items-center gap-2 text-sm text-gray-600">
-                                    {(accounting.aarsresultat ?? 0) >= 0 ? (
-                                        <TrendingUp className="h-4 w-4 text-green-500" />
-                                    ) : (
-                                        <TrendingDown className="h-4 w-4 text-red-500" />
-                                    )}
-                                    Resultat
+                            <div className="space-y-1.5">
+                                <div className="flex items-center justify-between text-sm">
+                                    <div className="flex items-center gap-2 text-slate-500">
+                                        {(accounting.aarsresultat ?? 0) >= 0 ? (
+                                            <TrendingUp className="h-4 w-4 text-emerald-400 shrink-0" />
+                                        ) : (
+                                            <TrendingDown className="h-4 w-4 text-rose-400 shrink-0" />
+                                        )}
+                                        <span>Resultat</span>
+                                    </div>
+                                    <div className="flex items-center gap-1.5">
+                                        <span className={`font-bold ${(accounting.aarsresultat ?? 0) >= 0
+                                            ? (battleMode && isWinner.profit ? 'text-emerald-600' : 'text-slate-900')
+                                            : 'text-rose-600'
+                                            }`}>
+                                            {formatLargeNumber(accounting.aarsresultat)}
+                                        </span>
+                                        {battleMode && isWinner.profit && <Crown className="h-3.5 w-3.5 text-amber-500 fill-amber-500" />}
+                                    </div>
                                 </div>
-                                <span className={`font-semibold ${(accounting.aarsresultat ?? 0) >= 0
-                                    ? 'text-green-600'
-                                    : 'text-red-600'
-                                    }`}>
-                                    {formatLargeNumber(accounting.aarsresultat)}
-                                </span>
+                                {battleMode && (
+                                    <div className="w-full bg-slate-100 rounded-full h-1 overflow-hidden">
+                                        <div 
+                                            className={`h-full rounded-full transition-all duration-1000 ${isWinner.profit ? 'bg-emerald-500' : 'bg-slate-300'}`}
+                                            style={{ width: getRelativeWidth(accounting.aarsresultat, maxValues.profit) }}
+                                        />
+                                    </div>
+                                )}
                             </div>
 
                             {/* Equity */}
-                            <div className="flex items-center justify-between">
-                                <div className="flex items-center gap-2 text-sm text-gray-600">
-                                    <Wallet className="h-4 w-4 text-purple-500" />
-                                    Egenkapital
+                            <div className="space-y-1.5">
+                                <div className="flex items-center justify-between text-sm">
+                                    <div className="flex items-center gap-2 text-slate-500">
+                                        <Wallet className="h-4 w-4 text-indigo-400 shrink-0" />
+                                        <span>Egenkapital</span>
+                                    </div>
+                                    <div className="flex items-center gap-1.5">
+                                        <span className={`font-bold ${battleMode && isWinner.equity ? 'text-indigo-600' : 'text-slate-900'}`}>
+                                            {formatLargeNumber(accounting.egenkapital)}
+                                        </span>
+                                        {battleMode && isWinner.equity && <Crown className="h-3.5 w-3.5 text-amber-500 fill-amber-500" />}
+                                    </div>
                                 </div>
-                                <span className="font-semibold text-gray-900">
-                                    {formatLargeNumber(accounting.egenkapital)}
-                                </span>
+                                {battleMode && (
+                                    <div className="w-full bg-slate-100 rounded-full h-1 overflow-hidden">
+                                        <div 
+                                            className={`h-full rounded-full transition-all duration-1000 ${isWinner.equity ? 'bg-indigo-500' : 'bg-slate-300'}`}
+                                            style={{ width: getRelativeWidth(accounting.egenkapital, maxValues.equity) }}
+                                        />
+                                    </div>
+                                )}
                             </div>
                         </div>
                     ) : (
-                        <p className="text-sm text-gray-400 pt-3 border-t border-gray-100">
-                            Ingen regnskapsdata
-                        </p>
+                        <div className="py-8 text-center bg-slate-50 rounded-xl border border-dashed border-slate-200">
+                            <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">
+                                Ingen regnskapsdata
+                            </p>
+                        </div>
                     )}
                 </>
             ) : null}
@@ -146,6 +224,7 @@ function ComparisonPage() {
     const clearStore = useComparisonStore((s) => s.clear)
 
     const [data, setData] = useState<ComparisonData[]>([])
+    const [battleMode, setBattleMode] = useState(false)
     const fetchIdRef = useRef(0)
 
     // Determine which org numbers to use (URL params take priority, then store)
@@ -155,6 +234,11 @@ function ComparisonPage() {
         }
         return storeCompanies.map(c => c.orgnr)
     }, [orgnrParam, storeCompanies])
+
+    // Calculate winners and max values
+    const { winners, maxValues } = useMemo(() => {
+        return calculateComparisonMetrics(data)
+    }, [data])
 
     // Fetch company data
     useEffect(() => {
@@ -249,83 +333,128 @@ function ComparisonPage() {
                 description="Sammenlign nøkkeltall og økonomi mellom norske bedrifter side ved side."
             />
 
-            <div className="max-w-6xl mx-auto">
+            <div className="max-w-7xl mx-auto px-4 pb-20">
                 {/* Header */}
-                <div className="flex items-center justify-between mb-6">
-                    <div className="flex items-center gap-4">
+                <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 mb-12">
+                    <div className="flex items-center gap-6">
                         <Link
                             to="/"
-                            className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
+                            className="p-3 bg-white border border-slate-200 hover:bg-slate-50 rounded-2xl transition-all shadow-sm group"
                             title="Tilbake"
                             aria-label="Tilbake til forsiden"
                         >
-                            <ArrowLeft className="h-5 w-5 text-gray-600" />
+                            <ArrowLeft className="h-5 w-5 text-slate-600 group-hover:-translate-x-1 transition-transform" />
                         </Link>
                         <div>
-                            <h1 className="text-2xl font-bold text-gray-900">
-                                Sammenlign bedrifter
+                            <h1 className="text-3xl font-black text-slate-900 tracking-tight">
+                                Sammenligning
                             </h1>
-                            <p className="text-sm text-gray-500">
-                                {orgNumbers.length > 0
-                                    ? `${orgNumbers.length} bedrift${orgNumbers.length > 1 ? 'er' : ''} valgt`
-                                    : 'Ingen bedrifter valgt'}
+                            <p className="text-sm font-medium text-slate-400 mt-1">
+                                {orgNumbers.length} bedrift{orgNumbers.length > 1 ? 'er' : ''} i utvalget
                             </p>
                         </div>
                     </div>
 
-                    {orgNumbers.length > 0 && (
-                        <button
-                            onClick={handleShare}
-                            className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors"
-                        >
-                            <Share2 className="h-4 w-4" />
-                            Del
-                        </button>
-                    )}
+                    <div className="flex items-center gap-3">
+                        {/* Battle Mode Toggle */}
+                        {orgNumbers.length > 1 && (
+                            <button
+                                onClick={() => setBattleMode(!battleMode)}
+                                className={`flex items-center gap-2 px-6 py-3 rounded-2xl font-bold text-sm transition-all shadow-sm border ${
+                                    battleMode 
+                                    ? 'bg-blue-600 text-white border-blue-500 shadow-blue-200' 
+                                    : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-50'
+                                }`}
+                            >
+                                {battleMode ? <LayoutGrid className="h-4 w-4" /> : <Swords className="h-4 w-4" />}
+                                {battleMode ? 'Standard visning' : 'Battle Mode'}
+                            </button>
+                        )}
+
+                        {orgNumbers.length > 0 && (
+                            <button
+                                onClick={handleShare}
+                                className="flex items-center gap-2 px-6 py-3 text-sm font-bold text-slate-700 bg-white border border-slate-200 rounded-2xl hover:bg-slate-50 transition-all shadow-sm"
+                            >
+                                <Share2 className="h-4 w-4" />
+                                Del utvalg
+                            </button>
+                        )}
+                    </div>
                 </div>
 
                 {/* Empty state */}
                 {orgNumbers.length === 0 && (
-                    <div className="bg-white rounded-xl border border-gray-200 p-12 text-center">
-                        <Building2 className="h-12 w-12 text-gray-300 mx-auto mb-4" />
-                        <h2 className="text-lg font-medium text-gray-900 mb-2">
+                    <div className="bg-white rounded-3xl border border-slate-200 p-20 text-center shadow-sm">
+                        <div className="h-20 w-20 bg-slate-50 text-slate-400 rounded-3xl flex items-center justify-center mx-auto mb-6">
+                            <Building2 className="h-10 w-10" />
+                        </div>
+                        <h2 className="text-2xl font-black text-slate-900 mb-3">
                             Ingen bedrifter valgt
                         </h2>
-                        <p className="text-gray-500 mb-6 max-w-md mx-auto">
-                            Søk etter bedrifter og trykk på "Sammenlign"-knappen for å legge dem til her.
+                        <p className="text-slate-500 mb-8 max-w-md mx-auto font-medium">
+                            Søk etter bedrifter og bruk "Sammenlign"-knappen for å sette opp en analyse.
                         </p>
                         <Link
                             to="/utforsk"
-                            className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                            className="inline-flex items-center gap-2 px-8 py-4 bg-slate-900 text-white font-bold rounded-2xl hover:bg-blue-600 transition-all shadow-xl"
                         >
-                            Utforsk bedrifter
+                            Finn bedrifter
                         </Link>
                     </div>
                 )}
 
                 {/* Company grid */}
                 {orgNumbers.length > 0 && (
-                    <div className={`grid gap-4 ${orgNumbers.length <= 2 ? 'md:grid-cols-2' :
-                        orgNumbers.length === 3 ? 'md:grid-cols-3' :
-                            'md:grid-cols-2 lg:grid-cols-4'
-                        }`}>
-                        {data.map((item) => (
-                            <ComparisonCard
-                                key={item.orgnr}
-                                item={item}
-                                onRemove={orgNumbers.length > 1 ? handleRemove : undefined}
-                            />
-                        ))}
+                    <div className="relative">
+                        <div className={`grid gap-6 ${orgNumbers.length <= 2 ? 'md:grid-cols-2 max-w-4xl mx-auto' :
+                            orgNumbers.length === 3 ? 'lg:grid-cols-3' :
+                                'md:grid-cols-2 lg:grid-cols-4'
+                            }`}>
+                            {data.map((item, idx) => (
+                                <div key={item.orgnr} className="relative group">
+                                    <ComparisonCard
+                                        item={item}
+                                        onRemove={orgNumbers.length > 1 ? handleRemove : undefined}
+                                        maxValues={maxValues}
+                                        battleMode={battleMode}
+                                        isWinner={{
+                                            revenue: winners.revenue === item.orgnr,
+                                            profit: winners.profit === item.orgnr,
+                                            equity: winners.equity === item.orgnr,
+                                            employees: winners.employees === item.orgnr
+                                        }}
+                                    />
+                                    {/* VS Badge between cards only in Battle Mode */}
+                                    {battleMode && idx < data.length - 1 && (
+                                        <div className="hidden lg:flex absolute -right-4 top-1/2 -translate-y-1/2 z-20 items-center justify-center w-8 h-8 bg-blue-600 text-white rounded-full shadow-xl border-4 border-white pointer-events-none italic">
+                                            <Swords className="h-3 w-3" />
+                                        </div>
+                                    )}
+                                </div>
+                            ))}
+                        </div>
                     </div>
                 )}
 
-                {/* Tip */}
-                {orgNumbers.length > 0 && orgNumbers.length < 5 && (
-                    <div className="mt-6 p-4 bg-blue-50 border border-blue-100 rounded-lg">
-                        <p className="text-sm text-blue-800">
-                            <strong>Tips:</strong> Du kan legge til opptil 5 bedrifter for sammenligning.
-                            Bruk "Sammenlign"-knappen på bedriftssidene for å legge til flere.
-                        </p>
+                {/* Battle Mode Tip - Only shown when Battle Mode is OFF */}
+                {orgNumbers.length > 1 && !battleMode && (
+                    <div className="mt-12 p-8 bg-slate-100/50 border border-slate-200 rounded-3xl flex items-center justify-between gap-6">
+                        <div className="flex items-center gap-5">
+                            <div className="h-12 w-12 bg-white text-slate-400 rounded-2xl flex items-center justify-center shadow-sm">
+                                <Swords className="h-6 w-6" />
+                            </div>
+                            <div>
+                                <p className="text-slate-900 font-bold">Ønsker du en mer visuell duell?</p>
+                                <p className="text-sm text-slate-500 font-medium">Aktiver "Battle Mode" for å kåre vinnere og se relative forskjeller i nøkkeltall.</p>
+                            </div>
+                        </div>
+                        <button 
+                            onClick={() => setBattleMode(true)}
+                            className="px-6 py-3 bg-white border border-slate-200 text-slate-900 font-bold rounded-xl hover:bg-white hover:border-blue-400 hover:text-blue-600 transition-all shadow-sm"
+                        >
+                            Prøv Battle Mode
+                        </button>
                     </div>
                 )}
             </div>
