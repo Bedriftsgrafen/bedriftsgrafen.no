@@ -64,7 +64,7 @@ export function SimilarCompanies({ orgnr }: SimilarCompaniesProps) {
               key={company.orgnr}
               to="/bedrift/$orgnr"
               params={{ orgnr: company.orgnr }}
-              className="text-left p-3 bg-gray-50 rounded-lg border border-gray-200 hover:border-blue-300 hover:bg-blue-50/50 transition-colors group"
+              className="text-left p-3 bg-gray-50 rounded-lg border border-gray-200 hover:border-blue-300 hover:bg-blue-50/50 transition-colors group min-w-0"
             >
               <p className="font-medium text-gray-900 text-sm truncate group-hover:text-blue-700">
                 {company.navn}

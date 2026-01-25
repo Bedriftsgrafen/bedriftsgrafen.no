@@ -88,7 +88,7 @@ export const CompanyCard = memo(function CompanyCard({ company, onClick }: Compa
     return (
         <div
             onClick={onClick}
-            className="bg-white rounded-xl border border-slate-200 p-4 hover:shadow-xl hover:border-blue-200 transition-all duration-300 cursor-pointer group active:scale-[0.98]"
+            className="bg-white rounded-xl border border-slate-200 p-4 hover:shadow-xl hover:border-blue-200 transition-all duration-300 cursor-pointer group active:scale-[0.98] min-w-0"
             role="button"
             tabIndex={0}
             onKeyDown={(e) => e.key === 'Enter' && onClick()}

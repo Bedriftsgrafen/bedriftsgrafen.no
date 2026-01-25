@@ -47,13 +47,15 @@ const ComparisonCard = memo(function ComparisonCard({ item }: { item: Comparison
 
                     {/* Basic info */}
                     <div className="space-y-2">
-                                                <div className="flex items-center gap-2 text-sm min-w-0">
-                                                    <Building2 className="h-4 w-4 text-gray-400 shrink-0" />
-                                                    <span className="truncate flex-1" title={formatNace(item.company.naeringskode)}>
-                                                        {formatNace(item.company.naeringskode) || 'Ukjent bransje'}
-                                                    </span>
-                                                </div>
-                                                <div className="flex items-center gap-2 text-sm">
+                        <div className="flex items-center gap-2 text-sm min-w-0">
+                            <Building2 className="h-4 w-4 text-gray-400 shrink-0" />
+                            <div className="min-w-0 flex-1">
+                                <span className="block truncate text-gray-600" title={formatNace(item.company.naeringskode)}>
+                                    {formatNace(item.company.naeringskode) || 'Ukjent bransje'}
+                                </span>
+                            </div>
+                        </div>
+                        <div className="flex items-center gap-2 text-sm">
                             <Users className="h-4 w-4 text-gray-400" />
                             <span className="text-gray-600">
                                 {item.company.antall_ansatte ?? '-'} ansatte
