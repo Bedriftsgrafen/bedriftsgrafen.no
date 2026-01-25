@@ -29,6 +29,8 @@ npm install
 npm run dev
 ```
 
+See [STYLE_GUIDE.md](./STYLE_GUIDE.md) for coding standards and UI patterns.
+
 Server will start at http://localhost:5173
 
 ### Build
