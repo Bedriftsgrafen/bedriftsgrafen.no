@@ -22,7 +22,7 @@ class CompanyBase(BaseModel):
     orgnr: str
     navn: str | None = None
     organisasjonsform: str | None = None
-    naeringskode: str | None = None
+    naeringskode: str | Naeringskode | None = None
     naeringskoder: list[Naeringskode] | list[str] = []
     antall_ansatte: int | None = None
     stiftelsesdato: date | None = None

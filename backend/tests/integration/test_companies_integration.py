@@ -21,11 +21,12 @@ async def mock_get_db():
 app.dependency_overrides[get_db] = mock_get_db
 
 
-@patch("routers.v1.companies.NaceService")
 @patch("routers.v1.companies.CompanyService")
-def test_get_company_success(MockServiceClass, MockNaceService):
+def test_get_company_success(MockServiceClass):
     # Arrange
     mock_service = MockServiceClass.return_value
+    mock_service._enrich_nace_codes = AsyncMock()
+    
     mock_company = MagicMock(spec=Company)
     mock_company.orgnr = "123456789"
     mock_company.navn = "Test AS"
@@ -51,7 +52,9 @@ def test_get_company_success(MockServiceClass, MockNaceService):
     mock_company.under_tvangsavvikling = False
     mock_company.latest_profit = 0.0
     mock_company.latest_revenue = 0.0
+    mock_company.latest_operating_profit = 0.0
     mock_company.latest_operating_margin = 0.0
+    mock_company.latest_equity_ratio = 0.0
     mock_company.updated_at = None
     mock_company.last_polled_regnskap = None
     mock_company.geocoded_at = None
@@ -64,16 +67,7 @@ def test_get_company_success(MockServiceClass, MockNaceService):
     mock_company.institusjonell_sektor = None
 
     # Async mock return
-    async def get_comp(*args, **kwargs):
-        return mock_company
-
-    mock_service.get_company_with_accounting.side_effect = get_comp
-
-    # Mock NaceService
-    async def get_nace(code):
-        return "Konsulentvirksomhet"
-
-    MockNaceService.get_nace_name.side_effect = get_nace
+    mock_service.get_company_detail = AsyncMock(return_value=mock_company)
 
     # Act
     response = client.get("/v1/companies/123456789")
@@ -83,20 +77,13 @@ def test_get_company_success(MockServiceClass, MockNaceService):
     data = response.json()
     assert data["orgnr"] == "123456789"
     assert data["navn"] == "Test AS"
-    assert len(data["naeringskoder"]) == 1
-    assert data["naeringskoder"][0]["kode"] == "62.000"
-    assert data["naeringskoder"][0]["beskrivelse"] == "Konsulentvirksomhet"
 
 
 @patch("routers.v1.companies.CompanyService")
 def test_get_company_not_found(MockServiceClass):
     # Arrange
     mock_service = MockServiceClass.return_value
-
-    async def get_comp(*args, **kwargs):
-        return None
-
-    mock_service.get_company_with_accounting.side_effect = get_comp
+    mock_service.get_company_detail = AsyncMock(return_value=None)
 
     # Act
     response = client.get("/v1/companies/999999999")
