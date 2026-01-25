@@ -9,6 +9,12 @@ import { useFetchCompanyMutation } from '../hooks/mutations/useFetchCompanyMutat
 import { useCompanyModal } from '../hooks/useCompanyModal'
 import { useUiStore } from '../store/uiStore'
 import { useSlowLoadingToast } from '../hooks/useSlowLoadingToast'
+import type { TabType } from '../components/company/ModalTabs'
+
+// Search params for the company page
+export interface CompanySearch {
+    tab?: TabType
+}
 
 // Industry modal state
 interface IndustryModalState {
@@ -24,6 +30,11 @@ export const Route = createLazyFileRoute('/bedrift/$orgnr')({
 function CompanyPage() {
     const navigate = Route.useNavigate()
     const { orgnr } = Route.useParams()
+    const search = Route.useSearch() as CompanySearch
+    
+    // Active tab is driven by URL, defaulting to 'oversikt'
+    const activeTab = search.tab || 'oversikt'
+
     const selectedYear = useUiStore(s => s.selectedYear)
     const setSelectedYear = useUiStore(s => s.setSelectedYear)
     const addRecentCompany = useUiStore(s => s.addRecentCompany)
@@ -85,6 +96,14 @@ function CompanyPage() {
         setSelectedYear(year)
     }, [setSelectedYear])
 
+    const handleTabChange = useCallback((tab: TabType) => {
+        navigate({ 
+            to: '/bedrift/$orgnr', 
+            params: { orgnr }, 
+            search: (prev: Record<string, unknown>) => ({ ...prev, tab }) 
+        })
+    }, [navigate, orgnr])
+
     const handleOpenIndustry = useCallback((naceCode: string, description: string) => {
         // Open local industry modal with full code instead of navigating away
         setIndustryModal({
@@ -103,8 +122,13 @@ function CompanyPage() {
     }, [])
 
     const handleSelectCompany = useCallback((newOrgnr: string) => {
-        navigate({ to: '/bedrift/$orgnr', params: { orgnr: newOrgnr } })
-    }, [navigate])
+        // When selecting a related company, preserve the active tab
+        navigate({ 
+            to: '/bedrift/$orgnr', 
+            params: { orgnr: newOrgnr },
+            search: (prev: Record<string, unknown>) => ({ ...prev, tab: activeTab })
+        })
+    }, [navigate, activeTab])
 
     return (
         <>
@@ -130,6 +154,8 @@ function CompanyPage() {
                 company={company}
                 companyLoading={companyLoading}
                 companyError={companyError}
+                activeTab={activeTab}
+                onTabChange={handleTabChange}
                 selectedYear={selectedYear}
                 onSelectYear={handleSelectYear}
                 kpiData={kpiData ?? undefined}

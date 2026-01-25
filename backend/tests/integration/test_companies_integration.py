@@ -30,6 +30,8 @@ def test_get_company_success(MockServiceClass):
     mock_company = MagicMock(spec=Company)
     mock_company.orgnr = "123456789"
     mock_company.navn = "Test AS"
+    mock_company.parent_orgnr = None
+    mock_company.parent_navn = None
     mock_company.latitude = 60.0
     mock_company.organisasjonsform = "AS"
     mock_company.naeringskode = "62.000"

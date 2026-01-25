@@ -294,6 +294,11 @@ class Company(Base):
             return self.raw_data["institusjonellSektorkode"].get("beskrivelse")
         return None
 
+    @property
+    def parent_orgnr(self) -> str | None:
+        """Extract parent organization number if this is a subunit."""
+        return self.raw_data.get("overordnetEnhet") if self.raw_data else None
+
 
 class SubUnit(Base):
     """

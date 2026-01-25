@@ -2,20 +2,20 @@ import asyncio
 import contextlib
 import hashlib
 import logging
-from datetime import datetime, timezone
 from typing import Any
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
 import models
 from repositories.accounting_repository import AccountingRepository
-from repositories.company_filter_builder import FilterParams
 from repositories.company import CompanyRepository, CompanyWithFinancials
+from repositories.company_filter_builder import FilterParams
 from repositories.role_repository import RoleRepository
 from repositories.subunit_repository import SubUnitRepository
 from services.brreg_api_service import BrregApiService
 from services.dtos import CompanyFilterDTO
 from services.geocoding_service import GeocodingService
+from services.nace_service import NaceService
 from utils.cache import AsyncLRUCache
 
 logger = logging.getLogger(__name__)
@@ -23,32 +23,27 @@ logger = logging.getLogger(__name__)
 # Module-level cache shared across service instances
 search_cache = AsyncLRUCache(maxsize=500, ttl=60)
 stats_cache = AsyncLRUCache(maxsize=100, ttl=60)  # 60s cache for stats
+parent_name_cache = AsyncLRUCache(maxsize=1000, ttl=3600)  # 1h cache for parent names
 
 # Lock to prevent thundering herd on stats computation
 _stats_lock = asyncio.Lock()
 
 
 class CompanyService:
+    # Class-level set to track active sync tasks across service instances
+    _syncing_orgnrs: set[str] = set()
+
     def __init__(self, db: AsyncSession):
-        self.db = db  # Store for geocoding updates
+        self.db = db
         self.company_repo = CompanyRepository(db)
         self.accounting_repo = AccountingRepository(db)
         self.role_repo = RoleRepository(db)
         self.subunit_repo = SubUnitRepository(db)
         self.brreg_api = BrregApiService()
         self.geocoding_service = GeocodingService()
-        # NOTE: cache is module-level (see below) so it's shared across
-        # CompanyService instances.
 
     async def get_companies(self, filters: CompanyFilterDTO) -> list[CompanyWithFinancials]:
-        """Get companies with filters using DTO pattern
-
-        Args:
-            filters: CompanyFilterDTO with all filter parameters
-
-        Returns:
-            List of Company models matching filters
-        """
+        """Get companies matching filters."""
         repo_filters = FilterParams(**filters.to_count_params())
         results = await self.company_repo.get_all(
             filters=repo_filters,
@@ -61,11 +56,7 @@ class CompanyService:
         return results
 
     async def stream_companies(self, filters: CompanyFilterDTO):
-        """Stream companies from repository using generator.
-
-        Yields:
-            Company models one by one
-        """
+        """Stream companies efficiently for exports."""
         repo_filters = FilterParams(**filters.to_count_params())
         async for company in self.company_repo.stream_all(
             filters=repo_filters,
@@ -74,112 +65,90 @@ class CompanyService:
             sort_by=filters.sort_by,
             sort_order=filters.sort_order,
         ):
-            # For streaming, we don't batch enrich NACE codes to keep it memory efficient
             yield company
 
     async def count_companies(self, filters: CompanyFilterDTO) -> int:
-        """Count companies matching filters using DTO pattern
-
-        Args:
-            filters: CompanyFilterDTO with all filter parameters
-
-        Returns:
-            Count of companies matching filters
-        """
+        """Count companies matching filters."""
         repo_filters = FilterParams(**filters.to_count_params())
         return await self.company_repo.count_companies(filters=repo_filters, sort_by=filters.sort_by)
 
     async def get_company_with_accounting(self, orgnr: str) -> models.Company | None:
+        """Fetch company by orgnr with financials eager loaded."""
         return await self.company_repo.get_by_orgnr(orgnr)
 
     async def get_company_detail(self, orgnr: str) -> models.Company | None:
-        """
-        Get complete company details including accounting, geocoding if needed,
-        and enriched NACE descriptions.
-        """
+        """Get enriched company details with parent name lookup."""
         company = await self.company_repo.get_by_orgnr(orgnr)
         if not company:
             return None
 
-        # Auto-geocode if missing coordinates (legacy behavior preserved via Service)
+        # Fetch parent name efficiently if this is a subunit
+        if company.parent_orgnr:
+            parent_name = await parent_name_cache.get(company.parent_orgnr)
+            if parent_name:
+                setattr(company, "parent_navn", parent_name)
+            else:
+                try:
+                    # Optimized column-only lookup
+                    parent_name = await self.company_repo.get_company_name(company.parent_orgnr)
+                    if parent_name:
+                        setattr(company, "parent_navn", parent_name)
+                        await parent_name_cache.set(company.parent_orgnr, parent_name)
+                    else:
+                        asyncio.create_task(self._background_parent_sync(company.parent_orgnr))
+                except Exception:
+                    pass
+
+        # Auto-geocode if needed
         if company.latitude is None:
             await self.ensure_geocoded(company)
 
         return company
 
+    async def _background_parent_sync(self, parent_orgnr: str) -> None:
+        """Deduplicated background sync for missing parent companies."""
+        if parent_orgnr in self._syncing_orgnrs:
+            return
+        try:
+            self._syncing_orgnrs.add(parent_orgnr)
+            logger.info(f"Background sync: {parent_orgnr}")
+            await self.fetch_and_store_company(parent_orgnr, fetch_financials=True)
+        except Exception as e:
+            logger.error(f"Sync failed for {parent_orgnr}: {e}")
+        finally:
+            self._syncing_orgnrs.discard(parent_orgnr)
+
     async def get_similar_companies(self, orgnr: str, limit: int = 5) -> list[CompanyWithFinancials]:
-        """Get similar companies based on industry and location."""
+        """Find similar companies in proximity."""
         results = await self.company_repo.get_similar_companies(orgnr, limit)
         await self._enrich_nace_codes(results)
         return results
 
     async def get_aggregate_stats(self, filters: CompanyFilterDTO) -> dict[str, Any]:
-        """Get aggregate statistics for companies matching filters.
-
-        Args:
-            filters: CompanyFilterDTO with all filter parameters
-
-        Returns:
-            Dictionary with total_count, total_revenue, total_profit,
-            total_employees, and by_organisasjonsform breakdown
-        """
-        # Create cache key from filter params AND sort_by
-        # (Since sort_by can affect joining behavior and thus the resulting count/stats)
+        """Fetch cached aggregate statistics."""
         params = filters.to_count_params()
         if filters.sort_by:
             params["sort_by"] = filters.sort_by
 
         cache_key = hashlib.md5(str(sorted(params.items())).encode()).hexdigest()
-
-        # Check cache
         cached = await stats_cache.get(cache_key)
-        if cached is not None:
-            logger.debug(f"Stats cache hit for key {cache_key[:8]}")
+        if cached:
             return cached
 
-        # Compute and cache (only cache valid results with data)
         repo_filters = FilterParams(**filters.to_count_params())
         result = await self.company_repo.get_aggregate_stats(filters=repo_filters, sort_by=filters.sort_by)
-
-        # Handle None result (edge case when query returns no data)
-        if result is None:
-            result = {
-                "total_count": 0,
-                "total_revenue": 0,
-                "total_profit": 0,
-                "total_employees": 0,
-                "by_organisasjonsform": {},
-            }
-
-        if result.get("total_count", 0) > 0 or result.get("by_organisasjonsform"):
+        if result:
             await stats_cache.set(cache_key, result)
-            logger.debug(f"Stats cached for key {cache_key[:8]}")
-
-        return result
+        return result or {"total_count": 0}
 
     async def get_companies_by_industry(
         self, nace_code: str, page: int = 1, limit: int = 20, include_inactive: bool = False
     ) -> dict[str, Any]:
-        """
-        Get paginated list of companies in a specific industry.
-
-        Args:
-            nace_code: NACE code (e.g., "62.010" for exact, "62" for prefix match)
-            page: Page number (1-indexed)
-            limit: Items per page
-            include_inactive: Include bankrupt/liquidating companies
-
-        Returns:
-            Dictionary with items, pagination metadata, and industry info
-        """
+        """Get paginated companies in an industry."""
         offset = (page - 1) * limit
         companies, total = await self.company_repo.get_by_industry_code(nace_code, limit, offset, include_inactive)
-
         await self._enrich_nace_codes(companies)
-
-        # Calculate pagination metadata
         total_pages = (total + limit - 1) // limit if total > 0 else 0
-
         return {
             "items": companies,
             "total": total,
@@ -190,432 +159,137 @@ class CompanyService:
             "has_more": page < total_pages,
         }
 
-    async def search_companies(self, name: str, limit: int = 20) -> list[dict[str, Any]]:
-        # Normalize cache key
-        key = f"{name.strip().lower()}|{limit}"
-        cached = await search_cache.get(key)
-        if cached is not None:
+    async def search_companies(self, name: str, limit: int = 10) -> list[CompanyWithFinancials]:
+        """Full-text search for companies."""
+        cache_key = f"search_{name}_{limit}"
+        cached = await search_cache.get(cache_key)
+        if cached:
             return cached
 
         results = await self.company_repo.search_by_name(name, limit)
-        # If repository returned None (DB error/timeout), don't cache — just
-        # return an empty list so frontend gets a graceful response.
-        if results is None:
-            return []
+        await self._enrich_nace_codes(results)
+        await search_cache.set(cache_key, results)
+        return results
 
-        # Convert ORM instances to plain serializable dicts before caching.
-        serializable = []
-        for c in results:
-            serializable.append(
-                {
-                    "orgnr": getattr(c, "orgnr", None),
-                    "navn": getattr(c, "navn", None),
-                    "organisasjonsform": getattr(c, "organisasjonsform", None),
-                    "naeringskode": getattr(c, "naeringskode", None),
-                    "naeringskoder": list(getattr(c, "naeringskoder", [])),
-                    "antall_ansatte": getattr(c, "antall_ansatte", None),
-                    "latest_revenue": getattr(c, "latest_revenue", None),
-                    "latest_profit": getattr(c, "latest_profit", None),
-                    "latest_operating_profit": getattr(c, "latest_operating_profit", None),
-                    "latest_operating_margin": getattr(c, "latest_operating_margin", None),
-                    "latest_equity_ratio": getattr(c, "latest_equity_ratio", None),
-                    "postadresse": getattr(c, "postadresse", None),
-                    "forretningsadresse": getattr(c, "forretningsadresse", None),
-                    "vedtektsfestet_formaal": getattr(c, "vedtektsfestet_formaal", None),
-                }
-            )
-            # Handle date separately for type safety
-            stiftelsesdato = getattr(c, "stiftelsesdato", None)
-            serializable[-1]["stiftelsesdato"] = stiftelsesdato.isoformat() if stiftelsesdato else None
+    async def search_subunits(self, query: str, limit: int = 10) -> list[models.SubUnit]:
+        """Fuzzy search for subunits."""
+        return await self.subunit_repo.search_by_name(query, limit)
 
-        await self._enrich_nace_codes(serializable)
-
-        # cache serializable result
-        await search_cache.set(key, serializable)
-        return serializable
-
-    async def _enrich_nace_codes(self, items: list[Any]) -> None:
-        """
-        Enrich a list of company objects or dictionaries with NACE descriptions.
-        Supports:
-        - naeringskoder: list[str] -> list[dict]
-        - naeringskode: str -> dict
-        Works with CompanyWithFinancials, Pydantic models, and plain dictionaries.
-        """
-        if not items:
-            return
-
-        from services.nace_service import NaceService
-
-        # 1. Collect all unique codes
-        unique_codes = set()
-        for item in items:
-            # Handle plural codes (list)
-            codes = item.get("naeringskoder") if isinstance(item, dict) else getattr(item, "naeringskoder", None)
-            if codes:
-                for c in codes:
-                    if isinstance(c, str):
-                        unique_codes.add(c)
-
-            # Handle singular code (string)
-            code = item.get("naeringskode") if isinstance(item, dict) else getattr(item, "naeringskode", None)
-            if isinstance(code, str):
-                unique_codes.add(code)
-
-        if not unique_codes:
-            return
-
-        # 2. Fetch descriptions in bulk (internally cached)
-        tasks = {code: NaceService.get_nace_name(code) for code in unique_codes}
-        results = await asyncio.gather(*tasks.values())
-        names = dict(zip(tasks.keys(), results))
-
-        # 3. Update items in place
-        for item in items:
-            is_dict = isinstance(item, dict)
-            is_pydantic = hasattr(item, "model_fields")
-
-            # Enrich plural field (naeringskoder)
-            codes = item.get("naeringskoder") if is_dict else getattr(item, "naeringskoder", None)
-            if codes and isinstance(codes[0], str):
-                enriched_list = [{"kode": c, "beskrivelse": names.get(c, f"Kode {c}")} for c in codes]
-                if is_dict:
-                    item["naeringskoder"] = enriched_list
-                elif is_pydantic:
-                    setattr(item, "naeringskoder", enriched_list)
-                else:
-                    item.naeringskoder = enriched_list
-
-            # Enrich singular field (naeringskode)
-            code = item.get("naeringskode") if is_dict else getattr(item, "naeringskode", None)
-            if isinstance(code, str):
-                enriched_obj = {"kode": code, "beskrivelse": names.get(code, f"Kode {code}")}
-                if is_dict:
-                    item["naeringskode"] = enriched_obj
-                elif is_pydantic:
-                    setattr(item, "naeringskode", enriched_obj)
-                else:
-                    item.naeringskode = enriched_obj
+    async def get_subunits(self, parent_orgnr: str, force_refresh: bool = False) -> list[models.SubUnit]:
+        """Get subunits for a company, syncing if missing."""
+        if force_refresh:
+            await self._sync_subunits_from_api(parent_orgnr)
+        subunits = await self.subunit_repo.get_by_parent_orgnr(parent_orgnr)
+        if not subunits and not force_refresh:
+            await self._sync_subunits_from_api(parent_orgnr)
+            subunits = await self.subunit_repo.get_by_parent_orgnr(parent_orgnr)
+        return subunits
 
     async def fetch_and_store_company(
         self, orgnr: str, fetch_financials: bool = True, geocode: bool = True
     ) -> dict[str, Any]:
-        """
-        Fetch company data from Brønnøysund and store it in the database
+        """Fetch from Brreg and upsert into database."""
+        result: dict[str, Any] = {"orgnr": orgnr, "company_fetched": False, "financials_fetched": 0, "errors": []}
+        try:
+            data = await self.brreg_api.fetch_company(orgnr)
+            if not data:
+                result["errors"].append("Not found in Brreg")
+                return result
 
-        Args:
-            orgnr: Organization number (9 digits)
-            fetch_financials: Whether to also fetch financial statements
-            geocode: Whether to geocode the address (defaults to True)
+            company = await self.company_repo.create_or_update(data, autocommit=True)
+            result["company_fetched"] = True
+            await self._sync_subunits_from_api(orgnr)
 
-        Returns:
-            Dictionary with status and stored data info
-        """
-        result: dict[str, Any] = {
-            "orgnr": orgnr,
-            "company_fetched": False,
-            "financials_fetched": 0,
-            "errors": [],
-        }
+            with contextlib.suppress(Exception):
+                from services.role_service import RoleService
 
-        # Fetch company data
-        company_data = await self.brreg_api.fetch_company(orgnr)
-        if company_data:
-            try:
-                await self.company_repo.create_or_update(company_data)
-                result["company_fetched"] = True
-                logger.info(f"Stored company data for {orgnr}")
+                await RoleService(self.db).get_roles(orgnr, force_refresh=True)
 
-                # Geocode address (async, non-blocking on failure)
-                if geocode:
-                    await self._geocode_company(orgnr, company_data)
+            if fetch_financials:
+                statements = await self.brreg_api.fetch_financial_statements(orgnr)
+                if statements:
+                    for s in statements:
+                        await self.accounting_repo.create_or_update(orgnr, s, raw_data=s)
+                    await self.company_repo.update_last_polled_regnskap(orgnr)
+                    await self.db.commit()
+                    result["financials_fetched"] = len(statements)
 
-            except Exception as e:
-                error_msg = f"Error storing company {orgnr}: {str(e)}"
-                logger.error(error_msg)
-                # Provide user-friendly error messages
-                if "statement timeout" in str(e).lower() or "querycancelederror" in str(e).lower():
-                    result["errors"].append("Oppdatering tok for lang tid. Vennligst prøv igjen.")
-                else:
-                    result["errors"].append("Kunne ikke lagre bedriftsdata i databasen")
-        else:
-            result["errors"].append(f"Company {orgnr} not found in Enhetsregisteret")
-
-        # Fetch financial statements if requested
-        if fetch_financials and result["company_fetched"]:
-            statements = await self.brreg_api.fetch_financial_statements(orgnr)
-
-            for statement in statements:
-                try:
-                    parsed_data = await self.brreg_api.parse_financial_data(statement)
-
-                    if parsed_data.get("aar"):
-                        await self.accounting_repo.create_or_update(orgnr, parsed_data, statement)
-                        result["financials_fetched"] += 1
-                        logger.info(f"Stored financial data for {orgnr}, year {parsed_data['aar']}")
-                except Exception as e:
-                    error_msg = f"Error storing financial data for {orgnr}: {str(e)}"
-                    logger.error(error_msg)
-                    # Provide user-friendly error messages
-                    if "generatedalwayserror" in str(e).lower():
-                        result["errors"].append("Databasefeil: Kunne ikke lagre regnskapsdata")
-                    else:
-                        result["errors"].append("Kunne ikke lagre regnskapsdata")
-
+            if geocode and company.latitude is None:
+                await self.ensure_geocoded(company)
+        except Exception as e:
+            result["errors"].append(str(e))
         return result
 
-    async def _geocode_company(self, orgnr: str, company_data: dict) -> None:
-        """
-        Geocode a company's address and store coordinates.
-        Non-blocking: failures are logged but don't stop the main flow.
-        """
-        try:
-            # Build address string from company data
-            forretningsadresse = company_data.get("forretningsadresse", {})
-            postadresse = company_data.get("postadresse", {})
-
-            address_str = GeocodingService.build_address_string(forretningsadresse, postadresse)
-            if not address_str:
-                return
-
-            # Geocode via Kartverket API (handles overrides)
-            coords = await self.geocoding_service.geocode_address(address_str, orgnr=orgnr)
-            if not coords:
-                return
-
-            lat, lng = coords
-
-            # Update company with coordinates
-            await self.company_repo.update_coordinates(orgnr, lat, lng)
-
-            logger.info(f"Geocoded {orgnr} -> ({lat:.5f}, {lng:.5f})")
-
-        except Exception as e:
-            logger.warning(f"Geocoding failed for {orgnr}: {e}")
-            # Don't propagate - geocoding failure shouldn't break fetch flow
-
     async def ensure_geocoded(self, company: models.Company) -> None:
-        """
-        Geocode company if coordinates are missing.
-        Updates the company object in-place and saves to DB.
-        """
+        """Geocode company if missing coordinates."""
+        addr_str = self.geocoding_service.build_address_string(
+            company.forretningsadresse or {}, company.postadresse or {}
+        )
+        if addr_str:
+            coords = await self.geocoding_service.geocode_address(addr_str, orgnr=company.orgnr)
+            if coords:
+                await self.company_repo.update_coordinates(company.orgnr, coords[0], coords[1])
+
+    async def _sync_subunits_from_api(self, parent_orgnr: str) -> None:
+        """Internal helper to sync subunits."""
         try:
-            if company.latitude is not None and company.longitude is not None:
-                return
-
-            # Build address string
-            address_str = GeocodingService.build_address_string(
-                company.forretningsadresse or {}, company.postadresse or {}
-            )
-
-            if not address_str:
-                return
-
-            # Geocode (handles overrides)
-            coords = await self.geocoding_service.geocode_address(address_str, orgnr=company.orgnr)
-            if not coords:
-                return
-
-            lat, lng = coords
-
-            # Update DB
-            await self.company_repo.update_coordinates(company.orgnr, lat, lng)
-
-            # Update object in place so response includes new coords
-            company.latitude = lat
-            company.longitude = lng
-            company.geocoded_at = datetime.now(timezone.utc)
-
-            logger.info(f"Geocoded on-demand {company.orgnr} -> ({lat:.5f}, {lng:.5f})")
-
+            data = await self.brreg_api.fetch_subunits(parent_orgnr)
+            if data:
+                subunits = [models.SubUnit(**s, parent_orgnr=parent_orgnr) for s in data]
+                await self.subunit_repo.create_batch(subunits)
         except Exception as e:
-            logger.warning(f"On-demand geocoding failed for {company.orgnr}: {e}")
+            logger.warning(f"Subunit sync failed: {e}")
 
-    async def get_statistics(self) -> dict:
-        """
-        Get high-level dashboard statistics.
-        Refactored to prioritize materialized views and fast estimations.
-        """
-        # Check cache first (cache key "dashboard_stats")
-        cached_stats = await search_cache.get("dashboard_stats")
-        if cached_stats:
-            return cached_stats
+    async def _enrich_nace_codes(self, items: Any) -> None:
+        """Enrich NACE codes with descriptions."""
+        nace = NaceService(self.db)
+        for item in items:
+            # Handle both objects and dicts (for compatibility with existing tests)
+            is_dict = isinstance(item, dict)
 
-        # Prevent thundering herd - only one computation at a time
-        async with _stats_lock:
-            # Double-check cache after acquiring lock
-            cached_stats = await search_cache.get("dashboard_stats")
-            if cached_stats:
-                return cached_stats
+            # Enrich primary NACE
+            primary_code = item.get("naeringskode") if is_dict else getattr(item, "naeringskode", None)
+            if primary_code and isinstance(primary_code, str):
+                name = await nace.get_nace_name(primary_code)
+                enriched = {"kode": primary_code, "beskrivelse": name}
+                if is_dict:
+                    item["naeringskode"] = enriched
+                else:
+                    setattr(item, "naeringskode", enriched)
 
-            # 1. Start background tasks for specific renewal metrics
-            # These are either unindexed (avg_board_age) or from specific tables (roles)
-            renewal_tasks = [
-                self.company_repo.get_geocoded_count(),
-                self.company_repo.get_new_companies_30d(),
-                self.role_repo.count_total_roles(),
-                self.role_repo.get_average_board_age(),
-            ]
+            # Enrich secondary NACEs
+            secondary_codes = item.get("naeringskoder") if is_dict else getattr(item, "naeringskoder", None)
+            if secondary_codes and isinstance(secondary_codes, list):
+                enriched_list = []
+                for c in secondary_codes:
+                    if isinstance(c, str):
+                        name = await nace.get_nace_name(c)
+                        enriched_list.append({"kode": c, "beskrivelse": name})
+                    else:
+                        enriched_list.append(c)
 
-            # 2. Basic aggregates (Prioritize company_totals view)
-            # This is much faster than count(*) on bedrifter + complicated joins
-            try:
-                # We use the existing get_aggregate_stats logic with empty filters
-                # as it already has a fast path for company_totals
-                agg_stats = await self.get_aggregate_stats(CompanyFilterDTO())
-                total_companies = agg_stats.get("total_count", 0)
-                total_employees = agg_stats.get("total_employees", 0)
-            except Exception as e:
-                logger.warning(f"Fast aggregate stats failed, falling back to estimates: {e}")
+                if is_dict:
+                    item["naeringskoder"] = enriched_list
+                else:
+                    setattr(item, "naeringskoder", enriched_list)
+
+    async def get_statistics(self) -> dict[str, Any]:
+        """Get high-level platform statistics with fast-path optimization."""
+        try:
+            # Attempt fast path using the materialized view
+            agg_stats = await self.get_aggregate_stats(CompanyFilterDTO())
+            total_companies = agg_stats.get("total_count", 0)
+            total_employees = agg_stats.get("total_employees", 0)
+
+            # If view is empty or failed, use fast count estimate
+            if total_companies == 0:
                 total_companies = await self.company_repo.count(fast=True)
                 total_employees = await self.company_repo.get_total_employees()
+        except Exception:
+            # Fallback to direct count if aggregate stats fails
+            total_companies = await self.company_repo.count(fast=True)
+            total_employees = await self.company_repo.get_total_employees()
 
-            # 3. Financial aggregates (from latest_accountings view)
-            financial_stats = await self.accounting_repo.get_aggregated_stats()
+        financial_stats = await self.accounting_repo.get_aggregated_stats()
 
-            # 4. Other dashboard_stats (pre-computed table)
-            total_reports = await self.accounting_repo.count()
-            new_companies_ytd = await self.company_repo.get_new_companies_ytd()
-            bankruptcies = await self.company_repo.get_bankruptcies_count()
-
-            # 5. Await renewal metrics with safety timeouts
-            try:
-                # Group tasks: geocoded_count, new_30d, total_roles, avg_age
-                results = await asyncio.gather(*renewal_tasks, return_exceptions=True)
-
-                # Helper to safely extract results or fall back to default
-                def get_val(idx: int, default_val: Any) -> Any:
-                    val = results[idx]
-                    if isinstance(val, Exception):
-                        logger.warning(f"Metric task {idx} failed: {val}")
-                        return default_val
-                    return val
-
-                geocoded_count = get_val(0, 0)
-                new_companies_30d = get_val(1, 0)
-                total_roles = get_val(2, 0)
-                avg_board_age = get_val(3, 0.0)
-            except Exception as e:
-                logger.error(f"Critical error gathering renewal metrics: {e}")
-                geocoded_count, new_companies_30d, total_roles, avg_board_age = 0, 0, 0, 0.0
-
-            stats = {
-                "total_companies": total_companies,
-                "total_accounting_reports": total_reports,
-                "total_revenue": financial_stats["total_revenue"],
-                "total_ebitda": financial_stats["total_ebitda"],
-                "total_employees": total_employees,
-                "profitable_percentage": financial_stats["profitable_percentage"],
-                "solid_company_percentage": financial_stats["solid_company_percentage"],
-                "avg_operating_margin": financial_stats["avg_operating_margin"],
-                "new_companies_ytd": new_companies_ytd,
-                "new_companies_30d": new_companies_30d,
-                "bankruptcies": bankruptcies,
-                "geocoded_count": geocoded_count,
-                "total_roles": total_roles,
-                "avg_board_age": avg_board_age,
-            }
-
-            # Cache for 1 hour (3600 seconds)
-            await search_cache.set("dashboard_stats", stats, ttl=3600)
-
-            return stats
-
-    async def get_subunits(self, parent_orgnr: str, force_refresh: bool = False) -> list[models.SubUnit]:
-        """
-        Get subunits (underenheter) for a parent company.
-        Uses lazy-loading: checks DB first, fetches from API if not found.
-
-        Args:
-            parent_orgnr: Parent company organization number
-            force_refresh: If True, fetch from API even if DB has data
-
-        Returns:
-            List of SubUnit models
-        """
-        # If force refresh, delete existing and fetch new
-        if force_refresh:
-            await self.subunit_repo.delete_by_parent_orgnr(parent_orgnr)
-
-        # Check database first
-        subunits = await self.subunit_repo.get_by_parent_orgnr(parent_orgnr)
-
-        # If found in DB and not forcing refresh, return cached data
-        if subunits and not force_refresh:
-            logger.debug(f"Found {len(subunits)} subunits in DB for {parent_orgnr}")
-            return subunits
-
-        # Fetch from API
-        logger.info(f"Fetching subunits from API for {parent_orgnr}")
-        try:
-            api_subunits = await self.brreg_api.fetch_subunits(parent_orgnr)
-
-            if not api_subunits:
-                logger.info(f"No subunits found for {parent_orgnr}")
-                return []
-
-            # Parse and create SubUnit models
-            new_subunits = []
-            for item in api_subunits:
-                try:
-                    # Validate required fields
-                    orgnr = item.get("organisasjonsnummer")
-                    navn = item.get("navn")
-
-                    if not orgnr or not navn:
-                        logger.warning(
-                            f"Skipping subunit with missing required fields: {item.get('organisasjonsnummer', 'unknown')}"
-                        )
-                        continue
-
-                    # Extract founding date
-                    stiftelsesdato = None
-                    if "stiftelsesdato" in item:
-                        with contextlib.suppress(ValueError, TypeError):
-                            stiftelsesdato = datetime.strptime(item["stiftelsesdato"], "%Y-%m-%d").date()
-
-                    subunit = models.SubUnit(
-                        orgnr=orgnr,
-                        navn=navn,
-                        organisasjonsform=item.get("organisasjonsform", {}).get("kode")
-                        if isinstance(item.get("organisasjonsform"), dict)
-                        else None,
-                        parent_orgnr=parent_orgnr,
-                        beliggenhetsadresse=item.get("beliggenhetsadresse"),
-                        postadresse=item.get("postadresse"),
-                        antall_ansatte=item.get("antallAnsatte") or 0,
-                        naeringskode=item.get("naeringskode1", {}).get("kode")
-                        if isinstance(item.get("naeringskode1"), dict)
-                        else None,
-                        stiftelsesdato=stiftelsesdato,
-                    )
-                    new_subunits.append(subunit)
-                except Exception as e:
-                    logger.error(f"Error parsing subunit data: {e}", exc_info=True)
-                    continue
-
-            # Batch save to database
-            if new_subunits:
-                saved_count = await self.subunit_repo.create_batch(new_subunits)
-                logger.info(f"Saved {saved_count}/{len(new_subunits)} subunits for {parent_orgnr}")
-                return new_subunits
-            else:
-                return []
-
-        except Exception as e:
-            logger.error(f"Error fetching/storing subunits for {parent_orgnr}: {e}", exc_info=True)
-            # Return DB data as fallback if API fails
-            return subunits if subunits else []
-
-    async def search_subunits(self, query: str, limit: int = 50) -> list[models.SubUnit]:
-        """
-        Fuzzy search for subunits by name using trigram similarity.
-
-        Args:
-            query: Search query (minimum 2 characters)
-            limit: Maximum number of results (default 50, max 500)
-
-        Returns:
-            List of SubUnit objects matching the query, sorted by similarity
-        """
-        return await self.subunit_repo.search_by_name(query, limit)
+        return {"total_companies": total_companies, "total_employees": total_employees, **financial_stats}

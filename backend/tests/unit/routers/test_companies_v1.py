@@ -64,6 +64,8 @@ async def test_get_company_detail(mock_company_service):
     mock_company = MagicMock()
     mock_company.orgnr = "123456789"
     mock_company.navn = "Test AS"
+    mock_company.parent_orgnr = None
+    mock_company.parent_navn = None
     mock_company.organisasjonsform = "AS"
     mock_company.naeringskode = "62.010"
     mock_company.stiftelsesdato = None

@@ -21,6 +21,8 @@ class CompanyBase(BaseModel):
 
     orgnr: str
     navn: str | None = None
+    parent_orgnr: str | None = None
+    parent_navn: str | None = None
     organisasjonsform: str | None = None
     naeringskode: str | Naeringskode | None = None
     naeringskoder: list[Naeringskode] | list[str] = []

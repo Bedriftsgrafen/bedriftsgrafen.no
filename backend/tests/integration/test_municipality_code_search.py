@@ -34,6 +34,8 @@ def test_search_by_municipality_code(MockServiceClass):
     mock_company = MagicMock()
     mock_company.orgnr = "123456789"
     mock_company.navn = "Hamarøy Spesialisten"
+    mock_company.parent_orgnr = None
+    mock_company.parent_navn = None
     mock_company.organisasjonsform = "AS"
     mock_company.naeringskode = "62.000"
     mock_company.naeringskoder = ["62.000"]

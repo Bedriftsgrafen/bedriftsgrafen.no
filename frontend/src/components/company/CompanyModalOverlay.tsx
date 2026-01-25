@@ -9,6 +9,7 @@ import { useState, useEffect } from 'react'
 import { useNavigate } from '@tanstack/react-router'
 import { CompanyModal } from './CompanyModal'
 import { IndustryModal } from './IndustryModal'
+import type { TabType } from './ModalTabs'
 import { useCompanyDetailQuery } from '../../hooks/queries/useCompanyDetailQuery'
 import { useAccountingKpisQuery } from '../../hooks/queries/useAccountingKpisQuery'
 import { useFetchCompanyMutation } from '../../hooks/mutations/useFetchCompanyMutation'
@@ -42,6 +43,8 @@ export function CompanyModalOverlay({ orgnr: rawOrgnr, onClose, onSelectCompany 
         naceCode: null,
         description: null
     })
+
+    const [activeTab, setActiveTab] = useState<TabType>('oversikt')
 
     // Queries
     const {
@@ -119,6 +122,8 @@ export function CompanyModalOverlay({ orgnr: rawOrgnr, onClose, onSelectCompany 
                 company={company}
                 companyLoading={companyLoading}
                 companyError={companyError}
+                activeTab={activeTab}
+                onTabChange={setActiveTab}
                 selectedYear={selectedYear}
                 onSelectYear={handleSelectYear}
                 kpiData={kpiData ?? undefined}

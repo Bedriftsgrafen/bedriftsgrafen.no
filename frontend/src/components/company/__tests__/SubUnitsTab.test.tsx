@@ -216,3 +216,60 @@ describe('SubUnitsTab - Data Display', () => {
         expect(screen.getByText(`Opprettet: ${new Date('2021-06-15').toLocaleDateString('no-NO')}`)).toBeInTheDocument()
     })
 })
+
+// ============================================================================
+// Category 5: Search Functionality
+// ============================================================================
+describe('SubUnitsTab - Search Functionality', () => {
+    beforeEach(() => {
+        mockUseSubUnitsQuery.mockReturnValue({
+            data: mockSubUnits,
+            isLoading: false,
+            isError: false,
+            error: null,
+            fetchFromBrreg: vi.fn(),
+        })
+    })
+
+    it('filters subunits by name', () => {
+        render(<SubUnitsTab orgnr="123456789" />, { wrapper: createTestWrapper() })
+
+        const searchInput = screen.getByPlaceholderText(/Søk i avdelinger/)
+        fireEvent.change(searchInput, { target: { value: 'Avdeling A' } })
+
+        expect(screen.getByText('Avdeling A')).toBeInTheDocument()
+        expect(screen.queryByText('Avdeling B')).not.toBeInTheDocument()
+        expect(screen.getByText('(1 treff)')).toBeInTheDocument()
+    })
+
+    it('filters subunits by city (poststed)', () => {
+        render(<SubUnitsTab orgnr="123456789" />, { wrapper: createTestWrapper() })
+
+        const searchInput = screen.getByPlaceholderText(/Søk i avdelinger/)
+        fireEvent.change(searchInput, { target: { value: 'BERGEN' } })
+
+        expect(screen.queryByText('Avdeling A')).not.toBeInTheDocument()
+        expect(screen.getByText('Avdeling B')).toBeInTheDocument()
+    })
+
+    it('filters subunits by orgnr', () => {
+        render(<SubUnitsTab orgnr="123456789" />, { wrapper: createTestWrapper() })
+
+        const searchInput = screen.getByPlaceholderText(/Søk i avdelinger/)
+        fireEvent.change(searchInput, { target: { value: '123456780' } })
+
+        expect(screen.queryByText('Avdeling A')).not.toBeInTheDocument()
+        expect(screen.getByText('Avdeling B')).toBeInTheDocument()
+    })
+
+    it('shows empty state when no matches found', () => {
+        render(<SubUnitsTab orgnr="123456789" />, { wrapper: createTestWrapper() })
+
+        const searchInput = screen.getByPlaceholderText(/Søk i avdelinger/)
+        fireEvent.change(searchInput, { target: { value: 'Non-existent' } })
+
+        expect(screen.getByText(/Ingen avdelinger matchet søket "Non-existent"/)).toBeInTheDocument()
+        expect(screen.queryByText('Avdeling A')).not.toBeInTheDocument()
+        expect(screen.queryByText('Avdeling B')).not.toBeInTheDocument()
+    })
+})

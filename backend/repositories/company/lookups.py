@@ -28,18 +28,7 @@ class LookupsMixin:
     db: AsyncSession  # Type hint for mixin
 
     async def get_by_orgnr(self, orgnr: str) -> models.Company:
-        """Get company by organization number.
-
-        Args:
-            orgnr: Organization number
-
-        Returns:
-            Company model
-
-        Raises:
-            CompanyNotFoundException: If company not found
-            DatabaseException: If database error occurs
-        """
+        """Get company by organization number."""
         try:
             result = await self.db.execute(
                 select(models.Company).options(*DETAIL_VIEW_OPTIONS).filter(models.Company.orgnr == orgnr)
@@ -55,6 +44,15 @@ class LookupsMixin:
         except Exception as e:
             logger.error(f"Database error fetching company {orgnr}: {e}")
             raise DatabaseException(f"Failed to fetch company {orgnr}", original_error=e)
+
+    async def get_company_name(self, orgnr: str) -> str | None:
+        """Fetch only the name of a company by its orgnr. Highly efficient."""
+        try:
+            result = await self.db.execute(select(models.Company.navn).filter(models.Company.orgnr == orgnr))
+            return result.scalar_one_or_none()
+        except Exception as e:
+            logger.error(f"Database error fetching company name {orgnr}: {e}")
+            return None
 
     async def get_existing_orgnrs(self, orgnrs: list[str]) -> set[str]:
         """Check which of the given orgnrs exist in the database.

@@ -1,5 +1,5 @@
-import { createFileRoute } from '@tanstack/react-router'
-import { Link } from '@tanstack/react-router'
+import { createFileRoute, Link } from '@tanstack/react-router'
+import { z } from 'zod'
 import { getCompanyDetailQueryOptions } from '../hooks/queries/useCompanyDetailQuery'
 import { queryClient } from '../lib/queryClient'
 
@@ -8,10 +8,18 @@ interface CompanySearchParams {
   orgnr: string
 }
 
+const companySearchSchema = z.object({
+  tab: z.enum(['oversikt', 'okonomi', 'sammenligning', 'avdelinger', 'roller']).optional(),
+})
+
 const validateOrgnr = (orgnr: string): boolean => {
   return /^\d{9}$/.test(orgnr)
 }
+
 export const Route = createFileRoute('/bedrift/$orgnr')({
+  // Validate search params
+  validateSearch: (search) => companySearchSchema.parse(search),
+
   // Validate params
   params: {
     parse: (params): CompanySearchParams => {

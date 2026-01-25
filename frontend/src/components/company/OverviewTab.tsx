@@ -1,4 +1,4 @@
-import { Building2, Building, MapPin, Users, Calendar, Briefcase, ChevronRight, AlertTriangle, ExternalLink } from 'lucide-react'
+import { Building2, Building, MapPin, Users, Calendar, Briefcase, ChevronRight, AlertTriangle, ExternalLink, Home } from 'lucide-react'
 import { useMemo } from 'react'
 import type { CompanyWithAccounting, Naeringskode } from '../../types'
 import { Link } from '@tanstack/react-router'
@@ -99,6 +99,28 @@ export function OverviewTab({ company, onOpenIndustry }: OverviewTabProps) {
                   </div>
                 </div>
               </div>
+
+              {company.parent_orgnr && (
+                <div className="flex items-start gap-3">
+                  <Home className="h-5 w-5 text-blue-500 mt-0.5" />
+                  <div>
+                    <div className="text-sm font-medium text-gray-900">Hovedenhet</div>
+                    <Link
+                      to="/bedrift/$orgnr"
+                      params={{ orgnr: company.parent_orgnr }}
+                      className="text-sm text-blue-600 hover:text-blue-800 hover:underline flex flex-col gap-0.5 font-medium"
+                    >
+                      <span className="truncate max-w-[200px]" title={company.parent_navn}>
+                        {company.parent_navn || 'Gå til hovedenhet'}
+                      </span>
+                      <span className="text-xs text-gray-500 font-normal flex items-center gap-1">
+                        Org.nr {company.parent_orgnr}
+                        <ChevronRight className="h-3 w-3" />
+                      </span>
+                    </Link>
+                  </div>
+                </div>
+              )}
 
               <div className="flex items-start gap-3">
                 <Briefcase className="h-5 w-5 text-gray-400 mt-0.5" />

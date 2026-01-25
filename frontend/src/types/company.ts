@@ -13,6 +13,7 @@ export interface Address {
 
 export interface SubUnit {
   orgnr: string
+  parent_orgnr?: string
   navn: string
   organisasjonsform: string
   beliggenhetsadresse?: Address
@@ -30,6 +31,8 @@ export interface Naeringskode {
 export interface Company {
   orgnr: string
   navn?: string
+  parent_orgnr?: string
+  parent_navn?: string
   organisasjonsform?: string
   naeringskode?: string | Naeringskode
   naeringskoder?: Naeringskode[]

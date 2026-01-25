@@ -13,6 +13,8 @@ MOCK_ORGNR = "123456789"
 MOCK_COMPANY_DATA = {
     "orgnr": MOCK_ORGNR,
     "navn": "Test Bedrift AS",
+    "parent_orgnr": None,
+    "parent_navn": None,
     "organisasjonsform": "AS",
     "naeringskode": "62.010",
     "antall_ansatte": 10,
