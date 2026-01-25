@@ -148,15 +148,17 @@ export function OverviewTab({ company, onOpenIndustry }: OverviewTabProps) {
                 </div>
               )}
 
-              <div className="flex items-start gap-3">
-                <Users className="h-5 w-5 text-gray-400 mt-0.5" />
-                <div>
-                  <div className="text-sm font-medium text-gray-900">Antall ansatte</div>
-                  <div className="text-sm text-gray-600">
-                    {company.antall_ansatte ?? 'Ikke registrert'}
+              {company.antall_ansatte !== null && company.antall_ansatte !== undefined && (
+                <div className="flex items-start gap-3">
+                  <Users className="h-5 w-5 text-gray-400 mt-0.5" />
+                  <div>
+                    <div className="text-sm font-medium text-gray-900">Antall ansatte</div>
+                    <div className="text-sm text-gray-600">
+                      {company.antall_ansatte}
+                    </div>
                   </div>
                 </div>
-              </div>
+              )}
 
               <div className="flex items-start gap-3">
                 <Calendar className="h-5 w-5 text-gray-400 mt-0.5" />
@@ -190,32 +192,42 @@ export function OverviewTab({ company, onOpenIndustry }: OverviewTabProps) {
               </div>
 
               {/* Register Badges */}
-              <div className="pt-2">
-                <div className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">Andre registreringer</div>
-                <div className="flex flex-wrap gap-2">
-                  <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium border ${company.registrert_i_foretaksregisteret ? 'bg-green-50 text-green-700 border-green-200' : 'bg-gray-50 text-gray-500 border-gray-200'}`}>
-                    Foretaksregisteret
-                  </span>
-                  <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium border ${company.registrert_i_mvaregisteret ? 'bg-green-50 text-green-700 border-green-200' : 'bg-gray-50 text-gray-500 border-gray-200'}`}>
-                    MVA-registeret
-                  </span>
-                  {company.registrert_i_frivillighetsregisteret && (
-                    <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-50 text-green-700 border border-green-200">
-                      Frivillighetsregisteret
-                    </span>
-                  )}
-                  {company.registrert_i_stiftelsesregisteret && (
-                    <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-50 text-green-700 border border-green-200">
-                      Stiftelsesregisteret
-                    </span>
-                  )}
-                  {company.registrert_i_partiregisteret && (
-                    <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-50 text-green-700 border border-green-200">
-                      Partiregisteret
-                    </span>
-                  )}
+              {(company.registrert_i_foretaksregisteret || 
+                company.registrert_i_mvaregisteret || 
+                company.registrert_i_frivillighetsregisteret || 
+                company.registrert_i_stiftelsesregisteret || 
+                company.registrert_i_partiregisteret) && (
+                <div className="pt-2">
+                  <div className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">Andre registreringer</div>
+                  <div className="flex flex-wrap gap-2">
+                    {company.registrert_i_foretaksregisteret && (
+                      <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-50 text-green-700 border border-green-200">
+                        Foretaksregisteret
+                      </span>
+                    )}
+                    {company.registrert_i_mvaregisteret && (
+                      <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-50 text-green-700 border border-green-200">
+                        MVA-registeret
+                      </span>
+                    )}
+                    {company.registrert_i_frivillighetsregisteret && (
+                      <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-50 text-green-700 border border-green-200">
+                        Frivillighetsregisteret
+                      </span>
+                    )}
+                    {company.registrert_i_stiftelsesregisteret && (
+                      <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-50 text-green-700 border border-green-200">
+                        Stiftelsesregisteret
+                      </span>
+                    )}
+                    {company.registrert_i_partiregisteret && (
+                      <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-50 text-green-700 border border-green-200">
+                        Partiregisteret
+                      </span>
+                    )}
+                  </div>
                 </div>
-              </div>
+              )}
 
             </div>
           </div>
