@@ -23,7 +23,7 @@ class SubUnitResponse(BaseModel):
     beliggenhetsadresse: dict[str, Any] | None = None
     postadresse: dict[str, Any] | None = None
     antall_ansatte: int | None = 0
-    naeringskode: str | None = None
+    naeringskode: str | Naeringskode | None = None
     stiftelsesdato: date | None = None
 
     model_config = ConfigDict(from_attributes=True)

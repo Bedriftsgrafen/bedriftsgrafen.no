@@ -5,6 +5,7 @@ This module contains shared code used across all company repository modules.
 
 import asyncio
 import logging
+from typing import Union
 
 from sqlalchemy.orm import defer, noload, selectinload
 
@@ -70,6 +71,9 @@ LATEST_FINANCIAL_COLUMNS = [
 class CompanyWithFinancials:
     """Simple wrapper to hold company + financial data together."""
 
+    # Type hint for enriched or raw NACE codes
+    naeringskoder: list[Union[str, dict[str, str]]]
+
     def __init__(
         self,
         company: models.Company,
@@ -103,7 +107,8 @@ class CompanyWithFinancials:
         self.forretningsadresse = company.forretningsadresse
         self.data = None
         # Copy naeringskoder from company property if available
-        self.naeringskoder = company.naeringskoder if hasattr(company, "naeringskoder") else []
+        # This will be list[str] initially, then enriched by Service
+        self.naeringskoder = list(company.naeringskoder) if hasattr(company, "naeringskoder") else []
         self.latest_revenue = latest_revenue
         self.latest_profit = latest_profit
         self.latest_operating_profit = latest_operating_profit

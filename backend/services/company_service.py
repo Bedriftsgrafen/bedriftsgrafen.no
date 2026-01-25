@@ -50,13 +50,15 @@ class CompanyService:
             List of Company models matching filters
         """
         repo_filters = FilterParams(**filters.to_count_params())
-        return await self.company_repo.get_all(
+        results = await self.company_repo.get_all(
             filters=repo_filters,
             skip=filters.skip,
             limit=filters.limit,
             sort_by=filters.sort_by,
             sort_order=filters.sort_order,
         )
+        await self._enrich_nace_codes(results)
+        return results
 
     async def stream_companies(self, filters: CompanyFilterDTO):
         """Stream companies from repository using generator.
@@ -72,6 +74,7 @@ class CompanyService:
             sort_by=filters.sort_by,
             sort_order=filters.sort_order,
         ):
+            # For streaming, we don't batch enrich NACE codes to keep it memory efficient
             yield company
 
     async def count_companies(self, filters: CompanyFilterDTO) -> int:
@@ -89,9 +92,26 @@ class CompanyService:
     async def get_company_with_accounting(self, orgnr: str) -> models.Company | None:
         return await self.company_repo.get_by_orgnr(orgnr)
 
+    async def get_company_detail(self, orgnr: str) -> models.Company | None:
+        """
+        Get complete company details including accounting, geocoding if needed,
+        and enriched NACE descriptions.
+        """
+        company = await self.company_repo.get_by_orgnr(orgnr)
+        if not company:
+            return None
+
+        # Auto-geocode if missing coordinates (legacy behavior preserved via Service)
+        if company.latitude is None:
+            await self.ensure_geocoded(company)
+
+        return company
+
     async def get_similar_companies(self, orgnr: str, limit: int = 5) -> list[CompanyWithFinancials]:
         """Get similar companies based on industry and location."""
-        return await self.company_repo.get_similar_companies(orgnr, limit)
+        results = await self.company_repo.get_similar_companies(orgnr, limit)
+        await self._enrich_nace_codes(results)
+        return results
 
     async def get_aggregate_stats(self, filters: CompanyFilterDTO) -> dict[str, Any]:
         """Get aggregate statistics for companies matching filters.
@@ -155,6 +175,8 @@ class CompanyService:
         offset = (page - 1) * limit
         companies, total = await self.company_repo.get_by_industry_code(nace_code, limit, offset, include_inactive)
 
+        await self._enrich_nace_codes(companies)
+
         # Calculate pagination metadata
         total_pages = (total + limit - 1) // limit if total > 0 else 0
 
@@ -190,7 +212,7 @@ class CompanyService:
                     "navn": getattr(c, "navn", None),
                     "organisasjonsform": getattr(c, "organisasjonsform", None),
                     "naeringskode": getattr(c, "naeringskode", None),
-                    "naeringskoder": getattr(c, "naeringskoder", []),
+                    "naeringskoder": list(getattr(c, "naeringskoder", [])),
                     "antall_ansatte": getattr(c, "antall_ansatte", None),
                     "latest_revenue": getattr(c, "latest_revenue", None),
                     "latest_profit": getattr(c, "latest_profit", None),
@@ -206,9 +228,74 @@ class CompanyService:
             stiftelsesdato = getattr(c, "stiftelsesdato", None)
             serializable[-1]["stiftelsesdato"] = stiftelsesdato.isoformat() if stiftelsesdato else None
 
+        await self._enrich_nace_codes(serializable)
+
         # cache serializable result
         await search_cache.set(key, serializable)
         return serializable
+
+    async def _enrich_nace_codes(self, items: list[Any]) -> None:
+        """
+        Enrich a list of company objects or dictionaries with NACE descriptions.
+        Supports:
+        - naeringskoder: list[str] -> list[dict]
+        - naeringskode: str -> dict
+        Works with CompanyWithFinancials, Pydantic models, and plain dictionaries.
+        """
+        if not items:
+            return
+
+        from services.nace_service import NaceService
+
+        # 1. Collect all unique codes
+        unique_codes = set()
+        for item in items:
+            # Handle plural codes (list)
+            codes = item.get("naeringskoder") if isinstance(item, dict) else getattr(item, "naeringskoder", None)
+            if codes:
+                for c in codes:
+                    if isinstance(c, str):
+                        unique_codes.add(c)
+
+            # Handle singular code (string)
+            code = item.get("naeringskode") if isinstance(item, dict) else getattr(item, "naeringskode", None)
+            if isinstance(code, str):
+                unique_codes.add(code)
+
+        if not unique_codes:
+            return
+
+        # 2. Fetch descriptions in bulk (internally cached)
+        tasks = {code: NaceService.get_nace_name(code) for code in unique_codes}
+        results = await asyncio.gather(*tasks.values())
+        names = dict(zip(tasks.keys(), results))
+
+        # 3. Update items in place
+        for item in items:
+            is_dict = isinstance(item, dict)
+            is_pydantic = hasattr(item, "model_fields")
+
+            # Enrich plural field (naeringskoder)
+            codes = item.get("naeringskoder") if is_dict else getattr(item, "naeringskoder", None)
+            if codes and isinstance(codes[0], str):
+                enriched_list = [{"kode": c, "beskrivelse": names.get(c, f"Kode {c}")} for c in codes]
+                if is_dict:
+                    item["naeringskoder"] = enriched_list
+                elif is_pydantic:
+                    setattr(item, "naeringskoder", enriched_list)
+                else:
+                    item.naeringskoder = enriched_list
+
+            # Enrich singular field (naeringskode)
+            code = item.get("naeringskode") if is_dict else getattr(item, "naeringskode", None)
+            if isinstance(code, str):
+                enriched_obj = {"kode": code, "beskrivelse": names.get(code, f"Kode {code}")}
+                if is_dict:
+                    item["naeringskode"] = enriched_obj
+                elif is_pydantic:
+                    setattr(item, "naeringskode", enriched_obj)
+                else:
+                    item.naeringskode = enriched_obj
 
     async def fetch_and_store_company(
         self, orgnr: str, fetch_financials: bool = True, geocode: bool = True

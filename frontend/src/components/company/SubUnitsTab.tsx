@@ -56,8 +56,11 @@ function SubUnitCard({ unit }: { unit: SubUnit }) {
         <div className="pt-2 mt-2 border-t border-gray-100 flex justify-between items-center text-xs text-gray-500">
           <span title={unit.orgnr}>Org.nr: {unit.orgnr}</span>
           {unit.naeringskode && (
-            <span className="bg-gray-100 px-2 py-1 rounded" title={unit.naeringskode}>
-              {unit.naeringskode}
+            <span
+              className="bg-gray-100 px-2 py-1 rounded truncate max-w-[150px]"
+              title={typeof unit.naeringskode === 'object' ? `${unit.naeringskode.kode} - ${unit.naeringskode.beskrivelse}` : unit.naeringskode}
+            >
+              {typeof unit.naeringskode === 'object' ? unit.naeringskode.kode : unit.naeringskode}
             </span>
           )}
         </div>

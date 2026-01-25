@@ -4,6 +4,7 @@ import { Building2, Users, TrendingUp, TrendingDown, Wallet, X, ArrowLeft, Share
 import { SEOHead } from '../components/layout'
 import { apiClient } from '../utils/apiClient'
 import { formatLargeNumber } from '../utils/formatters'
+import { formatNace } from '../utils/nace'
 import type { CompanyWithAccounting } from '../types'
 import { useComparisonStore } from '../store/comparisonStore'
 
@@ -66,8 +67,8 @@ function ComparisonCard({ item, onRemove }: { item: ComparisonData; onRemove?: (
                     <div className="space-y-2">
                         <div className="flex items-center gap-2 text-sm">
                             <Building2 className="h-4 w-4 text-gray-400" />
-                            <span className="text-gray-600">
-                                {item.company.naeringskode || 'Ukjent bransje'}
+                            <span className="truncate" title={formatNace(item.company.naeringskode)}>
+                                {formatNace(item.company.naeringskode) || 'Ukjent bransje'}
                             </span>
                         </div>
                         <div className="flex items-center gap-2 text-sm">

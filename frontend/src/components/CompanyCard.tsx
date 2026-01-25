@@ -24,7 +24,15 @@ function formatMillions(value: number | null | undefined): string {
 export const CompanyCard = memo(function CompanyCard({ company, onClick }: CompanyCardProps) {
     const orgFormLabel = getOrganizationFormLabel(company.organisasjonsform)
     const kommune = company.forretningsadresse?.kommune || company.postadresse?.kommune
-    const industry = company.naeringskoder?.[0]?.beskrivelse || company.naeringskode
+    const industry = useMemo(() => {
+        if (company.naeringskoder?.[0]?.beskrivelse) {
+            return company.naeringskoder[0].beskrivelse
+        }
+        if (typeof company.naeringskode === 'object' && company.naeringskode !== null) {
+            return company.naeringskode.beskrivelse
+        }
+        return company.naeringskode
+    }, [company.naeringskoder, company.naeringskode])
 
     // Smart Badges Logic
     const badges = useMemo(() => {

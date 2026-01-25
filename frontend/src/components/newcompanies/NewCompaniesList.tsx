@@ -7,6 +7,7 @@ import { useState, useMemo, useCallback, MouseEvent } from 'react'
 import { ChevronLeft, ChevronRight, Search, Filter, X, Copy, Check } from 'lucide-react'
 import { SortableHeader } from '../common/SortableHeader'
 import { formatNumber } from '../../utils/formatters'
+import { formatNace, getNaceCode } from '../../utils/nace'
 import { RegionSelect } from '../common/RegionSelect'
 import { LoadingState } from '../common/LoadingState'
 import { ErrorState } from '../common/ErrorState'
@@ -320,11 +321,11 @@ export function NewCompaniesList({
                                     <td className="px-4 py-3 text-sm text-gray-600">
                                         {company.naeringskode ? (
                                             <button
-                                                onClick={(e) => handleNaceClick(company.naeringskode!, e)}
-                                                className="hover:text-green-600 hover:underline transition-colors"
-                                                title={`Filtrer på bransje ${company.naeringskode}`}
+                                                onClick={(e) => handleNaceClick(getNaceCode(company.naeringskode)!, e)}
+                                                className="text-blue-600 hover:text-blue-800 hover:underline text-left max-w-full truncate"
+                                                title={formatNace(company.naeringskode)}
                                             >
-                                                {company.naeringskode}
+                                                {formatNace(company.naeringskode)}
                                             </button>
                                         ) : '—'}
                                     </td>

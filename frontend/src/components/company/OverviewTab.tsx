@@ -1,9 +1,10 @@
-import { Building2, MapPin, Users, Calendar, Briefcase, ChevronRight, AlertTriangle, ExternalLink } from 'lucide-react'
+import { Building2, Building, MapPin, Users, Calendar, Briefcase, ChevronRight, AlertTriangle, ExternalLink } from 'lucide-react'
 import { useMemo } from 'react'
 import type { CompanyWithAccounting, Naeringskode } from '../../types'
 import { Link } from '@tanstack/react-router'
 import { formatDate, getBrregEnhetsregisteretUrl } from '../../utils/formatters'
 import { getOrganizationFormLabel } from '../../utils/organizationForms'
+import { formatNace, getNaceCode } from '../../utils/nace'
 import { LocationMap } from '../common/LocationMap'
 import { ContactCard } from './ContactCard'
 import { AffiliateBanner } from '../ads/AffiliateBanner'
@@ -121,14 +122,13 @@ export function OverviewTab({ company, onOpenIndustry }: OverviewTabProps) {
                         ))}
                       </div>
                     ) : company.naeringskode ? (
-                      <button
-                        onClick={() => onOpenIndustry?.(company.naeringskode!, company.naeringskode!)}
-                        className="group flex items-center gap-1 py-1 px-2 -mx-2 rounded hover:bg-blue-50 transition-colors"
-                        title={`Se andre bedrifter med næringskode ${company.naeringskode}`}
-                      >
-                        <span className="text-gray-600 group-hover:text-blue-600">{company.naeringskode}</span>
-                        <ChevronRight className="h-4 w-4 text-gray-400 group-hover:text-blue-600 opacity-0 group-hover:opacity-100 transition-opacity" />
-                      </button>
+                    <button
+                        onClick={() => onOpenIndustry?.(getNaceCode(company.naeringskode)!, getNaceCode(company.naeringskode)!)}
+                        className="flex items-center gap-2 group"
+                    >
+                        <Building className="h-4 w-4 text-blue-500" />
+                        <span className="text-gray-600 group-hover:text-blue-600">{formatNace(company.naeringskode)}</span>
+                    </button>
                     ) : (
                       <span className="text-gray-600">Ikke registrert</span>
                     )}

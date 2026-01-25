@@ -12,6 +12,7 @@ import { useUiStore, COLUMN_CONFIG, type CompanyColumn } from '../store/uiStore'
 import { useFilterStore } from '../store/filterStore'
 import { formatDateNorwegian } from '../utils/dates'
 import { formatCurrency, formatNumber } from '../utils/formatters'
+import { formatNace } from '../utils/nace'
 
 /** Compact badges for the list view */
 const SmartBadgesList = ({ company }: { company: Company }) => {
@@ -71,7 +72,7 @@ const getCellValue = (company: Company, column: CompanyColumn): React.ReactNode 
         case 'naeringskode':
             return company.naeringskoder?.[0]
                 ? `${company.naeringskoder[0].kode} - ${company.naeringskoder[0].beskrivelse}`
-                : company.naeringskode || '-'
+                : formatNace(company.naeringskode) || '-'
         case 'antall_ansatte': return company.antall_ansatte ?? '-'
         case 'stiftelsesdato': return formatDateNorwegian(company.stiftelsesdato || null)
         case 'kommune': return company.forretningsadresse?.kommune || company.postadresse?.kommune || '-'

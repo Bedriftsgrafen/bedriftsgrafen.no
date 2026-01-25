@@ -4,6 +4,7 @@ import { useComparisonStore } from '../../store/comparisonStore'
 import { Button } from '../common/Button'
 import { apiClient } from '../../utils/apiClient'
 import { formatLargeNumber } from '../../utils/formatters'
+import { formatNace } from '../../utils/nace'
 import type { CompanyWithAccounting } from '../../types'
 import { AffiliateBanner } from '../ads/AffiliateBanner'
 import { CONTACT_EMAIL } from '../../constants/contact'
@@ -46,13 +47,13 @@ const ComparisonCard = memo(function ComparisonCard({ item }: { item: Comparison
 
                     {/* Basic info */}
                     <div className="space-y-2">
-                        <div className="flex items-center gap-2 text-sm">
-                            <Building2 className="h-4 w-4 text-gray-400" />
-                            <span className="text-gray-600">
-                                {item.company.naeringskode || 'Ukjent bransje'}
-                            </span>
-                        </div>
-                        <div className="flex items-center gap-2 text-sm">
+                                                <div className="flex items-center gap-2 text-sm">
+                                                    <Building2 className="h-4 w-4 text-gray-400" />
+                                                    <span className="truncate" title={formatNace(item.company.naeringskode)}>
+                                                        {formatNace(item.company.naeringskode) || 'Ukjent bransje'}
+                                                    </span>
+                                                </div>
+                                                <div className="flex items-center gap-2 text-sm">
                             <Users className="h-4 w-4 text-gray-400" />
                             <span className="text-gray-600">
                                 {item.company.antall_ansatte ?? '-'} ansatte

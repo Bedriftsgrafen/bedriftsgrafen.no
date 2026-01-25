@@ -3,12 +3,12 @@ import { getNaceLevel } from '../nace';
 
 describe('nace utils', () => {
     it('identifies division codes', () => {
-        expect(getNaceLevel('62')).toBe('Hovedbransje');
-        expect(getNaceLevel('01')).toBe('Hovedbransje');
+        expect(getNaceLevel('62')).toEqual(['62']);
+        expect(getNaceLevel('01')).toEqual(['01']);
     });
 
     it('identifies subclass codes', () => {
-        expect(getNaceLevel('62.010')).toBe('Underbransje');
-        expect(getNaceLevel('01.110')).toBe('Underbransje');
+        expect(getNaceLevel('62.010')).toEqual(['62', '010']);
+        expect(getNaceLevel('01.110')).toEqual(['01', '110']);
     });
 });

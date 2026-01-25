@@ -5,7 +5,6 @@ from main import app
 from services.company_service import CompanyService
 from schemas.companies import (
     CompanyBase,
-    CompanyWithAccounting,
     FetchCompanyResponse,
 )
 
@@ -25,6 +24,7 @@ MOCK_COMPANY_DATA = {
 @pytest.fixture
 def mock_company_service(monkeypatch):
     service_mock = AsyncMock(spec=CompanyService)
+    service_mock._enrich_nace_codes = AsyncMock()
 
     # We need to patch the DEPENDENCY which yields the db,
     # but more importantly, we assume the router instantiates CompanyService(db).
@@ -58,13 +58,34 @@ def test_get_companies_success(client, mock_company_service):
 
 def test_get_company_success(client, mock_company_service):
     # Arrange
-    mock_response = CompanyWithAccounting(**MOCK_COMPANY_DATA, raw_data={})
-    # Needed for router logic (latitude check)
-    mock_response.latitude = 60.0
-    mock_response.longitude = 10.0
-    mock_response.naeringskoder = []
+    # CompanyWithAccounting requires many fields, ensure mock_response has them
+    from models import Company
 
-    mock_company_service.get_company_with_accounting.return_value = mock_response
+    mock_company = MagicMock(spec=Company)
+    for key, val in MOCK_COMPANY_DATA.items():
+        setattr(mock_company, key, val)
+    mock_company.latitude = 60.0
+    mock_company.longitude = 10.0
+    mock_company.naeringskoder = ["62.010"]
+    mock_company.stiftelsesdato = None
+    mock_company.registreringsdato_enhetsregisteret = None
+    mock_company.registreringsdato_foretaksregisteret = None
+    mock_company.hjemmeside = None
+    mock_company.postadresse = None
+    mock_company.forretningsadresse = None
+    mock_company.konkurs = False
+    mock_company.konkursdato = None
+    mock_company.under_avvikling = False
+    mock_company.under_tvangsavvikling = False
+    mock_company.vedtektsfestet_formaal = None
+    mock_company.telefon = None
+    mock_company.mobil = None
+    mock_company.epostadresse = None
+    mock_company.siste_innsendte_aarsregnskap = None
+    mock_company.institusjonell_sektor = None
+    mock_company.last_polled_regnskap = None
+
+    mock_company_service.get_company_detail.return_value = mock_company
 
     # Act
     response = client.get(f"/v1/companies/{MOCK_ORGNR}")
@@ -76,7 +97,7 @@ def test_get_company_success(client, mock_company_service):
 
 def test_get_company_not_found(client, mock_company_service):
     # Arrange
-    mock_company_service.get_company_with_accounting.return_value = None
+    mock_company_service.get_company_detail.return_value = None
 
     # Act
     response = client.get(f"/v1/companies/{MOCK_ORGNR}")

@@ -7,6 +7,7 @@ import { useMemo } from 'react'
 import { ChevronLeft, ChevronRight, Search, Filter, X } from 'lucide-react'
 import { SortableHeader } from '../common/SortableHeader'
 import { formatNumber } from '../../utils/formatters'
+import { formatNace } from '../../utils/nace'
 import { RegionSelect } from '../common/RegionSelect'
 import { LoadingState } from '../common/LoadingState'
 import { ErrorState } from '../common/ErrorState'
@@ -287,8 +288,8 @@ export function BankruptcyList({
                                     <td className="px-4 py-3 text-right text-sm text-gray-600">
                                         {company.antall_ansatte ?? '—'}
                                     </td>
-                                    <td className="px-4 py-3 text-sm text-gray-600">
-                                        {company.naeringskode || '—'}
+                                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                                        {formatNace(company.naeringskode) || '—'}
                                     </td>
                                     <td className="px-4 py-3 text-sm text-gray-600">
                                         {company.forretningsadresse?.kommune || '—'}

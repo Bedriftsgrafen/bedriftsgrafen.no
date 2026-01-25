@@ -18,7 +18,7 @@ export interface SubUnit {
   beliggenhetsadresse?: Address
   postadresse?: Address
   antall_ansatte?: number
-  naeringskode?: string
+  naeringskode?: string | Naeringskode
   stiftelsesdato?: string
 }
 
@@ -31,7 +31,7 @@ export interface Company {
   orgnr: string
   navn?: string
   organisasjonsform?: string
-  naeringskode?: string
+  naeringskode?: string | Naeringskode
   naeringskoder?: Naeringskode[]
   updated_at?: string
   antall_ansatte?: number

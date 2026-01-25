@@ -20,7 +20,6 @@ from schemas.companies import (
     FetchCompanyResponse,
     IndustryCompaniesResponse,
     NaceSubclass,
-    Naeringskode,
 )
 from services.company_service import CompanyService
 from services.export_service import ExportService
@@ -305,25 +304,13 @@ async def get_company_markers(
 @limiter.limit("10/second")
 async def get_company(request: Request, orgnr: str, db: AsyncSession = Depends(get_db)):
     service = CompanyService(db)
-    company = await service.get_company_with_accounting(orgnr)
+    company = await service.get_company_detail(orgnr)
     if company is None:
         raise HTTPException(status_code=404, detail="Company not found")
 
-    # Auto-geocode if missing coordinates (legacy behavior preserved via Service)
-    if company.latitude is None:
-        await service.ensure_geocoded(company)
-
-    # Enrich with NACE descriptions (batch fetch to avoid N+1 sequential awaits)
+    # Enrich with NACE descriptions
     response = CompanyWithAccounting.model_validate(company)
-    codes = company.naeringskoder
-    if codes:
-        # Fetch all NACE names concurrently
-        import asyncio
-
-        descriptions = await asyncio.gather(*[NaceService.get_nace_name(c) for c in codes])
-        response.naeringskoder = [Naeringskode(kode=c, beskrivelse=desc) for c, desc in zip(codes, descriptions)]
-    else:
-        response.naeringskoder = []
+    await service._enrich_nace_codes([response])
 
     return response
 
@@ -423,6 +410,7 @@ async def get_company_subunits(
 
     # Convert to response models
     subunit_responses = [SubUnitResponse.model_validate(s) for s in paginated]
+    await service._enrich_nace_codes(subunit_responses)
 
     # Set HTTP caching headers for subunit details
     if response:

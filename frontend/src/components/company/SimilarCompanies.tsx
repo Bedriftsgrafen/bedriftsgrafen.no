@@ -24,6 +24,7 @@ function SimilarCompaniesSkeleton() {
 }
 
 import { formatLargeCurrency } from '../../utils/formatters'
+import { formatNace } from '../../utils/nace'
 
 export function SimilarCompanies({ orgnr }: SimilarCompaniesProps) {
   const { data: companies, isLoading } = useSimilarCompaniesQuery(orgnr)
@@ -68,13 +69,14 @@ export function SimilarCompanies({ orgnr }: SimilarCompaniesProps) {
               <p className="font-medium text-gray-900 text-sm truncate group-hover:text-blue-700">
                 {company.navn}
               </p>
-              <p className="text-xs text-gray-500 mt-1">
+              <p className="text-[10px] text-gray-500 mt-1 truncate">
                 {hasRevenue ? (
                   formatLargeCurrency(company.latest_revenue)
                 ) : (
-                  company.naeringskode || 'Ukjent bransje'
+                  formatNace(company.naeringskode) || 'Ukjent bransje'
                 )}
               </p>
+
               {kommune && (
                 <p className="text-xs text-gray-400 mt-0.5 flex items-center gap-1">
                   <MapPin className="h-3 w-3" />

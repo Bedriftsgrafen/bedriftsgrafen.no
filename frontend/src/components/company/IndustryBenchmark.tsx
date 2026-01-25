@@ -4,7 +4,7 @@ import { useBenchmarkQuery } from '../../hooks/queries/useBenchmarkQuery'
 import { formatCurrency, formatNumber, formatPercentValue } from '../../utils/formatters'
 import type { CompanyWithAccounting } from '../../types'
 import { BenchmarkCard } from './BenchmarkCard'
-import { getNaceLevel } from '../../utils/nace'
+import { getNaceLevel, getNaceCode } from '../../utils/nace'
 
 interface IndustryBenchmarkProps {
     company: CompanyWithAccounting
@@ -38,7 +38,7 @@ export function IndustryBenchmark({ company }: IndustryBenchmarkProps) {
     const effectiveMunicipalityCode = scope === 'municipal' && municipalityCode ? municipalityCode : null
 
     const { data: benchmark, isLoading, isError, error } = useBenchmarkQuery(
-        selectedNaceCode || company.naeringskode,
+        getNaceCode(selectedNaceCode || company.naeringskode),
         company.orgnr,
         effectiveMunicipalityCode
     )
@@ -46,6 +46,13 @@ export function IndustryBenchmark({ company }: IndustryBenchmarkProps) {
     // Check if we requested municipal but got national fallback
     const requestedMunicipal = scope === 'municipal' && municipalityCode
     const gotNationalFallback = requestedMunicipal && benchmark && !benchmark.municipality_code
+
+    const naceLevelLabel = useMemo(() => {
+        const parts = getNaceLevel(selectedNaceCode || company.naeringskode)
+        if (parts.length > 1) return 'Underbransje'
+        if (parts[0]?.length === 2) return 'Bransje'
+        return 'Sektor'
+    }, [selectedNaceCode, company.naeringskode])
 
     const handleSetNational = useCallback(() => setScope('national'), [])
     const handleSetMunicipal = useCallback(() => setScope('municipal'), [])
@@ -96,7 +103,6 @@ export function IndustryBenchmark({ company }: IndustryBenchmarkProps) {
 
     if (!benchmark) return null
 
-    const naceLevel = getNaceLevel(benchmark.nace_code)
     const hasMunicipalOption = !!municipalityCode
     const hasMultipleNace = (company.naeringskoder?.length ?? 0) > 1
 
@@ -112,11 +118,11 @@ export function IndustryBenchmark({ company }: IndustryBenchmarkProps) {
                     <div>
                         <h3 className="text-xl font-semibold text-gray-900 flex items-center gap-2">
                             Bransjesammenligning
-                            <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${naceLevel === 'Underbransje'
-                                ? 'bg-indigo-100 text-indigo-700'
-                                : 'bg-gray-100 text-gray-700'
+                            <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${naceLevelLabel === 'Underbransje'
+                                ? 'bg-blue-50 text-blue-700'
+                                : 'bg-slate-100 text-slate-700'
                                 }`}>
-                                {naceLevel}
+                                {naceLevelLabel}
                             </span>
                         </h3>
                         <p className="text-sm text-gray-500">
@@ -140,7 +146,7 @@ export function IndustryBenchmark({ company }: IndustryBenchmarkProps) {
                     {hasMultipleNace && (
                         <div className="relative inline-block w-full sm:w-auto">
                             <select
-                                value={selectedNaceCode || ''}
+                                value={getNaceCode(selectedNaceCode) || ''}
                                 onChange={(e) => setSelectedNaceCode(e.target.value)}
                                 className="appearance-none w-full bg-white border border-gray-200 text-gray-700 py-2 px-4 pr-10 rounded-lg leading-tight focus:outline-none focus:bg-white focus:border-blue-500 text-sm font-medium shadow-sm cursor-pointer hover:border-blue-300 transition-all"
                                 aria-label="Velg bransje for sammenligning"

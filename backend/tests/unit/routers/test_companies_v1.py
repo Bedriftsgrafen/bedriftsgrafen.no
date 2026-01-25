@@ -24,6 +24,7 @@ app.dependency_overrides[get_db] = override_get_db
 @pytest.fixture
 def mock_company_service():
     with patch("routers.v1.companies.CompanyService") as mock:
+        mock.return_value._enrich_nace_codes = AsyncMock()
         yield mock.return_value
 
 
@@ -102,7 +103,7 @@ async def test_get_company_detail(mock_company_service):
     mock_company.latest_operating_margin = 0
 
     # Configure mock return
-    mock_company_service.get_company_with_accounting = AsyncMock(return_value=mock_company)
+    mock_company_service.get_company_detail = AsyncMock(return_value=mock_company)
 
     # Mock NACE service to avoid external calls
     with patch("services.nace_service.NaceService.get_nace_name", AsyncMock(return_value="Programming")):
@@ -120,7 +121,7 @@ async def test_get_company_detail(mock_company_service):
 @pytest.mark.asyncio
 async def test_get_company_not_found(mock_company_service):
     # Arrange
-    mock_company_service.get_company_with_accounting = AsyncMock(return_value=None)
+    mock_company_service.get_company_detail = AsyncMock(return_value=None)
 
     async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as ac:
         # Act
