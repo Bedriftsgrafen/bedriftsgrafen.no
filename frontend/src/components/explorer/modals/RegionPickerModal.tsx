@@ -139,9 +139,9 @@ const LocationItem = memo(function LocationItem({
                 <Icon className="h-4 w-4" />
             </span>
             <div className="flex-1 min-w-0">
-                <span className="text-gray-800 font-medium">{name}</span>
+                <span className="text-gray-800 font-medium block truncate">{name}</span>
                 {subtitle && (
-                    <span className="text-gray-400 text-sm ml-2">{subtitle}</span>
+                    <span className="text-gray-400 text-sm block truncate">{subtitle}</span>
                 )}
             </div>
             {isSelected && (

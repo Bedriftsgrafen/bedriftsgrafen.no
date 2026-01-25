@@ -36,7 +36,7 @@ const ComparisonCard = memo(function ComparisonCard({ item }: { item: Comparison
             ) : item.company ? (
                 <>
                     {/* Company header */}
-                    <div>
+                    <div className="min-w-0">
                         <h3 className="font-semibold text-gray-900 line-clamp-2">
                             {item.company.navn}
                         </h3>

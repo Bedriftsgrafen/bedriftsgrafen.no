@@ -1,5 +1,5 @@
 import React, { useState, useMemo, useCallback, useEffect } from 'react'
-import { Users, Briefcase, Building2, AlertCircle, Loader, RefreshCw, Crown, User, UserCheck, ChevronDown, Calendar, ExternalLink } from 'lucide-react'
+import { Users, Briefcase, Building2, AlertCircle, Loader, RefreshCw, Crown, User, UserCheck, ChevronDown, Calendar, ExternalLink, type LucideProps } from 'lucide-react'
 import { useRolesQuery, type Role } from '../../hooks/queries/useRolesQuery'
 import { Link } from '@tanstack/react-router'
 import { getLinkedInSearchUrl, get1881SearchUrl } from '../../utils/formatters'
@@ -13,13 +13,13 @@ interface RolesTabProps {
 }
 
 // Role type configuration with icons, colors, and display labels
-const ROLE_CONFIG: Record<string, { icon: typeof Users; label: string; sectionTitle: string; color: string }> = {
-    INNH: { icon: Crown, label: 'Innehaver', sectionTitle: 'Innehaver', color: 'text-amber-600' },
+const ROLE_CONFIG: Record<string, { icon: React.FC<LucideProps>; label: string; sectionTitle: string; color: string }> = {
+    INNH: { icon: (props: LucideProps) => <Crown {...props} aria-hidden="true" />, label: 'Innehaver', sectionTitle: 'Innehaver', color: 'text-amber-600' },
     DAGL: { icon: Briefcase, label: 'Daglig leder', sectionTitle: 'Daglig ledelse', color: 'text-blue-600' },
-    LEDE: { icon: Crown, label: 'Styreleder', sectionTitle: 'Styreleder', color: 'text-amber-600' },
+    LEDE: { icon: (props: LucideProps) => <Crown {...props} aria-hidden="true" />, label: 'Styreleder', sectionTitle: 'Styreleder', color: 'text-amber-600' },
     MEDL: { icon: Users, label: 'Styremedlem', sectionTitle: 'Styremedlemmer', color: 'text-gray-600' },
     VARA: { icon: UserCheck, label: 'Varamedlem', sectionTitle: 'Varamedlemmer', color: 'text-gray-500' },
-    NEST: { icon: Crown, label: 'Nestleder', sectionTitle: 'Nestleder', color: 'text-amber-500' },
+    NEST: { icon: (props: LucideProps) => <Crown {...props} aria-hidden="true" />, label: 'Nestleder', sectionTitle: 'Nestleder', color: 'text-amber-500' },
     KONT: { icon: User, label: 'Kontaktperson', sectionTitle: 'Kontaktpersoner', color: 'text-green-600' },
     REPR: { icon: User, label: 'Representant', sectionTitle: 'Representanter', color: 'text-purple-600' },
     REVI: { icon: Building2, label: 'Revisor', sectionTitle: 'Revisor', color: 'text-indigo-600' },
@@ -201,7 +201,7 @@ function RoleCard({ role, onCompanyClick }: { role: Role, onCompanyClick?: (orgn
     )
 }
 
-function RoleSection({ title, roles, icon: Icon, onCompanyClick }: { title: string; roles: Role[]; icon: typeof Users, onCompanyClick?: (orgnr: string) => void }) {
+function RoleSection({ title, roles, icon: Icon, onCompanyClick }: { title: string; roles: Role[]; icon: React.ComponentType<LucideProps>, onCompanyClick?: (orgnr: string) => void }) {
     return (
         <div className="space-y-2">
             <h4 className="flex items-center gap-2 text-sm font-semibold text-gray-700">

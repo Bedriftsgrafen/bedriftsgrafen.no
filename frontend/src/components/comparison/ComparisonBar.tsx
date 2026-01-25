@@ -40,13 +40,13 @@ export const ComparisonBar = memo(function ComparisonBar() {
                     <span className="text-sm text-gray-500 shrink-0">
                         Sammenlign ({companies.length}/3):
                     </span>
-                    <div className="flex items-center gap-2 overflow-x-auto">
+                    <div className="flex items-center gap-2 overflow-x-auto pb-1">
                         {companies.map((company) => (
                             <div
                                 key={company.orgnr}
-                                className="flex items-center gap-1.5 px-2.5 py-1 bg-blue-50 text-blue-700 rounded-lg text-sm shrink-0"
+                                className="flex items-center gap-1.5 px-2.5 py-1 bg-blue-50 text-blue-700 rounded-lg text-sm shrink-0 min-w-0"
                             >
-                                <span className="truncate max-w-[150px]">{company.navn}</span>
+                                <span className="truncate">{company.navn}</span>
                                 <button
                                     type="button"
                                     onClick={() => handleRemove(company.orgnr)}
