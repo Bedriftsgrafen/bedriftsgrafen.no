@@ -6,36 +6,37 @@ This guide outlines the coding standards and UI/UX patterns used in the Bedrifts
 
 We use **Tailwind CSS v4** for styling. Adhere to these patterns to avoid common layout issues.
 
-### 1. Flexbox Truncation Pattern
-When using `truncate` or `line-clamp` inside a flex or grid container, the parent container **must** have `min-w-0` (or `min-h-0` for vertical) to allow the child to shrink and truncate properly.
+### 1. Flexbox Truncation & Grid Stability
+When using `truncate` or `line-clamp` inside a flex or grid container, the parent container **must** have `min-w-0` (or `min-h-0` for vertical) to allow the child to shrink and truncate properly. This is critical in side-by-side comparison views.
 
 **❌ Incorrect:**
 ```tsx
-<div className="flex">
-  <span className="truncate">This very long text will overflow the container</span>
+<div className="grid grid-cols-2">
+  <div className="group">
+    <span className="truncate">Very long industry name...</span>
+  </div>
 </div>
 ```
 
 **✅ Correct:**
 ```tsx
-<div className="flex min-w-0">
-  <span className="truncate">This text will now truncate correctly</span>
+<div className="grid grid-cols-2 min-w-0">
+  <div className="group min-w-0">
+    <span className="truncate">This text will now truncate correctly</span>
+  </div>
 </div>
 ```
 
-### 2. Text Normalization
-Legacy data from Brreg often contains inconsistent whitespace and "weird" line breaks. Always use the `normalizeText` utility from `src/utils/formatters.ts` for long-form register data (e.g., "Vedtektsfestet formål").
+### 2. Line Clamp vs Truncation
+- Use `truncate` for single-line text (e.g., Company Names in bars).
+- Use `line-clamp-2` for slightly longer text (e.g., NACE Industry descriptions) to provide more context while maintaining layout height stability.
+- Ensure `leading-snug` or `leading-relaxed` is used with `line-clamp` for better readability.
 
-```tsx
-import { normalizeText } from '../utils/formatters'
-
-// ...
-<p>{normalizeText(company.vedtektsfestet_formaal)}</p>
-```
-
-### 3. Responsive Design
-- Prefer mobile-first design (`className="w-full md:w-1/2"`).
-- Use the standardized grid for card layouts: `grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4`.
+### 3. Clean UI Pattern (Hide vs Gray-out)
+Adopt a "Clean UI" approach for optional or empty data.
+- **DO NOT** show "Ikke registrert" or grayed-out "false" states for non-essential info (e.g., MVA-register, Antall ansatte if null).
+- **DO** hide the entire row or section if the information is missing or the flag is false.
+- **EXCEPTION**: Key legal dates (like Stiftelsesdato) should remain visible but marked as missing if they are critical to the company's identity.
 
 ---
 
@@ -44,15 +45,34 @@ import { normalizeText } from '../utils/formatters'
 ### 1. Memoization
 Wrap functional components in `memo()` when they are part of large lists (like `CompanyCard`) or receive complex objects as props to prevent unnecessary re-renders.
 
-### 2. Props Naming
-- Use `Boolean` flags for UI states (e.g., `isLoading`, `isOpen`, `isCompact`).
-- Event handlers should follow the `on[Action]` pattern (e.g., `onSelect`, `onClick`).
+### 2. Strict Typing for Icons
+When a component accepts an icon as a prop, use `React.ComponentType<LucideProps>` to allow for wrapped components (e.g., icons with `aria-hidden` applied).
+
+```tsx
+import { LucideProps } from 'lucide-react'
+
+interface Props {
+  icon: React.ComponentType<LucideProps>
+}
+```
 
 ### 3. Iconography
 We use **Lucide React**.
 - Standard icon size for UI elements: `h-4 w-4` or `h-5 w-5`.
-- Always set `aria-hidden="true"` for purely decorative icons.
-- Use consistent colors: `text-blue-600` for primary actions, `text-gray-400` for subtle indicators.
+- **CRITICAL**: Always set `aria-hidden="true"` for purely decorative icons.
+- For Battle Mode/Comparison winners, use the `Crown` icon with `amber-500` and `fill-amber-500`.
+
+---
+
+## ⚔️ Battle Mode & Comparisons
+
+### 1. Relative Metrics
+- Use `Math.abs` for calculating relative bar widths to handle negative results gracefully.
+- Metric bars should have a subtle background (`bg-slate-100`) and use primary colors (`bg-blue-500`, `bg-emerald-500`) for the "winner".
+
+### 2. Visual Consistency
+- Align labels and icons to the top (`items-start`) when text might wrap to multiple lines.
+- VS badges should be centered between columns and visible only when appropriate breakpoints are met.
 
 ---
 
