@@ -1,3 +1,5 @@
+import { TabContainer } from '../common'
+
 export type TabType = 'oversikt' | 'okonomi' | 'sammenligning' | 'avdelinger' | 'roller'
 
 interface TabsProps {
@@ -32,7 +34,7 @@ function TabButton({ tab, label, isActive, onChange }: TabButtonProps) {
 
 export function ModalTabs({ activeTab, onTabChange, hasAccountingData = true }: TabsProps) {
   return (
-    <div className="flex border-b border-gray-200 mb-6 overflow-x-auto no-scrollbar">
+    <TabContainer className="gap-0">
       <TabButton tab="oversikt" label="Oversikt" isActive={activeTab === 'oversikt'} onChange={onTabChange} />
       <TabButton tab="okonomi" label="Økonomi" isActive={activeTab === 'okonomi'} onChange={onTabChange} />
       {hasAccountingData && (
@@ -40,6 +42,6 @@ export function ModalTabs({ activeTab, onTabChange, hasAccountingData = true }: 
       )}
       <TabButton tab="roller" label="Roller" isActive={activeTab === 'roller'} onChange={onTabChange} />
       <TabButton tab="avdelinger" label="Avdelinger" isActive={activeTab === 'avdelinger'} onChange={onTabChange} />
-    </div>
+    </TabContainer>
   )
 }

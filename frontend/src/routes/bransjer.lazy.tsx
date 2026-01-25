@@ -8,7 +8,7 @@ import { IndustryTopList } from '../components/dashboard/IndustryTopList'
 import { CompanyModalOverlay } from '../components/company/CompanyModalOverlay'
 import { useMemo, useCallback, useEffect } from 'react'
 import { BarChart3, Search, Map, Award } from 'lucide-react'
-import { TabButton } from '../components/common'
+import { TabButton, TabContainer } from '../components/common'
 import { MapFilterValues, defaultMapFilters } from '../types/map'
 import { COUNTIES } from '../constants/explorer'
 import { MUNICIPALITIES } from '../constants/municipalityCodes'
@@ -196,7 +196,7 @@ function BransjerPage() {
             </div>
 
             {/* Tab navigation */}
-            <div className="flex gap-2 mb-6 border-b border-gray-200">
+            <TabContainer>
                 <TabButton
                     active={activeTab === 'stats'}
                     icon={<BarChart3 size={18} />}
@@ -221,7 +221,7 @@ function BransjerPage() {
                     label="Søk bedrifter"
                     onClick={() => setActiveTab('search')}
                 />
-            </div>
+            </TabContainer>
 
             {/* Content */}
             {activeTab === 'stats' && <IndustryDashboard initialNace={nace} onSelectCompany={setSelectedCompanyOrgnr} />}

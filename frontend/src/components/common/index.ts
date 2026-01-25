@@ -4,6 +4,7 @@ export * from './Pagination';
 export * from './RegionSelect';
 export * from './LocationMap';
 export * from './TabButton';
+export * from './TabContainer';
 export * from './SummaryCard';
 export * from './SortableHeader';
 export * from './LoadingState';

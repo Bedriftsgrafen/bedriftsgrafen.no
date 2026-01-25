@@ -9,7 +9,7 @@ import { IndustryMap } from '../components/maps/IndustryMap'
 import { MapFilterValues, defaultMapFilters } from '../types/map'
 import { CompanyModalOverlay } from '../components/company/CompanyModalOverlay'
 import { CompanyListModal } from '../components/dashboard/CompanyListModal'
-import { SummaryCard, TabButton } from '../components/common'
+import { SummaryCard, TabButton, TabContainer } from '../components/common'
 import { IndustryBreakdownStats } from '../components/dashboard/IndustryBreakdownStats'
 import { TrendChart } from '../components/dashboard/TrendChart'
 import { formatNumber, formatCurrency, cleanOrgnr } from '../utils/formatters'
@@ -256,7 +256,7 @@ function NyetableringerPage() {
             </div>
 
             {/* Tab navigation */}
-            <div className="flex gap-2 mb-6 border-b border-gray-200">
+            <TabContainer>
                 <TabButton
                     active={activeTab === 'list'}
                     icon={<List size={18} />}
@@ -277,7 +277,7 @@ function NyetableringerPage() {
                     label="Kart"
                     onClick={handleMapTab}
                 />
-            </div>
+            </TabContainer>
 
             {/* Content */}
             {activeTab === 'list' && (
