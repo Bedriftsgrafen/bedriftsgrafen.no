@@ -138,7 +138,7 @@ export const CompanyCard = memo(function CompanyCard({ company, onClick }: Compa
 
             {/* Industry */}
             {industry && (
-                <p className="text-[11px] font-medium text-slate-500 truncate mb-3" title={industry}>
+                <p className="text-[11px] font-medium text-slate-500 line-clamp-2 mb-3 leading-snug" title={industry}>
                     {industry}
                 </p>
             )}

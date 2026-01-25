@@ -45,33 +45,29 @@ function ComparisonCard({
     }
 
     return (
-        <div className={`bg-white rounded-2xl border ${battleMode && Object.values(isWinner).some(Boolean) ? 'border-blue-200 shadow-md' : 'border-slate-200 shadow-sm'} p-6 space-y-5 relative transition-all duration-300`}>
+        <div className={`bg-white rounded-2xl border ${battleMode && Object.values(isWinner).some(Boolean) ? 'border-blue-200 shadow-md' : 'border-slate-200 shadow-sm'} p-6 space-y-5 relative transition-all duration-300 min-w-0`}>
             {onRemove && (
                 <button
                     onClick={() => onRemove(item.orgnr)}
-                    className="absolute top-4 right-4 p-1.5 hover:bg-gray-100 rounded-lg transition-colors z-10"
+                    className="absolute top-4 right-4 p-1.5 text-slate-400 hover:text-rose-500 hover:bg-rose-50 rounded-lg transition-colors z-10"
                     title="Fjern fra sammenligning"
-                    aria-label="Fjern fra sammenligning"
                 >
-                    <X className="h-4 w-4 text-gray-400" />
+                    <X className="h-4 w-4" />
                 </button>
             )}
 
-            {item.loading ? (
-                <div className="animate-pulse space-y-3">
-                    <div className="h-6 bg-gray-200 rounded w-3/4" />
-                    <div className="h-4 bg-gray-200 rounded w-1/2" />
-                    <div className="h-32 bg-gray-200 rounded" />
-                </div>
-            ) : item.error ? (
-                <div className="py-12 text-center">
-                    <X className="h-10 w-10 text-red-200 mx-auto mb-2" />
-                    <div className="text-red-500 text-sm font-medium">{item.error}</div>
+            {!item.company && item.loading ? (
+                <div className="flex flex-col items-center justify-center py-12 space-y-4">
+                    <Building2 className="h-8 w-8 text-slate-200 animate-pulse" />
+                    <div className="space-y-2 w-full">
+                        <div className="h-4 bg-slate-100 rounded animate-pulse w-3/4 mx-auto" />
+                        <div className="h-3 bg-slate-50 rounded animate-pulse w-1/2 mx-auto" />
+                    </div>
                 </div>
             ) : item.company ? (
                 <>
                     {/* Company header */}
-                    <div className="pr-8">
+                    <div className="pr-8 min-w-0">
                         <Link
                             to="/bedrift/$orgnr"
                             params={{ orgnr: item.orgnr }}
@@ -79,17 +75,17 @@ function ComparisonCard({
                         >
                             {item.company.navn}
                         </Link>
-                        <p className="text-[10px] font-black text-gray-400 uppercase tracking-[0.15em] mt-1">
+                        <p className="text-[10px] font-black text-gray-400 uppercase tracking-[0.15em] mt-1 truncate" title={`${item.company.organisasjonsform} • ${item.orgnr}`}>
                             {item.company.organisasjonsform} • {item.orgnr}
                         </p>
                     </div>
 
                     {/* Basic info */}
-                    <div className="space-y-4">
-                        <div className="flex items-center gap-2 text-sm min-w-0">
-                            <Building2 className="h-4 w-4 text-slate-300 shrink-0" />
+                    <div className="space-y-4 min-w-0">
+                        <div className="flex items-start gap-2 text-sm min-w-0">
+                            <Building2 className="h-4 w-4 text-slate-300 shrink-0 mt-0.5" />
                             <div className="min-w-0 flex-1">
-                                <span className="block truncate text-slate-600 font-medium" title={formatNace(item.company.naeringskode)}>
+                                <span className="block line-clamp-2 text-slate-600 font-medium leading-snug" title={formatNace(item.company.naeringskode)}>
                                     {formatNace(item.company.naeringskode) || 'Ukjent bransje'}
                                 </span>
                             </div>
@@ -434,7 +430,7 @@ function ComparisonPage() {
                                 'md:grid-cols-2 lg:grid-cols-4'
                             }`}>
                             {data.map((item, idx) => (
-                                <div key={item.orgnr} className="relative group">
+                                <div key={item.orgnr} className="relative group min-w-0">
                                     <ComparisonCard
                                         item={item}
                                         onRemove={orgNumbers.length > 1 ? handleRemove : undefined}

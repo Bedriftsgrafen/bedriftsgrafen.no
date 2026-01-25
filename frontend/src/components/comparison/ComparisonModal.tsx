@@ -24,7 +24,7 @@ const ComparisonCard = memo(function ComparisonCard({ item }: { item: Comparison
     }, [item.company])
 
     return (
-        <div className="bg-gray-50 rounded-lg p-4 space-y-4">
+        <div className="bg-gray-50 rounded-lg p-4 space-y-4 min-w-0">
             {item.loading ? (
                 <div className="animate-pulse space-y-3">
                     <div className="h-6 bg-gray-200 rounded w-3/4" />
@@ -40,17 +40,17 @@ const ComparisonCard = memo(function ComparisonCard({ item }: { item: Comparison
                         <h3 className="font-semibold text-gray-900 line-clamp-2">
                             {item.company.navn}
                         </h3>
-                        <p className="text-sm text-gray-500">
+                        <p className="text-sm text-gray-500 truncate" title={`${item.company.organisasjonsform} • ${item.orgnr}`}>
                             {item.company.organisasjonsform} • {item.orgnr}
                         </p>
                     </div>
 
                     {/* Basic info */}
-                    <div className="space-y-2">
-                        <div className="flex items-center gap-2 text-sm min-w-0">
-                            <Building2 className="h-4 w-4 text-gray-400 shrink-0" />
+                    <div className="space-y-2 min-w-0">
+                        <div className="flex items-start gap-2 text-sm min-w-0">
+                            <Building2 className="h-4 w-4 text-gray-400 shrink-0 mt-0.5" />
                             <div className="min-w-0 flex-1">
-                                <span className="block truncate text-gray-600" title={formatNace(item.company.naeringskode)}>
+                                <span className="block line-clamp-2 text-gray-600 leading-snug" title={formatNace(item.company.naeringskode)}>
                                     {formatNace(item.company.naeringskode) || 'Ukjent bransje'}
                                 </span>
                             </div>
