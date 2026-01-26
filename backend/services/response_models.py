@@ -7,11 +7,7 @@ from datetime import date, datetime
 from typing import Any
 
 from pydantic import BaseModel, ConfigDict
-
-
-class Naeringskode(BaseModel):
-    kode: str
-    beskrivelse: str
+from schemas.companies import Naeringskode
 
 
 class SubUnitResponse(BaseModel):
