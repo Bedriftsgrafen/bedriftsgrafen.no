@@ -3,7 +3,7 @@
 import logging
 from datetime import date, datetime, timedelta
 
-from sqlalchemy import delete, select, text
+from sqlalchemy import delete, select, text, tuple_
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import contains_eager
 from sqlalchemy.sql import func
@@ -313,6 +313,7 @@ class RoleRepository:
                 select(models.Role.person_navn, models.Role.foedselsdato)
                 .join(models.Company, models.Role.orgnr == models.Company.orgnr)
                 .where(models.Role.person_navn.is_not(None))
+                .where(models.Role.foedselsdato.is_not(None))
                 .where(
                     (models.Company.registrert_i_foretaksregisteret == True)  # noqa: E712
                     | (
@@ -331,10 +332,17 @@ class RoleRepository:
             logger.error(f"Error counting commercial people: {e}")
             return 0
 
-    async def get_paginated_commercial_people(self, offset: int, limit: int) -> list[tuple[str, date | None, datetime]]:
+    async def get_paginated_commercial_people(
+        self,
+        offset: int = 0,
+        limit: int = 50000,
+        after_name: str | None = None,
+        after_birthdate: date | None = None,
+    ) -> list[tuple[str, date | None, datetime]]:
         """
         Fetch paginated unique people with commercial roles.
         Used for sitemap generation.
+        Supports both OFFSET (slow) and Keyset (fast) pagination.
         """
         from constants.org_forms import COMMERCIAL_ORG_FORMS, NON_COMMERCIAL_ORG_FORMS
 
@@ -347,6 +355,7 @@ class RoleRepository:
                 )
                 .join(models.Company, models.Role.orgnr == models.Company.orgnr)
                 .where(models.Role.person_navn.is_not(None))
+                .where(models.Role.foedselsdato.is_not(None))
                 .where(
                     (models.Company.registrert_i_foretaksregisteret == True)  # noqa: E712
                     | (
@@ -356,13 +365,67 @@ class RoleRepository:
                     )
                 )
                 .group_by(models.Role.person_navn, models.Role.foedselsdato)
-                .order_by(models.Role.person_navn)
-                .offset(offset)
-                .limit(limit)
+                .order_by(models.Role.person_navn, models.Role.foedselsdato)
             )
+
+            if after_name is not None:
+                # Row-value comparison for stable keyset seeking
+                stmt = stmt.where(
+                    tuple_(models.Role.person_navn, models.Role.foedselsdato) > (after_name, after_birthdate)
+                )
+            else:
+                stmt = stmt.offset(offset)
+
+            stmt = stmt.limit(limit)
 
             result = await self.db.execute(stmt)
             return [(row.person_navn, row.foedselsdato, row.latest_update) for row in result]
         except Exception as e:
             logger.error(f"Error fetching paginated commercial people: {e}")
             return []
+
+    async def get_person_sitemap_anchors(self, page_size: int = 50000) -> list[tuple[str, date | None]]:
+        """
+        Fetch the starting (name, birthdate) for each sitemap page.
+        Allows 'jumping' to a specific page using keyset pagination.
+        """
+        # Get total count first
+        total = await self.count_commercial_people()
+
+        anchors = []
+        # Page 1 contains page_size people.
+        # Its last person is at index (page_size - 1).
+        # We use the LAST person of page N as the anchor for page N+1.
+        start_offset = page_size - 1
+
+        for offset in range(start_offset, total, page_size):
+            if offset < 0:
+                continue
+
+            from constants.org_forms import COMMERCIAL_ORG_FORMS, NON_COMMERCIAL_ORG_FORMS
+
+            # Fetch just the (name, birthdate) at this offset
+            anchor_stmt = (
+                select(models.Role.person_navn, models.Role.foedselsdato)
+                .join(models.Company, models.Role.orgnr == models.Company.orgnr)
+                .where(models.Role.person_navn.is_not(None))
+                .where(models.Role.foedselsdato.is_not(None))
+                .where(
+                    (models.Company.registrert_i_foretaksregisteret == True)  # noqa: E712
+                    | (
+                        models.Company.organisasjonsform.in_(list(COMMERCIAL_ORG_FORMS))
+                        & ~models.Company.organisasjonsform.in_(list(NON_COMMERCIAL_ORG_FORMS))
+                        & (models.Company.organisasjonsform != "STI")
+                    )
+                )
+                .group_by(models.Role.person_navn, models.Role.foedselsdato)
+                .order_by(models.Role.person_navn, models.Role.foedselsdato)
+                .offset(offset)
+                .limit(1)
+            )
+            anchor_result = await self.db.execute(anchor_stmt)
+            row = anchor_result.first()
+            if row:
+                anchors.append((row.person_navn, row.foedselsdato))
+
+        return anchors

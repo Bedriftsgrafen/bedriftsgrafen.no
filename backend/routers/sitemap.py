@@ -8,47 +8,31 @@ For 1.1M+ companies, uses Sitemap Index pattern:
 """
 
 import math
+import logging
 import urllib.parse
-from datetime import datetime, timedelta
-from typing import Any, Dict
+from datetime import datetime
+from typing import Any
 
 from fastapi import APIRouter, Depends, Path, Request
 from fastapi.responses import Response
-from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from database import get_db
 from limiter import limiter
-from models import Company
 from repositories.company.repository import CompanyRepository
 from repositories.role_repository import RoleRepository
-from repositories.stats_repository import StatsRepository
+from services.seo_service import SEOService, STATIC_ROUTES, URLS_PER_SITEMAP
 
 router: APIRouter = APIRouter(tags=["SEO"])
+logger = logging.getLogger(__name__)
 
 # Constants for sitemap pagination
-URLS_PER_SITEMAP = 50000  # Google limit per file
 BULK_FETCH_SIZE = 10000  # DB fetch batch size for memory efficiency
 
-# Simple in-memory cache for total counts to avoid DB hammering
-_cache: Dict[str, Any] = {
-    "total_companies": None,
-    "total_people": None,
-    "municipalities": None,  # List of (code, lastmod)
-    "expiry": None,
-}
-CACHE_TTL = timedelta(hours=6)
 
-STATIC_ROUTES = [
-    "",  # Homepage
-    "utforsk",
-    "konkurser",
-    "nyetableringer",
-    "bransjer",
-    "kart",
-    "sammenlign",
-    "om",
-]
+def get_seo_service(db: AsyncSession = Depends(get_db)) -> SEOService:
+    """Dependency for SEOService."""
+    return SEOService(db)
 
 
 def format_date(dt: Any) -> str:
@@ -63,26 +47,6 @@ def format_date(dt: Any) -> str:
     return datetime.now().strftime("%Y-%m-%d")
 
 
-async def get_cached_counts(db: AsyncSession):
-    """Get total counts with 6-hour caching"""
-    now = datetime.now()
-    if _cache["expiry"] is None or now > _cache["expiry"]:
-        # Refresh cache
-        company_stmt = select(func.count(Company.orgnr))
-        company_result = await db.execute(company_stmt)
-        _cache["total_companies"] = company_result.scalar() or 0
-
-        role_repo = RoleRepository(db)
-        _cache["total_people"] = await role_repo.count_commercial_people()
-
-        stats_repo = StatsRepository(db)
-        _cache["municipalities"] = await stats_repo.get_municipality_codes_with_updates()
-
-        _cache["expiry"] = now + CACHE_TTL
-
-    return _cache["total_companies"], _cache["total_people"], _cache["municipalities"]
-
-
 def calculate_sitemap_pages(total_count: int, offset: int = 0) -> int:
     """Calculate number of sitemap files needed"""
     return math.ceil((total_count + offset) / URLS_PER_SITEMAP)
@@ -90,12 +54,18 @@ def calculate_sitemap_pages(total_count: int, offset: int = 0) -> int:
 
 @router.get("/sitemap_index.xml", response_class=Response)
 @limiter.limit("60/minute")
-async def get_sitemap_index(request: Request, db: AsyncSession = Depends(get_db)):
+async def get_sitemap_index(
+    request: Request,
+    seo_service: SEOService = Depends(get_seo_service),
+):
     """
     Main Sitemap Index.
     Lists paginated sitemaps for both companies and people.
     """
-    total_companies, total_people, municipalities = await get_cached_counts(db)
+    cache = await seo_service.get_sitemap_data()
+    total_companies = cache["total_companies"]
+    total_people = cache["total_people"]
+    municipalities = cache["municipalities"]
 
     # Calculate pages
     num_company_pages = calculate_sitemap_pages(total_companies, offset=len(STATIC_ROUTES) + len(municipalities))
@@ -132,6 +102,7 @@ async def get_paginated_sitemap(
     request: Request,
     filename: str = Path(..., description="Sitemap filename (e.g., company_1, person_1)"),
     db: AsyncSession = Depends(get_db),
+    seo_service: SEOService = Depends(get_seo_service),
 ):
     """
     Get a paginated sitemap file.
@@ -151,10 +122,17 @@ async def get_paginated_sitemap(
     xml_content = '<?xml version="1.0" encoding="UTF-8"?>\n'
     xml_content += '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n'
 
+    cache = await seo_service.get_sitemap_data()
+
     if sitemap_type == "company":
-        _, _, municipalities = await get_cached_counts(db)
+        municipalities = cache["municipalities"]
+        anchors = cache["company_anchors"]
 
         # Handle static routes + municipalities on page 1
+        limit = URLS_PER_SITEMAP
+        after_orgnr = None
+        offset = 0
+
         if page == 1:
             # Add Static Routes
             for route in STATIC_ROUTES:
@@ -175,13 +153,17 @@ async def get_paginated_sitemap(
                 xml_content += "  </url>\n"
 
             limit = URLS_PER_SITEMAP - len(STATIC_ROUTES) - len(municipalities)
-            offset = 0
         else:
-            limit = URLS_PER_SITEMAP
-            offset = (page - 1) * URLS_PER_SITEMAP - len(STATIC_ROUTES) - len(municipalities)
+            # Use keyset pagination for page 2+
+            # anchor[page-2] is the starting orgnr for page N
+            if page - 2 < len(anchors):
+                after_orgnr = anchors[page - 2]
+            else:
+                # Handle out of bounds by falling back to potentially slow offset
+                offset = (page - 1) * URLS_PER_SITEMAP - len(STATIC_ROUTES) - len(municipalities)
 
         company_repo = CompanyRepository(db)
-        companies = await company_repo.get_paginated_orgnrs(offset=offset, limit=limit)
+        companies = await company_repo.get_paginated_orgnrs(offset=offset, limit=limit, after_orgnr=after_orgnr)
 
         for orgnr, updated_at in companies:
             xml_content += "  <url>\n"
@@ -192,11 +174,24 @@ async def get_paginated_sitemap(
             xml_content += "  </url>\n"
 
     elif sitemap_type == "person":
-        offset = (page - 1) * URLS_PER_SITEMAP
+        anchors = cache["person_anchors"]
+
+        offset = 0
         limit = URLS_PER_SITEMAP
+        after_name = None
+        after_birthdate = None
+
+        if page > 1:
+            # Use keyset pagination for page 2+
+            if page - 2 < len(anchors):
+                after_name, after_birthdate = anchors[page - 2]
+            else:
+                offset = (page - 1) * URLS_PER_SITEMAP
 
         role_repo = RoleRepository(db)
-        people = await role_repo.get_paginated_commercial_people(offset=offset, limit=limit)
+        people = await role_repo.get_paginated_commercial_people(
+            offset=offset, limit=limit, after_name=after_name, after_birthdate=after_birthdate
+        )
 
         for name, birthdate, last_update in people:
             birthdate_str = birthdate.isoformat() if birthdate else "none"

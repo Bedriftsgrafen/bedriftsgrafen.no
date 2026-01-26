@@ -5,7 +5,7 @@ Contains get_all, stream_all, and related query methods with optimization logic.
 
 import logging
 from typing import cast
-from sqlalchemy import select, Select
+from sqlalchemy import select, Select, func
 from sqlalchemy.ext.asyncio import AsyncSession
 
 import models
@@ -208,22 +208,55 @@ class QueryMixin:
             for c in companies
         ]
 
-    async def get_paginated_orgnrs(self, offset: int, limit: int) -> list[tuple[str, str | None]]:
+    async def get_paginated_orgnrs(
+        self, offset: int = 0, limit: int = 50000, after_orgnr: str | None = None
+    ) -> list[tuple[str, str | None]]:
         """
         Fetch paginated orgnrs and their update timestamps from raw_data.
         Optimized for sitemap generation to avoid large object overhead.
+        Supports both OFFSET (slow) and Keyset (fast) pagination.
         """
-        stmt = (
-            select(
-                models.Company.orgnr,
-                models.Company.raw_data["oppdatert"].astext.label("updated_at"),
-            )
-            .order_by(models.Company.orgnr)
-            .offset(offset)
-            .limit(limit)
-        )
+        stmt = select(
+            models.Company.orgnr,
+            models.Company.raw_data["oppdatert"].astext.label("updated_at"),
+        ).order_by(models.Company.orgnr)
+
+        if after_orgnr:
+            stmt = stmt.where(models.Company.orgnr > after_orgnr)
+        else:
+            stmt = stmt.offset(offset)
+
+        stmt = stmt.limit(limit)
         result = await self.db.execute(stmt)
         return [(row.orgnr, row.updated_at) for row in result]
+
+    async def get_sitemap_anchors(self, page_size: int = 50000, first_page_offset: int = 0) -> list[str]:
+        """
+        Fetch the starting orgnr for each sitemap page.
+        Allows 'jumping' to a specific page using keyset pagination.
+        """
+        # Get total count first
+        count_stmt = select(func.count(models.Company.orgnr))
+        count_result = await self.db.execute(count_stmt)
+        total = count_result.scalar() or 0
+
+        anchors = []
+        # Page 1 contains (page_size - first_page_offset) companies.
+        # Its last company is at index (page_size - first_page_offset - 1).
+        # We use the LAST company of page N as the anchor for page N+1.
+        # This allows using WHERE orgnr > anchor for the next page.
+        start_offset = page_size - first_page_offset - 1
+
+        for offset in range(start_offset, total, page_size):
+            if offset < 0:
+                continue
+            anchor_stmt = select(models.Company.orgnr).order_by(models.Company.orgnr).offset(offset).limit(1)
+            anchor_result = await self.db.execute(anchor_stmt)
+            anchor = anchor_result.scalar()
+            if anchor:
+                anchors.append(anchor)
+
+        return anchors
 
     async def _get_all_with_financial_join(
         self,

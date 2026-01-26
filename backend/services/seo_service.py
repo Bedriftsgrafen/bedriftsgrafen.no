@@ -1,21 +1,87 @@
 """Service for SEO related operations like dynamic OG images and sitemaps."""
 
 import html
+import logging
 import textwrap
+from datetime import datetime, timedelta
 from typing import Any, Dict
 
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 import models
 from constants.nace import get_nace_name
 from repositories.company.repository import CompanyRepository
+from repositories.role_repository import RoleRepository
+from repositories.stats_repository import StatsRepository
+
+logger = logging.getLogger(__name__)
+
+# Constants for sitemap pagination
+URLS_PER_SITEMAP = 50000
+
+STATIC_ROUTES = [
+    "",  # Homepage
+    "utforsk",
+    "konkurser",
+    "nyetableringer",
+    "bransjer",
+    "kart",
+    "sammenlign",
+    "om",
+]
 
 
 class SEOService:
+    # Class-level cache to persist across instances (FastAPI creates a new service per request)
+    # Using a dictionary shared by all instances
+    _sitemap_cache: Dict[str, Any] = {
+        "total_companies": None,
+        "total_people": None,
+        "municipalities": None,
+        "company_anchors": [],
+        "person_anchors": [],
+        "expiry": None,
+    }
+    CACHE_TTL = timedelta(hours=6)
+
     def __init__(self, db: AsyncSession):
         self.db = db
         self.company_repo = CompanyRepository(db)
+        self.role_repo = RoleRepository(db)
+        self.stats_repo = StatsRepository(db)
+
+    async def get_sitemap_data(self, force_refresh: bool = False) -> Dict[str, Any]:
+        """Get total counts and pagination anchors with 6-hour caching."""
+        now = datetime.now()
+        cache = SEOService._sitemap_cache
+
+        if force_refresh or cache["expiry"] is None or now > cache["expiry"]:
+            logger.info("Refreshing sitemap anchors and counts...")
+
+            # Refresh cache
+            company_stmt = select(func.count(models.Company.orgnr))
+            company_result = await self.db.execute(company_stmt)
+            cache["total_companies"] = company_result.scalar() or 0
+
+            cache["total_people"] = await self.role_repo.count_commercial_people()
+            cache["municipalities"] = await self.stats_repo.get_municipality_codes_with_updates()
+
+            # Fetch anchors for keyset pagination
+            first_page_meta_count = len(STATIC_ROUTES) + len(cache["municipalities"])
+
+            logger.debug("Fetching company sitemap anchors...")
+            cache["company_anchors"] = await self.company_repo.get_sitemap_anchors(
+                URLS_PER_SITEMAP, first_page_meta_count
+            )
+
+            logger.debug("Fetching person sitemap anchors...")
+            cache["person_anchors"] = await self.role_repo.get_person_sitemap_anchors(URLS_PER_SITEMAP)
+
+            cache["expiry"] = now + SEOService.CACHE_TTL
+            logger.info(f"Sitemap cache refreshed. Next expiry: {cache['expiry']}")
+
+        return cache
 
     async def get_company_og_data(self, orgnr: str) -> Dict[str, Any] | None:
         """Fetch optimized data for company OG image."""
