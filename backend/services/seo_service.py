@@ -1,5 +1,6 @@
 """Service for SEO related operations like dynamic OG images and sitemaps."""
 
+import asyncio
 import html
 import logging
 import textwrap
@@ -19,6 +20,9 @@ logger = logging.getLogger(__name__)
 
 # Constants for sitemap pagination
 URLS_PER_SITEMAP = 50000
+
+# Timeout for cache refresh operations (seconds)
+CACHE_REFRESH_TIMEOUT = 120.0
 
 STATIC_ROUTES = [
     "",  # Homepage
@@ -42,8 +46,19 @@ class SEOService:
         "company_anchors": [],
         "person_anchors": [],
         "expiry": None,
+        "is_warming": False,  # Flag to indicate warm-up in progress
     }
     CACHE_TTL = timedelta(hours=6)
+
+    # Class-level lock to prevent thundering herd on cache refresh
+    _cache_lock: asyncio.Lock | None = None
+
+    @classmethod
+    def _get_lock(cls) -> asyncio.Lock:
+        """Get or create the cache lock (lazy init for event loop safety)."""
+        if cls._cache_lock is None:
+            cls._cache_lock = asyncio.Lock()
+        return cls._cache_lock
 
     def __init__(self, db: AsyncSession):
         self.db = db
@@ -51,37 +66,97 @@ class SEOService:
         self.role_repo = RoleRepository(db)
         self.stats_repo = StatsRepository(db)
 
+    @classmethod
+    def is_cache_valid(cls) -> bool:
+        """Check if cache is valid without acquiring lock."""
+        cache = cls._sitemap_cache
+        if cache["expiry"] is None:
+            return False
+        return datetime.now() < cache["expiry"]
+
+    @classmethod
+    def is_cache_warming(cls) -> bool:
+        """Check if cache warm-up is in progress."""
+        return cls._sitemap_cache.get("is_warming", False)
+
     async def get_sitemap_data(self, force_refresh: bool = False) -> Dict[str, Any]:
-        """Get total counts and pagination anchors with 6-hour caching."""
-        now = datetime.now()
+        """
+        Get total counts and pagination anchors with 6-hour caching.
+
+        Uses asyncio.Lock to prevent thundering herd - only one request
+        will perform the expensive refresh while others wait or use stale data.
+        """
         cache = SEOService._sitemap_cache
 
-        if force_refresh or cache["expiry"] is None or now > cache["expiry"]:
-            logger.info("Refreshing sitemap anchors and counts...")
+        # Fast path: cache is valid, return immediately
+        if not force_refresh and SEOService.is_cache_valid():
+            return cache
 
-            # Refresh cache
-            company_stmt = select(func.count(models.Company.orgnr))
-            company_result = await self.db.execute(company_stmt)
-            cache["total_companies"] = company_result.scalar() or 0
+        # Try to acquire lock without blocking if cache has data (serve stale)
+        lock = SEOService._get_lock()
 
-            cache["total_people"] = await self.role_repo.count_commercial_people()
-            cache["municipalities"] = await self.stats_repo.get_municipality_codes_with_updates()
+        # If another request is already refreshing and we have stale data, return it
+        if lock.locked() and cache["total_companies"] is not None:
+            logger.debug("Cache refresh in progress, returning stale data")
+            return cache
 
-            # Fetch anchors for keyset pagination
-            first_page_meta_count = len(STATIC_ROUTES) + len(cache["municipalities"])
+        async with lock:
+            # Double-check after acquiring lock (another request may have refreshed)
+            if not force_refresh and SEOService.is_cache_valid():
+                return cache
 
-            logger.debug("Fetching company sitemap anchors...")
-            cache["company_anchors"] = await self.company_repo.get_sitemap_anchors(
-                URLS_PER_SITEMAP, first_page_meta_count
-            )
-
-            logger.debug("Fetching person sitemap anchors...")
-            cache["person_anchors"] = await self.role_repo.get_person_sitemap_anchors(URLS_PER_SITEMAP)
-
-            cache["expiry"] = now + SEOService.CACHE_TTL
-            logger.info(f"Sitemap cache refreshed. Next expiry: {cache['expiry']}")
+            try:
+                cache["is_warming"] = True
+                await self._refresh_cache_with_timeout()
+            except asyncio.TimeoutError:
+                logger.error(f"Cache refresh timed out after {CACHE_REFRESH_TIMEOUT}s")
+                # If we have any data, keep using it with extended expiry
+                if cache["total_companies"] is not None:
+                    cache["expiry"] = datetime.now() + timedelta(minutes=30)
+                    logger.warning("Using stale cache data due to timeout")
+            except Exception as e:
+                logger.error(f"Cache refresh failed: {e}")
+                # Circuit breaker: extend expiry on failure to avoid retry storm
+                if cache["total_companies"] is not None:
+                    cache["expiry"] = datetime.now() + timedelta(minutes=5)
+            finally:
+                cache["is_warming"] = False
 
         return cache
+
+    async def _refresh_cache_with_timeout(self) -> None:
+        """Refresh cache with timeout protection."""
+        async with asyncio.timeout(CACHE_REFRESH_TIMEOUT):
+            await self._do_refresh_cache()
+
+    async def _do_refresh_cache(self) -> None:
+        """Perform the actual cache refresh."""
+        cache = SEOService._sitemap_cache
+        logger.info("Refreshing sitemap anchors and counts...")
+        start_time = datetime.now()
+
+        # Refresh cache - counts first (fast)
+        company_stmt = select(func.count(models.Company.orgnr))
+        company_result = await self.db.execute(company_stmt)
+        cache["total_companies"] = company_result.scalar() or 0
+
+        cache["total_people"] = await self.role_repo.count_commercial_people()
+        cache["municipalities"] = await self.stats_repo.get_municipality_codes_with_updates()
+
+        # Fetch anchors for keyset pagination (optimized single-query methods)
+        first_page_meta_count = len(STATIC_ROUTES) + len(cache["municipalities"])
+
+        logger.debug("Fetching company sitemap anchors...")
+        cache["company_anchors"] = await self.company_repo.get_sitemap_anchors_optimized(
+            URLS_PER_SITEMAP, first_page_meta_count
+        )
+
+        logger.debug("Fetching person sitemap anchors...")
+        cache["person_anchors"] = await self.role_repo.get_person_sitemap_anchors_optimized(URLS_PER_SITEMAP)
+
+        cache["expiry"] = datetime.now() + SEOService.CACHE_TTL
+        elapsed = (datetime.now() - start_time).total_seconds()
+        logger.info(f"Sitemap cache refreshed in {elapsed:.2f}s. Next expiry: {cache['expiry']}")
 
     async def get_company_og_data(self, orgnr: str) -> Dict[str, Any] | None:
         """Fetch optimized data for company OG image."""

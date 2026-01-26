@@ -178,6 +178,8 @@ class UpdateService:
                     error_msg = f"Critical error during update loop: {e!s}"
                     logger.exception(error_msg)
                     result.errors.append(error_msg)
+                    # Rollback any partial transaction to allow recovery
+                    await self.db.rollback()
                     break
 
         # Refresh materialized view after all updates
@@ -506,7 +508,19 @@ class UpdateService:
                         all_subunits = []
                         for subunit_data in all_subunits_data:
                             parent_orgnr = subunit_data.get("overordnetEnhet")
-                            if parent_orgnr and parent_orgnr not in verified_parents:
+
+                            # Skip subunits without parent_orgnr (required field)
+                            if not parent_orgnr:
+                                logger.warning(
+                                    f"Skipping subunit {subunit_data.get('organisasjonsnummer')} "
+                                    f"because it has no parent_orgnr (overordnetEnhet is missing)."
+                                )
+                                continue
+
+                            # Convert to string for comparison
+                            parent_orgnr = str(parent_orgnr)
+
+                            if parent_orgnr not in verified_parents:
                                 logger.warning(
                                     f"Skipping subunit {subunit_data.get('organisasjonsnummer')} "
                                     f"because parent {parent_orgnr} is missing and could not be fetched."
@@ -555,6 +569,8 @@ class UpdateService:
 
                 except Exception as e:
                     logger.exception(f"Error in subunit updates: {e}")
+                    # Rollback any partial transaction to allow recovery
+                    await self.db.rollback()
                     break
 
         return result.model_dump()
@@ -796,6 +812,8 @@ class UpdateService:
 
                 except Exception as e:
                     logger.exception(f"Error in role updates batch: {e}")
+                    # Rollback any partial transaction to allow recovery
+                    await self.db.rollback()
                     break
 
             # If we processed roles, update DB statistics to keep sitemap seek planner fast

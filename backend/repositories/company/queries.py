@@ -234,6 +234,8 @@ class QueryMixin:
         """
         Fetch the starting orgnr for each sitemap page.
         Allows 'jumping' to a specific page using keyset pagination.
+
+        NOTE: This is the legacy O(n) implementation. Use get_sitemap_anchors_optimized instead.
         """
         # Get total count first
         count_stmt = select(func.count(models.Company.orgnr))
@@ -257,6 +259,58 @@ class QueryMixin:
                 anchors.append(anchor)
 
         return anchors
+
+    async def get_sitemap_anchors_optimized(self, page_size: int = 50000, first_page_offset: int = 0) -> list[str]:
+        """
+        Fetch all sitemap page anchors in a single query using window functions.
+
+        This is O(1) queries instead of O(n) where n = number of pages.
+        Uses ROW_NUMBER() to identify page boundaries efficiently.
+
+        Args:
+            page_size: Number of URLs per sitemap page (default 50000)
+            first_page_offset: Number of non-company URLs on page 1 (static routes + municipalities)
+
+        Returns:
+            List of orgnr values that start each page (page 2 onwards)
+        """
+        from sqlalchemy import text
+
+        # Calculate the position of the last item on each page
+        # Page 1 ends at position (page_size - first_page_offset)
+        # Page 2 ends at position (page_size - first_page_offset + page_size)
+        # etc.
+
+        # We want the LAST orgnr of each page as the anchor for the NEXT page
+        # Using modulo arithmetic to find page boundaries
+        first_page_size = page_size - first_page_offset
+
+        query = text("""
+            WITH numbered AS (
+                SELECT 
+                    orgnr,
+                    ROW_NUMBER() OVER (ORDER BY orgnr) as rn
+                FROM bedrifter
+            ),
+            page_boundaries AS (
+                SELECT 
+                    orgnr,
+                    rn,
+                    CASE 
+                        WHEN rn <= :first_page_size THEN 1
+                        ELSE 1 + CEIL(CAST(rn - :first_page_size AS numeric) / CAST(:page_size AS numeric))
+                    END as page_num
+                FROM numbered
+            )
+            SELECT orgnr
+            FROM page_boundaries
+            WHERE rn = :first_page_size 
+               OR (rn > :first_page_size AND MOD(rn - :first_page_size, :page_size) = 0)
+            ORDER BY rn
+        """)
+
+        result = await self.db.execute(query, {"page_size": page_size, "first_page_size": first_page_size})
+        return [row[0] for row in result]
 
     async def _get_all_with_financial_join(
         self,

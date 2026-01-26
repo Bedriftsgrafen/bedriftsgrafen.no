@@ -388,6 +388,8 @@ class RoleRepository:
         """
         Fetch the starting (name, birthdate) for each sitemap page.
         Allows 'jumping' to a specific page using keyset pagination.
+
+        NOTE: This is the legacy O(n) implementation. Use get_person_sitemap_anchors_optimized instead.
         """
         # Get total count first
         total = await self.count_commercial_people()
@@ -429,3 +431,58 @@ class RoleRepository:
                 anchors.append((row.person_navn, row.foedselsdato))
 
         return anchors
+
+    async def get_person_sitemap_anchors_optimized(self, page_size: int = 50000) -> list[tuple[str, date | None]]:
+        """
+        Fetch all sitemap page anchors in a single query using window functions.
+
+        This is O(1) queries instead of O(n) where n = number of pages.
+        Uses ROW_NUMBER() to identify page boundaries efficiently.
+
+        Args:
+            page_size: Number of URLs per sitemap page (default 50000)
+
+        Returns:
+            List of (name, birthdate) tuples that start each page (page 2 onwards)
+        """
+        from sqlalchemy import text
+
+        query = text("""
+            WITH commercial_people AS (
+                SELECT DISTINCT ON (r.person_navn, r.foedselsdato)
+                    r.person_navn,
+                    r.foedselsdato
+                FROM roller r
+                JOIN bedrifter b ON r.orgnr = b.orgnr
+                WHERE r.person_navn IS NOT NULL
+                  AND r.foedselsdato IS NOT NULL
+                  AND (
+                      b.registrert_i_foretaksregisteret = true
+                      OR (
+                          b.organisasjonsform IN ('AS','ASA','ENK','ANS','DA','NUF','KS','SAM','IKS')
+                          AND b.organisasjonsform NOT IN ('FLI','BRL','ESEK','ANNA')
+                          AND b.organisasjonsform != 'STI'
+                      )
+                  )
+                ORDER BY r.person_navn, r.foedselsdato
+            ),
+            numbered AS (
+                SELECT 
+                    person_navn,
+                    foedselsdato,
+                    ROW_NUMBER() OVER (ORDER BY person_navn, foedselsdato) as rn
+                FROM commercial_people
+            )
+            SELECT person_navn, foedselsdato
+            FROM numbered
+            WHERE MOD(rn, :page_size) = 0
+            ORDER BY rn
+        """)
+
+        try:
+            result = await self.db.execute(query, {"page_size": page_size})
+            return [(row[0], row[1]) for row in result]
+        except Exception as e:
+            logger.error(f"Error fetching person sitemap anchors (optimized): {e}")
+            # Fallback to legacy method
+            return await self.get_person_sitemap_anchors(page_size)

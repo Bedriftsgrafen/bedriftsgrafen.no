@@ -10,7 +10,7 @@ from slowapi.middleware import SlowAPIMiddleware
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from limiter import limiter
-from database import get_db
+from database import get_db, AsyncSessionLocal
 from exceptions import BedriftsgrafenException
 from middleware import RequestIdMiddleware
 from utils.logging_config import setup_logging
@@ -31,14 +31,42 @@ from routers.v1 import municipality as v1_municipality  # noqa: E402
 from routers.v1 import og_image as v1_og_image  # noqa: E402
 from services.company_service import CompanyService  # noqa: E402
 from services.scheduler import SchedulerService  # noqa: E402
+from services.seo_service import SEOService  # noqa: E402
+
+
+async def warm_sitemap_cache() -> None:
+    """
+    Pre-warm sitemap cache on startup to avoid blocking first request.
+
+    This runs as a background task so the server can start accepting requests
+    immediately while cache warms up.
+    """
+    import asyncio
+
+    # Small delay to let the server start first
+    await asyncio.sleep(2)
+
+    logger.info("Starting sitemap cache warm-up...")
+    try:
+        async with AsyncSessionLocal() as db:
+            seo_service = SEOService(db)
+            await seo_service.get_sitemap_data(force_refresh=True)
+        logger.info("Sitemap cache warm-up completed successfully")
+    except Exception as e:
+        logger.error(f"Sitemap cache warm-up failed: {e}")
+        # Non-fatal - cache will be populated on first request
 
 
 @asynccontextmanager
 async def lifespan(app):
     """Application lifespan manager for startup/shutdown events."""
+    import asyncio
+
     # Startup
     start_scheduler = os.getenv("START_SCHEDULER", "true").lower() == "true"
+    warm_cache = os.getenv("WARM_SITEMAP_CACHE", "false").lower() == "true"
     scheduler_service = None
+    cache_task = None
 
     if start_scheduler:
         logger.info("Starting scheduler service...")
@@ -48,9 +76,24 @@ async def lifespan(app):
     else:
         logger.info("Scheduler service disabled (START_SCHEDULER=false)")
 
+    # Start cache warm-up as background task (non-blocking)
+    # NOTE: Disabled by default since scheduler already warms cache every 6h.
+    # With multiple uvicorn workers, each would trigger warm-up on startup.
+    if warm_cache:
+        cache_task = asyncio.create_task(warm_sitemap_cache())
+    else:
+        logger.debug("Sitemap startup warm-up disabled (scheduler handles this)")
+
     yield
 
     # Shutdown
+    if cache_task and not cache_task.done():
+        cache_task.cancel()
+        try:
+            await cache_task
+        except asyncio.CancelledError:
+            pass
+
     if scheduler_service:
         logger.info("Shutting down scheduler service...")
         await scheduler_service.shutdown()
