@@ -59,10 +59,10 @@ class SchedulerService:
             misfire_grace_time=300,
         )
 
-        # Geocode companies without coordinates (every 1 hour)
+        # Geocode companies without coordinates (every 15 minutes)
         self.scheduler.add_job(
             self.geocode_companies_batch,
-            trigger=IntervalTrigger(hours=1),
+            trigger=IntervalTrigger(minutes=15),
             id="geocode_companies",
             replace_existing=True,
             max_instances=1,
@@ -233,7 +233,7 @@ class SchedulerService:
             async with AsyncSessionLocal() as db:
                 try:
                     service = GeocodingBatchService(db)
-                    result = await service.run_batch(batch_size=250)
+                    result = await service.run_batch(batch_size=100)
 
                     # Log progress
                     if result["processed"] > 0:
