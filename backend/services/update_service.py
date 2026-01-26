@@ -19,6 +19,7 @@ import httpx
 
 
 from pydantic import ValidationError
+from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from repositories.accounting_repository import AccountingRepository
@@ -669,52 +670,56 @@ class UpdateService:
 
                     await self.db.commit()
 
-                    # Ensure all companies for which we're syncing roles exist in the database
-                    # This prevents FK violations when inserting roles
+                    # Phase 0: Smart Onboarding.
+                    # Ensure all companies for which we're syncing roles exist in the database.
+                    # We check both 'bedrifter' (main units) and 'underenheter' (subunits).
+                    # Subunits are skipped because they have no roles in Brreg.
                     existing_orgnrs = await self.company_repo.get_existing_orgnrs(list(orgnrs_to_sync))
-                    # Check subunits to avoid trying to fetch them as main companies (causes 404/410)
                     existing_subunits = await self.subunit_repo.get_existing_orgnrs(list(orgnrs_to_sync))
 
-                    missing_orgnrs = orgnrs_to_sync - existing_orgnrs - existing_subunits - failed_this_run
+                    # Identify truly unknown orgnrs (not in main units, not in subunits, not failed yet)
+                    unknown_orgnrs = orgnrs_to_sync - existing_orgnrs - existing_subunits - failed_this_run
 
-                    if missing_orgnrs:
-                        # Convert to stable list for concurrent fetching and result mapping
-                        missing_list = list(missing_orgnrs)
+                    if unknown_orgnrs:
+                        unknown_list = list(unknown_orgnrs)
                         logger.info(
-                            f"Found {len(missing_list)} unknown companies in role updates. Fetching from Brreg..."
+                            f"Checking {len(unknown_list)} unknown orgnrs from role feed for missing main companies..."
                         )
-                        # Fetch and create missing companies
+
                         semaphore = asyncio.Semaphore(CONCURRENCY_LIMIT)
 
-                        async def fetch_missing_company(org_no: str) -> dict[str, Any] | None:
+                        async def fetch_missing_main_unit(org_no: str) -> dict[str, Any] | None:
                             async with semaphore:
                                 try:
+                                    # Use main unit endpoint. Subunits return 404 here.
                                     return await self.brreg_api.fetch_company(org_no)
                                 except Exception as e:
-                                    # We don't log errors for 410/404 as they are common for subunits or deleted entities
-                                    logger.debug(f"Could not fetch unknown company {org_no}: {e}")
+                                    # 404/410 are common for subunits or deleted entities
+                                    logger.debug(f"Orgnr {org_no} is likely a subunit or deleted (404 on enheter): {e}")
                                     return None
 
-                        fetch_tasks = [fetch_missing_company(o) for o in missing_list]
-                        fetched_companies = await asyncio.gather(*fetch_tasks)
+                        fetch_tasks = [fetch_missing_main_unit(o) for o in unknown_list]
+                        fetched_results = await asyncio.gather(*fetch_tasks)
 
-                        for i, company_data in enumerate(fetched_companies):
-                            target_orgnr = missing_list[i]
+                        new_companies_onboarded = 0
+                        for i, company_data in enumerate(fetched_results):
+                            target_orgnr = unknown_list[i]
                             if company_data:
                                 try:
                                     await self.company_repo.create_or_update(company_data)
+                                    existing_orgnrs.add(target_orgnr)
+                                    new_companies_onboarded += 1
                                 except Exception as e:
-                                    logger.error(
-                                        f"Failed to persist company {company_data.get('organisasjonsnummer')}: {e}"
-                                    )
+                                    logger.error(f"Failed to persist onboarded company {target_orgnr}: {e}")
                             else:
-                                # Mark as failed/subunit to avoid retrying in this run
+                                # Mark as failed/subunit to avoid redundant API calls in this execution
                                 failed_this_run.add(target_orgnr)
 
-                        await self.db.commit()
-
-                        # Re-check which companies exist now
-                        existing_orgnrs = await self.company_repo.get_existing_orgnrs(list(orgnrs_to_sync))
+                        if new_companies_onboarded > 0:
+                            await self.db.commit()
+                            logger.info(
+                                f"Successfully onboarded {new_companies_onboarded} missing main companies during role sync."
+                            )
 
                     # Phase 1: Collect all roles for companies that exist in the database
                     all_batch_roles: list[models.Role] = []
@@ -792,6 +797,14 @@ class UpdateService:
                 except Exception as e:
                     logger.exception(f"Error in role updates batch: {e}")
                     break
+
+            # If we processed roles, update DB statistics to keep sitemap seek planner fast
+            if result.companies_updated > 0:
+                logger.info("Updating database statistics for 'roller' table...")
+                try:
+                    await self.db.execute(text("ANALYZE roller;"))
+                except Exception as e:
+                    logger.warning(f"Failed to run ANALYZE roller: {e}")
 
         return result.model_dump()
 

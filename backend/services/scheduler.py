@@ -8,6 +8,7 @@ from apscheduler.triggers.interval import IntervalTrigger
 from sqlalchemy import text
 
 from database import AsyncSessionLocal, engine
+from services.seo_service import SEOService
 
 logger = logging.getLogger(__name__)
 
@@ -163,14 +164,14 @@ class SchedulerService:
             misfire_grace_time=300,
         )
 
-        # Clean up old bulk import queue entries weekly (Sundays at 05:00)
+        # Warm sitemap cache every 6 hours
         self.scheduler.add_job(
-            self.cleanup_import_queue,
-            trigger=CronTrigger(day_of_week="sun", hour=5, minute=0),
-            id="cleanup_import_queue",
+            self.warm_sitemap_cache,
+            trigger=IntervalTrigger(hours=6),
+            id="warm_sitemap_cache",
             replace_existing=True,
             max_instances=1,
-            misfire_grace_time=300,
+            misfire_grace_time=3600,
         )
 
     async def start(self) -> None:
@@ -603,3 +604,14 @@ class SchedulerService:
                 logger.info("Bulk import queue cleanup completed", extra={"deleted": deleted_count, "cutoff_days": 7})
         except Exception as e:
             logger.exception("Failed to cleanup import queue", extra={"error": str(e)})
+
+    async def warm_sitemap_cache(self) -> None:
+        """Proactively refreshes the sitemap cache to avoid slow first requests."""
+        logger.info("Proactively warming sitemap cache...")
+        try:
+            async with AsyncSessionLocal() as db:
+                seo_service = SEOService(db)
+                await seo_service.get_sitemap_data(force_refresh=True)
+                logger.info("Sitemap cache warmed successfully")
+        except Exception as e:
+            logger.error(f"Error warming sitemap cache: {e}")

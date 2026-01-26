@@ -3,7 +3,7 @@ import logging
 from datetime import datetime, timezone
 from typing import Any
 
-from sqlalchemy import func, select, update
+from sqlalchemy import func, select, text, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from models_import import BulkImportQueue, ImportBatch, ImportStatus
@@ -241,6 +241,16 @@ class BulkImportService:
         batch.failed_count = int(failed.scalar() or 0)
 
         await self.db.commit()
+
+        # Update database statistics after large bulk import to keep indices/sitemap fast
+        if batch.completed_count and batch.completed_count > 1000:
+            logger.info(f"Bulk import of {batch.completed_count} companies finished. Running ANALYZE...")
+            try:
+                await self.db.execute(text("ANALYZE bedrifter;"))
+                await self.db.execute(text("ANALYZE regnskap;"))
+                await self.db.execute(text("ANALYZE roller;"))
+            except Exception as e:
+                logger.warning(f"Post-import ANALYZE failed: {e}")
 
         duration = 0.0
         if batch.completed_at and batch.started_at:
