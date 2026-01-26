@@ -12,7 +12,7 @@ from datetime import datetime
 
 from typing import Any, Sequence
 
-from sqlalchemy import Row, and_, func, select, update
+from sqlalchemy import Row, and_, func, select, update, or_
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from models import Company
@@ -40,12 +40,16 @@ class GeocodingBatchService:
 
     async def get_companies_needing_geocoding(self, limit: int = DEFAULT_BATCH_SIZE) -> Sequence[Row[Any]]:
         """Fetch companies that need geocoding, selecting only necessary columns."""
+        address_filter = or_(
+            func.jsonb_typeof(Company.forretningsadresse) == "object",
+            func.jsonb_typeof(Company.postadresse) == "object",
+        )
         query = (
             select(Company.orgnr, Company.forretningsadresse, Company.postadresse, Company.geocoding_attempts)
             .where(
                 and_(
                     Company.latitude.is_(None),
-                    Company.forretningsadresse.isnot(None),
+                    address_filter,
                     Company.geocoding_attempts < self.MAX_GEOCODING_ATTEMPTS,
                 )
             )
@@ -58,13 +62,17 @@ class GeocodingBatchService:
 
     async def count_companies_needing_geocoding(self) -> int:
         """Count companies that still need geocoding (excluding max-attempts)."""
+        address_filter = or_(
+            func.jsonb_typeof(Company.forretningsadresse) == "object",
+            func.jsonb_typeof(Company.postadresse) == "object",
+        )
         query = (
             select(func.count())
             .select_from(Company)
             .where(
                 and_(
                     Company.latitude.is_(None),
-                    Company.forretningsadresse.isnot(None),
+                    address_filter,
                     Company.geocoding_attempts < self.MAX_GEOCODING_ATTEMPTS,
                 )
             )

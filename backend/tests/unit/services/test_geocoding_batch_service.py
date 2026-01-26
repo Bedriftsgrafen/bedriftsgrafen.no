@@ -112,6 +112,22 @@ async def test_run_batch_processing(service, mock_db_session):
 
 
 @pytest.mark.asyncio
+async def test_get_companies_needing_geocoding_filters_json_null(service, mock_db_session):
+    mock_result = MagicMock()
+    mock_result.all.return_value = []
+    mock_db_session.execute.return_value = mock_result
+
+    await service.get_companies_needing_geocoding(limit=5)
+
+    stmt = mock_db_session.execute.call_args[0][0]
+    compiled = str(stmt).lower()
+
+    assert "jsonb_typeof" in compiled
+    assert "forretningsadresse" in compiled
+    assert "postadresse" in compiled
+
+
+@pytest.mark.asyncio
 async def test_run_postal_code_backfill_file_not_found(service):
     with patch("os.path.exists", return_value=False):
         result = await service.run_postal_code_backfill()

@@ -4,14 +4,19 @@ import { SEOHead, Breadcrumbs } from '../components/layout'
 import { Loader2, MapPin, Search, ChevronDown } from 'lucide-react'
 import { useState, useMemo } from 'react'
 import { Link } from '@tanstack/react-router'
-import { HeroMap } from '../components/maps/HeroMap'
 import { COUNTIES } from '../constants/explorer'
+import { getStaticMapUrl } from '../utils/mapTiles'
+
+const MUNICIPALITY_MAP_CLASS =
+  'absolute inset-0 opacity-75 group-hover:opacity-85 transition-opacity pointer-events-none bg-cover bg-center filter contrast-150 brightness-90'
+const MUNICIPALITY_MAP_OVERLAY_CLASS =
+  'absolute inset-0 bg-linear-to-b from-white/15 via-white/5 to-white/25 pointer-events-none'
 
 export const Route = createLazyFileRoute('/kommuner')({
   component: KommunerPage,
 })
 
-function KommunerPage() {
+export function KommunerPage() {
   const { data: municipalities, isLoading } = useMunicipalitiesListQuery()
   const [searchQuery, setSearchQuery] = useState('')
   const [selectedCounty, setSelectedCounty] = useState<string>('all')
@@ -105,14 +110,20 @@ function KommunerPage() {
                 className="group bg-white rounded-3xl p-8 border border-slate-200 hover:border-blue-200 shadow-sm hover:shadow-2xl hover:-translate-y-1.5 transition-all duration-500 flex flex-col justify-between relative overflow-hidden"
               >
                 {/* 
-                   Background Context Map
-                   Reduced opacity for more "premium" feel. Map serves as a subtle texture.
+                   Static Map Background - Much more performant than 357 Leaflet instances.
+                   Uses a single tile image as a subtle texture for premium feel.
                 */}
                 {m.lat && m.lng && (
-                  <div className="absolute inset-0 opacity-15 group-hover:opacity-25 transition-opacity pointer-events-none">
-                    <HeroMap lat={m.lat} lng={m.lng} zoom={9} variant="light" />
-                  </div>
+                  <div
+                    data-testid={`municipality-map-${m.code}`}
+                    className={MUNICIPALITY_MAP_CLASS}
+                    style={{
+                      backgroundImage: `url(${getStaticMapUrl(m.lat, m.lng, 11)})`,
+                    }}
+                  />
                 )}
+                {/* Subtle gradient overlay for text readability */}
+                <div className={MUNICIPALITY_MAP_OVERLAY_CLASS} />
                 
                 <div className="relative z-10">
                   <div className="flex items-center justify-between mb-8">

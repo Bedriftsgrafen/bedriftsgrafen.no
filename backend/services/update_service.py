@@ -38,7 +38,7 @@ logger = logging.getLogger(__name__)
 CONCURRENCY_LIMIT = 10
 
 # Chunk size for database commits (commit after N records)
-DB_COMMIT_CHUNK_SIZE = 50
+DB_COMMIT_CHUNK_SIZE = 25
 
 
 class UpdateService:
@@ -344,7 +344,9 @@ class UpdateService:
         """
         records_since_commit = 0
 
-        for fetch_result in fetch_results:
+        sorted_results = sorted(fetch_results, key=lambda item: item.orgnr)
+
+        for fetch_result in sorted_results:
             result.companies_processed += 1
 
             if not fetch_result.success:

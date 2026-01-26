@@ -2,6 +2,7 @@ import pytest
 from unittest.mock import MagicMock, AsyncMock
 from repositories.company.crud import CrudMixin
 import models
+from sqlalchemy.exc import DBAPIError
 
 
 class MockRepository(CrudMixin):
@@ -46,6 +47,27 @@ async def test_create_or_update_db_error(repo, mock_db_session):
     with pytest.raises(DatabaseException):
         await repo.create_or_update(company_data, autocommit=True)
 
+    assert mock_db_session.rollback.called
+
+
+@pytest.mark.asyncio
+async def test_create_or_update_retries_deadlock(repo, mock_db_session):
+    class FakeOrig:
+        sqlstate = "40P01"
+
+    deadlock_error = DBAPIError("stmt", {}, FakeOrig(), False)
+
+    success_result = MagicMock()
+    success_result.scalar_one.return_value = MagicMock(spec=models.Company)
+
+    mock_db_session.execute.side_effect = [deadlock_error, success_result]
+
+    company_data = {"organisasjonsnummer": "123456789", "navn": "Test AS"}
+
+    result = await repo.create_or_update(company_data, autocommit=False)
+
+    assert result is not None
+    assert mock_db_session.execute.call_count == 2
     assert mock_db_session.rollback.called
 
 

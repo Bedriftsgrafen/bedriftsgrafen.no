@@ -10,6 +10,7 @@ from datetime import date, timedelta
 from unittest.mock import AsyncMock, MagicMock, patch
 
 from services.update_service import UpdateService
+from schemas.brreg import FetchResult, UpdateBatchResult
 
 
 @pytest.fixture
@@ -66,6 +67,30 @@ class TestFetchUpdates:
             result = await update_service.fetch_updates(page_size=1)
             assert update_service._process_single_page.call_count == 2
             assert result["companies_processed"] == 0
+
+
+@pytest.mark.asyncio
+async def test_persist_chunk_sorts_orgnrs(update_service):
+    update_service._fetch_and_persist_financials = AsyncMock()
+
+    company = MagicMock()
+    company.last_polled_regnskap = date.today()
+    update_service.company_repo.create_or_update = AsyncMock(return_value=company)
+
+    fetch_results = [
+        FetchResult(orgnr="999999999", success=True, company_data={"organisasjonsnummer": "999999999"}),
+        FetchResult(orgnr="111111111", success=True, company_data={"organisasjonsnummer": "111111111"}),
+        FetchResult(orgnr="555555555", success=True, company_data={"organisasjonsnummer": "555555555"}),
+    ]
+
+    result = UpdateBatchResult(since_date=date.today(), since_iso="2026-01-26T00:00:00.000Z")
+
+    await update_service._persist_chunk(fetch_results, result)
+
+    called_orgnrs = [
+        call.args[0]["organisasjonsnummer"] for call in update_service.company_repo.create_or_update.call_args_list
+    ]
+    assert called_orgnrs == ["111111111", "555555555", "999999999"]
 
 
 class TestFetchSubunitUpdates:

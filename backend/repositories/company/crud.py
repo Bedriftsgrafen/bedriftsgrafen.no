@@ -3,12 +3,14 @@
 Contains create_or_update and related data manipulation methods.
 """
 
+import asyncio
 import logging
 from datetime import datetime, timezone
 from typing import Any
 
 from sqlalchemy import update
 from sqlalchemy.dialects.postgresql import insert
+from sqlalchemy.exc import DBAPIError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 import models
@@ -124,6 +126,15 @@ class CrudMixin:
             "forretningsadresse": company_data.get("forretningsadresse"),
         }
 
+    @staticmethod
+    def _is_retryable_db_error(error: Exception) -> bool:
+        """Check if a database error is safe to retry (deadlock/serialization)."""
+        if isinstance(error, DBAPIError) and error.orig:
+            sqlstate = getattr(error.orig, "sqlstate", None)
+            if sqlstate in {"40P01", "40001"}:
+                return True
+        return "deadlock detected" in str(error).lower()
+
     async def create_or_update(self, company_data: dict[str, Any], autocommit: bool = False) -> models.Company:
         """Create or update company from Brønnøysund API data.
 
@@ -142,38 +153,52 @@ class CrudMixin:
         """
         orgnr = company_data.get("organisasjonsnummer")
 
-        try:
-            # Parse all fields
-            fields = self._parse_company_fields(company_data)
-            fields["orgnr"] = orgnr  # Ensure PK is in fields
+        max_attempts = 3
+        for attempt in range(1, max_attempts + 1):
+            try:
+                # Parse all fields
+                fields = self._parse_company_fields(company_data)
+                fields["orgnr"] = orgnr  # Ensure PK is in fields
 
-            # Prepare UPSERT statement
-            insert_stmt = insert(models.Company).values(**fields)
+                # Prepare UPSERT statement
+                insert_stmt = insert(models.Company).values(**fields)
 
-            # On conflict (PK orgnr), update all fields except PK and creation metadata
-            update_dict = {
-                k: getattr(insert_stmt.excluded, k) for k in fields.keys() if k not in ["orgnr", "created_at"]
-            }
+                # On conflict (PK orgnr), update all fields except PK and creation metadata
+                update_dict = {
+                    k: getattr(insert_stmt.excluded, k) for k in fields.keys() if k not in ["orgnr", "created_at"]
+                }
 
-            upsert_stmt = insert_stmt.on_conflict_do_update(
-                index_elements=["orgnr"],
-                set_=update_dict,
-            ).returning(models.Company)
+                upsert_stmt = insert_stmt.on_conflict_do_update(
+                    index_elements=["orgnr"],
+                    set_=update_dict,
+                ).returning(models.Company)
 
-            # Execute UPSERT
-            result = await self.db.execute(upsert_stmt)
-            company = result.scalar_one()
+                # Execute UPSERT
+                result = await self.db.execute(upsert_stmt)
+                company = result.scalar_one()
 
-            if autocommit:
-                await self.db.commit()
+                if autocommit:
+                    await self.db.commit()
 
-            return company
+                return company
 
-        except Exception as e:
-            if autocommit:
-                await self.db.rollback()
-            logger.error(f"Database error creating/updating company {orgnr}: {e}")
-            raise DatabaseException(f"Failed to create/update company {orgnr}", original_error=e)
+            except Exception as e:
+                if self._is_retryable_db_error(e) and attempt < max_attempts:
+                    await self.db.rollback()
+                    backoff = 0.1 * (2 ** (attempt - 1))
+                    logger.warning(
+                        "Retrying company upsert after deadlock/serialization failure",
+                        extra={"orgnr": orgnr, "attempt": attempt, "backoff": backoff},
+                    )
+                    await asyncio.sleep(backoff)
+                    continue
+
+                if autocommit:
+                    await self.db.rollback()
+                logger.error(f"Database error creating/updating company {orgnr}: {e}")
+                raise DatabaseException(f"Failed to create/update company {orgnr}", original_error=e)
+
+        raise DatabaseException(f"Failed to create/update company {orgnr}")
 
     async def update_coordinates(self, orgnr: str, lat: float, lon: float) -> None:
         """Update company coordinates and timestamp."""
