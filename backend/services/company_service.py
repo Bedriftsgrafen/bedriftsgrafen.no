@@ -16,7 +16,7 @@ from services.brreg_api_service import BrregApiService
 from services.dtos import CompanyFilterDTO
 from services.geocoding_service import GeocodingService
 from services.nace_service import NaceService
-from services.response_models import Naeringskode
+from schemas.companies import Naeringskode
 from utils.cache import AsyncLRUCache
 
 logger = logging.getLogger(__name__)

@@ -1,7 +1,7 @@
 import pytest
 from unittest.mock import AsyncMock, patch
 from services.company_service import CompanyService
-from services.response_models import Naeringskode
+from schemas.companies import Naeringskode
 
 
 @pytest.fixture
