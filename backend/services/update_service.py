@@ -635,6 +635,9 @@ class UpdateService:
         else:
             params["afterTime"] = since_iso
 
+        # To avoid re-fetching dead or subunit orgnrs in the same execution
+        failed_this_run: set[str] = set()
+
         async with httpx.AsyncClient(timeout=self.brreg_api.timeout) as http_client:
             while True:
                 try:
@@ -657,7 +660,10 @@ class UpdateService:
                         if orgnr:
                             orgnrs_to_sync.add(orgnr)
                         try:
-                            last_seen_id = int(event.get("id"))
+                            # IMPORTANT: Track progress even if we fail later in this batch
+                            current_id = int(event.get("id"))
+                            if last_seen_id is None or current_id > last_seen_id:
+                                last_seen_id = current_id
                         except (ValueError, TypeError):
                             pass
 
@@ -666,27 +672,34 @@ class UpdateService:
                     # Ensure all companies for which we're syncing roles exist in the database
                     # This prevents FK violations when inserting roles
                     existing_orgnrs = await self.company_repo.get_existing_orgnrs(list(orgnrs_to_sync))
-                    missing_orgnrs = orgnrs_to_sync - existing_orgnrs
+                    # Check subunits to avoid trying to fetch them as main companies (causes 404/410)
+                    existing_subunits = await self.subunit_repo.get_existing_orgnrs(list(orgnrs_to_sync))
+
+                    missing_orgnrs = orgnrs_to_sync - existing_orgnrs - existing_subunits - failed_this_run
 
                     if missing_orgnrs:
+                        # Convert to stable list for concurrent fetching and result mapping
+                        missing_list = list(missing_orgnrs)
                         logger.info(
-                            f"Found {len(missing_orgnrs)} missing companies for role updates. Fetching from Brreg..."
+                            f"Found {len(missing_list)} unknown companies in role updates. Fetching from Brreg..."
                         )
                         # Fetch and create missing companies
                         semaphore = asyncio.Semaphore(CONCURRENCY_LIMIT)
 
-                        async def fetch_missing_company(orgnr: str) -> dict[str, Any] | None:
+                        async def fetch_missing_company(org_no: str) -> dict[str, Any] | None:
                             async with semaphore:
                                 try:
-                                    return await self.brreg_api.fetch_company(orgnr)
+                                    return await self.brreg_api.fetch_company(org_no)
                                 except Exception as e:
-                                    logger.warning(f"Failed to fetch missing company {orgnr}: {e}")
+                                    # We don't log errors for 410/404 as they are common for subunits or deleted entities
+                                    logger.debug(f"Could not fetch unknown company {org_no}: {e}")
                                     return None
 
-                        fetch_tasks = [fetch_missing_company(orgnr) for orgnr in missing_orgnrs]
+                        fetch_tasks = [fetch_missing_company(o) for o in missing_list]
                         fetched_companies = await asyncio.gather(*fetch_tasks)
 
-                        for company_data in fetched_companies:
+                        for i, company_data in enumerate(fetched_companies):
+                            target_orgnr = missing_list[i]
                             if company_data:
                                 try:
                                     await self.company_repo.create_or_update(company_data)
@@ -694,6 +707,9 @@ class UpdateService:
                                     logger.error(
                                         f"Failed to persist company {company_data.get('organisasjonsnummer')}: {e}"
                                     )
+                            else:
+                                # Mark as failed/subunit to avoid retrying in this run
+                                failed_this_run.add(target_orgnr)
 
                         await self.db.commit()
 
@@ -758,6 +774,10 @@ class UpdateService:
 
                         # 3. Final commit for this batch
                         await self.db.commit()
+
+                        # Save progress to prevent repeating if next batch fails or run times out
+                        if last_seen_id:
+                            await self.system_repo.set_state("role_update_latest_id", str(last_seen_id))
 
                     result.companies_processed += len(events)
                     result.latest_oppdateringsid = last_seen_id
