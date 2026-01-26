@@ -45,6 +45,13 @@ export function CompanyModalOverlay({ orgnr: rawOrgnr, onClose, onSelectCompany 
     })
 
     const [activeTab, setActiveTab] = useState<TabType>('oversikt')
+    const [prevOrgnr, setPrevOrgnr] = useState(orgnr)
+
+    // Reset tab to overview when company (orgnr) changes
+    if (orgnr !== prevOrgnr) {
+        setPrevOrgnr(orgnr)
+        setActiveTab('oversikt')
+    }
 
     // Queries
     const {

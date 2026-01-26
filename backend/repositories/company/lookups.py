@@ -46,12 +46,19 @@ class LookupsMixin:
             raise DatabaseException(f"Failed to fetch company {orgnr}", original_error=e)
 
     async def get_company_name(self, orgnr: str) -> str | None:
-        """Fetch only the name of a company by its orgnr. Highly efficient."""
+        """Fetch only the name of a company or subunit by its orgnr. Highly efficient."""
         try:
+            # First try company table
             result = await self.db.execute(select(models.Company.navn).filter(models.Company.orgnr == orgnr))
+            name = result.scalar_one_or_none()
+            if name:
+                return name
+
+            # Fallback to subunit table
+            result = await self.db.execute(select(models.SubUnit.navn).filter(models.SubUnit.orgnr == orgnr))
             return result.scalar_one_or_none()
         except Exception as e:
-            logger.error(f"Database error fetching company name {orgnr}: {e}")
+            logger.error(f"Database error fetching company/subunit name {orgnr}: {e}")
             return None
 
     async def get_existing_orgnrs(self, orgnrs: list[str]) -> set[str]:

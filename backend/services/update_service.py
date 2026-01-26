@@ -82,13 +82,18 @@ class UpdateService:
             from sqlalchemy import select
 
             # Check if an unresolved error already exists to avoid duplicates
-            stmt = select(models.SyncError).where(
-                models.SyncError.orgnr == orgnr,
-                models.SyncError.entity_type == entity_type,
-                models.SyncError.status.in_([models.SyncErrorStatus.PENDING, models.SyncErrorStatus.RETRYING]),
-            )
-            result = await self.db.execute(stmt)
-            existing = result.scalar_one_or_none()
+            # Use no_autoflush to prevent premature flushes if the session has dirty objects
+            # which might cause a rollback exception here.
+            with self.db.no_autoflush:
+                stmt = select(models.SyncError).where(
+                    models.SyncError.orgnr == orgnr,
+                    models.SyncError.entity_type == entity_type,
+                    models.SyncError.status.in_(
+                        [models.SyncErrorStatus.PENDING.value, models.SyncErrorStatus.RETRYING.value]
+                    ),
+                )
+                result = await self.db.execute(stmt)
+                existing = result.scalar_one_or_none()
 
             if existing:
                 existing.error_message = error_message
@@ -99,7 +104,7 @@ class UpdateService:
                     orgnr=orgnr,
                     entity_type=entity_type,
                     error_message=error_message,
-                    status=status,
+                    status=status.value if hasattr(status, "value") else status,
                     attempt_count=1,
                 )
                 self.db.add(new_error)
@@ -519,6 +524,10 @@ class UpdateService:
                                     beliggenhetsadresse=subunit_data.get("beliggenhetsadresse"),
                                     postadresse=subunit_data.get("postadresse"),
                                     stiftelsesdato=self._parse_date(subunit_data.get("stiftelsesdato")),
+                                    registreringsdato_enhetsregisteret=self._parse_date(
+                                        subunit_data.get("registreringsdatoEnhetsregisteret")
+                                    ),
+                                    raw_data=subunit_data,
                                 )
                             )
                             result.companies_updated += 1

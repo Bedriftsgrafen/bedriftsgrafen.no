@@ -113,11 +113,12 @@ export function CompanyModal({
                   activeTab={activeTab}
                   onTabChange={onTabChange}
                   hasAccountingData={company.regnskap.length > 0 && company.naeringskode !== '00.000'}
+                  isSubunit={company.is_subunit}
                 />
               </div>
 
               {/* Tab Content - Scrollable with Premium Entry Animation */}
-              <div 
+              <div
                 ref={scrollContainerRef}
                 className="flex-1 overflow-y-auto overscroll-contain p-4 md:p-6 pt-0 md:pt-0 animate-in fade-in duration-300 slide-in-from-bottom-2"
                 key={company.orgnr} // Key-based remounting for the entry animation on navigation

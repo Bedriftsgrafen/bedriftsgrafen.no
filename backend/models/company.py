@@ -168,6 +168,24 @@ class Company(Base):
             "ix_bedrifter_fylkesnummer",
             func.left(Column("forretningsadresse", JSONB)["kommunenummer"].astext, 2),
         ),
+        Index("idx_company_municipality_code", sa_text("(forretningsadresse ->> 'kommunenummer'::text)")),
+        # Optimizations for local dashboards (municipality-scoped feeds)
+        Index(
+            "idx_bedrifter_muni_stiftelse",
+            sa_text("(forretningsadresse ->> 'kommunenummer'::text)"),
+            sa_text("stiftelsesdato DESC NULLS LAST"),
+        ),
+        Index(
+            "idx_bedrifter_muni_ansatte",
+            sa_text("(forretningsadresse ->> 'kommunenummer'::text)"),
+            sa_text("antall_ansatte DESC NULLS LAST"),
+        ),
+        Index(
+            "idx_bedrifter_muni_konkurs_partial",
+            sa_text("(forretningsadresse ->> 'kommunenummer'::text)"),
+            sa_text("konkursdato DESC NULLS LAST"),
+            postgresql_where=sa_text("konkurs IS TRUE"),
+        ),
     )
 
     orgnr: Mapped[str] = mapped_column(String, primary_key=True, index=True)
@@ -351,6 +369,11 @@ class SubUnit(Base):
     # SubUnits often use 'beliggenhetsadresse' etc directly.
 
     stiftelsesdato: Mapped[date | None] = mapped_column(Date, nullable=True)
+    registreringsdato_enhetsregisteret: Mapped[date | None] = mapped_column(Date, nullable=True, index=True)
+
+    # Raw data from Brønnøysund for future proofing
+    raw_data: Mapped[dict | None] = mapped_column("data", JSONB, nullable=True)
+
     updated_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), onupdate=func.now()
     )

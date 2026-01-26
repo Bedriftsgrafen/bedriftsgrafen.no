@@ -32,16 +32,22 @@ function TabButton({ tab, label, isActive, onChange }: TabButtonProps) {
   )
 }
 
-export function ModalTabs({ activeTab, onTabChange, hasAccountingData = true }: TabsProps) {
+export function ModalTabs({ activeTab, onTabChange, hasAccountingData = true, isSubunit = false }: TabsProps & { isSubunit?: boolean }) {
   return (
     <TabContainer className="gap-0">
       <TabButton tab="oversikt" label="Oversikt" isActive={activeTab === 'oversikt'} onChange={onTabChange} />
-      <TabButton tab="okonomi" label="Økonomi" isActive={activeTab === 'okonomi'} onChange={onTabChange} />
-      {hasAccountingData && (
+      {!isSubunit && (
+        <TabButton tab="okonomi" label="Økonomi" isActive={activeTab === 'okonomi'} onChange={onTabChange} />
+      )}
+      {hasAccountingData && !isSubunit && (
         <TabButton tab="sammenligning" label="Sammenligning" isActive={activeTab === 'sammenligning'} onChange={onTabChange} />
       )}
-      <TabButton tab="roller" label="Roller" isActive={activeTab === 'roller'} onChange={onTabChange} />
-      <TabButton tab="avdelinger" label="Avdelinger" isActive={activeTab === 'avdelinger'} onChange={onTabChange} />
+      {!isSubunit && (
+        <TabButton tab="roller" label="Roller" isActive={activeTab === 'roller'} onChange={onTabChange} />
+      )}
+      {!isSubunit && (
+        <TabButton tab="avdelinger" label="Avdelinger" isActive={activeTab === 'avdelinger'} onChange={onTabChange} />
+      )}
     </TabContainer>
   )
 }

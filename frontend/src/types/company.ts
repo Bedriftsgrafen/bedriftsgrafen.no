@@ -76,6 +76,7 @@ export interface Company {
   longitude?: number | null
   geocoded_at?: string | null
   last_polled_regnskap?: string | null
+  is_subunit?: boolean
 }
 
 export interface Accounting {

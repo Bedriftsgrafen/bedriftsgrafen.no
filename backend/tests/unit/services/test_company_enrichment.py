@@ -1,6 +1,7 @@
 import pytest
 from unittest.mock import AsyncMock, patch
 from services.company_service import CompanyService
+from services.response_models import Naeringskode
 
 
 @pytest.fixture
@@ -18,10 +19,10 @@ async def test_enrich_nace_codes_dict(service):
         await service._enrich_nace_codes(items)
 
     # Assert
-    assert items[0]["naeringskode"] == {"kode": "62.010", "beskrivelse": "Name for 62.010"}
+    assert items[0]["naeringskode"] == Naeringskode(kode="62.010", beskrivelse="Name for 62.010")
     assert items[0]["naeringskoder"] == [
-        {"kode": "62.010", "beskrivelse": "Name for 62.010"},
-        {"kode": "62.020", "beskrivelse": "Name for 62.020"},
+        Naeringskode(kode="62.010", beskrivelse="Name for 62.010"),
+        Naeringskode(kode="62.020", beskrivelse="Name for 62.020"),
     ]
 
 
@@ -38,5 +39,5 @@ async def test_enrich_nace_codes_mixed_types(service):
     with patch("services.nace_service.NaceService.get_nace_name", return_value="Test Industry"):
         await service._enrich_nace_codes(items)
 
-    assert items[0].naeringskode == {"kode": "62.010", "beskrivelse": "Test Industry"}
-    assert items[0].naeringskoder == [{"kode": "62.010", "beskrivelse": "Test Industry"}]
+    assert items[0].naeringskode == Naeringskode(kode="62.010", beskrivelse="Test Industry")
+    assert items[0].naeringskoder == [Naeringskode(kode="62.010", beskrivelse="Test Industry")]

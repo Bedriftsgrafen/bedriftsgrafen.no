@@ -23,6 +23,7 @@ class MunicipalityPopulation(Base):
 
     municipality_code: Mapped[str] = mapped_column(String, primary_key=True)
     year: Mapped[int] = mapped_column(Integer, primary_key=True)
+    name: Mapped[str | None] = mapped_column(String, nullable=True)  # Denormalized for performance
     population: Mapped[int] = mapped_column(Integer, nullable=False)
     updated_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), onupdate=func.now()

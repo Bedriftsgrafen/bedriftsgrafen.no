@@ -403,7 +403,8 @@ async def get_company_subunits(
 
     # Get parent company for metadata (reuse service to avoid double lookup)
     company = await service.get_company_with_accounting(orgnr)
-    last_updated = company.raw_data.get("oppdatert") if company and company.raw_data else None
+    raw_data = getattr(company, "raw_data", None) if not isinstance(company, dict) else company.get("raw_data")
+    last_updated = raw_data.get("oppdatert") if raw_data else None
 
     # Apply pagination
     paginated = all_subunits[skip : skip + limit]

@@ -24,11 +24,12 @@ class CompanyBase(BaseModel):
     parent_orgnr: str | None = None
     parent_navn: str | None = None
     organisasjonsform: str | None = None
-    naeringskode: str | Naeringskode | None = None
+    naeringskode: Naeringskode | str | None = None
     naeringskoder: list[Naeringskode] | list[str] = []
     antall_ansatte: int | None = None
     stiftelsesdato: date | None = None
     hjemmeside: str | None = None
+    is_subunit: bool = False
     # Contact info (from raw_data)
     telefon: str | None = None
     mobil: str | None = None

@@ -503,9 +503,10 @@ class StatsService:
         summary = await self.stats_repo.get_municipality_premium_summary(municipality_code)
         sectors = await self.stats_repo.get_municipality_sector_distribution(municipality_code)
 
-        # Advanced rankings (Density and Revenue)
+        # Advanced rankings (Density, Revenue, and Population)
         ranking_density = await self.stats_repo.get_municipality_rankings(municipality_code, metric="density")
         ranking_revenue = await self.stats_repo.get_municipality_rankings(municipality_code, metric="revenue")
+        ranking_population = await self.stats_repo.get_municipality_rankings(municipality_code, metric="population")
 
         trend = await self.stats_repo.get_establishment_trend(municipality_code)
 
@@ -565,4 +566,5 @@ class StatsService:
             "latest_bankruptcies": bankrupt_res,
             "ranking_in_county_density": ranking_density,
             "ranking_in_county_revenue": ranking_revenue,
+            "ranking_in_county_population": ranking_population,
         }

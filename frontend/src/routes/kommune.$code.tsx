@@ -62,7 +62,7 @@ function MunicipalityDashboardPage() {
         <div className="relative bg-slate-900 text-white pt-12 pb-24 px-4 shadow-2xl mb-12 overflow-hidden min-h-[600px] flex flex-col justify-center border-b border-white/5">
           {/* Background Map with lower opacity for premium feel */}
           {dashboard.lat && dashboard.lng && (
-            <div className="opacity-40">
+            <div className="opacity-40" aria-hidden="true" role="presentation">
               <HeroMap lat={dashboard.lat} lng={dashboard.lng} />
             </div>
           )}
@@ -83,11 +83,11 @@ function MunicipalityDashboardPage() {
             <div className="flex flex-col lg:flex-row lg:items-end justify-between gap-16">
               <div className="flex-1">
                 <div className="flex items-center gap-3 mb-8">
-                  <span className="px-4 py-1.5 bg-blue-500/20 border border-blue-400/20 backdrop-blur-xl rounded-full text-[10px] font-black tracking-[0.2em] uppercase text-blue-300">
+                  <span className="px-4 py-1.5 bg-blue-500/20 border border-blue-400/30 backdrop-blur-xl rounded-full text-xs font-black tracking-widest uppercase text-blue-200">
                     KODE {dashboard.code}
                   </span>
-                  <span className="h-1.5 w-1.5 bg-white/20 rounded-full" />
-                  <span className="text-white/60 text-[10px] font-black tracking-[0.2em] uppercase">
+                  <span className="h-1.5 w-1.5 bg-white/20 rounded-full" aria-hidden="true" />
+                  <span className="text-white/70 text-xs font-black tracking-widest uppercase">
                     {dashboard.county_name}
                   </span>
                 </div>
@@ -101,7 +101,7 @@ function MunicipalityDashboardPage() {
 
               <div className="flex flex-col sm:flex-row gap-6">
                 <div className="bg-white/5 backdrop-blur-3xl rounded-[2rem] p-10 border border-white/10 shadow-2xl min-w-[240px]">
-                  <p className="text-blue-200/40 text-[10px] font-black uppercase tracking-[0.2em] mb-6">INNBYGGERE</p>
+                  <p className="text-blue-100/70 text-xs font-black uppercase tracking-widest mb-6">INNBYGGERE</p>
                   <div className="flex items-center gap-6">
                     <span className="text-6xl font-black tracking-tighter">{formatNumber(dashboard.population)}</span>
                     {dashboard.population_growth_1y != null && (
@@ -113,7 +113,7 @@ function MunicipalityDashboardPage() {
                   </div>
                 </div>
                 <div className="bg-white/5 backdrop-blur-3xl rounded-[2rem] p-10 border border-white/10 shadow-2xl min-w-[240px]">
-                  <p className="text-blue-200/40 text-[10px] font-black uppercase tracking-[0.2em] mb-6">VIRKSOMHETER</p>
+                  <p className="text-blue-100/70 text-xs font-black uppercase tracking-widest mb-6">VIRKSOMHETER</p>
                   <span className="text-6xl font-black tracking-tighter">{formatNumber(dashboard.company_count)}</span>
                 </div>
               </div>
@@ -131,7 +131,7 @@ function MunicipalityDashboardPage() {
                   <div className="h-10 w-2 bg-blue-600 rounded-full" />
                   Nyetableringer
                 </h2>
-                <div className="text-[10px] font-black text-slate-400 uppercase tracking-widest">SISTE 12 MÅNEDER</div>
+                <div className="text-xs font-black text-slate-500 uppercase tracking-widest">SISTE 12 MÅNEDER</div>
               </div>
               <div className="h-[350px] w-full">
                 <ResponsiveContainer width="100%" height="100%">
@@ -207,7 +207,7 @@ function MunicipalityDashboardPage() {
                 {dashboard.top_sectors.map(sector => (
                   <div key={sector.nace_division} className="relative">
                     <div className="flex justify-between items-center mb-3">
-                      <span className="text-slate-500 font-black text-[10px] uppercase tracking-widest truncate max-w-[80%]">
+                      <span className="text-slate-600 font-black text-xs uppercase tracking-widest truncate max-w-[80%]">
                         {sector.nace_name}
                       </span>
                       <span className="text-slate-900 font-black tabular-nums text-sm">
@@ -233,21 +233,31 @@ function MunicipalityDashboardPage() {
                 <div className="flex flex-col gap-6">
                   <div className="bg-slate-50 rounded-3xl p-8 border border-slate-100 flex items-center justify-between group-hover:bg-blue-50/50 transition-colors">
                     <div>
-                      <p className="text-slate-400 text-[9px] font-black uppercase tracking-[0.2em] mb-1">TETTHET</p>
-                      <p className="text-slate-500 text-[10px] font-bold">i {dashboard.county_name}</p>
+                      <p className="text-slate-500 text-xs font-black uppercase tracking-widest mb-1">TETTHET</p>
+                      <p className="text-slate-600 text-xs font-bold">i {dashboard.county_name}</p>
                     </div>
                     <div className="text-5xl font-black text-slate-900 tracking-tighter">
-                      <span className="text-blue-600 text-2xl tracking-normal mr-1">#</span>{dashboard.ranking_in_county_density?.rank ?? '—'}
+                      <span className="text-blue-600 text-2xl tracking-normal mr-1" aria-hidden="true">#</span>{dashboard.ranking_in_county_density?.rank ?? '—'}
                     </div>
                   </div>
 
                   <div className="bg-slate-50 rounded-3xl p-8 border border-slate-100 flex items-center justify-between group-hover:bg-emerald-50/50 transition-colors">
                     <div>
-                      <p className="text-slate-400 text-[9px] font-black uppercase tracking-[0.2em] mb-1">OMSETNING</p>
-                      <p className="text-slate-500 text-[10px] font-bold">i {dashboard.county_name}</p>
+                      <p className="text-slate-500 text-xs font-black uppercase tracking-widest mb-1">OMSETNING</p>
+                      <p className="text-slate-600 text-xs font-bold">i {dashboard.county_name}</p>
                     </div>
                     <div className="text-5xl font-black text-slate-900 tracking-tighter">
-                      <span className="text-emerald-600 text-2xl tracking-normal mr-1">#</span>{dashboard.ranking_in_county_revenue?.rank ?? '—'}
+                      <span className="text-emerald-600 text-2xl tracking-normal mr-1" aria-hidden="true">#</span>{dashboard.ranking_in_county_revenue?.rank ?? '—'}
+                    </div>
+                  </div>
+
+                  <div className="bg-slate-50 rounded-3xl p-8 border border-slate-100 flex items-center justify-between group-hover:bg-indigo-50/50 transition-colors">
+                    <div>
+                      <p className="text-slate-500 text-xs font-black uppercase tracking-widest mb-1">INNBYGGERE</p>
+                      <p className="text-slate-600 text-xs font-bold">i {dashboard.county_name}</p>
+                    </div>
+                    <div className="text-5xl font-black text-slate-900 tracking-tighter">
+                      <span className="text-indigo-600 text-2xl tracking-normal mr-1" aria-hidden="true">#</span>{dashboard.ranking_in_county_population?.rank ?? '—'}
                     </div>
                   </div>
                 </div>
@@ -266,7 +276,7 @@ function MunicipalityDashboardPage() {
                 <div className="flex items-center gap-4">
                   Største Selskaper
                 </div>
-                <span className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">ETTER OMSETNING</span>
+                <span className="text-xs font-black text-slate-500 uppercase tracking-widest">ETTER OMSETNING</span>
               </h3>
               <div className="space-y-4">
                 {dashboard.top_companies.map((company, idx) => (
@@ -274,7 +284,8 @@ function MunicipalityDashboardPage() {
                     key={company.orgnr}
                     to="/bedrift/$orgnr"
                     params={{ orgnr: company.orgnr }}
-                    className="flex items-center justify-between p-6 bg-white hover:bg-slate-50 border border-slate-100 hover:border-blue-200 rounded-3xl transition-all group shadow-sm"
+                    className="flex items-center justify-between p-6 bg-white hover:bg-slate-50 border border-slate-100 hover:border-blue-200 rounded-3xl transition-all group shadow-sm focus-visible:ring-2 focus-visible:ring-blue-600 outline-none hover:scale-[1.01]"
+                    aria-label={`Se detaljer for ${company.navn}`}
                   >
                     <div className="flex items-center gap-8 min-w-0">
                       <span className="text-slate-200 font-black text-3xl tabular-nums w-12 group-hover:text-blue-100">{(idx + 1).toString().padStart(2, '0')}</span>
@@ -282,7 +293,7 @@ function MunicipalityDashboardPage() {
                         <p className="text-slate-900 font-bold group-hover:text-blue-600 transition-colors truncate text-base tracking-tight">
                           {company.navn}
                         </p>
-                        <p className="text-slate-400 text-[10px] font-black uppercase tracking-widest mt-1">
+                        <p className="text-slate-500 text-xs font-black uppercase tracking-widest mt-1">
                           {company.organisasjonsform} • {company.orgnr}
                         </p>
                       </div>
@@ -293,7 +304,7 @@ function MunicipalityDashboardPage() {
                           <p className="text-slate-900 font-black tabular-nums text-base">
                             {formatLargeCurrency(company.latest_revenue)}
                           </p>
-                          <p className="text-[9px] font-black text-slate-400 uppercase tracking-tighter mt-1">OMSETNING</p>
+                          <p className="text-xs font-black text-slate-500 uppercase tracking-tighter mt-1">OMSETNING</p>
                         </div>
                       )}
                     </div>
@@ -307,7 +318,7 @@ function MunicipalityDashboardPage() {
                 <div className="flex items-center gap-4">
                   Siste Nyetableringer
                 </div>
-                <span className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">ETTER DATO</span>
+                <span className="text-xs font-black text-slate-500 uppercase tracking-widest">ETTER DATO</span>
               </h3>
               <div className="space-y-4">
                 {dashboard.newest_companies.map(company => (
@@ -315,17 +326,18 @@ function MunicipalityDashboardPage() {
                     key={company.orgnr}
                     to="/bedrift/$orgnr"
                     params={{ orgnr: company.orgnr }}
-                    className="flex items-center justify-between p-6 bg-white hover:bg-slate-50 border border-slate-100 hover:border-blue-200 rounded-3xl transition-all group shadow-sm"
+                    className="flex items-center justify-between p-6 bg-white hover:bg-slate-50 border border-slate-100 hover:border-blue-200 rounded-3xl transition-all group shadow-sm focus-visible:ring-2 focus-visible:ring-blue-600 outline-none hover:scale-[1.01]"
+                    aria-label={`Se detaljer for ${company.navn}`}
                   >
                     <div className="flex items-center gap-8 min-w-0">
                       <div className="h-12 w-12 rounded-2xl bg-slate-50 border border-slate-100 text-slate-400 flex items-center justify-center font-black text-xs group-hover:bg-blue-600 group-hover:text-white group-hover:border-blue-500 transition-all">
-                        <MapPin className="h-5 w-5" />
+                        <MapPin className="h-5 w-5" aria-hidden="true" />
                       </div>
                       <div className="truncate">
                         <p className="text-slate-900 font-bold group-hover:text-blue-600 transition-colors truncate text-base tracking-tight">
                           {company.navn}
                         </p>
-                        <p className="text-slate-400 text-[10px] font-black uppercase tracking-widest mt-1">
+                        <p className="text-slate-500 text-xs font-black uppercase tracking-widest mt-1">
                           Stiftet {new Date(company.stiftelsesdato || '').toLocaleDateString('no-NO', { day: '2-digit', month: 'short', year: 'numeric' })}
                         </p>
                       </div>
@@ -337,7 +349,7 @@ function MunicipalityDashboardPage() {
                 <Link
                   to="/nyetableringer"
                   search={{ municipality_code: dashboard.code }}
-                  className="flex items-center justify-center gap-3 p-6 text-slate-400 font-black uppercase text-[10px] tracking-[0.2em] hover:text-blue-600 transition-all mt-6 bg-slate-50 rounded-3xl border border-dashed border-slate-200 hover:bg-blue-50/50 hover:border-blue-200"
+                  className="flex items-center justify-center gap-3 p-6 text-slate-500 font-black uppercase text-xs tracking-widest hover:text-blue-600 transition-all mt-6 bg-slate-50 rounded-3xl border border-dashed border-slate-200 hover:bg-blue-50/50 hover:border-blue-200 focus-visible:ring-2 focus-visible:ring-blue-600 outline-none"
                 >
                   Se alle nyetableringer i {dashboard.name}
                   <ChevronRight className="h-4 w-4" />
@@ -345,7 +357,7 @@ function MunicipalityDashboardPage() {
               </div>
             </section>
           </div>
-          
+
           {/* Bankruptcies section - Premium professional look */}
           <div className="mt-16">
             <section className="bg-white rounded-[2.5rem] p-12 border border-slate-100 shadow-sm relative overflow-hidden">
@@ -353,9 +365,9 @@ function MunicipalityDashboardPage() {
                 <div className="flex items-center gap-4">
                   Siste Konkurser
                 </div>
-                <span className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">MELDINGER</span>
+                <span className="text-xs font-black text-slate-500 uppercase tracking-widest">MELDINGER</span>
               </h3>
-              
+
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                 {dashboard.latest_bankruptcies.length > 0 ? (
                   dashboard.latest_bankruptcies.map(company => (
@@ -363,13 +375,14 @@ function MunicipalityDashboardPage() {
                       key={company.orgnr}
                       to="/bedrift/$orgnr"
                       params={{ orgnr: company.orgnr }}
-                      className="flex items-center justify-between p-6 bg-slate-50 hover:bg-white border border-transparent hover:border-slate-200 rounded-2xl transition-all group"
+                      className="flex items-center justify-between p-6 bg-slate-50 hover:bg-white border border-transparent hover:border-slate-200 rounded-2xl transition-all group focus-visible:ring-2 focus-visible:ring-rose-600 outline-none hover:scale-[1.02]"
+                      aria-label={`Se detaljer for ${company.navn}`}
                     >
                       <div className="truncate mr-4">
                         <p className="text-slate-900 font-bold group-hover:text-rose-600 transition-colors truncate text-sm">
                           {company.navn}
                         </p>
-                        <p className="text-rose-600/60 text-[9px] font-black uppercase tracking-tight mt-1">
+                        <p className="text-rose-600 text-xs font-black uppercase tracking-tight mt-1">
                           Konkurs {company.konkursdato || 'nylig'}
                         </p>
                       </div>
@@ -386,7 +399,7 @@ function MunicipalityDashboardPage() {
               <Link
                 to="/konkurser"
                 search={{ municipality_code: dashboard.code }}
-                className="flex items-center justify-center gap-3 p-6 text-slate-400 font-black uppercase text-[10px] tracking-[0.2em] hover:text-rose-600 transition-all mt-10 bg-slate-50 rounded-3xl border border-dashed border-slate-200 hover:bg-rose-50/50 hover:border-rose-200"
+                className="flex items-center justify-center gap-3 p-6 text-slate-500 font-black uppercase text-xs tracking-widest hover:text-rose-600 transition-all mt-10 bg-slate-50 rounded-3xl border border-dashed border-slate-200 hover:bg-rose-50/50 hover:border-rose-200 focus-visible:ring-2 focus-visible:ring-rose-600 outline-none"
               >
                 Se alle konkurser i {dashboard.name}
                 <ChevronRight className="h-4 w-4" />

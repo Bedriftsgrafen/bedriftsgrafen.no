@@ -53,6 +53,7 @@ export interface MunicipalityPremiumResponse {
     // Rankings
     ranking_in_county_density?: RankingInfo
     ranking_in_county_revenue?: RankingInfo
+    ranking_in_county_population?: RankingInfo
 }
 
 export interface MunicipalityListItem {

@@ -124,15 +124,13 @@ export function formatLargeCurrency(value: number | null | undefined): string {
   if (value === null || value === undefined) return '-'
 
   if (value >= 1_000_000_000) {
-    return `${(value / 1_000_000_000).toLocaleString('nb-NO', { maximumFractionDigits: 1 })} mrd. NOK`
+    return `${(value / 1_000_000_000).toLocaleString('nb-NO', { maximumFractionDigits: 1 })} mrd. kr`
   }
   if (value >= 1_000_000) {
-    return `${(value / 1_000_000).toLocaleString('nb-NO', { maximumFractionDigits: 1 })} MNOK`
+    return `${(value / 1_000_000).toLocaleString('nb-NO', { maximumFractionDigits: 1 })} mill. kr`
   }
-  if (value >= 1_000) {
-    return `${(value / 1_000).toLocaleString('nb-NO', { maximumFractionDigits: 0 })} TNOK`
-  }
-  return `${formatNumber(value)} NOK`
+  // For thousands and below, show the full number for maximum clarity
+  return `${formatNumber(value)} kr`
 }
 
 // Format time distance (e.g., "2 minutes ago")

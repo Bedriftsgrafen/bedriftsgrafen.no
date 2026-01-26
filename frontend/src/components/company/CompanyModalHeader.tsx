@@ -139,9 +139,9 @@ export function CompanyModalHeader({
   )
 
   return (
-    <div className="p-4 md:p-6 border-b border-gray-200 min-h-[128px]">
-      <div className="flex flex-col gap-4 md:flex-row md:justify-between md:items-start md:gap-0">
-        <div className="flex-1 min-w-0 pr-12 md:pr-0">
+    <div className="p-4 md:p-6 border-b border-gray-200 min-h-[128px] relative">
+      <div className="flex flex-col gap-4 md:flex-row md:justify-between md:items-start md:gap-0 pr-12 md:pr-10">
+        <div className="flex-1 min-w-0">
           {isLoading ? (
             <div className="space-y-2">
               <div className="h-8 bg-gray-200 rounded w-full max-w-[240px] animate-pulse" />
@@ -149,8 +149,8 @@ export function CompanyModalHeader({
             </div>
           ) : company ? (
             <>
-              <h1 className="text-xl md:text-2xl font-bold text-gray-900 flex items-center gap-2 break-words">
-                <Building2 className="h-6 w-6 text-blue-600 flex-shrink-0" />
+              <h1 className="text-xl md:text-2xl font-bold text-gray-900 flex items-center gap-2 wrap-break-word">
+                <Building2 className="h-6 w-6 text-blue-600 shrink-0" />
                 <span>{company.navn}</span>
               </h1>
               <div className="flex flex-wrap items-center gap-x-3 gap-y-1 mt-1">

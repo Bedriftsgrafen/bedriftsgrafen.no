@@ -31,7 +31,7 @@ function CompanyPage() {
     const navigate = Route.useNavigate()
     const { orgnr } = Route.useParams()
     const search = Route.useSearch() as CompanySearch
-    
+
     // Active tab is driven by URL, defaulting to 'oversikt'
     const activeTab = search.tab || 'oversikt'
 
@@ -97,10 +97,11 @@ function CompanyPage() {
     }, [setSelectedYear])
 
     const handleTabChange = useCallback((tab: TabType) => {
-        navigate({ 
-            to: '/bedrift/$orgnr', 
-            params: { orgnr }, 
-            search: (prev: Record<string, unknown>) => ({ ...prev, tab }) 
+        navigate({
+            to: '/bedrift/$orgnr',
+            params: { orgnr },
+            search: (prev: Record<string, unknown>) => ({ ...prev, tab }),
+            replace: true
         })
     }, [navigate, orgnr])
 
@@ -123,12 +124,13 @@ function CompanyPage() {
 
     const handleSelectCompany = useCallback((newOrgnr: string) => {
         // When selecting a related company, preserve the active tab
-        navigate({ 
-            to: '/bedrift/$orgnr', 
+        navigate({
+            to: '/bedrift/$orgnr',
             params: { orgnr: newOrgnr },
-            search: (prev: Record<string, unknown>) => ({ ...prev, tab: activeTab })
+            search: (prev: Record<string, unknown>) => ({ ...prev, tab: 'oversikt' }),
+            replace: true
         })
-    }, [navigate, activeTab])
+    }, [navigate])
 
     return (
         <>

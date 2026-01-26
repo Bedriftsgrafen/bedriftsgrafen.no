@@ -65,6 +65,7 @@ class MunicipalityPremiumResponse(BaseModel):
     # Rankings
     ranking_in_county_density: RankingInfo | None = None
     ranking_in_county_revenue: RankingInfo | None = None
+    ranking_in_county_population: RankingInfo | None = None
 
     model_config = ConfigDict(from_attributes=True)
 

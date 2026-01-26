@@ -131,14 +131,19 @@ class StatsRepository:
         return result.scalars().all()
 
     async def get_municipality_names(self):
-        """Fetch distinct municipality names for cache."""
+        """Fetch distinct municipality names from the geo model (fast)."""
+        # We use the most recent year to get the most representative names
+        year = await self.get_latest_population_year() or 2024
         result = await self.db.execute(
             select(
-                models.Company.forretningsadresse["kommunenummer"].astext.label("code"),
-                models.Company.forretningsadresse["kommune"].astext.label("name"),
+                models.MunicipalityPopulation.municipality_code.label("code"),
+                models.MunicipalityPopulation.name.label("name"),
+            ).where(
+                and_(
+                    models.MunicipalityPopulation.year == year,
+                    models.MunicipalityPopulation.name.isnot(None),
+                )
             )
-            .where(models.Company.forretningsadresse["kommunenummer"].isnot(None))
-            .distinct()
         )
         return result.all()
 
@@ -353,7 +358,7 @@ class StatsRepository:
         ]
 
     async def get_municipality_rankings(
-        self, municipality_code: str, metric: Literal["density", "revenue"] = "density"
+        self, municipality_code: str, metric: Literal["density", "revenue", "population"] = "density"
     ):
         """Get rankings for various metrics within the county."""
         from sqlalchemy import Float, cast
@@ -381,6 +386,21 @@ class StatsRepository:
                 )
                 .where(func.left(models.MunicipalityStats.municipality_code, 2) == county_code)
                 .group_by(models.MunicipalityStats.municipality_code, models.MunicipalityPopulation.population)
+                .subquery()
+            )
+        elif metric == "population":
+            # Rank by population
+            muni_data = (
+                select(
+                    models.MunicipalityPopulation.municipality_code,
+                    models.MunicipalityPopulation.population.label("value"),
+                )
+                .where(
+                    and_(
+                        func.left(models.MunicipalityPopulation.municipality_code, 2) == county_code,
+                        models.MunicipalityPopulation.year == latest_year,
+                    )
+                )
                 .subquery()
             )
         else:

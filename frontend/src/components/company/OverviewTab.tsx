@@ -1,8 +1,8 @@
-import { Building2, Building, MapPin, Users, Calendar, Briefcase, ChevronRight, AlertTriangle, ExternalLink, Home } from 'lucide-react'
+import { Building2, Building, MapPin, Users, Calendar, Briefcase, ChevronRight, AlertTriangle, ExternalLink, Home, Coins } from 'lucide-react'
 import { useMemo } from 'react'
 import type { CompanyWithAccounting, Naeringskode } from '../../types'
 import { Link } from '@tanstack/react-router'
-import { formatDate, getBrregEnhetsregisteretUrl, normalizeText } from '../../utils/formatters'
+import { formatDate, getBrregEnhetsregisteretUrl, normalizeText, formatLargeCurrency } from '../../utils/formatters'
 import { getOrganizationFormLabel } from '../../utils/organizationForms'
 import { formatNace, getNaceCode } from '../../utils/nace'
 import { LocationMap } from '../common/LocationMap'
@@ -26,6 +26,7 @@ export function OverviewTab({ company, onOpenIndustry }: OverviewTabProps) {
 
   return (
     <div className="space-y-6">
+
       {/* Bankruptcy/Dissolution Status Banner */}
       {(company.konkurs || company.under_avvikling || company.under_tvangsavvikling) && (
         <div className="bg-red-50 border border-red-200 rounded-lg p-4">
@@ -92,10 +93,15 @@ export function OverviewTab({ company, onOpenIndustry }: OverviewTabProps) {
             <div className="space-y-4">
               <div className="flex items-start gap-3">
                 <Building2 className="h-5 w-5 text-gray-400 mt-0.5" />
-                <div>
+                <div className="flex-1 min-w-0">
                   <div className="text-sm font-medium text-gray-900">Organisasjonsform</div>
-                  <div className="text-sm text-gray-600">
+                  <div className="text-sm text-gray-600 flex items-center gap-2">
                     {getOrganizationFormLabel(company.organisasjonsform)}
+                    {company.er_i_konsern && (
+                      <span className="inline-flex items-center px-1.5 py-0.5 rounded-full text-[10px] font-bold bg-blue-100 text-blue-700 uppercase tracking-tighter shadow-xs" title="Selskapet inngår i et konsern">
+                        Konsern
+                      </span>
+                    )}
                   </div>
                 </div>
               </div>
@@ -103,20 +109,23 @@ export function OverviewTab({ company, onOpenIndustry }: OverviewTabProps) {
               {company.parent_orgnr && (
                 <div className="flex items-start gap-3">
                   <Home className="h-5 w-5 text-blue-500 mt-0.5" />
-                  <div>
+                  <div className="flex-1">
                     <div className="text-sm font-medium text-gray-900">Hovedenhet</div>
                     <Link
                       to="/bedrift/$orgnr"
                       params={{ orgnr: company.parent_orgnr }}
-                      className="text-sm text-blue-600 hover:text-blue-800 hover:underline flex flex-col gap-0.5 font-medium"
+                      replace={true}
+                      className="mt-1 block p-3 rounded-lg border border-blue-100 bg-blue-50/30 hover:bg-blue-50 hover:border-blue-300 transition-all group"
                     >
-                      <span className="truncate max-w-[200px]" title={company.parent_navn}>
-                        {company.parent_navn || 'Gå til hovedenhet'}
-                      </span>
-                      <span className="text-xs text-gray-500 font-normal flex items-center gap-1">
+                      <div className="text-sm text-blue-600 font-bold group-hover:text-blue-800 flex items-center justify-between">
+                        <span className="truncate max-w-[220px]" title={company.parent_navn}>
+                          {company.parent_navn || 'Gå til hovedenhet'}
+                        </span>
+                        <ChevronRight className="h-4 w-4 shrink-0 transition-transform group-hover:translate-x-0.5" />
+                      </div>
+                      <div className="text-xs text-gray-500 font-normal mt-0.5">
                         Org.nr {company.parent_orgnr}
-                        <ChevronRight className="h-3 w-3" />
-                      </span>
+                      </div>
                     </Link>
                   </div>
                 </div>
@@ -136,7 +145,7 @@ export function OverviewTab({ company, onOpenIndustry }: OverviewTabProps) {
                             className="w-full text-left group flex items-center justify-between py-1.5 px-2 -mx-2 rounded-lg border border-transparent hover:border-blue-200 hover:bg-blue-50 transition-all min-w-0"
                             title={`Se andre bedrifter med næringskode ${nk.kode}`}
                           >
-                            <span className="text-blue-600 group-hover:text-blue-700 group-hover:underline truncate flex-1">
+                            <span className="text-blue-600 group-hover:text-blue-700 group-hover:underline flex-1">
                               <span className="font-medium">{nk.kode}</span> {nk.beskrivelse}
                             </span>
                             <ChevronRight className="h-4 w-4 text-blue-400 group-hover:text-blue-600 group-hover:translate-x-0.5 transition-all shrink-0" />
@@ -144,13 +153,21 @@ export function OverviewTab({ company, onOpenIndustry }: OverviewTabProps) {
                         ))}
                       </div>
                     ) : company.naeringskode ? (
-                    <button
-                        onClick={() => onOpenIndustry?.(getNaceCode(company.naeringskode)!, getNaceCode(company.naeringskode)!)}
-                        className="flex items-center gap-2 group min-w-0"
-                    >
-                        <Building className="h-4 w-4 text-blue-500 shrink-0" />
-                        <span className="text-gray-600 group-hover:text-blue-600 truncate">{formatNace(company.naeringskode)}</span>
-                    </button>
+                      <div className="space-y-1 mt-1">
+                        <button
+                          onClick={() => {
+                            const code = getNaceCode(company.naeringskode)!
+                            onOpenIndustry?.(code, formatNace(company.naeringskode).replace(code, '').replace(/^ - /, ''))
+                          }}
+                          className="w-full text-left group flex items-center justify-between py-1.5 px-2 -mx-2 rounded-lg border border-transparent hover:border-blue-200 hover:bg-blue-50 transition-all min-w-0"
+                          title={`Se andre bedrifter med næringskode ${getNaceCode(company.naeringskode)}`}
+                        >
+                          <span className="text-blue-600 group-hover:text-blue-700 group-hover:underline flex-1">
+                            <span className="font-medium">{getNaceCode(company.naeringskode)}</span> {formatNace(company.naeringskode).replace(getNaceCode(company.naeringskode) || '', '').replace(/^ - /, '')}
+                          </span>
+                          <ChevronRight className="h-4 w-4 text-blue-400 group-hover:text-blue-600 group-hover:translate-x-0.5 transition-all shrink-0" />
+                        </button>
+                      </div>
                     ) : (
                       <span className="text-gray-600">Ikke registrert</span>
                     )}
@@ -170,13 +187,37 @@ export function OverviewTab({ company, onOpenIndustry }: OverviewTabProps) {
                 </div>
               )}
 
+              {company.institusjonell_sektor && (
+                <div className="flex items-start gap-3">
+                  <Building className="h-5 w-5 text-gray-400 mt-0.5" />
+                  <div className="flex-1 min-w-0">
+                    <div className="text-sm font-medium text-gray-900">Institusjonell sektor</div>
+                    <div className="text-sm text-gray-600 truncate" title={company.institusjonell_sektor}>
+                      {company.institusjonell_sektor}
+                    </div>
+                  </div>
+                </div>
+              )}
+
               {company.antall_ansatte !== null && company.antall_ansatte !== undefined && (
                 <div className="flex items-start gap-3">
                   <Users className="h-5 w-5 text-gray-400 mt-0.5" />
                   <div>
                     <div className="text-sm font-medium text-gray-900">Antall ansatte</div>
                     <div className="text-sm text-gray-600">
-                      {company.antall_ansatte}
+                      {company.antall_ansatte} {company.antall_ansatte === 1 ? 'ansatt' : 'ansatte'}
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {company.aksjekapital !== undefined && company.aksjekapital !== null && company.aksjekapital > 0 && (
+                <div className="flex items-start gap-3">
+                  <Coins className="h-5 w-5 text-gray-400 mt-0.5" />
+                  <div>
+                    <div className="text-sm font-medium text-gray-900">Aksjekapital</div>
+                    <div className="text-sm text-gray-600">
+                      {formatLargeCurrency(company.aksjekapital)}
                     </div>
                   </div>
                 </div>
@@ -187,12 +228,14 @@ export function OverviewTab({ company, onOpenIndustry }: OverviewTabProps) {
                 <div className="flex-1">
                   <div className="text-sm font-medium text-gray-900">Viktige datoer</div>
                   <div className="mt-1 space-y-2">
-                    <div className="flex justify-between items-center text-sm border-b border-gray-50 pb-1">
-                      <span className="text-gray-500">Stiftelsesdato</span>
-                      <span className="font-medium text-gray-900">
-                        {company.stiftelsesdato ? formatDate(company.stiftelsesdato) : 'Ikke registrert'}
-                      </span>
-                    </div>
+                    {company.stiftelsesdato && (
+                      <div className="flex justify-between items-center text-sm border-b border-gray-50 pb-1">
+                        <span className="text-gray-500">Stiftelsesdato</span>
+                        <span className="font-medium text-gray-900">
+                          {formatDate(company.stiftelsesdato)}
+                        </span>
+                      </div>
+                    )}
                     {company.registreringsdato_enhetsregisteret && (
                       <div className="flex justify-between items-center text-sm border-b border-gray-50 pb-1">
                         <span className="text-gray-500">Reg. Enhetsregisteret</span>
@@ -209,47 +252,50 @@ export function OverviewTab({ company, onOpenIndustry }: OverviewTabProps) {
                         </span>
                       </div>
                     )}
+                    {!company.stiftelsesdato && !company.registreringsdato_enhetsregisteret && (
+                      <div className="text-sm text-gray-400 italic">Ingen registrerte datoer</div>
+                    )}
                   </div>
                 </div>
               </div>
 
               {/* Register Badges */}
-              {(company.registrert_i_foretaksregisteret || 
-                company.registrert_i_mvaregisteret || 
-                company.registrert_i_frivillighetsregisteret || 
-                company.registrert_i_stiftelsesregisteret || 
+              {(company.registrert_i_foretaksregisteret ||
+                company.registrert_i_mvaregisteret ||
+                company.registrert_i_frivillighetsregisteret ||
+                company.registrert_i_stiftelsesregisteret ||
                 company.registrert_i_partiregisteret) && (
-                <div className="pt-2">
-                  <div className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">Andre registreringer</div>
-                  <div className="flex flex-wrap gap-2">
-                    {company.registrert_i_foretaksregisteret && (
-                      <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-50 text-green-700 border border-green-200">
-                        Foretaksregisteret
-                      </span>
-                    )}
-                    {company.registrert_i_mvaregisteret && (
-                      <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-50 text-green-700 border border-green-200">
-                        MVA-registeret
-                      </span>
-                    )}
-                    {company.registrert_i_frivillighetsregisteret && (
-                      <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-50 text-green-700 border border-green-200">
-                        Frivillighetsregisteret
-                      </span>
-                    )}
-                    {company.registrert_i_stiftelsesregisteret && (
-                      <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-50 text-green-700 border border-green-200">
-                        Stiftelsesregisteret
-                      </span>
-                    )}
-                    {company.registrert_i_partiregisteret && (
-                      <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-50 text-green-700 border border-green-200">
-                        Partiregisteret
-                      </span>
-                    )}
+                  <div className="pt-2">
+                    <div className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">Andre registreringer</div>
+                    <div className="flex flex-wrap gap-2">
+                      {company.registrert_i_foretaksregisteret && (
+                        <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-50 text-green-700 border border-green-200">
+                          Foretaksregisteret
+                        </span>
+                      )}
+                      {company.registrert_i_mvaregisteret && (
+                        <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-50 text-green-700 border border-green-200">
+                          MVA-registeret
+                        </span>
+                      )}
+                      {company.registrert_i_frivillighetsregisteret && (
+                        <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-50 text-green-700 border border-green-200">
+                          Frivillighetsregisteret
+                        </span>
+                      )}
+                      {company.registrert_i_stiftelsesregisteret && (
+                        <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-50 text-green-700 border border-green-200">
+                          Stiftelsesregisteret
+                        </span>
+                      )}
+                      {company.registrert_i_partiregisteret && (
+                        <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-50 text-green-700 border border-green-200">
+                          Partiregisteret
+                        </span>
+                      )}
+                    </div>
                   </div>
-                </div>
-              )}
+                )}
 
             </div>
           </div>

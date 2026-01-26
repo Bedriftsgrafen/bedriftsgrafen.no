@@ -16,6 +16,7 @@ from services.brreg_api_service import BrregApiService
 from services.dtos import CompanyFilterDTO
 from services.geocoding_service import GeocodingService
 from services.nace_service import NaceService
+from services.response_models import Naeringskode
 from utils.cache import AsyncLRUCache
 
 logger = logging.getLogger(__name__)
@@ -73,34 +74,77 @@ class CompanyService:
         return await self.company_repo.count_companies(filters=repo_filters, sort_by=filters.sort_by)
 
     async def get_company_with_accounting(self, orgnr: str) -> models.Company | None:
-        """Fetch company by orgnr with financials eager loaded."""
-        return await self.company_repo.get_by_orgnr(orgnr)
+        """Fetch company by orgnr with financials eager loaded. Falls back to subunit lookup if main fails."""
+        try:
+            return await self.company_repo.get_by_orgnr(orgnr)
+        except Exception:
+            # Fallback for metadata/internal lookups. Returns None instead of raising.
+            # This prevents 404 crashes in routes that expect a company but get a subunit.
+            return await self.get_company_detail(orgnr)
 
-    async def get_company_detail(self, orgnr: str) -> models.Company | None:
-        """Get enriched company details with parent name lookup."""
-        company = await self.company_repo.get_by_orgnr(orgnr)
+    async def get_company_detail(self, orgnr: str) -> models.Company | Any | None:
+        """Get enriched company details with parent name lookup and subunit fallback."""
+        company: models.Company | dict[str, Any] | None
+        try:
+            company = await self.company_repo.get_by_orgnr(orgnr)
+        except Exception:
+            # Fallback to subunit lookup if not found in main company table
+            subunit = await self.subunit_repo.get_by_orgnr(orgnr)
+            if not subunit:
+                return None
+
+            # Map SubUnit to a Company-compatible dictionary for Pydantic
+            # This allows the frontend to open sub-units in the same Modal
+            logger.info(f"Using SubUnit fallback for {orgnr}")
+            # Map to dict for Pydantic (will be validated by CompanyWithAccounting)
+            comp_dict: dict[str, Any] = {
+                "orgnr": subunit.orgnr,
+                "navn": subunit.navn,
+                "parent_orgnr": subunit.parent_orgnr,
+                "organisasjonsform": subunit.organisasjonsform,
+                "naeringskode": subunit.naeringskode,
+                "antall_ansatte": subunit.antall_ansatte,
+                "stiftelsesdato": subunit.stiftelsesdato,
+                "registreringsdato_enhetsregisteret": subunit.registreringsdato_enhetsregisteret,
+                "forretningsadresse": subunit.beliggenhetsadresse or subunit.postadresse,
+                "postadresse": subunit.postadresse,
+                "raw_data": subunit.raw_data,
+                "regnskap": [],  # Subunits don't have their own accounting in Brreg
+                "underenheter": [],
+                "roller": [],
+                "is_subunit": True,  # Flag for frontend to show slightly different UI
+            }
+            company = comp_dict
+
         if not company:
             return None
 
-        # Fetch parent name efficiently if this is a subunit
-        if company.parent_orgnr:
-            parent_name = await parent_name_cache.get(company.parent_orgnr)
+        # Fetch parent name efficiently if this is a subunit or a "promoted" subunit
+        parent_orgnr = company.get("parent_orgnr") if isinstance(company, dict) else company.parent_orgnr
+        if parent_orgnr:
+            parent_name = await parent_name_cache.get(parent_orgnr)
             if parent_name:
-                setattr(company, "parent_navn", parent_name)
+                if isinstance(company, dict):
+                    company["parent_navn"] = parent_name
+                else:
+                    setattr(company, "parent_navn", parent_name)
             else:
                 try:
                     # Optimized column-only lookup
-                    parent_name = await self.company_repo.get_company_name(company.parent_orgnr)
+                    parent_name = await self.company_repo.get_company_name(parent_orgnr)
                     if parent_name:
-                        setattr(company, "parent_navn", parent_name)
-                        await parent_name_cache.set(company.parent_orgnr, parent_name)
+                        if isinstance(company, dict):
+                            company["parent_navn"] = parent_name
+                        else:
+                            setattr(company, "parent_navn", parent_name)
+                        await parent_name_cache.set(parent_orgnr, parent_name)
                     else:
-                        asyncio.create_task(self._background_parent_sync(company.parent_orgnr))
+                        asyncio.create_task(self._background_parent_sync(parent_orgnr))
                 except Exception:
                     pass
 
-        # Auto-geocode if needed
-        if company.latitude is None:
+        # Auto-geocode if needed (for Companies)
+        if not isinstance(company, dict) and company.latitude is None:
             await self.ensure_geocoded(company)
 
         return company
@@ -251,7 +295,7 @@ class CompanyService:
             primary_code = item.get("naeringskode") if is_dict else getattr(item, "naeringskode", None)
             if primary_code and isinstance(primary_code, str):
                 name = await nace.get_nace_name(primary_code)
-                enriched = {"kode": primary_code, "beskrivelse": name}
+                enriched = Naeringskode(kode=primary_code, beskrivelse=name)
                 if is_dict:
                     item["naeringskode"] = enriched
                 else:
@@ -264,7 +308,7 @@ class CompanyService:
                 for c in secondary_codes:
                     if isinstance(c, str):
                         name = await nace.get_nace_name(c)
-                        enriched_list.append({"kode": c, "beskrivelse": name})
+                        enriched_list.append(Naeringskode(kode=c, beskrivelse=name))
                     else:
                         enriched_list.append(c)
 
@@ -290,6 +334,25 @@ class CompanyService:
             total_companies = await self.company_repo.count(fast=True)
             total_employees = await self.company_repo.get_total_employees()
 
-        financial_stats = await self.accounting_repo.get_aggregated_stats()
+        # Concurrent fetching of additional stats
+        results = await asyncio.gather(
+            self.accounting_repo.get_aggregated_stats(),
+            self.company_repo.get_geocoded_count(),
+            self.company_repo.get_new_companies_30d(),
+            self.role_repo.count_total_roles(),
+            return_exceptions=True,
+        )
 
-        return {"total_companies": total_companies, "total_employees": total_employees, **financial_stats}
+        financial_stats = results[0] if not isinstance(results[0], Exception) else {}
+        geocoded_count = results[1] if not isinstance(results[1], Exception) else 0
+        new_companies_30d = results[2] if not isinstance(results[2], Exception) else 0
+        total_roles = results[3] if not isinstance(results[3], Exception) else 0
+
+        return {
+            "total_companies": total_companies,
+            "total_employees": total_employees,
+            "geocoded_count": geocoded_count,
+            "new_companies_30d": new_companies_30d,
+            "total_roles": total_roles,
+            **(financial_stats if isinstance(financial_stats, dict) else {}),
+        }
