@@ -53,6 +53,8 @@ def calculate_sitemap_pages(total_count: int, offset: int = 0) -> int:
 
 
 @router.get("/sitemap_index.xml", response_class=Response)
+@router.get("/sitemap-index.xml", response_class=Response)
+@router.get("/sitemap.xml", response_class=Response)
 @limiter.limit("60/minute")
 async def get_sitemap_index(
     request: Request,
@@ -80,14 +82,14 @@ async def get_sitemap_index(
     # Add company sitemaps
     for page in range(1, num_company_pages + 1):
         xml_content += "  <sitemap>\n"
-        xml_content += f"    <loc>https://bedriftsgrafen.no/api/sitemaps/company_{page}.xml</loc>\n"
+        xml_content += f"    <loc>https://bedriftsgrafen.no/api/sitemaps/company-{page}.xml</loc>\n"
         xml_content += f"    <lastmod>{today}</lastmod>\n"
         xml_content += "  </sitemap>\n"
 
     # Add person sitemaps
     for page in range(1, num_person_pages + 1):
         xml_content += "  <sitemap>\n"
-        xml_content += f"    <loc>https://bedriftsgrafen.no/api/sitemaps/person_{page}.xml</loc>\n"
+        xml_content += f"    <loc>https://bedriftsgrafen.no/api/sitemaps/person-{page}.xml</loc>\n"
         xml_content += f"    <lastmod>{today}</lastmod>\n"
         xml_content += "  </sitemap>\n"
 
@@ -109,7 +111,13 @@ async def get_paginated_sitemap(
     Supports 'company_{n}' and 'person_{n}' formats.
     """
     try:
-        parts = filename.split("_")
+        if "_" in filename:
+            parts = filename.split("_")
+        elif "-" in filename:
+            parts = filename.split("-")
+        else:
+            raise ValueError("Invalid filename format")
+
         if len(parts) != 2:
             raise ValueError("Invalid filename format")
 

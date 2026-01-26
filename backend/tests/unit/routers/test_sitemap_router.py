@@ -54,13 +54,19 @@ async def test_sitemap_index(mock_db_session, override_get_db):
         }
 
         response = client.get("/sitemap_index.xml")
-
         assert response.status_code == 200
+
+        response = client.get("/sitemap-index.xml")
+        assert response.status_code == 200
+
+        response = client.get("/sitemap.xml")
+        assert response.status_code == 200
+
         assert response.headers["content-type"] == "application/xml"
         content = response.text
         assert "<sitemapindex" in content
-        assert "/api/sitemaps/company_1.xml" in content
-        assert "/api/sitemaps/person_1.xml" in content
+        assert "api/sitemaps/company-1.xml" in content
+        assert "api/sitemaps/person-1.xml" in content
 
 
 @pytest.mark.asyncio
@@ -82,7 +88,7 @@ async def test_sitemap_company_page_1(mock_db_session, override_get_db):
         mock_company_repo.get_paginated_orgnrs = AsyncMock(return_value=[("123", "2024-01-01T12:00:00")])
         mock_company_repo.get_sitemap_anchors = AsyncMock(return_value=[])
 
-        response = client.get("/sitemaps/company_1.xml")
+        response = client.get("/sitemaps/company-1.xml")
 
         assert response.status_code == 200
         content = response.text
@@ -144,7 +150,7 @@ async def test_sitemap_person_page_1(mock_db_session, override_get_db):
             return_value=[("Ola Nordmann", date(1980, 1, 1), datetime(2024, 2, 2))]
         )
 
-        response = client.get("/sitemaps/person_1.xml")
+        response = client.get("/sitemaps/person-1.xml")
 
         assert response.status_code == 200
         content = response.text
