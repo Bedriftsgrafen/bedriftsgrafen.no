@@ -205,3 +205,23 @@ class SubUnitRepository:
         except Exception as e:
             logger.error(f"Failed to count subunits for {parent_orgnr}: {e}")
             return 0
+
+    async def get_existing_orgnrs(self, orgnrs: list[str]) -> set[str]:
+        """Check which of the given orgnrs exist in the underenheter table.
+
+        Args:
+            orgnrs: List of organization numbers to check
+
+        Returns:
+            Set of existing organization numbers
+        """
+        if not orgnrs:
+            return set()
+
+        try:
+            stmt = select(models.SubUnit.orgnr).where(models.SubUnit.orgnr.in_(orgnrs))
+            result = await self.db.execute(stmt)
+            return {row[0] for row in result.fetchall()}
+        except Exception as e:
+            logger.error(f"Database error checking existing subunits: {e}")
+            return set()
