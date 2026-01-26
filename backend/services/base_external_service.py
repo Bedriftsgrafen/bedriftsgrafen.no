@@ -177,8 +177,9 @@ class BaseExternalService(ABC):
                     async with httpx.AsyncClient(timeout=self.timeout) as client:
                         response = await self._perform_request(client, method, url, params, json, data, headers)
 
-                # Success or Not Found - return to caller
-                if response.status_code in (200, 201, 204, 404):
+                # Success, Not Found, or Gone - return to caller to handle
+                # 410 (Gone) is common for deleted Brreg companies
+                if response.status_code in (200, 201, 204, 404, 410):
                     return response
 
                 # Rate limit - exponential backoff
