@@ -128,6 +128,31 @@ class TestFetchSubunitUpdates:
 
 
 @pytest.mark.asyncio
+async def test_ensure_parent_companies_exist_sorts_missing_orgnrs(update_service, mock_db):
+    update_service.company_repo.get_existing_orgnrs = AsyncMock(side_effect=[set(), {"111", "222", "333"}])
+    update_service.brreg_api.fetch_company = AsyncMock(
+        side_effect=[
+            {"organisasjonsnummer": "111", "navn": "First"},
+            {"organisasjonsnummer": "222", "navn": "Second"},
+            {"organisasjonsnummer": "333", "navn": "Third"},
+        ]
+    )
+    update_service.company_repo.create_or_update = AsyncMock()
+    update_service.report_sync_error = AsyncMock()
+
+    subunits_data = [
+        {"overordnetEnhet": "333"},
+        {"overordnetEnhet": "111"},
+        {"overordnetEnhet": "222"},
+    ]
+
+    await update_service._ensure_parent_companies_exist(subunits_data)
+
+    called_orgnrs = [call.args[0] for call in update_service.brreg_api.fetch_company.call_args_list]
+    assert called_orgnrs == ["111", "222", "333"]
+
+
+@pytest.mark.asyncio
 class TestFetchRoleUpdates:
     """Tests for role updates fetching and processing."""
 

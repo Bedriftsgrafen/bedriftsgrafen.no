@@ -1,5 +1,7 @@
 import pytest
-from unittest.mock import MagicMock, AsyncMock
+from unittest.mock import AsyncMock, MagicMock
+
+from sqlalchemy.sql.elements import TextClause
 from repositories.company.crud import CrudMixin
 import models
 from sqlalchemy.exc import DBAPIError
@@ -32,7 +34,19 @@ async def test_create_or_update_success(repo, mock_db_session):
 
     assert result is not None
     assert mock_db_session.execute.called
+    assert mock_db_session.execute.call_count == 2
     assert mock_db_session.commit.called
+
+
+@pytest.mark.asyncio
+async def test_create_or_update_acquires_advisory_lock(repo, mock_db_session):
+    company_data = {"organisasjonsnummer": "123456789", "navn": "Test AS"}
+
+    await repo.create_or_update(company_data, autocommit=False)
+
+    first_stmt = mock_db_session.execute.call_args_list[0].args[0]
+    assert isinstance(first_stmt, TextClause)
+    assert "pg_advisory_xact_lock" in first_stmt.text
 
 
 @pytest.mark.asyncio
@@ -57,17 +71,18 @@ async def test_create_or_update_retries_deadlock(repo, mock_db_session):
 
     deadlock_error = DBAPIError("stmt", {}, FakeOrig(), False)
 
+    advisory_result = MagicMock()
     success_result = MagicMock()
     success_result.scalar_one.return_value = MagicMock(spec=models.Company)
 
-    mock_db_session.execute.side_effect = [deadlock_error, success_result]
+    mock_db_session.execute.side_effect = [advisory_result, deadlock_error, advisory_result, success_result]
 
     company_data = {"organisasjonsnummer": "123456789", "navn": "Test AS"}
 
     result = await repo.create_or_update(company_data, autocommit=False)
 
     assert result is not None
-    assert mock_db_session.execute.call_count == 2
+    assert mock_db_session.execute.call_count == 4
     assert mock_db_session.rollback.called
 
 

@@ -610,7 +610,8 @@ class UpdateService:
                     await self.report_sync_error(orgnr, "company", error_msg)
                     return None
 
-        fetch_tasks = [fetch_parent(orgnr) for orgnr in missing_orgnrs]
+        missing_orgnr_list = sorted(missing_orgnrs)
+        fetch_tasks = [fetch_parent(orgnr) for orgnr in missing_orgnr_list]
         fetched_parents = await asyncio.gather(*fetch_tasks)
 
         # Sequential persist
@@ -699,7 +700,7 @@ class UpdateService:
                     unknown_orgnrs = orgnrs_to_sync - existing_orgnrs - existing_subunits - failed_this_run
 
                     if unknown_orgnrs:
-                        unknown_list = list(unknown_orgnrs)
+                        unknown_list = sorted(unknown_orgnrs)
                         logger.info(
                             f"Checking {len(unknown_list)} unknown orgnrs from role feed for missing main companies..."
                         )

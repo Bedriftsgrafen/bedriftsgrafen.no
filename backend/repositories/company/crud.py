@@ -8,7 +8,7 @@ import logging
 from datetime import datetime, timezone
 from typing import Any
 
-from sqlalchemy import update
+from sqlalchemy import text, update
 from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.exc import DBAPIError
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -159,6 +159,12 @@ class CrudMixin:
                 # Parse all fields
                 fields = self._parse_company_fields(company_data)
                 fields["orgnr"] = orgnr  # Ensure PK is in fields
+
+                if orgnr:
+                    await self.db.execute(
+                        text("SELECT pg_advisory_xact_lock(hashtext(:orgnr))"),
+                        {"orgnr": str(orgnr)},
+                    )
 
                 # Prepare UPSERT statement
                 insert_stmt = insert(models.Company).values(**fields)
