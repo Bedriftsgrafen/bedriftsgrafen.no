@@ -618,6 +618,14 @@ class UpdateService:
         count = 0
         for parent_data in fetched_parents:
             if parent_data:
+                # Skip onboarding if the company is already deleted (has slettedato)
+                if parent_data.get("slettedato"):
+                    logger.debug(
+                        f"Skipping onboarding of deleted parent company {parent_data.get('organisasjonsnummer')} "
+                        f"(slettedato: {parent_data.get('slettedato')})"
+                    )
+                    continue
+
                 try:
                     await self.company_repo.create_or_update(parent_data)
                     count += 1
@@ -724,6 +732,15 @@ class UpdateService:
                         for i, company_data in enumerate(fetched_results):
                             target_orgnr = unknown_list[i]
                             if company_data:
+                                # Skip onboarding if the company is already deleted (has slettedato)
+                                if company_data.get("slettedato"):
+                                    logger.debug(
+                                        f"Skipping onboarding of deleted company {target_orgnr} "
+                                        f"(slettedato: {company_data.get('slettedato')})"
+                                    )
+                                    failed_this_run.add(target_orgnr)
+                                    continue
+
                                 try:
                                     await self.company_repo.create_or_update(company_data)
                                     existing_orgnrs.add(target_orgnr)

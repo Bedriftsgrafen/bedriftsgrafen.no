@@ -153,6 +153,25 @@ async def test_ensure_parent_companies_exist_sorts_missing_orgnrs(update_service
 
 
 @pytest.mark.asyncio
+async def test_ensure_parent_companies_exist_skips_deleted(update_service, mock_db):
+    """Verify that deleted parent companies (with slettedato) are not onboarded."""
+    # 1. Arrange: missing parent '999' which is deleted
+    update_service.company_repo.get_existing_orgnrs = AsyncMock(return_value=set())
+    update_service.brreg_api.fetch_company = AsyncMock(
+        return_value={"organisasjonsnummer": "999", "slettedato": "2023-01-01"}
+    )
+    update_service.company_repo.create_or_update = AsyncMock()
+
+    # 2. Act
+    subunits_data = [{"overordnetEnhet": "999"}]
+    verified = await update_service._ensure_parent_companies_exist(subunits_data)
+
+    # 3. Assert
+    update_service.company_repo.create_or_update.assert_not_called()
+    assert "999" not in verified
+
+
+@pytest.mark.asyncio
 class TestFetchRoleUpdates:
     """Tests for role updates fetching and processing."""
 
@@ -180,6 +199,34 @@ class TestFetchRoleUpdates:
             update_service._ensure_parent_companies_exist.assert_called_once()
             update_service.role_repo.create_batch.assert_called_once()
             assert mock_db.commit.call_count >= 2
+
+    async def test_fetch_role_updates_skips_deleted_companies(self, update_service, mock_db):
+        """Verify that deleted companies (with slettedato) are not onboarded."""
+        # 1. Mock pagination
+        mock_resp_1 = MagicMock(status_code=200)
+        mock_resp_1.json.return_value = [{"id": "100", "data": {"organisasjonsnummer": "999"}}]
+        mock_resp_2 = MagicMock(status_code=200)
+        mock_resp_2.json.return_value = []
+
+        with patch("httpx.AsyncClient") as mock_client:
+            mock_instance = mock_client.return_value.__aenter__.return_value
+            mock_instance.get.side_effect = [mock_resp_1, mock_resp_2]
+
+            # 2. Mock unknown company that is deleted in Brreg
+            update_service.company_repo.get_existing_orgnrs = AsyncMock(return_value=set())
+            update_service.subunit_repo.get_existing_orgnrs = AsyncMock(return_value=set())
+            update_service.brreg_api.fetch_company = AsyncMock(
+                return_value={"organisasjonsnummer": "999", "slettedato": "2023-01-01"}
+            )
+
+            # 3. Act
+            await update_service.fetch_role_updates(page_size=10)
+
+            # 4. Assert
+            # create_or_update should NOT be called for deleted company
+            update_service.company_repo.create_or_update.assert_not_called()
+            # Role sync should be skipped for this company
+            update_service.brreg_api.fetch_roles.assert_not_called()
 
     async def test_report_sync_error_smart_filtering(self, update_service, mock_db):
         mock_db.execute = AsyncMock(return_value=MagicMock(scalar_one_or_none=lambda: None))
