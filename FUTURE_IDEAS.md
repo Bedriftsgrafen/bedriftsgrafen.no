@@ -51,11 +51,11 @@ This document consolidates feature ideas and strategic plans for the future deve
 - **Action**: Export filtered results to CSV (potential premium feature).
 - **Why**: Moves the platform from research to an active business enablement tool.
 
-### ~~County (Fylker) Dashboards~~ ✅ (Jan 28, 2026)
+### ~~County (Fylker) Dashboards~~ ✅ (Jan 29, 2026)
 - **Goal**: Dedicated landing pages for Norwegian counties (e.g., `/fylke/46`).
 - **Why**: High-volume SEO terms ("Bedrifter i Vestland").
-- **Tech**: `/fylke/[code]` route mapping to `COUNTY_CODES`.
-- **Status**: **IMPLEMENTED**. Full premium dashboard with drill-down navigation to municipalities.
+- **Tech**: `/fylke/[code]` route with premium dashboard, shared components with municipalities.
+- **Status**: **IMPLEMENTED**. Full premium dashboard with drill-down navigation to municipalities, DRY components, A11y improvements.
 
 ### Industry Landing Pages (NACE) 🏗️
 - **Goal**: Dedicated SEO pages for industry sectors (e.g., `/bransje/41` for Byggevirksomhet).
