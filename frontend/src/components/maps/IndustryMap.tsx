@@ -42,8 +42,8 @@ const COUNTIES = [
 ];
 
 const METRIC_LABELS: Readonly<Record<string, string>> = {
-    company_count: 'Antall bedrifter',
-    new_last_year: 'Nye selskaper',
+    company_count: 'Antall virksomheter',
+    new_last_year: 'Nye virksomheter',
     bankrupt_count: 'Konkurser',
 } as const;
 
@@ -505,7 +505,7 @@ export function IndustryMap({
         </div>
     );
 
-    const metricLabel = filters?.showPerCapita ? 'Bedrifter pr 1000 innb.' : (METRIC_LABELS[metric] || 'Verdi');
+    const metricLabel = filters?.showPerCapita ? 'Virksomheter pr 1000 innb.' : (METRIC_LABELS[metric] || 'Verdi');
 
     return (
         <div className="flex flex-col md:flex-row h-full rounded-xl overflow-hidden border border-slate-200 shadow-xl bg-white">

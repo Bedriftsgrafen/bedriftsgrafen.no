@@ -39,7 +39,7 @@ export function useFetchCompanyMutation() {
         addToast('warning', 'Fant ingen regnskapsdata hos Brønnøysundregistrene')
       } else {
         // Success - found financial data
-        addToast('success', `Hentet ${data.financials_fetched} regnskapsår for bedriften`)
+        addToast('success', `Hentet ${data.financials_fetched} regnskapsår for virksomheten`)
       }
 
       // Invalidate queries to refetch fresh data

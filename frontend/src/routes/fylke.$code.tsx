@@ -59,7 +59,7 @@ function CountyDashboardPage() {
     <div className="min-h-screen bg-slate-50">
       <SEOHead
         title={`${dashboard.name} Fylke - Næringsliv & Statistikk | Bedriftsgrafen.no`}
-        description={`Regional innsikt for ${dashboard.name}. ${formatNumber(dashboard.company_count)} bedrifter, ${dashboard.municipality_count} kommuner. Se vekst, bransjefordeling og topplister.`}
+        description={`Regional innsikt for ${dashboard.name}. ${formatNumber(dashboard.company_count)} virksomheter, ${dashboard.municipality_count} kommuner. Se vekst, bransjefordeling og topplister.`}
         ogImage={`/v1/og/county/${dashboard.code}.svg`}
       />
 
@@ -228,7 +228,7 @@ function CountyDashboardPage() {
                         {muni.name}
                       </p>
                       <p className="text-slate-500 text-xs font-medium mt-0.5">
-                        {formatNumber(muni.company_count)} bedrifter
+                        {formatNumber(muni.company_count)} virksomheter
                       </p>
                     </div>
                   </div>

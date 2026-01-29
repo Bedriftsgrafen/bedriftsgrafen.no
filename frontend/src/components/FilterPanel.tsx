@@ -261,7 +261,7 @@ export function FilterPanel() {
   const headerControls = useMemo(() => (
     <div className="flex items-center gap-3">
       <Filter className="h-5 w-5 text-blue-600" />
-      <h2 className="font-semibold text-lg text-gray-900">Filtrer bedrifter</h2>
+      <h2 className="font-semibold text-lg text-gray-900">Filtrer virksomheter</h2>
       {activeFilters > 0 && (
         <>
           <span className="px-2.5 py-0.5 bg-blue-600 text-white text-sm font-medium rounded-full">

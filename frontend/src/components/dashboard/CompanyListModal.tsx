@@ -142,7 +142,7 @@ export const CompanyListModal = ({
         <table className="w-full">
             <thead className="bg-blue-50/50">
                 <tr>
-                    <SortableHeader field="navn" label="Selskap" currentSort={sortField} sortOrder={sortOrder} onSort={handleSort} />
+                    <SortableHeader field="navn" label="Virksomhet" currentSort={sortField} sortOrder={sortOrder} onSort={handleSort} />
                     <SortableHeader field="kommune" label="Kommune" className="hidden sm:table-cell" currentSort={sortField} sortOrder={sortOrder} onSort={handleSort} />
                     <SortableHeader field="registreringsdato_enhetsregisteret" label="Registrert" currentSort={sortField} sortOrder={sortOrder} onSort={handleSort} />
                     <th className="px-4 py-3 text-left text-xs font-medium text-gray-600 uppercase hidden md:table-cell">
@@ -189,7 +189,7 @@ export const CompanyListModal = ({
         <table className="w-full">
             <thead className="bg-blue-50/50">
                 <tr>
-                    <SortableHeader field="navn" label="Selskap" currentSort={sortField} sortOrder={sortOrder} onSort={handleSort} />
+                    <SortableHeader field="navn" label="Virksomhet" currentSort={sortField} sortOrder={sortOrder} onSort={handleSort} />
                     <SortableHeader field="kommune" label="Kommune" className="hidden sm:table-cell" currentSort={sortField} sortOrder={sortOrder} onSort={handleSort} />
                     <SortableHeader field="konkursdato" label="Konkursdato" currentSort={sortField} sortOrder={sortOrder} onSort={handleSort} />
                     <th className="px-4 py-3 text-left text-xs font-medium text-gray-600 uppercase hidden md:table-cell">
@@ -236,7 +236,7 @@ export const CompanyListModal = ({
         <table className="w-full">
             <thead className="bg-blue-50/50">
                 <tr>
-                    <SortableHeader field="navn" label="Selskap" currentSort={sortField} sortOrder={sortOrder} onSort={handleSort} />
+                    <SortableHeader field="navn" label="Virksomhet" currentSort={sortField} sortOrder={sortOrder} onSort={handleSort} />
                     <SortableHeader field="kommune" label="Kommune" className="hidden sm:table-cell" currentSort={sortField} sortOrder={sortOrder} onSort={handleSort} />
                     <SortableHeader field="antall_ansatte" label="Ansatte" className="text-right" currentSort={sortField} sortOrder={sortOrder} onSort={handleSort} />
                     <SortableHeader field="revenue" label="Omsetning" className="text-right" currentSort={sortField} sortOrder={sortOrder} onSort={handleSort} />

@@ -18,7 +18,7 @@ export const RecentCompanies = memo(function RecentCompanies() {
       <div className="p-4 border-b border-blue-100 bg-blue-50 flex items-center justify-between">
         <div className="flex items-center gap-2">
           <History className="h-5 w-5 text-blue-600" />
-          <h2 className="font-semibold text-gray-900">Nylig besøkte bedrifter</h2>
+          <h2 className="font-semibold text-gray-900">Nylig besøkte virksomheter</h2>
         </div>
         <button
           onClick={clearRecentCompanies}

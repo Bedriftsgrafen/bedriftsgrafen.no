@@ -136,7 +136,7 @@ export const MapSidebar: React.FC<MapSidebarProps> = ({
                                     onClick={() => onShowCompanies?.(selectedRegionData.name, selectedRegionData.code)}
                                     className="w-full bg-blue-600 hover:bg-blue-700 text-white py-2.5 rounded-lg text-xs font-black transition-all shadow-md active:scale-95 flex items-center justify-center gap-2"
                                 >
-                                    Se bedrifter
+                                    Se virksomheter
                                     <ChevronRight className="w-4 h-4" />
                                 </button>
 

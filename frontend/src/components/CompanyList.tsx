@@ -221,7 +221,7 @@ const CompanyTableBody = React.memo(({
                     <td colSpan={visibleColumns.length} className="px-5 py-12">
                         <EmptyState
                             icon={Building2}
-                            title="Ingen bedrifter funnet"
+                            title="Ingen virksomheter funnet"
                             description="Prøv å justere filtrene eller søket ditt."
                             action={{
                                 label: "Nullstill filtre",
@@ -327,7 +327,7 @@ export function CompanyList({
     if (isError) {
         return (
             <div className="bg-white rounded-xl shadow-md overflow-hidden border border-gray-200 p-6 text-center">
-                <p className="text-red-700 mb-3 font-medium">Kunne ikke laste bedrifter</p>
+                <p className="text-red-700 mb-3 font-medium">Kunne ikke laste virksomheter</p>
                 <Button onClick={onRetry} variant="primary">Prøv igjen</Button>
             </div>
         )
@@ -337,13 +337,13 @@ export function CompanyList({
         <div className="bg-white rounded-xl shadow-md overflow-hidden border border-gray-200 flex flex-col h-full">
             {/* Header */}
             <div className="px-5 py-4 border-b border-slate-200 bg-linear-to-br from-slate-50 to-white flex justify-between items-center shrink-0">
-                <h2 className="font-semibold text-lg text-slate-900">Bedrifter</h2>
+                <h2 className="font-semibold text-lg text-slate-900">Virksomheter</h2>
                 <div className="flex items-center gap-3">
                     <span className="text-sm text-gray-600" aria-live="polite" aria-busy={countLoading}>
                         {countLoading ? (
                             <span className="flex items-center gap-2">
                                 <span className="w-4 h-4 border-2 border-blue-600 border-t-transparent rounded-full animate-spin" aria-hidden="true" />
-                                <span className="sr-only">Laster antall bedrifter</span>
+                                <span className="sr-only">Laster antall virksomheter</span>
                                 Teller...
                             </span>
                         ) : (

@@ -16,7 +16,7 @@ export function MapGuide() {
         {
             icon: Users,
             title: 'Per innbygger',
-            description: 'Se bedriftstetthet i forhold til befolkning med "Per innbygger"-knappen.',
+            description: 'Se virksomhetstetthet i forhold til befolkning med "Per innbygger"-knappen.',
             color: 'text-purple-600',
             bgColor: 'bg-purple-50'
         },
@@ -30,14 +30,14 @@ export function MapGuide() {
         {
             icon: MousePointer2,
             title: 'Utforsk region',
-            description: 'Klikk på et område for å se nøkkeltall og gå videre til bedriftsoversikt.',
+            description: 'Klikk på et område for å se nøkkeltall og gå videre til virksomhetsoversikt.',
             color: 'text-amber-600',
             bgColor: 'bg-amber-50'
         },
         {
             icon: Building,
-            title: 'Finn bedrifter',
-            description: 'Zoom inn eller filtrer bransjer for å se individuelle bedrifter i kartet.',
+            title: 'Finn virksomheter',
+            description: 'Zoom inn eller filtrer bransjer for å se individuelle virksomheter i kartet.',
             color: 'text-red-600',
             bgColor: 'bg-red-50'
         }
@@ -61,7 +61,7 @@ export function MapGuide() {
                         <h2 className="text-lg md:text-xl font-bold text-gray-900">Slik bruker du kartet</h2>
                         {!isOpen && (
                             <p className="text-gray-500 text-xs mt-0.5 hidden md:block">
-                                Lær hvordan du bruker filtre, nivåer og utforsker bedrifter i kartet.
+                                Lær hvordan du bruker filtre, nivåer og utforsker virksomheter i kartet.
                             </p>
                         )}
                     </div>

@@ -23,7 +23,7 @@ export function Footer() {
           <div>
             <h2 className="text-white font-semibold mb-3">Om Bedriftsgrafen</h2>
             <p className="text-sm text-gray-400">
-              Gratis analyse av norske bedrifter basert på åpne data fra Brønnøysundregistrene.
+              Gratis analyse av norske virksomheter basert på åpne data fra Brønnøysundregistrene.
             </p>
             <a
               href="https://codewiki.google/github.com/bedriftsgrafen/bedriftsgrafen.no"

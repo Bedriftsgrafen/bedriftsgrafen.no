@@ -64,7 +64,7 @@ export function IndustryTopList({ naceCode, onSelectCompany }: IndustryTopListPr
                     </div>
                     <p className="text-blue-100 max-w-2xl">
                         Oversikt over de største aktørene sortert etter omsetning.
-                        Klikk på kolonnene for å endre sortering eller velg en bedrift for detaljer.
+                        Klikk på kolonnene for å endre sortering eller velg en virksomhet for detaljer.
                     </p>
                 </div>
             </div>
@@ -78,7 +78,7 @@ export function IndustryTopList({ naceCode, onSelectCompany }: IndustryTopListPr
                                 <th className="px-5 py-4 font-semibold text-gray-900 w-16 text-center">#</th>
                                 <SortableHeader
                                     field="navn"
-                                    label="Selskap"
+                                    label="Virksomhet"
                                     currentSort={sortBy}
                                     sortOrder={sortOrder}
                                     onSort={() => handleSort('navn')}

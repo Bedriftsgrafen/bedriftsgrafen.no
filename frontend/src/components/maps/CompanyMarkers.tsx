@@ -438,7 +438,7 @@ export function CompanyMarkers({
                                     onClick={() => onCompanyClick?.(orgnr)}
                                     className="mt-2 text-sm text-blue-600 hover:underline"
                                 >
-                                    Vis bedrift →
+                                    Vis virksomhet →
                                 </button>
                             </div>
                         </Popup>
@@ -452,7 +452,7 @@ export function CompanyMarkers({
                     className="absolute bottom-4 left-4 bg-yellow-100 text-yellow-800 text-sm px-3 py-2 rounded-lg shadow z-1000"
                     style={{ position: 'absolute', bottom: 16, left: 16, zIndex: 1000 }}
                 >
-                    Viser {data.markers.length} av {data.total} bedrifter. Zoom inn for å se flere.
+                    Viser {data.markers.length} av {data.total} virksomheter. Zoom inn for å se flere.
                 </div>
             )}
         </>
