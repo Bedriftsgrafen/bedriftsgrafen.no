@@ -108,7 +108,7 @@ export const FinancialsTab = React.memo(function FinancialsTab({
             <Link 
               to="/bedrift/$orgnr" 
               params={{ orgnr: company.parent_orgnr }}
-              search={(prev: Record<string, unknown>) => ({ ...prev, tab: 'okonomi' as const })}
+              search={{ tab: 'okonomi' as const }}
               className="mt-2 inline-flex items-center text-sm font-medium text-blue-700 hover:text-blue-800 bg-blue-100/50 hover:bg-blue-100 px-3 py-1.5 rounded-md transition-colors w-fit"
             >
               <Home className="h-3.5 w-3.5" />

@@ -112,7 +112,7 @@ describe('FilterPanel', () => {
 
     it('renders with basic filter buttons', () => {
         render(<FilterPanel />)
-        expect(screen.getByText('Filtrer bedrifter')).toBeDefined()
+        expect(screen.getByText('Filtrer virksomheter')).toBeDefined()
         // These are likely headers or labels in the panel
         // Bransje, Geografi, Økonomi are now headers in the grid if expanded?
         // Wait, if it's NOT expanded, these might not be visible.
@@ -131,7 +131,7 @@ describe('FilterPanel', () => {
 
     it('opens dialog when header is clicked', () => {
         render(<FilterPanel />)
-        const filterHeader = screen.getByText('Filtrer bedrifter')
+        const filterHeader = screen.getByText('Filtrer virksomheter')
         fireEvent.click(filterHeader)
 
         // Check for "Basis" which is a header in the expanded panel
@@ -140,7 +140,7 @@ describe('FilterPanel', () => {
 
     it('updates specific filter value when changed', () => {
         render(<FilterPanel />)
-        const filterHeader = screen.getByText('Filtrer bedrifter')
+        const filterHeader = screen.getByText('Filtrer virksomheter')
         fireEvent.click(filterHeader)
 
         // Find an input, e.g., naeringskode (placeholder "F.eks. 62.100")

@@ -103,7 +103,7 @@ describe('CompanyList', () => {
 
     it('renders error state correctly', () => {
         render(<CompanyList {...defaultProps} isError={true} />)
-        expect(screen.getByText('Kunne ikke laste bedrifter')).toBeInTheDocument()
+        expect(screen.getByText('Kunne ikke laste virksomheter')).toBeInTheDocument()
         expect(screen.getByText('Prøv igjen')).toBeInTheDocument()
     })
 
@@ -116,7 +116,7 @@ describe('CompanyList', () => {
 
     it('renders empty state when no companies found', () => {
         render(<CompanyList {...defaultProps} companies={[]} />)
-        expect(screen.getByText('Ingen bedrifter funnet')).toBeInTheDocument()
+        expect(screen.getByText('Ingen virksomheter funnet')).toBeInTheDocument()
     })
 
     it('triggers clearFilters when clicking reset in empty state', () => {
