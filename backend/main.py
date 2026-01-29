@@ -12,7 +12,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from limiter import limiter
 from database import get_db, AsyncSessionLocal
 from exceptions import BedriftsgrafenException
-from middleware import RequestIdMiddleware
+from middleware import RequestIdMiddleware, SecurityHeadersMiddleware
 from utils.logging_config import setup_logging
 
 # Setup structured logging before creating app
@@ -126,6 +126,9 @@ async def rate_limit_handler(request: Request, exc: RateLimitExceeded):
 # Add request tracking middleware (should be first)
 app.add_middleware(RequestIdMiddleware)
 
+# Add security headers to all responses
+app.add_middleware(SecurityHeadersMiddleware)
+
 # Enable CORS - reads from environment, defaults to "*" for development
 cors_origins_raw = os.getenv("CORS_ORIGINS", "*")
 cors_origins = [origin.strip() for origin in cors_origins_raw.split(",") if origin.strip()]
@@ -149,6 +152,42 @@ async def bedriftsgrafen_exception_handler(request: Request, exc: Bedriftsgrafen
     )
 
     return JSONResponse(status_code=exc.status_code, content={"detail": exc.message, "type": exc.__class__.__name__})
+
+
+# Global exception handler to prevent stack trace leakage in production
+ENVIRONMENT = os.getenv("ENVIRONMENT", "development")
+
+
+@app.exception_handler(Exception)
+async def generic_exception_handler(request: Request, exc: Exception):
+    """
+    Catch-all exception handler to prevent internal details from leaking.
+
+    In production: Returns generic error message, logs full details
+    In development: Returns full exception details for debugging
+    """
+    # Always log the full exception
+    logger.exception(
+        f"Unhandled exception: {exc}",
+        extra={"path": request.url.path, "method": request.method},
+    )
+
+    if ENVIRONMENT == "production":
+        # Production: Hide implementation details
+        return JSONResponse(
+            status_code=500,
+            content={"detail": "Internal server error"},
+        )
+    else:
+        # Development: Show full error for debugging
+        return JSONResponse(
+            status_code=500,
+            content={
+                "detail": str(exc),
+                "type": exc.__class__.__name__,
+                "path": str(request.url.path),
+            },
+        )
 
 
 # Include routers

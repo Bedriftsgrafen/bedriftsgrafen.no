@@ -21,17 +21,23 @@ class CompanyQueryParams:
 
     def __init__(
         self,
-        # Text search
-        name: str | None = Query(None, description="Search by company name or org number"),
+        # Text search - limit length to prevent DoS via extremely long search strings
+        name: str | None = Query(
+            None, max_length=200, description="Search by company name or org number (max 200 chars)"
+        ),
         # Basic filters - list params need Query() for proper parsing
         organisasjonsform: list[str] | None = Query(None, description="Filter by organization form codes"),
         naeringskode: str | None = Query(None, max_length=12, description="NACE industry code (max 12 chars)"),
-        municipality: str | None = Query(None, description="Filter by municipality (kommune) name"),
+        municipality: str | None = Query(
+            None, max_length=100, description="Filter by municipality (kommune) name (max 100 chars)"
+        ),
         municipality_code: str | None = Query(
             None, min_length=4, max_length=4, pattern=r"^\d{4}$", description="Filter by 4-digit municipality code"
         ),
         county: str | None = Query(
-            None, description="Filter by county (fylke) - 2-digit county code (e.g., '18' for Nordland)"
+            None,
+            max_length=50,
+            description="Filter by county (fylke) - 2-digit county code (e.g., '18' for Nordland)",
         ),
         # Employee limits
         min_employees: int | None = Query(None, ge=0, description="Minimum number of employees"),

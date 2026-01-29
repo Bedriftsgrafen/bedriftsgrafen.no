@@ -1,7 +1,10 @@
+import logging
+import os
 from datetime import date
+from pathlib import Path
 
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Request
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from database import AsyncSessionLocal, get_db
@@ -12,6 +15,11 @@ from services.update_service import UpdateService
 
 from utils.auth import verify_admin_key
 
+logger = logging.getLogger(__name__)
+
+# Security: Whitelist directory for file imports
+# Only files in this directory (or its subdirectories) can be imported
+ALLOWED_IMPORT_DIR = Path(os.getenv("IMPORT_DATA_DIR", "/app/data")).resolve()
 
 router: APIRouter = APIRouter(
     prefix="/admin/import", tags=["admin", "import"], dependencies=[Depends(verify_admin_key)]
@@ -19,18 +27,18 @@ router: APIRouter = APIRouter(
 
 
 class UpdateRequest(BaseModel):
-    since_date: str | None = None  # ISO format YYYY-MM-DD
-    limit: int = 100  # Max updates to process
+    since_date: str | None = Field(default=None, max_length=10, pattern=r"^\d{4}-\d{2}-\d{2}$")  # ISO format YYYY-MM-DD
+    limit: int = Field(default=100, ge=1, le=10000)  # Max updates to process
 
 
 class PopulateQueueRequest(BaseModel):
-    orgnr_list: list[str] | None = None
-    from_file: str | None = None  # Path to file
-    priority: int = 0
+    orgnr_list: list[str] | None = Field(default=None, max_length=10000)  # Max 10k orgnrs per request
+    from_file: str | None = Field(default=None, max_length=255)  # Path to file
+    priority: int = Field(default=0, ge=0, le=100)
 
 
 class BulkImportRequest(BaseModel):
-    batch_name: str = "default"
+    batch_name: str = Field(default="default", max_length=100, pattern=r"^[a-zA-Z0-9_-]+$")
 
 
 @router.post("/updates")
@@ -65,18 +73,36 @@ async def populate_import_queue(
 
     Either provide:
     - orgnr_list: List of specific organization numbers
-    - from_file: Path to JSON file with company data
+    - from_file: Filename (basename only) within the allowed import directory
     """
     service = BulkImportService(db)
 
     if queue_request.from_file:
-        # Security: Prevent directory traversal
-        import os
+        # Security: Strict path traversal prevention
+        # 1. Only accept basename (no path components allowed)
+        safe_basename = Path(queue_request.from_file).name
+        if safe_basename != queue_request.from_file:
+            logger.warning(f"SECURITY: Path traversal attempt blocked - input: {queue_request.from_file}")
+            raise HTTPException(status_code=400, detail="Invalid file path - use filename only")
 
-        safe_path = os.path.basename(queue_request.from_file)
-        if safe_path != queue_request.from_file or ".." in queue_request.from_file:
+        # 2. Construct full path within allowed directory
+        requested_path = (ALLOWED_IMPORT_DIR / safe_basename).resolve()
+
+        # 3. Verify final path is still within allowed directory (defense in depth)
+        if not str(requested_path).startswith(str(ALLOWED_IMPORT_DIR)):
+            logger.warning(f"SECURITY: Path escape attempt blocked - resolved: {requested_path}")
             raise HTTPException(status_code=400, detail="Invalid file path")
-        result = await service.populate_from_file(queue_request.from_file)
+
+        # 4. Reject symlinks (could point outside allowed directory)
+        if requested_path.is_symlink():
+            logger.warning(f"SECURITY: Symlink rejected - path: {requested_path}")
+            raise HTTPException(status_code=400, detail="Symlinks not allowed")
+
+        # 5. Verify file exists
+        if not requested_path.is_file():
+            raise HTTPException(status_code=404, detail="File not found")
+
+        result = await service.populate_from_file(str(requested_path))
     elif queue_request.orgnr_list:
         result = await service.populate_queue(queue_request.orgnr_list, queue_request.priority)
     else:
