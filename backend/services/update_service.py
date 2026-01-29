@@ -22,12 +22,14 @@ from pydantic import ValidationError
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from constants.concurrency import API_CONCURRENCY_LIMIT, DB_COMMIT_CHUNK_SIZE
+from constants.urls import BRREG_UPDATES_URL, BRREG_SUBUNIT_UPDATES_URL, BRREG_ROLE_UPDATES_URL
 from repositories.accounting_repository import AccountingRepository
 from repositories.company import CompanyRepository
 from repositories.role_repository import RoleRepository
 from repositories.subunit_repository import SubUnitRepository
 from repositories.system_repository import SystemRepository
-from services.brreg_mappers import map_subunit_from_api
+from services.brreg_mappers import map_role_from_api, map_subunit_from_api
 import models
 from schemas.brreg import FetchResult, UpdateBatchResult
 from services.brreg_api_service import BrregApiService
@@ -35,11 +37,8 @@ from services.rate_limits import BRREG_RATE_LIMITER
 
 logger = logging.getLogger(__name__)
 
-# Concurrency limit for parallel API fetching
-CONCURRENCY_LIMIT = 10
-
-# Chunk size for database commits (commit after N records)
-DB_COMMIT_CHUNK_SIZE = 25
+# Use centralized constants
+CONCURRENCY_LIMIT = API_CONCURRENCY_LIMIT
 
 
 class UpdateService:
@@ -49,9 +48,10 @@ class UpdateService:
     Implements phased processing for safety and performance.
     """
 
-    UPDATES_BASE_URL = "https://data.brreg.no/enhetsregisteret/api/oppdateringer/enheter"
-    SUBUNIT_UPDATES_BASE_URL = "https://data.brreg.no/enhetsregisteret/api/oppdateringer/underenheter"
-    ROLE_UPDATES_BASE_URL = "https://data.brreg.no/enhetsregisteret/api/oppdateringer/roller"
+    # Use centralized URLs
+    UPDATES_BASE_URL = BRREG_UPDATES_URL
+    SUBUNIT_UPDATES_BASE_URL = BRREG_SUBUNIT_UPDATES_URL
+    ROLE_UPDATES_BASE_URL = BRREG_ROLE_UPDATES_URL
 
     def __init__(self, db: AsyncSession):
         self.db = db
@@ -764,19 +764,7 @@ class UpdateService:
 
                             # Create Role models
                             for r in roles_data:
-                                all_batch_roles.append(
-                                    models.Role(
-                                        orgnr=orgnr,
-                                        type_kode=r.get("type_kode"),
-                                        type_beskrivelse=r.get("type_beskrivelse"),
-                                        person_navn=r.get("person_navn"),
-                                        foedselsdato=self._parse_date(r.get("foedselsdato")),
-                                        enhet_navn=r.get("enhet_navn"),
-                                        enhet_orgnr=r.get("enhet_orgnr"),
-                                        fratraadt=r.get("fratraadt", False),
-                                        rekkefoelge=r.get("rekkefoelge"),
-                                    )
-                                )
+                                all_batch_roles.append(map_role_from_api(r, orgnr))
                             result.companies_updated += 1
                             processed_orgnrs.add(orgnr)
 
@@ -829,14 +817,3 @@ class UpdateService:
                     logger.warning(f"Failed to run ANALYZE roller: {e}")
 
         return result.model_dump()
-
-    def _parse_date(self, date_str: Any) -> date | None:
-        """Safely parse a date string from Brreg API into a Python date object."""
-        if not date_str or not isinstance(date_str, str):
-            return None
-        try:
-            # Handle YYYY-MM-DD or ISO with time
-            return datetime.strptime(date_str[:10], "%Y-%m-%d").date()
-        except (ValueError, TypeError, IndexError):
-            logger.debug(f"Failed to parse date string: {date_str}")
-            return None

@@ -1,6 +1,5 @@
 """Service for managing company roles with on-demand caching"""
 
-import contextlib
 import logging
 from datetime import datetime, timedelta, timezone
 
@@ -9,6 +8,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 import models
 from repositories.role_repository import RoleRepository
 from services.brreg_api_service import BrregApiService
+from services.brreg_mappers import map_role_from_api
 
 logger = logging.getLogger(__name__)
 
@@ -65,28 +65,11 @@ class RoleService:
             # Delete old roles and insert new ones
             await self.role_repo.delete_by_orgnr(orgnr, commit=False)
 
-            # Parse API response into Role models
+            # Parse API response into Role models using shared mapper
             new_roles = []
             for role_data in api_roles:
                 try:
-                    # Parse date if present
-                    foedselsdato = None
-                    if role_data.get("foedselsdato"):
-                        with contextlib.suppress(ValueError, TypeError):
-                            foedselsdato = datetime.strptime(role_data["foedselsdato"], "%Y-%m-%d").date()
-
-                    role = models.Role(
-                        orgnr=orgnr,
-                        type_kode=role_data.get("type_kode"),
-                        type_beskrivelse=role_data.get("type_beskrivelse"),
-                        person_navn=role_data.get("person_navn"),
-                        foedselsdato=foedselsdato,
-                        enhet_orgnr=role_data.get("enhet_orgnr"),
-                        enhet_navn=role_data.get("enhet_navn"),
-                        fratraadt=role_data.get("fratraadt", False),
-                        rekkefoelge=role_data.get("rekkefoelge"),
-                    )
-                    new_roles.append(role)
+                    new_roles.append(map_role_from_api(role_data, orgnr))
                 except Exception as e:
                     logger.warning(f"Error parsing role: {e}")
                     continue

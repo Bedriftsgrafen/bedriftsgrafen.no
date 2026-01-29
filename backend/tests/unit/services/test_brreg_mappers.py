@@ -5,7 +5,7 @@ from datetime import date
 import pytest
 
 import models
-from services.brreg_mappers import map_subunit_from_api, parse_brreg_date
+from services.brreg_mappers import map_role_from_api, map_subunit_from_api, parse_brreg_date
 
 
 class TestParseBrregDate:
@@ -199,3 +199,101 @@ class TestMapSubunitFromApi:
         assert result.stiftelsesdato is None
         assert result.registreringsdato_enhetsregisteret is None
         assert result.raw_data == minimal_data
+
+
+class TestMapRoleFromApi:
+    """Tests for map_role_from_api function."""
+
+    @pytest.fixture
+    def sample_role_api_response(self) -> dict:
+        """Complete sample API response from Brønnøysund /roller endpoint."""
+        return {
+            "type_kode": "DAGL",
+            "type_beskrivelse": "Daglig leder",
+            "person_navn": "Ola Nordmann",
+            "foedselsdato": "1985-03-15",
+            "enhet_navn": None,
+            "enhet_orgnr": None,
+            "fratraadt": False,
+            "rekkefoelge": 1,
+        }
+
+    def test_maps_type_kode(self, sample_role_api_response):
+        """Field 'type_kode' should be mapped directly."""
+        result = map_role_from_api(sample_role_api_response, "123456789")
+        assert result.type_kode == "DAGL"
+
+    def test_maps_type_beskrivelse(self, sample_role_api_response):
+        """Field 'type_beskrivelse' should be mapped directly."""
+        result = map_role_from_api(sample_role_api_response, "123456789")
+        assert result.type_beskrivelse == "Daglig leder"
+
+    def test_maps_person_navn(self, sample_role_api_response):
+        """Field 'person_navn' should be mapped directly."""
+        result = map_role_from_api(sample_role_api_response, "123456789")
+        assert result.person_navn == "Ola Nordmann"
+
+    def test_parses_foedselsdato(self, sample_role_api_response):
+        """Field 'foedselsdato' should be parsed to date."""
+        result = map_role_from_api(sample_role_api_response, "123456789")
+        assert result.foedselsdato == date(1985, 3, 15)
+
+    def test_sets_orgnr_from_parameter(self, sample_role_api_response):
+        """orgnr should be set from function parameter."""
+        result = map_role_from_api(sample_role_api_response, "987654321")
+        assert result.orgnr == "987654321"
+
+    def test_maps_enhet_fields(self):
+        """Should map enhet_navn and enhet_orgnr for organizational roles."""
+        data = {
+            "type_kode": "NEST",
+            "type_beskrivelse": "Nestleder",
+            "enhet_navn": "Datterselskap AS",
+            "enhet_orgnr": "111222333",
+        }
+        result = map_role_from_api(data, "123456789")
+        assert result.enhet_navn == "Datterselskap AS"
+        assert result.enhet_orgnr == "111222333"
+
+    def test_maps_fratraadt_true(self):
+        """Should correctly map fratraadt=True."""
+        data = {"type_kode": "DAGL", "fratraadt": True}
+        result = map_role_from_api(data, "123456789")
+        assert result.fratraadt is True
+
+    def test_fratraadt_defaults_to_false(self):
+        """fratraadt should default to False if missing."""
+        data = {"type_kode": "DAGL"}
+        result = map_role_from_api(data, "123456789")
+        assert result.fratraadt is False
+
+    def test_maps_rekkefoelge(self, sample_role_api_response):
+        """Field 'rekkefoelge' should be mapped directly."""
+        result = map_role_from_api(sample_role_api_response, "123456789")
+        assert result.rekkefoelge == 1
+
+    def test_returns_role_model_instance(self, sample_role_api_response):
+        """Should return a models.Role instance."""
+        result = map_role_from_api(sample_role_api_response, "123456789")
+        assert isinstance(result, models.Role)
+
+    def test_handles_missing_optional_fields(self):
+        """Should handle missing optional fields gracefully."""
+        minimal_data = {"type_kode": "STYR"}
+        result = map_role_from_api(minimal_data, "123456789")
+
+        assert result.orgnr == "123456789"
+        assert result.type_kode == "STYR"
+        assert result.type_beskrivelse is None
+        assert result.person_navn is None
+        assert result.foedselsdato is None
+        assert result.enhet_navn is None
+        assert result.enhet_orgnr is None
+        assert result.fratraadt is False
+        assert result.rekkefoelge is None
+
+    def test_handles_null_foedselsdato(self):
+        """Should handle None foedselsdato gracefully."""
+        data = {"type_kode": "DAGL", "foedselsdato": None}
+        result = map_role_from_api(data, "123456789")
+        assert result.foedselsdato is None

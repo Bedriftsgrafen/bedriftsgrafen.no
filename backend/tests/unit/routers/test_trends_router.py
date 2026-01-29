@@ -28,7 +28,7 @@ def test_get_trends_timeline_bankruptcies(client, mock_db_session):
     # Arrange
     mock_row = MagicMock()
     mock_row.month = "2023-01"
-    mock_row.count = 50
+    mock_row.cnt = 50  # 'cnt' is the column alias used in the repository
 
     mock_result = mock_db_session.execute.return_value
     mock_result.all.return_value = [mock_row]
@@ -48,7 +48,7 @@ def test_get_trends_timeline_new_companies(client, mock_db_session):
     # Arrange
     mock_row = MagicMock()
     mock_row.month = "2023-02"
-    mock_row.count = 100
+    mock_row.cnt = 100  # 'cnt' is the column alias used in the repository
 
     mock_result = mock_db_session.execute.return_value
     mock_result.all.return_value = [mock_row]

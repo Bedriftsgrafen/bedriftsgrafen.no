@@ -3,11 +3,10 @@
 from typing import Literal
 
 from fastapi import APIRouter, Depends, Query
-from sqlalchemy import func, select, text
 from sqlalchemy.ext.asyncio import AsyncSession
 
-import models
 from database import get_db
+from repositories.stats_repository import StatsRepository
 
 router: APIRouter = APIRouter(prefix="/v1/trends", tags=["Trends"])
 
@@ -25,19 +24,5 @@ async def get_trends_timeline(
 
     Returns array of {month: "2024-01", count: 123} objects sorted by month.
     """
-    date_col = models.Company.konkursdato if metric == "bankruptcies" else models.Company.stiftelsesdato
-
-    # Use subquery approach to avoid GROUP BY issues
-    month_expr = func.to_char(date_col, "YYYY-MM")
-
-    query = (
-        select(month_expr.label("month"), func.count().label("count"))
-        .where(date_col.isnot(None), date_col >= text(f"CURRENT_DATE - interval '{months} months'"))
-        .group_by(month_expr)
-        .order_by(month_expr)
-    )
-
-    result = await db.execute(query)
-    rows = result.all()
-
-    return [{"month": row.month, "count": row.count} for row in rows]
+    repo = StatsRepository(db)
+    return await repo.get_timeline_trends(metric, months)

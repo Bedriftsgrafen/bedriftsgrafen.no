@@ -791,3 +791,78 @@ class StatsRepository:
             }
             for code, stats in stats_rows.items()
         ]
+
+    async def get_industry_stats_list(
+        self,
+        sort_by: Literal[
+            "company_count",
+            "total_revenue",
+            "avg_revenue",
+            "total_employees",
+            "bankrupt_count",
+            "new_last_year",
+            "bankruptcies_last_year",
+            "avg_profit",
+            "avg_operating_margin",
+        ],
+        sort_order: Literal["asc", "desc"],
+        limit: int,
+    ) -> Sequence[models.IndustryStats]:
+        """Get sorted list of industry statistics from materialized view."""
+        sort_columns = {
+            "company_count": models.IndustryStats.company_count,
+            "total_revenue": models.IndustryStats.total_revenue,
+            "avg_revenue": models.IndustryStats.avg_revenue,
+            "total_employees": models.IndustryStats.total_employees,
+            "bankrupt_count": models.IndustryStats.bankrupt_count,
+            "new_last_year": models.IndustryStats.new_last_year,
+            "bankruptcies_last_year": models.IndustryStats.bankruptcies_last_year,
+            "avg_profit": models.IndustryStats.avg_profit,
+            "avg_operating_margin": models.IndustryStats.avg_operating_margin,
+        }
+        sort_column = sort_columns[sort_by]
+
+        query = select(models.IndustryStats)
+        if sort_order == "asc":
+            query = query.order_by(sort_column.asc().nullslast())
+        else:
+            query = query.order_by(sort_column.desc().nullslast())
+
+        query = query.limit(limit)
+        result = await self.db.execute(query)
+        return result.scalars().all()
+
+    async def get_industry_stat_by_division(self, nace_division: str) -> models.IndustryStats | None:
+        """Get statistics for a specific NACE division."""
+        result = await self.db.execute(
+            select(models.IndustryStats).where(models.IndustryStats.nace_division == nace_division)
+        )
+        return result.scalar_one_or_none()
+
+    async def get_timeline_trends(
+        self, metric: Literal["bankruptcies", "new_companies"], months: int
+    ) -> list[dict[str, int | str]]:
+        """Get monthly counts for bankruptcies or new companies.
+
+        Args:
+            metric: Type of trend to fetch
+            months: Number of months to look back (1-36, validated upstream)
+        """
+        from sqlalchemy import text
+
+        # Defense-in-depth: ensure months is integer even though FastAPI validates upstream
+        safe_months = int(months)
+
+        date_col = models.Company.konkursdato if metric == "bankruptcies" else models.Company.stiftelsesdato
+        month_expr = func.to_char(date_col, "YYYY-MM")
+
+        query = (
+            select(month_expr.label("month"), func.count().label("cnt"))
+            .where(date_col.isnot(None), date_col >= text(f"CURRENT_DATE - interval '{safe_months} months'"))
+            .group_by(month_expr)
+            .order_by(month_expr)
+        )
+
+        result = await self.db.execute(query)
+        rows = result.all()
+        return [{"month": row.month, "count": row.cnt} for row in rows]

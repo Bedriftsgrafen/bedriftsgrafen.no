@@ -3,8 +3,9 @@ import logging
 from sqlalchemy import select, func, text, delete
 from sqlalchemy.ext.asyncio import AsyncSession
 import models
+from constants.concurrency import API_CONCURRENCY_LIMIT
 from services.brreg_api_service import BrregApiService
-from services.brreg_mappers import map_subunit_from_api
+from services.brreg_mappers import map_role_from_api, map_subunit_from_api
 from services.update_service import UpdateService
 from services.rate_limits import BRREG_RATE_LIMITER
 from repositories.company.repository import CompanyRepository
@@ -13,8 +14,8 @@ from repositories.role_repository import RoleRepository
 
 logger = logging.getLogger(__name__)
 
-# Bounded Concurrency: Max 10 simultaneous API tasks
-repair_semaphore = asyncio.Semaphore(10)
+# Bounded Concurrency: Use centralized API concurrency limit
+repair_semaphore = asyncio.Semaphore(API_CONCURRENCY_LIMIT)
 
 
 class RepairService:
@@ -151,20 +152,7 @@ class RepairService:
                     try:
                         roles_data = await self.brreg_api.fetch_roles(company.orgnr)
 
-                        role_models = [
-                            models.Role(
-                                orgnr=company.orgnr,
-                                type_kode=r.get("type_kode"),
-                                type_beskrivelse=r.get("type_beskrivelse"),
-                                person_navn=r.get("person_navn"),
-                                foedselsdato=self.update_service._parse_date(r.get("foedselsdato")),
-                                enhet_navn=r.get("enhet_navn"),
-                                enhet_orgnr=r.get("enhet_orgnr"),
-                                fratraadt=r.get("fratraadt", False),
-                                rekkefoelge=r.get("rekkefoelge"),
-                            )
-                            for r in roles_data
-                        ]
+                        role_models = [map_role_from_api(r, company.orgnr) for r in roles_data]
 
                         if self.repair:
                             await self.db.execute(delete(models.Role).where(models.Role.orgnr == company.orgnr))

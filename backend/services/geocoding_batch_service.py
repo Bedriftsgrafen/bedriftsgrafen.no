@@ -15,6 +15,7 @@ from typing import Any, Sequence
 from sqlalchemy import Row, and_, func, select, update, or_, text
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from constants.concurrency import API_CONCURRENCY_LIMIT
 from models import Company
 from services.geocoding_service import GeocodingService
 
@@ -163,7 +164,7 @@ class GeocodingBatchService:
                 "duration_seconds": 0,
             }
 
-        semaphore = asyncio.Semaphore(10)  # Process 10 companies in parallel I/O
+        semaphore = asyncio.Semaphore(API_CONCURRENCY_LIMIT)  # Process companies in parallel I/O
         success_count = 0
         fail_count = 0
 

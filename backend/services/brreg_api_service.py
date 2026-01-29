@@ -7,6 +7,7 @@ Inherits from BaseExternalService for common HTTP client and retry logic.
 import logging
 from typing import Any
 
+from constants.urls import BRREG_ENHETSREGISTERET_BASE, BRREG_REGNSKAPSREGISTERET_BASE
 from services.base_external_service import BaseExternalService, ExternalApiException
 
 logger = logging.getLogger(__name__)
@@ -23,8 +24,9 @@ class BrregApiService(BaseExternalService):
     """
 
     SERVICE_NAME = "Brønnøysund"
-    ENHETSREGISTERET_BASE_URL = "https://data.brreg.no/enhetsregisteret/api"
-    REGNSKAPSREGISTERET_BASE_URL = "https://data.brreg.no/regnskapsregisteret/regnskap"
+    # Use centralized URLs
+    ENHETSREGISTERET_BASE_URL = BRREG_ENHETSREGISTERET_BASE
+    REGNSKAPSREGISTERET_BASE_URL = BRREG_REGNSKAPSREGISTERET_BASE
 
     async def fetch_company(self, orgnr: str) -> dict[str, Any] | None:
         """

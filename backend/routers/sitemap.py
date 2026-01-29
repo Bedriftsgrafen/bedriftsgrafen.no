@@ -17,6 +17,7 @@ from fastapi import APIRouter, Depends, Path, Request
 from fastapi.responses import Response
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from constants.urls import BASE_URL
 from database import get_db
 from limiter import limiter
 from repositories.company.repository import CompanyRepository
@@ -82,14 +83,14 @@ async def get_sitemap_index(
     # Add company sitemaps
     for page in range(1, num_company_pages + 1):
         xml_content += "  <sitemap>\n"
-        xml_content += f"    <loc>https://bedriftsgrafen.no/api/sitemaps/company-{page}.xml</loc>\n"
+        xml_content += f"    <loc>{BASE_URL}/api/sitemaps/company-{page}.xml</loc>\n"
         xml_content += f"    <lastmod>{today}</lastmod>\n"
         xml_content += "  </sitemap>\n"
 
     # Add person sitemaps
     for page in range(1, num_person_pages + 1):
         xml_content += "  <sitemap>\n"
-        xml_content += f"    <loc>https://bedriftsgrafen.no/api/sitemaps/person-{page}.xml</loc>\n"
+        xml_content += f"    <loc>{BASE_URL}/api/sitemaps/person-{page}.xml</loc>\n"
         xml_content += f"    <lastmod>{today}</lastmod>\n"
         xml_content += "  </sitemap>\n"
 
@@ -145,7 +146,7 @@ async def get_paginated_sitemap(
             # Add Static Routes
             for route in STATIC_ROUTES:
                 xml_content += "  <url>\n"
-                xml_content += f"    <loc>https://bedriftsgrafen.no/{route}</loc>\n"
+                xml_content += f"    <loc>{BASE_URL}/{route}</loc>\n"
                 xml_content += f"    <lastmod>{today}</lastmod>\n"
                 xml_content += "    <changefreq>daily</changefreq>\n"
                 xml_content += "    <priority>1.0</priority>\n"
@@ -154,7 +155,7 @@ async def get_paginated_sitemap(
             # Add Municipality Dashboards with real lastmod
             for code, lastmod in municipalities:
                 xml_content += "  <url>\n"
-                xml_content += f"    <loc>https://bedriftsgrafen.no/kommune/{code}</loc>\n"
+                xml_content += f"    <loc>{BASE_URL}/kommune/{code}</loc>\n"
                 xml_content += f"    <lastmod>{format_date(lastmod)}</lastmod>\n"
                 xml_content += "    <changefreq>daily</changefreq>\n"
                 xml_content += "    <priority>0.9</priority>\n"
@@ -175,7 +176,7 @@ async def get_paginated_sitemap(
 
         for orgnr, updated_at in companies:
             xml_content += "  <url>\n"
-            xml_content += f"    <loc>https://bedriftsgrafen.no/bedrift/{orgnr}</loc>\n"
+            xml_content += f"    <loc>{BASE_URL}/bedrift/{orgnr}</loc>\n"
             xml_content += f"    <lastmod>{format_date(updated_at)}</lastmod>\n"
             xml_content += "    <changefreq>weekly</changefreq>\n"
             xml_content += "    <priority>0.8</priority>\n"
@@ -205,7 +206,7 @@ async def get_paginated_sitemap(
             birthdate_str = birthdate.isoformat() if birthdate else "none"
             safe_name = urllib.parse.quote(name)
             xml_content += "  <url>\n"
-            xml_content += f"    <loc>https://bedriftsgrafen.no/person/{safe_name}/{birthdate_str}</loc>\n"
+            xml_content += f"    <loc>{BASE_URL}/person/{safe_name}/{birthdate_str}</loc>\n"
             xml_content += f"    <lastmod>{format_date(last_update)}</lastmod>\n"
             xml_content += "    <changefreq>monthly</changefreq>\n"
             xml_content += "    <priority>0.6</priority>\n"

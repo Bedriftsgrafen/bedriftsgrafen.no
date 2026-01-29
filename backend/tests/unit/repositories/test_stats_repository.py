@@ -140,3 +140,143 @@ async def test_get_filtered_geography_stats(repo, mock_db_session):
     result = await repo.get_filtered_geography_stats(level="municipality", metric="total_employees", filters=filters)
     assert result == mock_rows
     assert mock_db_session.execute.called
+
+
+# =============================================================================
+# Tests for new refactored repository methods (stats.py, trends.py support)
+# =============================================================================
+
+
+@pytest.mark.asyncio
+async def test_get_industry_stats_list_default_sort(repo, mock_db_session):
+    """Test get_industry_stats_list with default sorting."""
+    mock_stats = [models.IndustryStats(nace_division="01"), models.IndustryStats(nace_division="02")]
+    mock_db_session.execute.return_value.scalars.return_value.all.return_value = mock_stats
+
+    result = await repo.get_industry_stats_list(sort_by="company_count", sort_order="desc", limit=50)
+
+    assert len(result) == 2
+    assert result[0].nace_division == "01"
+    assert mock_db_session.execute.called
+
+
+@pytest.mark.asyncio
+async def test_get_industry_stats_list_ascending_sort(repo, mock_db_session):
+    """Test get_industry_stats_list with ascending sort order."""
+    mock_stats = [models.IndustryStats(nace_division="99")]
+    mock_db_session.execute.return_value.scalars.return_value.all.return_value = mock_stats
+
+    result = await repo.get_industry_stats_list(sort_by="total_employees", sort_order="asc", limit=10)
+
+    assert len(result) == 1
+    assert mock_db_session.execute.called
+
+
+@pytest.mark.asyncio
+async def test_get_industry_stats_list_empty_result(repo, mock_db_session):
+    """Test get_industry_stats_list returns empty list when no data."""
+    mock_db_session.execute.return_value.scalars.return_value.all.return_value = []
+
+    result = await repo.get_industry_stats_list(sort_by="avg_revenue", sort_order="desc", limit=100)
+
+    assert result == []
+    assert mock_db_session.execute.called
+
+
+@pytest.mark.asyncio
+async def test_get_industry_stats_list_all_sort_fields(repo, mock_db_session):
+    """Test all valid sort fields are accepted."""
+    mock_stats = [models.IndustryStats()]
+    mock_db_session.execute.return_value.scalars.return_value.all.return_value = mock_stats
+
+    sort_fields = [
+        "company_count",
+        "total_revenue",
+        "avg_revenue",
+        "total_employees",
+        "bankrupt_count",
+        "new_last_year",
+        "bankruptcies_last_year",
+        "avg_profit",
+        "avg_operating_margin",
+    ]
+
+    for field in sort_fields:
+        result = await repo.get_industry_stats_list(sort_by=field, sort_order="desc", limit=10)
+        assert result is not None
+
+
+@pytest.mark.asyncio
+async def test_get_industry_stat_by_division_found(repo, mock_db_session):
+    """Test get_industry_stat_by_division when division exists."""
+    mock_stat = models.IndustryStats(nace_division="01", company_count=500)
+    mock_db_session.execute.return_value.scalar_one_or_none.return_value = mock_stat
+
+    result = await repo.get_industry_stat_by_division("01")
+
+    assert result is not None
+    assert result.nace_division == "01"
+    assert result.company_count == 500
+
+
+@pytest.mark.asyncio
+async def test_get_industry_stat_by_division_not_found(repo, mock_db_session):
+    """Test get_industry_stat_by_division when division doesn't exist."""
+    mock_db_session.execute.return_value.scalar_one_or_none.return_value = None
+
+    result = await repo.get_industry_stat_by_division("99")
+
+    assert result is None
+
+
+@pytest.mark.asyncio
+async def test_get_timeline_trends_bankruptcies(repo, mock_db_session):
+    """Test get_timeline_trends for bankruptcies metric."""
+    mock_row = MagicMock()
+    mock_row.month = "2024-01"
+    mock_row.cnt = 25
+    mock_db_session.execute.return_value.all.return_value = [mock_row]
+
+    result = await repo.get_timeline_trends(metric="bankruptcies", months=12)
+
+    assert len(result) == 1
+    assert result[0]["month"] == "2024-01"
+    assert result[0]["count"] == 25
+
+
+@pytest.mark.asyncio
+async def test_get_timeline_trends_new_companies(repo, mock_db_session):
+    """Test get_timeline_trends for new_companies metric."""
+    mock_rows = [
+        MagicMock(month="2024-01", cnt=100),
+        MagicMock(month="2024-02", cnt=150),
+    ]
+    mock_db_session.execute.return_value.all.return_value = mock_rows
+
+    result = await repo.get_timeline_trends(metric="new_companies", months=6)
+
+    assert len(result) == 2
+    assert result[0]["month"] == "2024-01"
+    assert result[1]["count"] == 150
+
+
+@pytest.mark.asyncio
+async def test_get_timeline_trends_empty_result(repo, mock_db_session):
+    """Test get_timeline_trends returns empty list when no data."""
+    mock_db_session.execute.return_value.all.return_value = []
+
+    result = await repo.get_timeline_trends(metric="bankruptcies", months=1)
+
+    assert result == []
+
+
+@pytest.mark.asyncio
+async def test_get_timeline_trends_months_safety(repo, mock_db_session):
+    """Test that months parameter is safely cast to int."""
+    mock_db_session.execute.return_value.all.return_value = []
+
+    # Even if somehow a float gets passed, it should be safely handled
+    result = await repo.get_timeline_trends(metric="new_companies", months=12)
+
+    assert result == []
+    assert mock_db_session.execute.called

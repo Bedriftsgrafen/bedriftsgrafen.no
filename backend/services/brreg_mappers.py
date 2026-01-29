@@ -69,3 +69,33 @@ def map_subunit_from_api(data: dict[str, Any], parent_orgnr: str) -> models.SubU
         registreringsdato_enhetsregisteret=parse_brreg_date(data.get("registreringsdatoEnhetsregisteret")),
         raw_data=data,
     )
+
+
+def map_role_from_api(data: dict[str, Any], orgnr: str) -> models.Role:
+    """
+    Map Brønnøysund Enhetsregisteret API role data to Role model.
+
+    Used by role sync operations across multiple services:
+    - update_service.py (role streaming sync)
+    - repair_service.py (role backfill)
+    - scheduler.py (error retry)
+    - role_service.py (on-demand fetch)
+
+    Args:
+        data: Raw JSON dict from Brønnøysund API /roller endpoint
+        orgnr: Organization number the role belongs to
+
+    Returns:
+        Role model instance ready for database insertion
+    """
+    return models.Role(
+        orgnr=orgnr,
+        type_kode=data.get("type_kode"),
+        type_beskrivelse=data.get("type_beskrivelse"),
+        person_navn=data.get("person_navn"),
+        foedselsdato=parse_brreg_date(data.get("foedselsdato")),
+        enhet_navn=data.get("enhet_navn"),
+        enhet_orgnr=data.get("enhet_orgnr"),
+        fratraadt=data.get("fratraadt", False),
+        rekkefoelge=data.get("rekkefoelge"),
+    )

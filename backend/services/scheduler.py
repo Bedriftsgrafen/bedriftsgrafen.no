@@ -466,6 +466,7 @@ class SchedulerService:
         from sqlalchemy import delete, select
 
         from models import Role, SyncError, SyncErrorStatus
+        from services.brreg_mappers import map_role_from_api
         from services.update_service import UpdateService
 
         logger.info("Starting retry of failed syncs...")
@@ -505,20 +506,7 @@ class SchedulerService:
                             await db.execute(delete(Role).where(Role.orgnr == error.orgnr))
 
                             roles_data = await update_service.brreg_api.fetch_roles(error.orgnr)
-                            roles = [
-                                Role(
-                                    orgnr=error.orgnr,
-                                    type_kode=r.get("type_kode"),
-                                    type_beskrivelse=r.get("type_beskrivelse"),
-                                    person_navn=r.get("person_navn"),
-                                    foedselsdato=update_service._parse_date(r.get("foedselsdato")),
-                                    enhet_navn=r.get("enhet_navn"),
-                                    enhet_orgnr=r.get("enhet_orgnr"),
-                                    fratraadt=r.get("fratraadt", False),
-                                    rekkefoelge=r.get("rekkefoelge"),
-                                )
-                                for r in roles_data
-                            ]
+                            roles = [map_role_from_api(r, error.orgnr) for r in roles_data]
                             if roles:
                                 await update_service.role_repo.create_batch(roles, commit=False)
                             success = True

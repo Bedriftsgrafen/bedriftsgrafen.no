@@ -8,11 +8,12 @@ from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.ext.asyncio import AsyncSession
 
 import models
+from constants.concurrency import SUBUNIT_SEARCH_SEMAPHORE_SIZE
 
 logger = logging.getLogger(__name__)
 
 # Limit concurrent trigram searches to avoid overwhelming DB (expensive operation)
-SEARCH_SEMAPHORE = asyncio.Semaphore(4)
+SEARCH_SEMAPHORE = asyncio.Semaphore(SUBUNIT_SEARCH_SEMAPHORE_SIZE)
 
 
 class SubUnitRepository:

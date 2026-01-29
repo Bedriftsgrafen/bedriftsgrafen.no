@@ -3,13 +3,13 @@
 from typing import Literal
 
 from fastapi import APIRouter, Depends, HTTPException, Path, Query
-from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 import models
 from constants.nace import get_nace_name
 from database import get_db
 from dependencies.company_filters import CompanyQueryParams
+from repositories.stats_repository import StatsRepository
 from schemas.benchmark import IndustryBenchmarkResponse
 from schemas.stats import GeoAveragesResponse, GeoStatResponse, IndustryStatResponse
 from services.stats_service import GeoLevel, GeoMetric, StatsService
@@ -44,20 +44,6 @@ def _enrich_with_nace_name(stat: models.IndustryStats) -> IndustryStatResponse:
     return response
 
 
-# Column mapping for sort validation
-_SORT_COLUMNS = {
-    "company_count": models.IndustryStats.company_count,
-    "total_revenue": models.IndustryStats.total_revenue,
-    "avg_revenue": models.IndustryStats.avg_revenue,
-    "total_employees": models.IndustryStats.total_employees,
-    "bankrupt_count": models.IndustryStats.bankrupt_count,
-    "new_last_year": models.IndustryStats.new_last_year,
-    "bankruptcies_last_year": models.IndustryStats.bankruptcies_last_year,
-    "avg_profit": models.IndustryStats.avg_profit,
-    "avg_operating_margin": models.IndustryStats.avg_operating_margin,
-}
-
-
 @router.get("/industries", response_model=list[IndustryStatResponse])
 async def get_industry_stats(
     sort_by: SortField = Query("company_count", description="Field to sort by"),
@@ -71,20 +57,8 @@ async def get_industry_stats(
     Data is served from the `industry_stats` materialized view which is
     refreshed nightly. Results are cached for 1 hour on the frontend.
     """
-    sort_column = _SORT_COLUMNS[sort_by]  # Safe: Literal type guarantees valid key
-
-    query = select(models.IndustryStats)
-
-    if sort_order == "asc":
-        query = query.order_by(sort_column.asc().nullslast())
-    else:
-        query = query.order_by(sort_column.desc().nullslast())
-
-    query = query.limit(limit)
-
-    result = await db.execute(query)
-    stats = result.scalars().all()
-
+    repo = StatsRepository(db)
+    stats = await repo.get_industry_stats_list(sort_by, sort_order, limit)
     return [_enrich_with_nace_name(stat) for stat in stats]
 
 
@@ -100,8 +74,8 @@ async def get_industry_stat(
     db: AsyncSession = Depends(get_db),
 ) -> IndustryStatResponse:
     """Get statistics for a specific industry (NACE division)."""
-    result = await db.execute(select(models.IndustryStats).where(models.IndustryStats.nace_division == nace_division))
-    stat = result.scalar_one_or_none()
+    repo = StatsRepository(db)
+    stat = await repo.get_industry_stat_by_division(nace_division)
 
     if not stat:
         raise HTTPException(status_code=404, detail=f"Industry with NACE division '{nace_division}' not found")

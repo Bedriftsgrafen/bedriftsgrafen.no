@@ -10,6 +10,10 @@ from typing import Union
 from sqlalchemy.orm import defer, noload, selectinload
 
 import models
+from constants.concurrency import (
+    COMPANY_SEARCH_SEMAPHORE_SIZE,
+    SEARCH_SEMAPHORE_TIMEOUT as _SEARCH_TIMEOUT,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -17,8 +21,8 @@ logger = logging.getLogger(__name__)
 STATS_QUERY_TIMEOUT_SECONDS = 10.0
 
 # Limit concurrent full-text search queries to avoid exhausting DB connections
-SEARCH_SEMAPHORE = asyncio.Semaphore(8)
-SEARCH_SEMAPHORE_TIMEOUT = 5.0
+SEARCH_SEMAPHORE = asyncio.Semaphore(COMPANY_SEARCH_SEMAPHORE_SIZE)
+SEARCH_SEMAPHORE_TIMEOUT = _SEARCH_TIMEOUT
 
 # Reusable query optimization options
 LIST_VIEW_OPTIONS = [
