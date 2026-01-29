@@ -410,3 +410,195 @@ class TestGetMunicipalityPremiumDashboard:
         assert result["business_density"] > 0
         assert "top_sectors" in result
         assert "top_companies" in result
+
+
+class TestEnsureMunicipalityNamesLoadedError:
+    """Tests for error handling in municipality names loading."""
+
+    @pytest.mark.asyncio
+    async def test_handles_db_error_gracefully(self):
+        # Arrange
+        mock_db = MagicMock()
+        service = StatsService(mock_db)
+        StatsService._municipality_names = {}  # Clear cache
+
+        service.stats_repo.get_municipality_names = AsyncMock(side_effect=Exception("DB error"))
+
+        # Act - should not raise
+        await service._ensure_municipality_names_loaded()
+
+        # Assert - cache remains empty, service continues working
+        # The fallback naming will be used
+
+
+class TestGetMunicipalityStatsEdgeCases:
+    """Tests for edge cases in municipality stats."""
+
+    @pytest.mark.asyncio
+    async def test_handles_null_row_code(self):
+        # Arrange
+        mock_db = MagicMock()
+        service = StatsService(mock_db)
+        StatsService._municipality_names = {"0301": "Oslo"}
+
+        # Mock municipality stats rows with null code
+        mock_row = MagicMock()
+        mock_row.code = None  # Should be skipped
+        mock_row.value = 50000
+
+        mock_pop_row = MagicMock()
+        mock_pop_row.municipality_code = "0301"
+        mock_pop_row.population = 700000
+
+        service.stats_repo.get_municipality_stats = AsyncMock(return_value=[mock_row])
+        service.stats_repo.get_municipality_populations = AsyncMock(return_value=[mock_pop_row])
+        service._ensure_municipality_names_loaded = AsyncMock()
+
+        # Act
+        result = await service.get_municipality_stats("company_count")
+
+        # Assert - null codes are skipped
+        assert len(result) == 0
+
+    @pytest.mark.asyncio
+    async def test_handles_zero_population(self):
+        # Arrange
+        mock_db = MagicMock()
+        service = StatsService(mock_db)
+        StatsService._municipality_names = {"0301": "Oslo"}
+
+        mock_row = MagicMock()
+        mock_row.code = "0301"
+        mock_row.value = 1000
+
+        mock_pop_row = MagicMock()
+        mock_pop_row.municipality_code = "0301"
+        mock_pop_row.population = 0  # Zero population
+
+        service.stats_repo.get_municipality_stats = AsyncMock(return_value=[mock_row])
+        service.stats_repo.get_municipality_populations = AsyncMock(return_value=[mock_pop_row])
+        service._ensure_municipality_names_loaded = AsyncMock()
+
+        # Act
+        result = await service.get_municipality_stats("company_count")
+
+        # Assert - per_capita should be None when population is 0
+        assert len(result) == 1
+        assert result[0].companies_per_capita is None
+
+
+class TestGetGeographyStatsFiltered:
+    """Tests for filtered geography stats paths."""
+
+    @pytest.mark.asyncio
+    async def test_filtered_municipality_path(self):
+        # Arrange
+        mock_db = MagicMock()
+        service = StatsService(mock_db)
+        StatsService._municipality_names = {"0301": "Oslo"}
+
+        from repositories.company_filter_builder import FilterParams
+
+        filters = FilterParams(min_employees=10)  # Non-empty filters
+
+        mock_row = MagicMock()
+        mock_row.code = "0301"
+        mock_row.value = 1000
+
+        mock_pop_row = MagicMock()
+        mock_pop_row.municipality_code = "0301"
+        mock_pop_row.population = 700000
+
+        service.stats_repo.get_filtered_geography_stats = AsyncMock(return_value=[mock_row])
+        service.stats_repo.get_municipality_populations = AsyncMock(return_value=[mock_pop_row])
+        service._ensure_municipality_names_loaded = AsyncMock()
+
+        # Act - use municipality level
+        result = await service.get_geography_stats("municipality", "company_count", filters)
+
+        # Assert
+        assert len(result) == 1
+        assert result[0].name == "Oslo"
+
+    @pytest.mark.asyncio
+    async def test_filtered_handles_null_code(self):
+        # Arrange
+        mock_db = MagicMock()
+        service = StatsService(mock_db)
+        StatsService._municipality_names = {}
+
+        from repositories.company_filter_builder import FilterParams
+
+        filters = FilterParams(min_employees=10)
+
+        mock_row = MagicMock()
+        mock_row.code = None  # Null code should be skipped
+        mock_row.value = 1000
+
+        service.stats_repo.get_filtered_geography_stats = AsyncMock(return_value=[mock_row])
+        service.stats_repo.get_municipality_populations = AsyncMock(return_value=[])
+        service._ensure_municipality_names_loaded = AsyncMock()
+
+        # Act
+        result = await service.get_geography_stats("municipality", "company_count", filters)
+
+        # Assert - null codes are skipped
+        assert len(result) == 0
+
+
+class TestGetGeographyAveragesFiltered:
+    """Tests for filtered geography averages."""
+
+    @pytest.mark.asyncio
+    async def test_filtered_averages_with_county_context(self):
+        # Arrange
+        mock_db = AsyncMock()
+        service = StatsService(mock_db)
+
+        from repositories.company_filter_builder import FilterParams
+
+        filters = FilterParams(min_employees=5)  # Non-empty filters
+
+        # Mock rows for Oslo and another municipality
+        mock_row1 = MagicMock()
+        mock_row1.code = "0301"  # Oslo (county 03)
+        mock_row1.value = 1000
+
+        mock_row2 = MagicMock()
+        mock_row2.code = "1101"  # Rogaland (county 11)
+        mock_row2.value = 500
+
+        service.stats_repo.get_filtered_geography_stats = AsyncMock(return_value=[mock_row1, mock_row2])
+
+        # Act
+        result = await service.get_geography_averages(
+            "municipality", "company_count", filters, county_code_context="03"
+        )
+
+        # Assert
+        assert result.national_total == 1500  # 1000 + 500
+        assert result.county_total == 1000  # Only Oslo (03)
+        assert result.county_name == "Oslo"
+
+    @pytest.mark.asyncio
+    async def test_filtered_averages_county_level(self):
+        # Arrange
+        mock_db = AsyncMock()
+        service = StatsService(mock_db)
+
+        from repositories.company_filter_builder import FilterParams
+
+        filters = FilterParams(min_employees=5)
+
+        mock_row = MagicMock()
+        mock_row.code = "03"  # Oslo county
+        mock_row.value = 10000
+
+        service.stats_repo.get_filtered_geography_stats = AsyncMock(return_value=[mock_row])
+
+        # Act
+        result = await service.get_geography_averages("county", "company_count", filters)
+
+        # Assert
+        assert result.national_total == 10000
+        assert result.national_avg is not None

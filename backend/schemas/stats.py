@@ -1,6 +1,6 @@
 """Statistics-related Pydantic schemas for API request/response models."""
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field
 
 
 class IndustryStatResponse(BaseModel):
@@ -22,8 +22,7 @@ class IndustryStatResponse(BaseModel):
     profitable_count: int | None = None
     avg_operating_margin: float | None = None
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 class GeoStatResponse(BaseModel):
@@ -37,8 +36,7 @@ class GeoStatResponse(BaseModel):
     lat: float | None = Field(None, description="Latitude")
     lng: float | None = Field(None, description="Longitude")
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 class GeoAveragesResponse(BaseModel):

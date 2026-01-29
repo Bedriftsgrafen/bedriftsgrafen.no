@@ -134,3 +134,67 @@ def test_search_companies(client, mock_company_service):
     # Assert
     assert response.status_code == 200
     assert len(response.json()) == 1
+
+
+def test_get_company_stats(client, mock_company_service):
+    """Test get company stats endpoint."""
+    # Arrange
+    mock_company_service.get_aggregate_stats.return_value = {
+        "total_count": 100,
+        "sum_revenue": 1000000,
+        "sum_profit": 100000,
+        "sum_employees": 500,
+    }
+
+    # Act
+    response = client.get("/v1/companies/stats")
+
+    # Assert
+    assert response.status_code == 200
+    data = response.json()
+    assert data["total_count"] == 100
+
+
+def test_export_companies(client, mock_company_service, monkeypatch):
+    """Test export companies endpoint."""
+
+    # Arrange - mock export service
+    async def mock_stream():
+        yield b"orgnr,navn\n"
+        yield b"123,Test\n"
+
+    mock_export_service = MagicMock()
+    mock_export_service.stream_companies_csv = MagicMock(return_value=mock_stream())
+    monkeypatch.setattr("routers.v1.companies.ExportService", MagicMock(return_value=mock_export_service))
+
+    # Act
+    response = client.get("/v1/companies/export")
+
+    # Assert
+    assert response.status_code == 200
+    assert "text/csv" in response.headers["content-type"]
+
+
+def test_get_company_similar(client, mock_company_service):
+    """Test similar companies endpoint."""
+    # Arrange
+    mock_company_service.get_similar_companies.return_value = []
+
+    # Act
+    response = client.get(f"/v1/companies/{MOCK_ORGNR}/similar")
+
+    # Assert
+    assert response.status_code == 200
+    assert response.json() == []
+
+
+def test_search_subunits(client, mock_company_service):
+    """Test search subunits endpoint."""
+    # Arrange
+    mock_company_service.search_subunits.return_value = []
+
+    # Act
+    response = client.get("/v1/companies/search/subunits?q=test")
+
+    # Assert
+    assert response.status_code == 200

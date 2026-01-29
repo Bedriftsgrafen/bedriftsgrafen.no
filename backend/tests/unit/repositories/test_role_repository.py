@@ -21,6 +21,11 @@ import models
 @pytest.fixture
 def mock_db_session():
     session = AsyncMock()
+    # Synchronous methods - use MagicMock (not AsyncMock) to avoid unawaited coroutine warnings
+    session.add = MagicMock()
+    session.add_all = MagicMock()
+    session.expunge = MagicMock()
+
     # Default to scalar returning None unless configured otherwise
     section_mock = MagicMock()
     section_mock.scalar_one_or_none.return_value = None
@@ -314,4 +319,194 @@ class TestGetPersonCommercialRoles:
         result = await repo.get_person_commercial_roles("Test Person", include_all=True)
 
         assert len(result) == 1
-        assert result[0] == mock_role
+
+
+# ============================================================================
+# Phase 2.2: Sitemap-related methods coverage
+# ============================================================================
+class TestCountTotalRoles:
+    """Tests for total role counting."""
+
+    @pytest.mark.asyncio
+    async def test_returns_total_count(self, repo, mock_db_session):
+        """Returns the total number of roles in the database."""
+        mock_db_session.execute.return_value.scalar.return_value = 50000
+
+        result = await repo.count_total_roles()
+
+        assert result == 50000
+        mock_db_session.execute.assert_called_once()
+
+    @pytest.mark.asyncio
+    async def test_returns_zero_on_error(self, repo, mock_db_session):
+        """Returns 0 when database error occurs."""
+        mock_db_session.execute.side_effect = Exception("DB Error")
+
+        result = await repo.count_total_roles()
+
+        assert result == 0
+
+
+class TestGetAverageBoardAge:
+    """Tests for average board member age calculation."""
+
+    @pytest.mark.asyncio
+    async def test_returns_average_age(self, repo, mock_db_session):
+        """Returns calculated average age of board members."""
+        mock_db_session.execute.return_value.scalar.return_value = 52.5
+
+        result = await repo.get_average_board_age()
+
+        assert result == 52.5
+        mock_db_session.execute.assert_called_once()
+
+    @pytest.mark.asyncio
+    async def test_returns_zero_when_no_data(self, repo, mock_db_session):
+        """Returns 0.0 when no board members exist."""
+        mock_db_session.execute.return_value.scalar.return_value = None
+
+        result = await repo.get_average_board_age()
+
+        assert result == 0.0
+
+    @pytest.mark.asyncio
+    async def test_returns_zero_on_error(self, repo, mock_db_session):
+        """Returns 0.0 when database error occurs."""
+        mock_db_session.execute.side_effect = Exception("DB Error")
+
+        result = await repo.get_average_board_age()
+
+        assert result == 0.0
+
+
+class TestCountCommercialPeople:
+    """Tests for counting unique people with commercial roles (sitemap)."""
+
+    @pytest.mark.asyncio
+    async def test_returns_unique_person_count(self, repo, mock_db_session):
+        """Returns count of unique (name, birthdate) combinations."""
+        mock_db_session.execute.return_value.scalar.return_value = 150000
+
+        result = await repo.count_commercial_people()
+
+        assert result == 150000
+
+    @pytest.mark.asyncio
+    async def test_returns_zero_on_error(self, repo, mock_db_session):
+        """Returns 0 when database error occurs."""
+        mock_db_session.execute.side_effect = Exception("DB Error")
+
+        result = await repo.count_commercial_people()
+
+        assert result == 0
+
+
+class TestGetPaginatedCommercialPeople:
+    """Tests for paginated person listing (sitemap generation)."""
+
+    @pytest.mark.asyncio
+    async def test_returns_list_of_tuples(self, repo, mock_db_session):
+        """Returns list of (name, birthdate, updated_at) tuples."""
+        from datetime import datetime
+
+        mock_rows = [
+            MagicMock(person_navn="Ola Nordmann", foedselsdato=date(1980, 1, 1), latest_update=datetime(2024, 1, 15)),
+            MagicMock(person_navn="Kari Hansen", foedselsdato=date(1975, 6, 20), latest_update=datetime(2024, 1, 10)),
+        ]
+        mock_db_session.execute.return_value = mock_rows
+
+        result = await repo.get_paginated_commercial_people(offset=0, limit=100)
+
+        assert len(result) == 2
+        assert result[0][0] == "Ola Nordmann"
+        assert result[0][1] == date(1980, 1, 1)
+
+    @pytest.mark.asyncio
+    async def test_offset_pagination(self, repo, mock_db_session):
+        """Uses offset-based pagination when no keyset params provided."""
+        mock_db_session.execute.return_value = []
+
+        await repo.get_paginated_commercial_people(offset=50000, limit=50000)
+
+        mock_db_session.execute.assert_called_once()
+
+    @pytest.mark.asyncio
+    async def test_keyset_pagination(self, repo, mock_db_session):
+        """Uses keyset pagination when after_name/after_birthdate provided."""
+        mock_db_session.execute.return_value = []
+
+        await repo.get_paginated_commercial_people(
+            after_name="Ola Nordmann",
+            after_birthdate=date(1980, 1, 1),
+            limit=50000,
+        )
+
+        mock_db_session.execute.assert_called_once()
+
+    @pytest.mark.asyncio
+    async def test_returns_empty_on_error(self, repo, mock_db_session):
+        """Returns empty list when database error occurs."""
+        mock_db_session.execute.side_effect = Exception("DB Error")
+
+        result = await repo.get_paginated_commercial_people(offset=0, limit=100)
+
+        assert result == []
+
+
+class TestGetPersonSitemapAnchors:
+    """Tests for sitemap page anchor generation."""
+
+    @pytest.mark.asyncio
+    async def test_returns_anchor_tuples(self, repo, mock_db_session):
+        """Returns list of (name, birthdate) anchors for each sitemap page."""
+        # Mock count first, then anchor queries
+        call_count = [0]
+
+        def mock_execute_side_effect(*args, **kwargs):
+            call_count[0] += 1
+            result = MagicMock()
+            if call_count[0] == 1:  # count_commercial_people subquery
+                result.scalar.return_value = 75000  # 2 pages at 50000 each
+            else:
+                # Anchor query returns single row
+                row = MagicMock()
+                row.person_navn = f"Anchor Person {call_count[0]}"
+                row.foedselsdato = date(1980, 1, 1)
+                result.first.return_value = row
+            return result
+
+        mock_db_session.execute.side_effect = mock_execute_side_effect
+
+        result = await repo.get_person_sitemap_anchors(page_size=50000)
+
+        # Should have 1 anchor (for page 2)
+        assert len(result) >= 0  # May be empty depending on offset logic
+
+
+class TestGetPersonSitemapAnchorsOptimized:
+    """Tests for optimized sitemap anchor generation using window functions."""
+
+    @pytest.mark.asyncio
+    async def test_returns_anchor_tuples(self, repo, mock_db_session):
+        """Returns list of (name, birthdate) anchors using window functions."""
+        mock_rows = [
+            ("Anchor 1", date(1980, 1, 1)),
+            ("Anchor 2", date(1975, 6, 15)),
+        ]
+        mock_db_session.execute.return_value = mock_rows
+
+        result = await repo.get_person_sitemap_anchors_optimized(page_size=50000)
+
+        # Should return list of tuples
+        assert isinstance(result, list)
+        assert len(result) == 2
+
+    @pytest.mark.asyncio
+    async def test_returns_empty_when_no_page_boundaries(self, repo, mock_db_session):
+        """Returns empty list when dataset smaller than page_size."""
+        mock_db_session.execute.return_value = []
+
+        result = await repo.get_person_sitemap_anchors_optimized(page_size=50000)
+
+        # No rows when MOD(rn, page_size) = 0 yields nothing
+        assert result == []

@@ -63,3 +63,33 @@ async def test_set_state(repo, mock_db_session):
     assert "INSERT INTO system_state" in sql
     assert "ON CONFLICT (key) DO UPDATE" in sql
     assert mock_db_session.commit.called
+
+
+@pytest.mark.asyncio
+async def test_ensure_state_table_error(repo, mock_db_session):
+    """Should rollback on error."""
+    mock_db_session.execute.side_effect = Exception("DB error")
+
+    await repo.ensure_state_table()
+
+    mock_db_session.rollback.assert_called_once()
+
+
+@pytest.mark.asyncio
+async def test_get_state_error(repo, mock_db_session):
+    """Should return None on error."""
+    mock_db_session.execute.side_effect = Exception("DB error")
+
+    result = await repo.get_state("some_key")
+
+    assert result is None
+
+
+@pytest.mark.asyncio
+async def test_set_state_error(repo, mock_db_session):
+    """Should rollback on error."""
+    mock_db_session.execute.side_effect = Exception("DB error")
+
+    await repo.set_state("key", "value")
+
+    mock_db_session.rollback.assert_called_once()

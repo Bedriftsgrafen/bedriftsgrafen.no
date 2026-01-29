@@ -12,6 +12,7 @@ Follows AAA pattern (Arrange - Act - Assert).
 import pytest
 from unittest.mock import AsyncMock, MagicMock, patch
 from services.repair_service import RepairService
+from models import Company
 
 
 @pytest.fixture
@@ -211,6 +212,95 @@ class TestBackfillRoles:
         repair_service.role_repo.create_batch.assert_called_once()
         repair_service.company_repo.update_last_polled_roles.assert_called_once_with("123456789")
         mock_db.commit.assert_called_once()
+
+    @pytest.mark.asyncio
+    async def test_backfill_roles_empty_list(self, repair_service, mock_db):
+        """Test backfill_roles handles empty company list."""
+        # Arrange: Return empty list via db.execute
+        mock_result = MagicMock()
+        mock_result.scalars.return_value.all.return_value = []
+        mock_db.execute.return_value = mock_result
+
+        # Act
+        await repair_service.backfill_roles(limit=10)
+
+        # Assert: No further processing
+        repair_service.brreg_api.fetch_roles.assert_not_called()
+
+
+class TestBackfillRegistrationDates:
+    """Tests for backfilling registration dates from raw_data."""
+
+    @pytest.mark.asyncio
+    async def test_backfill_registration_dates_success(self, repair_service, mock_db):
+        """Test successful backfill of registration dates from raw_data."""
+        # Arrange
+        mock_company = MagicMock(spec=Company)
+        mock_company.orgnr = "123456789"
+        mock_company.registreringsdato_enhetsregisteret = None
+        mock_company.raw_data = {
+            "registreringsdatoEnhetsregisteret": "2020-01-15",
+            "registreringsdatoForetaksregisteret": "2020-01-20",
+        }
+
+        # Mock db.execute to return the company
+        mock_result = MagicMock()
+        mock_result.scalars.return_value.all.return_value = [mock_company]
+        mock_db.execute.return_value = mock_result
+
+        # Mock the company_repo._parse_company_fields to return parsed fields
+        from datetime import date
+
+        repair_service.update_service.company_repo._parse_company_fields = MagicMock(
+            return_value={
+                "registreringsdato_enhetsregisteret": date(2020, 1, 15),
+                "registreringsdato_foretaksregisteret": date(2020, 1, 20),
+            }
+        )
+
+        # Enable repair mode for commit to happen
+        repair_service.repair = True
+
+        # Act
+        await repair_service.backfill_registration_dates(limit=1)
+
+        # Assert
+        mock_db.commit.assert_called_once()
+        assert mock_company.registreringsdato_enhetsregisteret == date(2020, 1, 15)
+
+    @pytest.mark.asyncio
+    async def test_backfill_registration_dates_skips_no_raw_data(self, repair_service, mock_db):
+        """Test backfill skips companies without raw_data."""
+        # Arrange
+        mock_company = MagicMock(spec=Company)
+        mock_company.orgnr = "123456789"
+        mock_company.raw_data = None  # No raw_data
+
+        mock_result = MagicMock()
+        mock_result.scalars.return_value.all.return_value = [mock_company]
+        mock_db.execute.return_value = mock_result
+
+        repair_service.repair = True
+
+        # Act
+        await repair_service.backfill_registration_dates(limit=1)
+
+        # Assert: commit not called if success_count is 0
+        mock_db.commit.assert_not_called()
+
+    @pytest.mark.asyncio
+    async def test_backfill_registration_dates_empty_list(self, repair_service, mock_db):
+        """Test backfill handles empty company list."""
+        # Arrange - return empty list from db.execute
+        mock_result = MagicMock()
+        mock_result.scalars.return_value.all.return_value = []
+        mock_db.execute.return_value = mock_result
+
+        # Act
+        await repair_service.backfill_registration_dates(limit=10)
+
+        # Assert: commit not called, no processing
+        mock_db.commit.assert_not_called()
 
 
 class TestRunAllRepairs:

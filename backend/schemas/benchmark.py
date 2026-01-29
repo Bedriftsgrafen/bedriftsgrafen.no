@@ -1,6 +1,6 @@
 """Benchmark-related Pydantic schemas for API request/response models."""
 
-from pydantic import BaseModel, Field, field_validator
+from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 
 class BenchmarkMetric(BaseModel):
@@ -43,5 +43,4 @@ class IndustryBenchmarkResponse(BaseModel):
             raise ValueError("NACE code must be 2 digits (XX) or 6 characters (XX.XXX)")
         return v
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)

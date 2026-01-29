@@ -8,6 +8,10 @@ import models
 async def test_report_sync_error_no_autoflush():
     # Arrange
     mock_db = AsyncMock()
+    # Synchronous methods - use MagicMock to avoid unawaited coroutine warnings
+    mock_db.add = MagicMock()
+    mock_db.add_all = MagicMock()
+
     # Mock no_autoflush to be a synchronous context manager
     mock_db.no_autoflush = MagicMock()
     mock_db.no_autoflush.__enter__ = MagicMock()

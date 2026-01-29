@@ -242,3 +242,194 @@ class TestFetchRoleUpdates:
         # 404 for company should be recorded
         await update_service.report_sync_error("123", "company", "Msg", status_code=404)
         assert mock_db.add.call_count == 1
+
+
+class TestFetchChunkDetails:
+    """Tests for concurrent API fetching in chunks."""
+
+    @pytest.mark.asyncio
+    async def test_fetch_chunk_details_fetches_concurrently(self, update_service):
+        """_fetch_chunk_details should fetch company data for each update."""
+        entities = [
+            {"organisasjonsnummer": "111111111", "oppdateringsid": 1},
+            {"organisasjonsnummer": "222222222", "oppdateringsid": 2},
+        ]
+
+        update_service.brreg_api.fetch_company = AsyncMock(
+            side_effect=[
+                {"organisasjonsnummer": "111111111", "navn": "Company 1"},
+                {"organisasjonsnummer": "222222222", "navn": "Company 2"},
+            ]
+        )
+
+        result = await update_service._fetch_chunk_details(entities)
+
+        assert len(result) == 2
+        assert result[0].orgnr == "111111111"
+        assert result[1].orgnr == "222222222"
+        assert update_service.brreg_api.fetch_company.call_count == 2
+
+    @pytest.mark.asyncio
+    async def test_fetch_chunk_details_handles_api_errors(self, update_service):
+        """_fetch_chunk_details should mark failures for API errors."""
+        entities = [{"organisasjonsnummer": "123456789", "oppdateringsid": 1}]
+
+        update_service.brreg_api.fetch_company = AsyncMock(side_effect=Exception("API timeout"))
+
+        result = await update_service._fetch_chunk_details(entities)
+
+        assert len(result) == 1
+        assert result[0].success is False
+        assert "API timeout" in result[0].error
+
+
+class TestPersistChunk:
+    """Tests for sequential database persistence."""
+
+    @pytest.mark.asyncio
+    async def test_persist_chunk_creates_company(self, update_service):
+        """_persist_chunk should create company from successful fetch."""
+        company = MagicMock()
+        company.last_polled_regnskap = date.today()
+        update_service.company_repo.create_or_update = AsyncMock(return_value=company)
+        update_service._fetch_and_persist_financials = AsyncMock()
+
+        fetch_results = [
+            FetchResult(
+                orgnr="123456789", success=True, company_data={"organisasjonsnummer": "123456789", "navn": "Test"}
+            )
+        ]
+        result = UpdateBatchResult(since_date=date.today(), since_iso="2026-01-26T00:00:00.000Z")
+
+        await update_service._persist_chunk(fetch_results, result)
+
+        update_service.company_repo.create_or_update.assert_called_once()
+        assert result.companies_processed == 1
+
+    @pytest.mark.asyncio
+    async def test_persist_chunk_skips_failed_fetches(self, update_service):
+        """_persist_chunk should skip items that failed to fetch."""
+        update_service.company_repo.create_or_update = AsyncMock()
+        update_service.report_sync_error = AsyncMock()  # Mock to avoid unawaited warning
+
+        fetch_results = [FetchResult(orgnr="123456789", success=False, error="API error")]
+        result = UpdateBatchResult(since_date=date.today(), since_iso="2026-01-26T00:00:00.000Z")
+
+        await update_service._persist_chunk(fetch_results, result)
+
+        update_service.company_repo.create_or_update.assert_not_called()
+        assert result.api_errors == 1
+
+
+class TestRefreshMaterializedView:
+    """Tests for materialized view refresh."""
+
+    @pytest.mark.asyncio
+    async def test_refresh_materialized_view_executes_query(self, update_service, mock_db):
+        """Should execute REFRESH MATERIALIZED VIEW."""
+        result = UpdateBatchResult(
+            since_date=date.today(),
+            since_iso="2026-01-26T00:00:00.000Z",
+            companies_created=10,
+        )
+
+        await update_service._refresh_materialized_view(result)
+
+        # Should execute REFRESH MATERIALIZED VIEW
+        mock_db.execute.assert_called()
+        mock_db.commit.assert_called()
+
+    @pytest.mark.asyncio
+    async def test_refresh_materialized_view_handles_error(self, update_service, mock_db):
+        """Should handle errors gracefully and rollback."""
+        result = UpdateBatchResult(
+            since_date=date.today(),
+            since_iso="2026-01-26T00:00:00.000Z",
+        )
+
+        mock_db.execute.side_effect = Exception("Database error")
+
+        await update_service._refresh_materialized_view(result)
+
+        # Should rollback on error
+        mock_db.rollback.assert_called()
+        assert len(result.errors) == 1
+
+
+class TestFetchAndPersistFinancials:
+    """Tests for financial data fetching."""
+
+    @pytest.mark.asyncio
+    async def test_fetch_financials_calls_api(self, update_service, mock_db):
+        """Should fetch financials via API for given orgnr."""
+        update_service.brreg_api.fetch_financial_statements = AsyncMock(return_value=[])
+        update_service.company_repo.update_last_polled_regnskap = AsyncMock()
+
+        result = UpdateBatchResult(since_date=date.today(), since_iso="2026-01-26T00:00:00.000Z")
+
+        await update_service._fetch_and_persist_financials("123456789", result)
+
+        update_service.brreg_api.fetch_financial_statements.assert_called_once_with("123456789")
+        update_service.company_repo.update_last_polled_regnskap.assert_called_once_with("123456789")
+
+    @pytest.mark.asyncio
+    async def test_fetch_financials_parses_and_stores(self, update_service, mock_db):
+        """Should parse and store financial statements."""
+        update_service.brreg_api.fetch_financial_statements = AsyncMock(
+            return_value=[{"id": 1, "regnskapsperiode": {"fraDato": "2024-01-01", "tilDato": "2024-12-31"}}]
+        )
+        update_service.brreg_api.parse_financial_data = AsyncMock(return_value={"aar": 2024, "orgnr": "123456789"})
+        update_service.accounting_repo.create_or_update = AsyncMock()
+        update_service.company_repo.update_last_polled_regnskap = AsyncMock()
+
+        result = UpdateBatchResult(since_date=date.today(), since_iso="2026-01-26T00:00:00.000Z")
+
+        await update_service._fetch_and_persist_financials("123456789", result)
+
+        update_service.accounting_repo.create_or_update.assert_called_once()
+        assert result.financials_updated == 1
+
+    @pytest.mark.asyncio
+    async def test_fetch_financials_handles_api_error(self, update_service, mock_db):
+        """Should handle API errors gracefully."""
+        update_service.brreg_api.fetch_financial_statements = AsyncMock(side_effect=Exception("API error"))
+
+        result = UpdateBatchResult(since_date=date.today(), since_iso="2026-01-26T00:00:00.000Z")
+
+        await update_service._fetch_and_persist_financials("123456789", result)
+
+        # Should record error but not raise
+        assert len(result.errors) == 1
+        assert "API error" in result.errors[0]
+
+
+class TestFetchSubunitUpdatesEdgeCases:
+    """Additional edge case tests for subunit updates."""
+
+    @pytest.mark.asyncio
+    async def test_handles_empty_page_response(self, update_service, mock_db):
+        """Should handle empty response gracefully."""
+        mock_resp = MagicMock(status_code=200)
+        mock_resp.json.return_value = {"_embedded": {"oppdaterteUnderenheter": []}, "_links": {}}
+
+        with patch("httpx.AsyncClient") as mock_client:
+            mock_client.return_value.__aenter__.return_value.get.return_value = mock_resp
+
+            result = await update_service.fetch_subunit_updates(page_size=10)
+
+            # Result should have proper structure
+            assert isinstance(result, dict)
+            assert "errors" in result or "since_date" in result
+
+    @pytest.mark.asyncio
+    async def test_handles_api_error_response(self, update_service, mock_db):
+        """Should handle non-200 API response."""
+        mock_resp = MagicMock(status_code=500)
+
+        with patch("httpx.AsyncClient") as mock_client:
+            mock_client.return_value.__aenter__.return_value.get.return_value = mock_resp
+
+            result = await update_service.fetch_subunit_updates(page_size=10)
+
+            # Should return result dict with errors
+            assert isinstance(result, dict)

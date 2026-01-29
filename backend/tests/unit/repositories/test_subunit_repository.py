@@ -150,3 +150,164 @@ async def test_count_by_parent(repo, mock_db_session):
     mock_db_session.execute.return_value.scalar_one.return_value = 3
     count = await repo.count_by_parent("parent1")
     assert count == 3
+
+
+@pytest.mark.asyncio
+async def test_count_by_parent_error(repo, mock_db_session):
+    """Should return 0 on error."""
+    mock_db_session.execute.side_effect = Exception("DB error")
+    count = await repo.count_by_parent("parent1")
+    assert count == 0
+
+
+@pytest.mark.asyncio
+async def test_delete_by_parent_orgnr(repo, mock_db_session):
+    """Should delete all subunits for a parent and return count."""
+    mock_db_session.execute.return_value.rowcount = 5
+
+    deleted = await repo.delete_by_parent_orgnr("999999999")
+
+    assert deleted == 5
+    mock_db_session.execute.assert_called_once()
+    mock_db_session.commit.assert_called_once()
+
+
+@pytest.mark.asyncio
+async def test_delete_by_parent_orgnr_error(repo, mock_db_session):
+    """Should return 0 and rollback on error."""
+    mock_db_session.execute.side_effect = Exception("DB error")
+
+    deleted = await repo.delete_by_parent_orgnr("999999999")
+
+    assert deleted == 0
+    mock_db_session.rollback.assert_called_once()
+
+
+@pytest.mark.asyncio
+async def test_delete_by_parent_orgnr_no_commit(repo, mock_db_session):
+    """Should not commit when commit=False."""
+    mock_db_session.execute.return_value.rowcount = 3
+
+    deleted = await repo.delete_by_parent_orgnr("999999999", commit=False)
+
+    assert deleted == 3
+    mock_db_session.commit.assert_not_called()
+
+
+@pytest.mark.asyncio
+async def test_get_existing_orgnrs(repo, mock_db_session):
+    """Should return set of existing orgnrs."""
+    mock_db_session.execute.return_value.fetchall.return_value = [("111",), ("222",)]
+
+    result = await repo.get_existing_orgnrs(["111", "222", "333"])
+
+    assert result == {"111", "222"}
+
+
+@pytest.mark.asyncio
+async def test_get_existing_orgnrs_empty_input(repo, mock_db_session):
+    """Should return empty set for empty input."""
+    result = await repo.get_existing_orgnrs([])
+
+    assert result == set()
+    mock_db_session.execute.assert_not_called()
+
+
+@pytest.mark.asyncio
+async def test_get_existing_orgnrs_error(repo, mock_db_session):
+    """Should return empty set on error."""
+    mock_db_session.execute.side_effect = Exception("DB error")
+
+    result = await repo.get_existing_orgnrs(["111", "222"])
+
+    assert result == set()
+
+
+@pytest.mark.asyncio
+async def test_get_by_parent_orgnr_error(repo, mock_db_session):
+    """Should return empty list on error."""
+    mock_db_session.execute.side_effect = Exception("DB error")
+
+    result = await repo.get_by_parent_orgnr("999999999")
+
+    assert result == []
+
+
+@pytest.mark.asyncio
+async def test_get_by_orgnr_error(repo, mock_db_session):
+    """Should return None on error."""
+    mock_db_session.execute.side_effect = Exception("DB error")
+
+    result = await repo.get_by_orgnr("111111111")
+
+    assert result is None
+
+
+@pytest.mark.asyncio
+async def test_search_by_name_error(repo, mock_db_session):
+    """Should return empty list on error."""
+    mock_db_session.execute.side_effect = Exception("DB error")
+
+    result = await repo.search_by_name("Test")
+
+    assert result == []
+
+
+@pytest.mark.asyncio
+async def test_search_by_name_empty_query(repo, mock_db_session):
+    """Should return empty list for empty query."""
+    result = await repo.search_by_name("")
+
+    assert result == []
+    mock_db_session.execute.assert_not_called()
+
+
+@pytest.mark.asyncio
+async def test_search_by_name_limits_results(repo, mock_db_session):
+    """Should cap results at 500."""
+    mock_db_session.execute.return_value.scalars.return_value.all.return_value = []
+
+    # Request more than max
+    await repo.search_by_name("Test", limit=1000)
+
+    # Verify execute was called (limit is enforced internally)
+    mock_db_session.execute.assert_called_once()
+
+
+@pytest.mark.asyncio
+async def test_create_batch_empty_input(repo, mock_db_session):
+    """Should return 0 for empty input."""
+    count = await repo.create_batch([])
+
+    assert count == 0
+    mock_db_session.execute.assert_not_called()
+
+
+@pytest.mark.asyncio
+async def test_create_batch_error(repo, mock_db_session):
+    """Should return 0 and rollback on error."""
+    unit = models.SubUnit()
+    unit.orgnr = "111111111"
+    unit.navn = "Test"
+    unit.parent_orgnr = "999999999"
+
+    mock_db_session.execute.side_effect = Exception("DB error")
+
+    count = await repo.create_batch([unit])
+
+    assert count == 0
+    mock_db_session.rollback.assert_called_once()
+
+
+@pytest.mark.asyncio
+async def test_create_batch_no_commit(repo, mock_db_session):
+    """Should not commit when commit=False."""
+    unit = models.SubUnit()
+    unit.orgnr = "111111111"
+    unit.navn = "Test"
+    unit.parent_orgnr = "999999999"
+
+    count = await repo.create_batch([unit], commit=False)
+
+    assert count == 1
+    mock_db_session.commit.assert_not_called()

@@ -7,6 +7,11 @@ from models import Company
 @pytest.fixture
 def mock_db_session():
     session = AsyncMock()
+    # Synchronous methods - use MagicMock to avoid unawaited coroutine warnings
+    session.add = MagicMock()
+    session.add_all = MagicMock()
+    session.expunge = MagicMock()
+
     # Mock execute/scalar behaviors as needed
     session.execute.return_value = MagicMock()
     session.execute.return_value.scalar.return_value = 0

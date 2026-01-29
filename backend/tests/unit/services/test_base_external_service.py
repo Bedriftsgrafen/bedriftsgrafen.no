@@ -4,9 +4,9 @@ from unittest.mock import MagicMock, AsyncMock, patch
 from services.base_external_service import BaseExternalService, ExternalApiException
 
 
-# Concrete implementation for testing
-class TestService(BaseExternalService):
-    SERVICE_NAME = "TestService"
+# Concrete implementation for testing (prefixed with _ to avoid pytest collection)
+class _MockExternalService(BaseExternalService):
+    SERVICE_NAME = "MockExternalService"
     BASE_URL = "http://test.com"
 
     async def get_resource(self):
@@ -21,7 +21,7 @@ def mock_httpx_client():
 
 @pytest.fixture
 def service(mock_httpx_client):
-    return TestService(client=mock_httpx_client)
+    return _MockExternalService(client=mock_httpx_client)
 
 
 @pytest.mark.asyncio

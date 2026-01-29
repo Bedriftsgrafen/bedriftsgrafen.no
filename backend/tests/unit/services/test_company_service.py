@@ -227,7 +227,8 @@ async def test_get_subunits_syncs_if_missing(service):
 
 
 @pytest.mark.asyncio
-async def test_fetch_and_store_company(service):
+@patch("services.role_service.RoleService")
+async def test_fetch_and_store_company(MockRoleService, service):
     """Should fetch from Brreg and store in database."""
     # Arrange
     mock_company_data = {"organisasjonsnummer": "123456789", "navn": "Test AS"}
@@ -239,6 +240,10 @@ async def test_fetch_and_store_company(service):
 
     service.brreg_api.fetch_subunits.return_value = []
     service.brreg_api.fetch_financial_statements.return_value = []
+
+    # Mock RoleService to avoid unawaited coroutine warning
+    mock_role_instance = AsyncMock()
+    MockRoleService.return_value = mock_role_instance
 
     # Act
     result = await service.fetch_and_store_company("123456789")
@@ -285,20 +290,21 @@ async def test_ensure_geocoded(service):
 @pytest.mark.asyncio
 async def test_get_statistics(service):
     """Should return platform-wide statistics."""
-    # Arrange
-    service.company_repo.count.return_value = 1000000
-    service.company_repo.get_total_employees.return_value = 2500000
-    service.company_repo.get_aggregate_stats.return_value = {"total_count": 1000000, "total_employees": 2500000}
-    service.accounting_repo.get_aggregated_stats.return_value = {"total_revenue": 1000000000}
-    service.company_repo.get_geocoded_count.return_value = 900000
-    service.company_repo.get_new_companies_30d.return_value = 5000
-    service.role_repo.count_total_roles.return_value = 3000000
+    # Arrange - use AsyncMock for async methods
+    service.get_aggregate_stats = AsyncMock(return_value={"total_count": 1000000, "total_employees": 2500000})
+    service.company_repo.count = AsyncMock(return_value=1000000)
+    service.company_repo.get_total_employees = AsyncMock(return_value=2500000)
+    service.accounting_repo.get_aggregated_stats = AsyncMock(return_value={"total_revenue": 1000000000})
+    service.company_repo.get_geocoded_count = AsyncMock(return_value=900000)
+    service.company_repo.get_new_companies_30d = AsyncMock(return_value=5000)
+    service.role_repo.count_total_roles = AsyncMock(return_value=3000000)
 
     # Act
     result = await service.get_statistics()
 
     # Assert
-    assert "total_companies" in result or service.company_repo.count.called
+    assert result["total_companies"] == 1000000
+    assert result["total_employees"] == 2500000
 
 
 class TestEnrichNaceCodes:
@@ -328,7 +334,7 @@ class TestEnrichNaceCodes:
         mock_item = {"naeringskode": "62.010", "naeringskoder": None}
 
         with patch("services.company_service.NaceService") as mock_nace_class:
-            mock_nace = MagicMock()
+            mock_nace = AsyncMock()
             mock_nace.get_nace_name = AsyncMock(return_value="Programmeringstjenester")
             mock_nace_class.return_value = mock_nace
 

@@ -152,3 +152,222 @@ async def test_alert_methods(repo, mock_db_session):
     mock_db_session.execute.return_value.scalar.return_value = 10
     assert await repo.get_new_companies_ytd() == 10
     assert await repo.get_bankruptcies_count() == 10
+
+
+@pytest.mark.asyncio
+async def test_count_companies_with_financial_sort(repo, mock_db_session):
+    """Test count with financial sort field triggers financial join."""
+    filters = FilterParams()
+    mock_db_session.execute.return_value.scalar.return_value = 25
+
+    count = await repo.count_companies(filters, sort_by="revenue")
+
+    assert count == 25
+
+
+@pytest.mark.asyncio
+async def test_count_companies_with_financial_filters(repo, mock_db_session):
+    """Test count with financial filters triggers financial join."""
+    filters = FilterParams(min_revenue=1000)
+    mock_db_session.execute.return_value.scalar.return_value = 15
+
+    count = await repo.count_companies(filters)
+
+    assert count == 15
+
+
+@pytest.mark.asyncio
+async def test_count_companies_org_form_error_fallback(repo, mock_db_session):
+    """Test org form optimization failure falls back to regular query."""
+    filters = FilterParams(organisasjonsform=["AS"])
+
+    # First call fails (org form optimization), second succeeds
+    mock_result1 = MagicMock()
+    mock_result1.scalar.side_effect = Exception("Table not found")
+
+    mock_result2 = MagicMock()
+    mock_result2.scalar.return_value = 30
+
+    mock_db_session.execute.side_effect = [mock_result1, mock_result2]
+
+    count = await repo.count_companies(filters)
+
+    assert count == 30
+
+
+@pytest.mark.asyncio
+async def test_get_aggregate_stats_with_financial_sort(repo, mock_db_session):
+    """Test aggregate stats with financial sort uses INNER JOIN."""
+    filters = FilterParams()
+
+    mock_row_stats = (50, 10000.0, 1000.0, 100)
+    mock_rows_breakdown = [("AS", 50)]
+
+    mock_result_stats = MagicMock()
+    mock_result_stats.fetchone.return_value = mock_row_stats
+
+    mock_result_breakdown = MagicMock()
+    mock_result_breakdown.fetchall.return_value = mock_rows_breakdown
+
+    mock_db_session.execute.side_effect = [mock_result_stats, mock_result_breakdown]
+
+    stats = await repo.get_aggregate_stats(filters, sort_by="revenue")
+
+    assert stats["total_count"] == 50
+    assert stats["total_revenue"] == 10000.0
+
+
+@pytest.mark.asyncio
+async def test_get_aggregate_stats_exception(repo, mock_db_session):
+    """Test aggregate stats returns defaults on error."""
+    filters = FilterParams(name="test")
+
+    mock_db_session.execute.side_effect = Exception("DB error")
+
+    stats = await repo.get_aggregate_stats(filters)
+
+    assert stats["total_count"] == 0
+    assert stats["total_revenue"] == 0.0
+    assert stats["by_organisasjonsform"] == []
+
+
+@pytest.mark.asyncio
+async def test_count_fast_estimate(repo, mock_db_session):
+    """Test fast count uses pg_class estimate."""
+    mock_db_session.execute.return_value.scalar.return_value = 1000000
+
+    count = await repo.count(fast=True)
+
+    assert count == 1000000
+
+
+@pytest.mark.asyncio
+async def test_count_fast_estimate_fallback(repo, mock_db_session):
+    """Test fast count falls back when estimate fails."""
+    mock_result_estimate = MagicMock()
+    mock_result_estimate.scalar.side_effect = Exception("pg_class error")
+
+    mock_result_actual = MagicMock()
+    mock_result_actual.scalar.return_value = 500000
+
+    mock_db_session.execute.side_effect = [mock_result_estimate, mock_result_actual]
+
+    count = await repo.count(fast=True)
+
+    assert count == 500000
+
+
+@pytest.mark.asyncio
+async def test_count_fast_estimate_zero_fallback(repo, mock_db_session):
+    """Test fast count falls back when estimate returns 0."""
+    mock_result_estimate = MagicMock()
+    mock_result_estimate.scalar.return_value = 0
+
+    mock_result_actual = MagicMock()
+    mock_result_actual.scalar.return_value = 100
+
+    mock_db_session.execute.side_effect = [mock_result_estimate, mock_result_actual]
+
+    count = await repo.count(fast=True)
+
+    assert count == 100
+
+
+@pytest.mark.asyncio
+async def test_get_new_companies_ytd_fallback(repo, mock_db_session):
+    """Test new companies YTD falls back to query on error."""
+    mock_result1 = MagicMock()
+    mock_result1.scalar.side_effect = Exception("Table not found")
+
+    mock_result2 = MagicMock()
+    mock_result2.scalar.return_value = 500
+
+    mock_db_session.execute.side_effect = [mock_result1, mock_result2]
+
+    count = await repo.get_new_companies_ytd()
+
+    assert count == 500
+
+
+@pytest.mark.asyncio
+async def test_get_bankruptcies_count_fallback(repo, mock_db_session):
+    """Test bankruptcies count falls back on error."""
+    mock_result1 = MagicMock()
+    mock_result1.scalar.side_effect = Exception("Table not found")
+
+    mock_result2 = MagicMock()
+    mock_result2.scalar.return_value = 50
+
+    mock_db_session.execute.side_effect = [mock_result1, mock_result2]
+
+    count = await repo.get_bankruptcies_count()
+
+    assert count == 50
+
+
+@pytest.mark.asyncio
+async def test_get_geocoded_count(repo, mock_db_session):
+    """Test geocoded count."""
+    mock_db_session.execute.return_value.scalar.return_value = 800000
+
+    count = await repo.get_geocoded_count()
+
+    assert count == 800000
+
+
+@pytest.mark.asyncio
+async def test_get_geocoded_count_error(repo, mock_db_session):
+    """Test geocoded count returns 0 on error."""
+    mock_db_session.execute.side_effect = Exception("DB error")
+
+    count = await repo.get_geocoded_count()
+
+    assert count == 0
+
+
+@pytest.mark.asyncio
+async def test_get_new_companies_30d(repo, mock_db_session):
+    """Test new companies in last 30 days."""
+    mock_db_session.execute.return_value.scalar.return_value = 1500
+
+    count = await repo.get_new_companies_30d()
+
+    assert count == 1500
+
+
+@pytest.mark.asyncio
+async def test_get_new_companies_30d_error(repo, mock_db_session):
+    """Test new companies 30d returns 0 on error."""
+    mock_db_session.execute.side_effect = Exception("DB error")
+
+    count = await repo.get_new_companies_30d()
+
+    assert count == 0
+
+
+@pytest.mark.asyncio
+async def test_get_aggregate_stats_materialized_view_error(repo, mock_db_session):
+    """Test materialized view error falls back to regular query."""
+    filters = FilterParams()
+
+    # Mock nested context manager that raises error
+    nested_cm = MagicMock()
+    nested_cm.__aenter__ = AsyncMock(side_effect=Exception("MV not available"))
+    nested_cm.__aexit__ = AsyncMock(return_value=None)
+    mock_db_session.begin_nested.return_value = nested_cm
+
+    # After MV fails, regular query should work
+    mock_row_stats = (10, 500.0, 50.0, 20)
+    mock_rows_breakdown = [("AS", 10)]
+
+    mock_result_stats = MagicMock()
+    mock_result_stats.fetchone.return_value = mock_row_stats
+
+    mock_result_breakdown = MagicMock()
+    mock_result_breakdown.fetchall.return_value = mock_rows_breakdown
+
+    mock_db_session.execute.side_effect = [mock_result_stats, mock_result_breakdown]
+
+    stats = await repo.get_aggregate_stats(filters)
+
+    assert stats["total_count"] == 10

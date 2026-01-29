@@ -99,8 +99,11 @@ def test_export_companies_headers(MockExportClass):
     # Arrange
     mock_service = MockExportClass.return_value
 
+    # UTF-8 BOM: EF BB BF (proper byte sequence, not escape sequence)
+    bom = b"\xef\xbb\xbf"
+
     async def mock_stream(*args, **kwargs):
-        yield b"\ufeff"
+        yield bom
         yield b"Header\n"
         yield b"Data\n"
 
@@ -115,4 +118,4 @@ def test_export_companies_headers(MockExportClass):
     assert response.status_code == 200
     assert response.headers["content-type"] == "text/csv; charset=utf-8"
     assert "attachment; filename=" in response.headers["content-disposition"]
-    assert response.content.startswith(b"\ufeffHeader")
+    assert response.content.startswith(bom + b"Header")

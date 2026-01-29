@@ -87,3 +87,172 @@ async def test_export_row_limit_enforced(mock_db):
     call_args = service.company_service.stream_companies.call_args
     passed_filters = call_args[0][0]
     assert passed_filters.limit == 1000
+
+
+@pytest.mark.asyncio
+async def test_stream_companies_csv_uses_postadresse_fallback(mock_db):
+    """Should use postadresse when forretningsadresse is missing."""
+    service = ExportService(mock_db)
+    service.company_service = AsyncMock()
+
+    async def mock_stream(filters):
+        c1 = MagicMock()
+        c1.orgnr = "456"
+        c1.navn = "Fallback AS"
+        c1.forretningsadresse = None  # No business address
+        c1.postadresse = {"kommune": "Bergen"}  # Use postal address
+        c1.organisasjonsform = "AS"
+        c1.naeringskode = "62.000"
+        c1.antall_ansatte = 5
+        c1.latest_revenue = 50.0
+        c1.latest_profit = 5.0
+        c1.stiftelsesdato = None
+        yield c1
+
+    service.company_service.stream_companies = MagicMock(side_effect=mock_stream)
+    filters = CompanyFilterDTO()
+
+    chunks = []
+    async for chunk in service.stream_companies_csv(filters):
+        chunks.append(chunk.decode("utf-8"))
+
+    full_text = "".join(chunks)
+    assert "Bergen" in full_text
+
+
+@pytest.mark.asyncio
+async def test_stream_companies_csv_handles_none_addresses(mock_db):
+    """Should handle companies with no addresses."""
+    service = ExportService(mock_db)
+    service.company_service = AsyncMock()
+
+    async def mock_stream(filters):
+        c1 = MagicMock()
+        c1.orgnr = "789"
+        c1.navn = "No Address AS"
+        c1.forretningsadresse = None
+        c1.postadresse = None
+        c1.organisasjonsform = "AS"
+        c1.naeringskode = None
+        c1.antall_ansatte = None
+        c1.latest_revenue = None
+        c1.latest_profit = None
+        c1.stiftelsesdato = None
+        yield c1
+
+    service.company_service.stream_companies = MagicMock(side_effect=mock_stream)
+    filters = CompanyFilterDTO()
+
+    chunks = []
+    async for chunk in service.stream_companies_csv(filters):
+        chunks.append(chunk.decode("utf-8"))
+
+    full_text = "".join(chunks)
+    assert "789;No Address AS" in full_text
+
+
+@pytest.mark.asyncio
+async def test_stream_companies_csv_escapes_semicolons(mock_db):
+    """Should escape semicolons in data to avoid CSV corruption."""
+    service = ExportService(mock_db)
+    service.company_service = AsyncMock()
+
+    async def mock_stream(filters):
+        c1 = MagicMock()
+        c1.orgnr = "111"
+        c1.navn = "Test; With; Semicolons"
+        c1.forretningsadresse = {"kommune": "Oslo"}
+        c1.postadresse = None
+        c1.organisasjonsform = "AS"
+        c1.naeringskode = "62.000"
+        c1.antall_ansatte = 1
+        c1.latest_revenue = None
+        c1.latest_profit = None
+        c1.stiftelsesdato = None
+        yield c1
+
+    service.company_service.stream_companies = MagicMock(side_effect=mock_stream)
+    filters = CompanyFilterDTO()
+
+    chunks = []
+    async for chunk in service.stream_companies_csv(filters):
+        chunks.append(chunk.decode("utf-8"))
+
+    full_text = "".join(chunks)
+    # Semicolons should be replaced with commas
+    assert "Test, With, Semicolons" in full_text
+
+
+@pytest.mark.asyncio
+async def test_stream_companies_csv_formats_date(mock_db):
+    """Should format stiftelsesdato as ISO date."""
+    from datetime import date
+
+    service = ExportService(mock_db)
+    service.company_service = AsyncMock()
+
+    async def mock_stream(filters):
+        c1 = MagicMock()
+        c1.orgnr = "222"
+        c1.navn = "Dated AS"
+        c1.forretningsadresse = {"kommune": "Oslo"}
+        c1.postadresse = None
+        c1.organisasjonsform = "AS"
+        c1.naeringskode = "62.000"
+        c1.antall_ansatte = 1
+        c1.latest_revenue = None
+        c1.latest_profit = None
+        c1.stiftelsesdato = date(2020, 5, 15)
+        yield c1
+
+    service.company_service.stream_companies = MagicMock(side_effect=mock_stream)
+    filters = CompanyFilterDTO()
+
+    chunks = []
+    async for chunk in service.stream_companies_csv(filters):
+        chunks.append(chunk.decode("utf-8"))
+
+    full_text = "".join(chunks)
+    assert "2020-05-15" in full_text
+
+
+@pytest.mark.asyncio
+async def test_stream_companies_csv_error_propagates(mock_db):
+    """Should propagate errors from streaming."""
+    service = ExportService(mock_db)
+    service.company_service = AsyncMock()
+
+    async def mock_stream_error(filters):
+        raise Exception("Stream failed")
+        yield  # Make it a generator
+
+    service.company_service.stream_companies = MagicMock(side_effect=mock_stream_error)
+    filters = CompanyFilterDTO()
+
+    with pytest.raises(Exception, match="Stream failed"):
+        async for _ in service.stream_companies_csv(filters):
+            pass
+
+
+@pytest.mark.asyncio
+async def test_stream_companies_csv_caps_unlimited_limit(mock_db):
+    """Should cap limit to EXPORT_ROW_LIMIT when not set."""
+    service = ExportService(mock_db)
+    service.company_service = AsyncMock()
+
+    async def empty_gen(f):
+        if False:
+            yield None
+
+    service.company_service.stream_companies = MagicMock(side_effect=empty_gen)
+
+    # Create filters without limit (defaults to 100 in DTO, but test capping logic)
+    filters = CompanyFilterDTO()
+    filters.limit = None  # Simulate no limit
+
+    async for _ in service.stream_companies_csv(filters):
+        pass
+
+    call_args = service.company_service.stream_companies.call_args
+    passed_filters = call_args[0][0]
+    assert passed_filters.limit == service.EXPORT_ROW_LIMIT

@@ -4,6 +4,7 @@ Pytest configuration and shared fixtures for backend tests.
 
 import sys
 from pathlib import Path
+from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 from dotenv import load_dotenv
@@ -95,3 +96,61 @@ def sample_accounting_data():
         "anleggsmidler": 4000000,
         "langsiktig_gjeld": 3500000,
     }
+
+
+# =============================================================================
+# Common Mock Fixtures for Unit Tests
+# =============================================================================
+
+
+@pytest.fixture
+def mock_db_session():
+    """
+    Standard mock async database session for unit tests.
+
+    NOTE: db.add() and db.add_all() are SYNCHRONOUS methods in SQLAlchemy,
+    so they must use MagicMock (not AsyncMock) to avoid unawaited coroutine warnings.
+    """
+    session = AsyncMock()
+
+    # Synchronous methods - use MagicMock
+    session.add = MagicMock()
+    session.add_all = MagicMock()
+    session.expunge = MagicMock()
+    session.expire = MagicMock()
+
+    # Async methods - use AsyncMock (these are awaited)
+    session.execute = AsyncMock()
+    session.commit = AsyncMock()
+    session.rollback = AsyncMock()
+    session.refresh = AsyncMock()
+    session.flush = AsyncMock()
+    session.close = AsyncMock()
+
+    # Default execute result mock
+    result_mock = MagicMock()
+    result_mock.scalar_one_or_none.return_value = None
+    result_mock.scalars.return_value.all.return_value = []
+    result_mock.all.return_value = []
+    result_mock.scalar.return_value = None
+    result_mock.one_or_none.return_value = None
+    result_mock.first.return_value = None
+    session.execute.return_value = result_mock
+
+    return session
+
+
+@pytest.fixture
+def mock_result():
+    """
+    Standalone mock for SQLAlchemy execute() result.
+    Useful when you need to customize the result separately.
+    """
+    result = MagicMock()
+    result.scalar_one_or_none.return_value = None
+    result.scalars.return_value.all.return_value = []
+    result.all.return_value = []
+    result.scalar.return_value = None
+    result.one_or_none.return_value = None
+    result.first.return_value = None
+    return result
