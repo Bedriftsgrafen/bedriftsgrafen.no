@@ -2,7 +2,7 @@ import logging
 from datetime import datetime
 from typing import Literal, Sequence, Any
 
-from sqlalchemy import func, select, and_, case
+from sqlalchemy import func, select, and_, case, literal_column
 from sqlalchemy.ext.asyncio import AsyncSession
 
 import models
@@ -480,3 +480,314 @@ class StatsRepository:
         )
         result = await self.db.execute(query)
         return [(row.municipality_code, row.latest_update) for row in result]
+
+    # =========================================================================
+    # COUNTY (FYLKE) DASHBOARD METHODS
+    # =========================================================================
+
+    async def get_county_premium_summary(self, county_code: str):
+        """
+        Get high-level summary for a county:
+        - Population (aggregated from municipalities)
+        - Total companies, employees, municipality count
+        - National density comparison
+        """
+        # 1. Fetch aggregated population for the county (latest year)
+        latest_year = await self.get_latest_population_year() or 2024
+
+        # Only count valid municipalities (non-empty names = current, not merged/historical)
+        pop_query = select(
+            func.sum(models.MunicipalityPopulation.population).label("population"),
+            func.count(models.MunicipalityPopulation.municipality_code).label("municipality_count"),
+        ).where(
+            and_(
+                func.left(models.MunicipalityPopulation.municipality_code, 2) == county_code,
+                models.MunicipalityPopulation.year == latest_year,
+                models.MunicipalityPopulation.name.isnot(None),
+                models.MunicipalityPopulation.name != "",
+            )
+        )
+
+        pop_res = await self.db.execute(pop_query)
+        pop_row = pop_res.one_or_none()
+
+        population = pop_row.population if pop_row else 0
+        municipality_count = pop_row.municipality_count if pop_row else 0
+
+        # 1b. Get previous year population for growth calculation
+        prev_pop_query = select(func.sum(models.MunicipalityPopulation.population)).where(
+            and_(
+                func.left(models.MunicipalityPopulation.municipality_code, 2) == county_code,
+                models.MunicipalityPopulation.year == latest_year - 1,
+                models.MunicipalityPopulation.name.isnot(None),
+                models.MunicipalityPopulation.name != "",
+            )
+        )
+        prev_pop_res = await self.db.execute(prev_pop_query)
+        prev_pop = prev_pop_res.scalar()
+        pop_growth = ((population - prev_pop) / prev_pop * 100) if prev_pop else None
+
+        # 2. Fetch aggregated company stats for the county (uses idx_municipality_stats_county)
+        stats_query = select(
+            func.sum(models.MunicipalityStats.company_count).label("company_count"),
+            func.sum(models.MunicipalityStats.total_employees).label("total_employees"),
+            func.sum(models.MunicipalityStats.new_last_year).label("new_last_year"),
+            func.sum(models.MunicipalityStats.total_revenue).label("total_revenue"),
+        ).where(func.left(models.MunicipalityStats.municipality_code, 2) == county_code)
+
+        stats_res = await self.db.execute(stats_query)
+        stats_row = stats_res.one_or_none()
+
+        # 3. Get national totals for density comparison
+        national_stats_query = select(func.sum(models.MunicipalityStats.company_count).label("total_companies"))
+        national_pop_query = select(func.sum(models.MunicipalityPopulation.population)).where(
+            models.MunicipalityPopulation.year == latest_year
+        )
+
+        n_stats_res = await self.db.execute(national_stats_query)
+        n_pop_res = await self.db.execute(national_pop_query)
+
+        total_n_companies = n_stats_res.scalar() or 0
+        total_n_pop = n_pop_res.scalar() or 1
+        national_density = total_n_companies / total_n_pop * 1000
+
+        return {
+            "population": population,
+            "population_growth_1y": pop_growth,
+            "company_count": stats_row.company_count if stats_row else 0,
+            "total_employees": stats_row.total_employees if stats_row else 0,
+            "new_last_year": stats_row.new_last_year if stats_row else 0,
+            "total_revenue": stats_row.total_revenue if stats_row else 0,
+            "municipality_count": municipality_count,
+            "national_density": national_density,
+            "year": latest_year,
+        }
+
+    async def get_county_sector_distribution(self, county_code: str, limit: int = 10):
+        """Get industry distribution for a county."""
+        from constants.nace import get_nace_name
+
+        query = (
+            select(
+                models.MunicipalityStats.nace_division,
+                func.sum(models.MunicipalityStats.company_count).label("company_count"),
+                func.sum(models.MunicipalityStats.total_employees).label("total_employees"),
+            )
+            .where(func.left(models.MunicipalityStats.municipality_code, 2) == county_code)
+            .group_by(models.MunicipalityStats.nace_division)
+            .order_by(func.sum(models.MunicipalityStats.company_count).desc())
+            .limit(limit)
+        )
+
+        result = await self.db.execute(query)
+        rows = result.all()
+
+        total_count = sum(r.company_count for r in rows) or 1
+
+        return [
+            {
+                "nace_division": r.nace_division,
+                "nace_name": get_nace_name(r.nace_division),
+                "company_count": r.company_count,
+                "total_employees": r.total_employees,
+                "percentage_of_total": (r.company_count / total_count * 100) if total_count else 0,
+            }
+            for r in rows
+        ]
+
+    async def get_county_rankings(
+        self, county_code: str, metric: Literal["density", "revenue", "population"] = "density"
+    ):
+        """Get national rankings for a county."""
+        from sqlalchemy import Float, cast, literal_column
+
+        latest_year = await self.get_latest_population_year() or 2024
+
+        if metric == "density":
+            # Step 1: Aggregate company counts by county from municipality_stats
+            # Use literal_column to ensure GROUP BY references the alias
+            county_col_stats = func.left(models.MunicipalityStats.municipality_code, 2)
+            company_counts = (
+                select(
+                    county_col_stats.label("county_code"),
+                    func.sum(models.MunicipalityStats.company_count).label("company_count"),
+                )
+                .group_by(literal_column("county_code"))
+                .subquery()
+            )
+
+            # Step 2: Aggregate population by county
+            county_col_pop = func.left(models.MunicipalityPopulation.municipality_code, 2)
+            pop_counts = (
+                select(
+                    county_col_pop.label("county_code"),
+                    func.sum(models.MunicipalityPopulation.population).label("population"),
+                )
+                .where(models.MunicipalityPopulation.year == latest_year)
+                .group_by(literal_column("county_code"))
+                .subquery()
+            )
+
+            # Step 3: Join the two aggregated subqueries
+            # Use NULLIF to prevent division by zero
+            county_data = (
+                select(
+                    company_counts.c.county_code,
+                    (
+                        cast(company_counts.c.company_count, Float)
+                        / func.nullif(cast(pop_counts.c.population, Float), 0)
+                        * 1000
+                    ).label("value"),
+                )
+                .join(pop_counts, company_counts.c.county_code == pop_counts.c.county_code)
+                .subquery()
+            )
+        elif metric == "population":
+            county_col = func.left(models.MunicipalityPopulation.municipality_code, 2)
+            county_data = (
+                select(
+                    county_col.label("county_code"),
+                    func.sum(models.MunicipalityPopulation.population).label("value"),
+                )
+                .where(models.MunicipalityPopulation.year == latest_year)
+                .group_by(literal_column("county_code"))
+                .subquery()
+            )
+        else:  # revenue
+            county_col = func.left(models.MunicipalityStats.municipality_code, 2)
+            county_data = (
+                select(
+                    county_col.label("county_code"),
+                    func.sum(models.MunicipalityStats.total_revenue).label("value"),
+                )
+                .group_by(literal_column("county_code"))
+                .subquery()
+            )
+
+        # Rank all counties
+        rank_query = select(
+            county_data.c.county_code,
+            func.rank().over(order_by=county_data.c.value.desc()).label("rank"),
+            func.count().over().label("total"),
+        ).select_from(county_data)
+
+        result = await self.db.execute(rank_query)
+        ranks = result.all()
+
+        for r in ranks:
+            if r.county_code == county_code:
+                return {"rank": r.rank, "out_of": r.total}
+        return None
+
+    async def get_county_establishment_trend(self, county_code: str, months: int = 12):
+        """Get monthly registration counts for a county."""
+        from datetime import date, timedelta
+
+        start_date = date.today().replace(day=1) - timedelta(days=30 * months)
+
+        query = (
+            select(
+                func.date_trunc("month", models.Company.stiftelsesdato).label("month"),
+                func.count(models.Company.orgnr).label("count"),
+            )
+            .where(
+                and_(
+                    func.left(models.Company.forretningsadresse["kommunenummer"].astext, 2) == county_code,
+                    models.Company.stiftelsesdato >= start_date,
+                )
+            )
+            .group_by("month")
+            .order_by("month")
+        )
+
+        result = await self.db.execute(query)
+        rows = result.all()
+
+        return [{"label": r.month.strftime("%b %y") if r.month else "Ukjent", "value": r.count} for r in rows]
+
+    async def get_county_municipalities(self, county_code: str):
+        """Get all municipalities in a county with their stats."""
+        latest_year = await self.get_latest_population_year() or 2024
+
+        query = (
+            select(
+                models.MunicipalityPopulation.municipality_code.label("code"),
+                models.MunicipalityPopulation.name,
+                models.MunicipalityPopulation.population,
+                func.sum(models.MunicipalityStats.company_count).label("company_count"),
+            )
+            .join(
+                models.MunicipalityStats,
+                models.MunicipalityPopulation.municipality_code == models.MunicipalityStats.municipality_code,
+                isouter=True,
+            )
+            .where(
+                and_(
+                    func.left(models.MunicipalityPopulation.municipality_code, 2) == county_code,
+                    models.MunicipalityPopulation.year == latest_year,
+                    # Filter out historical/merged municipalities without names
+                    models.MunicipalityPopulation.name.isnot(None),
+                    models.MunicipalityPopulation.name != "",
+                )
+            )
+            .group_by(
+                models.MunicipalityPopulation.municipality_code,
+                models.MunicipalityPopulation.name,
+                models.MunicipalityPopulation.population,
+            )
+            .order_by(func.sum(models.MunicipalityStats.company_count).desc().nullslast())
+        )
+
+        result = await self.db.execute(query)
+        rows = result.all()
+
+        return [
+            {
+                "code": r.code,
+                "name": r.name,
+                "population": r.population,
+                "company_count": r.company_count or 0,
+            }
+            for r in rows
+        ]
+
+    async def get_all_county_summaries(self):
+        """Get summary stats for all counties (for index page)."""
+        latest_year = await self.get_latest_population_year() or 2024
+
+        # Use literal_column for GROUP BY to avoid SQLAlchemy expression issues
+        query = (
+            select(
+                func.left(models.MunicipalityStats.municipality_code, 2).label("code"),
+                func.sum(models.MunicipalityStats.company_count).label("company_count"),
+                func.count(func.distinct(models.MunicipalityStats.municipality_code)).label("municipality_count"),
+            )
+            .group_by(literal_column("code"))
+            .order_by(func.sum(models.MunicipalityStats.company_count).desc())
+        )
+
+        result = await self.db.execute(query)
+        stats_rows = {r.code: r for r in result.all()}
+
+        # Get population per county
+        pop_query = (
+            select(
+                func.left(models.MunicipalityPopulation.municipality_code, 2).label("code"),
+                func.sum(models.MunicipalityPopulation.population).label("population"),
+            )
+            .where(models.MunicipalityPopulation.year == latest_year)
+            .group_by(literal_column("code"))
+        )
+
+        pop_result = await self.db.execute(pop_query)
+        pop_rows = {r.code: r.population for r in pop_result.all()}
+
+        return [
+            {
+                "code": code,
+                "company_count": stats.company_count,
+                "municipality_count": stats.municipality_count,
+                "population": pop_rows.get(code),
+            }
+            for code, stats in stats_rows.items()
+        ]

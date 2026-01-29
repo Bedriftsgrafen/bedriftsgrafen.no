@@ -11,10 +11,20 @@ This document consolidates feature ideas and strategic plans for the future deve
 - **Why**: Norway's geography is tall and narrow. A sidebar (30% width) for controls and stats, and a map (70% width) filling the vertical height, optimizes space and provides a better UX.
 - **Status**: **IMPLEMENTED**. All filters moved to a modular, vertically-scrollable sidebar. MapGuide is now collapsible.
 
-### Subunit Map View (Avdelinger)
+### Subunit Map View (Avdelinger) 🟡 BACKLOGGED
 - **Goal**: Add a "Map" toggle to the "Avdelinger" tab in the company profile.
 - **Why**: Visualize the physical footprint of companies with many branches (e.g., Rema 1000, Equinor).
 - **Tech**: Geocode `underenheter` table and implement `SubunitMap` component using `react-leaflet`.
+- **Issue**: 826K subunits need geocoding (~9 days at API rate limit). High effort for niche value.
+- **Plan**: [SUBUNIT_MAP_VIEW.md](docs/internal/plans/BACKLOG/SUBUNIT_MAP_VIEW.md)
+
+### Share Cards v2 (SEO + Social)
+- **Goal**: Rich Open Graph images for company, municipality, county, and industry pages.
+- **Features**:
+  - KPI highlights (growth, margin, equity ratio).
+  - Mini sparklines (last 3–5 years).
+  - Localized text in Norwegian.
+- **Why**: Higher CTR on social and better brand consistency.
 
 ### ~~Smart Badges for Search Results~~ ✅ (Jan 24, 2026)
 - **Goal**: Add visual badges to search results to highlight key company traits.
@@ -24,17 +34,16 @@ This document consolidates feature ideas and strategic plans for the future deve
   - 🏛️ **Etablert**: Older than 20 years.
 - **Status**: **IMPLEMENTED**. Dynamic badges added to `CompanyCard` component.
 
+### "Nearby Companies" (Geo Discovery)
+- **Goal**: Suggest relevant companies near a selected company or municipality center.
+- **Features**:
+  - Radius-based results (e.g., 2km/5km/10km).
+  - Quick filters: same industry, same size, fastest growth.
+- **Why**: Improves discovery and time-on-site with minimal UI changes.
+
 ---
 
 ## Priority 2: Core Features (4-7 days each)
-
-### "Battle Mode" (Gamified Comparison) ⚔️
-- **Goal**: Transform the current basic comparison into a gamified "Fighting Game" style experience.
-- **Features**: 
-  - Side-by-side "stats cards" for two companies.
-  - Metrics: Revenue Growth, Profit Margin, Solvency (Egenkapitalandel), and Efficiency.
-  - Declare a "Winner" in each category and an "Overall Champion".
-- **Why**: High virality potential and makes financial analysis accessible.
 
 ### Lead Generator (B2B Tool) 🎯
 - **Concept**: A powerful query builder for sales and marketing professionals.
@@ -42,19 +51,11 @@ This document consolidates feature ideas and strategic plans for the future deve
 - **Action**: Export filtered results to CSV (potential premium feature).
 - **Why**: Moves the platform from research to an active business enablement tool.
 
-### "Local Heroes" (Municipality Dashboards) 🏘️
-- **Goal**: Dedicated landing pages for every Norwegian municipality (e.g., `/kommune/0301`).
-- **Features**:
-  - "Top 10 Most Profitable" in the area.
-  - "Newest Establishments" (last 30 days).
-  - SEO-optimized content ("Se oversikt over bedrifter i [Kommune]").
-- **Tech**: New route structure `/kommune/[id]` with aggregated local queries.
-- **Status**: **BACKEND IMPLEMENTED** (Sitemap & Repository support added).
-
-### County (Fylker) Dashboards 📍
+### ~~County (Fylker) Dashboards~~ ✅ (Jan 28, 2026)
 - **Goal**: Dedicated landing pages for Norwegian counties (e.g., `/fylke/46`).
 - **Why**: High-volume SEO terms ("Bedrifter i Vestland").
-- **Tech**: `/fylke/[id]` route mapping to `COUNTY_CODES`.
+- **Tech**: `/fylke/[code]` route mapping to `COUNTY_CODES`.
+- **Status**: **IMPLEMENTED**. Full premium dashboard with drill-down navigation to municipalities.
 
 ### Industry Landing Pages (NACE) 🏗️
 - **Goal**: Dedicated SEO pages for industry sectors (e.g., `/bransje/41` for Byggevirksomhet).
@@ -62,6 +63,13 @@ This document consolidates feature ideas and strategic plans for the future deve
   - Industry-specific benchmarks and growth trends.
   - "Top performers" in the sector.
 - **Why**: Captures professional search traffic for specific business sectors.
+
+### Shareable Insights (Permalinks + Snapshots)
+- **Goal**: One-click share of filters and charts with stable URLs.
+- **Features**:
+  - Short share links for filtered search and map views.
+  - "Snapshot" card that freezes metrics at share time.
+- **Why**: Improves virality and collaboration.
 
 ### Hierarchical Org Charts 🌳
 - **Goal**: Visualize the parent-child relationship between main entities and subunits.
@@ -89,6 +97,14 @@ This document consolidates feature ideas and strategic plans for the future deve
   - Solvency Benchmarking (% of companies with >20% equity in a sector).
   - Operating Margin distributions.
 
+### Anomaly & Momentum Alerts
+- **Goal**: Detect unusual changes in company performance.
+- **Signals**:
+  - Sudden revenue drop/spike.
+  - Margin compression beyond industry norms.
+  - Rapid employee growth or contraction.
+- **Why**: Creates proactive insights and repeat visits.
+
 ---
 
 ## Priority 4: Network & AI
@@ -112,6 +128,9 @@ This document consolidates feature ideas and strategic plans for the future deve
 - **Export to Excel/PDF**: Move beyond CSV to professional PDF reports for due diligence.
 - **Alerts/Notifications**: "Varsle meg når [Selskap] leverer nytt regnskap".
 - **Rate Limiting & API for Third Parties**: Commercialize the data via a public API.
+- **Search Speed Boost**: Add trigram index for name search to improve short-query matching.
+- **Precomputed Trend Caches**: Nightly materialized views for top lists and municipality summaries.
+- **Share Link Tracking**: Attribute shares to pages and measure viral loops.
 
 ---
 
@@ -133,3 +152,5 @@ This document consolidates feature ideas and strategic plans for the future deve
 - **[x] Professional Network Links**: Standardized LinkedIn, 1881, and internal role navigation.
 - **[x] Sidebar Map Layout**: Consolidated all map filters into a modular, vertical sidebar. MapGuide is now collapsible for mobile.
 - **[x] Mobile Map Optimization**: Fixed sidebar scrolling and improved map/filter distribution on small screens.
+- **[x] Battle Mode (Gamified Comparison)**: Head-to-head comparison with winners per metric.
+- **[x] Local Heroes (Municipality Dashboards)**: Dedicated `/kommune/[id]` pages with local statistics and SEO content.

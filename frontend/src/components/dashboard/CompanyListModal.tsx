@@ -122,11 +122,11 @@ export const CompanyListModal = ({
     const getTitle = () => {
         switch (filterType) {
             case 'new':
-                return `Nye selskaper siste år: ${naceName}`;
+                return `Nye virksomheter siste år: ${naceName}`;
             case 'bankrupt':
                 return `Konkurser siste år: ${naceName}`;
             default:
-                return `Selskaper i: ${naceName}`;
+                return `Virksomheter i: ${naceName}`;
         }
     };
     const title = getTitle();
@@ -295,7 +295,7 @@ export const CompanyListModal = ({
                         <div>
                             <h2 className="text-lg font-semibold text-gray-900">{title}</h2>
                             <p className="text-sm text-gray-500">
-                                NACE {naceCode} • {totalCount !== undefined ? formatNumber(totalCount) : '—'} selskaper
+                                NACE {naceCode} • {totalCount !== undefined ? formatNumber(totalCount) : '—'} virksomheter
                             </p>
                         </div>
                     </div>
@@ -312,15 +312,15 @@ export const CompanyListModal = ({
                 <div className="p-4">
                     {isLoading ? (
                         <div className="py-12">
-                            <LoadingState message="Laster selskaper..." className="border-0 shadow-none" />
+                            <LoadingState message="Laster virksomheter..." className="border-0 shadow-none" />
                         </div>
                     ) : isError ? (
                         <div className="py-12">
-                            <ErrorState message="Kunne ikke laste selskaper" className="max-w-md mx-auto" />
+                            <ErrorState message="Kunne ikke laste virksomheter" className="max-w-md mx-auto" />
                         </div>
                     ) : !companies || companies.length === 0 ? (
                         <div className="text-center py-12 text-gray-500">
-                            Ingen selskaper funnet
+                            Ingen virksomheter funnet
                         </div>
                     ) : (
                         <>

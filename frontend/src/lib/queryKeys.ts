@@ -47,3 +47,10 @@ export const municipalityQueryKeys = {
   dashboards: () => [...municipalityQueryKeys.all, 'dashboard'] as const,
   dashboard: (code: string) => [...municipalityQueryKeys.dashboards(), code] as const,
 }
+
+export const countyQueryKeys = {
+  all: ['counties'] as const,
+  lists: () => [...countyQueryKeys.all, 'list'] as const,
+  dashboards: () => [...countyQueryKeys.all, 'dashboard'] as const,
+  dashboard: (code: string) => [...countyQueryKeys.dashboards(), code] as const,
+}

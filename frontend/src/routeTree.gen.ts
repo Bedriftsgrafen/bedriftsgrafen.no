@@ -16,10 +16,12 @@ import { Route as NyetableringerRouteImport } from './routes/nyetableringer'
 import { Route as KonkurserRouteImport } from './routes/konkurser'
 import { Route as KommunerRouteImport } from './routes/kommuner'
 import { Route as KartRouteImport } from './routes/kart'
+import { Route as FylkerRouteImport } from './routes/fylker'
 import { Route as BransjerRouteImport } from './routes/bransjer'
 import { Route as SplatRouteImport } from './routes/$'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as KommuneCodeRouteImport } from './routes/kommune.$code'
+import { Route as FylkeCodeRouteImport } from './routes/fylke.$code'
 import { Route as BedriftOrgnrRouteImport } from './routes/bedrift.$orgnr'
 import { Route as PersonNameBirthdateRouteImport } from './routes/person.$name.$birthdate'
 
@@ -60,6 +62,11 @@ const KartRoute = KartRouteImport.update({
   path: '/kart',
   getParentRoute: () => rootRouteImport,
 } as any)
+const FylkerRoute = FylkerRouteImport.update({
+  id: '/fylker',
+  path: '/fylker',
+  getParentRoute: () => rootRouteImport,
+} as any).lazy(() => import('./routes/fylker.lazy').then((d) => d.Route))
 const BransjerRoute = BransjerRouteImport.update({
   id: '/bransjer',
   path: '/bransjer',
@@ -78,6 +85,11 @@ const IndexRoute = IndexRouteImport.update({
 const KommuneCodeRoute = KommuneCodeRouteImport.update({
   id: '/kommune/$code',
   path: '/kommune/$code',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const FylkeCodeRoute = FylkeCodeRouteImport.update({
+  id: '/fylke/$code',
+  path: '/fylke/$code',
   getParentRoute: () => rootRouteImport,
 } as any)
 const BedriftOrgnrRoute = BedriftOrgnrRouteImport.update({
@@ -99,6 +111,7 @@ export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/$': typeof SplatRoute
   '/bransjer': typeof BransjerRoute
+  '/fylker': typeof FylkerRoute
   '/kart': typeof KartRoute
   '/kommuner': typeof KommunerRoute
   '/konkurser': typeof KonkurserRoute
@@ -107,6 +120,7 @@ export interface FileRoutesByFullPath {
   '/sammenlign': typeof SammenlignRoute
   '/utforsk': typeof UtforskRoute
   '/bedrift/$orgnr': typeof BedriftOrgnrRoute
+  '/fylke/$code': typeof FylkeCodeRoute
   '/kommune/$code': typeof KommuneCodeRoute
   '/person/$name/$birthdate': typeof PersonNameBirthdateRoute
 }
@@ -114,6 +128,7 @@ export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/$': typeof SplatRoute
   '/bransjer': typeof BransjerRoute
+  '/fylker': typeof FylkerRoute
   '/kart': typeof KartRoute
   '/kommuner': typeof KommunerRoute
   '/konkurser': typeof KonkurserRoute
@@ -122,6 +137,7 @@ export interface FileRoutesByTo {
   '/sammenlign': typeof SammenlignRoute
   '/utforsk': typeof UtforskRoute
   '/bedrift/$orgnr': typeof BedriftOrgnrRoute
+  '/fylke/$code': typeof FylkeCodeRoute
   '/kommune/$code': typeof KommuneCodeRoute
   '/person/$name/$birthdate': typeof PersonNameBirthdateRoute
 }
@@ -130,6 +146,7 @@ export interface FileRoutesById {
   '/': typeof IndexRoute
   '/$': typeof SplatRoute
   '/bransjer': typeof BransjerRoute
+  '/fylker': typeof FylkerRoute
   '/kart': typeof KartRoute
   '/kommuner': typeof KommunerRoute
   '/konkurser': typeof KonkurserRoute
@@ -138,6 +155,7 @@ export interface FileRoutesById {
   '/sammenlign': typeof SammenlignRoute
   '/utforsk': typeof UtforskRoute
   '/bedrift/$orgnr': typeof BedriftOrgnrRoute
+  '/fylke/$code': typeof FylkeCodeRoute
   '/kommune/$code': typeof KommuneCodeRoute
   '/person/$name/$birthdate': typeof PersonNameBirthdateRoute
 }
@@ -147,6 +165,7 @@ export interface FileRouteTypes {
     | '/'
     | '/$'
     | '/bransjer'
+    | '/fylker'
     | '/kart'
     | '/kommuner'
     | '/konkurser'
@@ -155,6 +174,7 @@ export interface FileRouteTypes {
     | '/sammenlign'
     | '/utforsk'
     | '/bedrift/$orgnr'
+    | '/fylke/$code'
     | '/kommune/$code'
     | '/person/$name/$birthdate'
   fileRoutesByTo: FileRoutesByTo
@@ -162,6 +182,7 @@ export interface FileRouteTypes {
     | '/'
     | '/$'
     | '/bransjer'
+    | '/fylker'
     | '/kart'
     | '/kommuner'
     | '/konkurser'
@@ -170,6 +191,7 @@ export interface FileRouteTypes {
     | '/sammenlign'
     | '/utforsk'
     | '/bedrift/$orgnr'
+    | '/fylke/$code'
     | '/kommune/$code'
     | '/person/$name/$birthdate'
   id:
@@ -177,6 +199,7 @@ export interface FileRouteTypes {
     | '/'
     | '/$'
     | '/bransjer'
+    | '/fylker'
     | '/kart'
     | '/kommuner'
     | '/konkurser'
@@ -185,6 +208,7 @@ export interface FileRouteTypes {
     | '/sammenlign'
     | '/utforsk'
     | '/bedrift/$orgnr'
+    | '/fylke/$code'
     | '/kommune/$code'
     | '/person/$name/$birthdate'
   fileRoutesById: FileRoutesById
@@ -193,6 +217,7 @@ export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   SplatRoute: typeof SplatRoute
   BransjerRoute: typeof BransjerRoute
+  FylkerRoute: typeof FylkerRoute
   KartRoute: typeof KartRoute
   KommunerRoute: typeof KommunerRoute
   KonkurserRoute: typeof KonkurserRoute
@@ -201,6 +226,7 @@ export interface RootRouteChildren {
   SammenlignRoute: typeof SammenlignRoute
   UtforskRoute: typeof UtforskRoute
   BedriftOrgnrRoute: typeof BedriftOrgnrRoute
+  FylkeCodeRoute: typeof FylkeCodeRoute
   KommuneCodeRoute: typeof KommuneCodeRoute
   PersonNameBirthdateRoute: typeof PersonNameBirthdateRoute
 }
@@ -256,6 +282,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof KartRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/fylker': {
+      id: '/fylker'
+      path: '/fylker'
+      fullPath: '/fylker'
+      preLoaderRoute: typeof FylkerRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/bransjer': {
       id: '/bransjer'
       path: '/bransjer'
@@ -284,6 +317,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof KommuneCodeRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/fylke/$code': {
+      id: '/fylke/$code'
+      path: '/fylke/$code'
+      fullPath: '/fylke/$code'
+      preLoaderRoute: typeof FylkeCodeRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/bedrift/$orgnr': {
       id: '/bedrift/$orgnr'
       path: '/bedrift/$orgnr'
@@ -305,6 +345,7 @@ const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   SplatRoute: SplatRoute,
   BransjerRoute: BransjerRoute,
+  FylkerRoute: FylkerRoute,
   KartRoute: KartRoute,
   KommunerRoute: KommunerRoute,
   KonkurserRoute: KonkurserRoute,
@@ -313,6 +354,7 @@ const rootRouteChildren: RootRouteChildren = {
   SammenlignRoute: SammenlignRoute,
   UtforskRoute: UtforskRoute,
   BedriftOrgnrRoute: BedriftOrgnrRoute,
+  FylkeCodeRoute: FylkeCodeRoute,
   KommuneCodeRoute: KommuneCodeRoute,
   PersonNameBirthdateRoute: PersonNameBirthdateRoute,
 }

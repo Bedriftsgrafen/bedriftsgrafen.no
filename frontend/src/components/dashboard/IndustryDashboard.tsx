@@ -365,7 +365,7 @@ export const IndustryDashboard = ({ initialNace, onSelectCompany }: IndustryDash
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                     <SummaryCard
                         icon={<Building2 className="w-5 h-5" />}
-                        label="Totalt Selskaper"
+                        label="Totalt Virksomheter"
                         value={formatNumber(totals.companies)}
                     />
                     <SummaryCard
@@ -385,7 +385,7 @@ export const IndustryDashboard = ({ initialNace, onSelectCompany }: IndustryDash
                     <div className="p-4 border-b border-gray-200 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
                         <div>
                             <h2 className="text-lg font-semibold text-gray-900">Bransjestatistikk</h2>
-                            <p className="text-sm text-gray-500">Klikk på en bransje for å se selskaper</p>
+                            <p className="text-sm text-gray-500">Klikk på en bransje for å se virksomheter</p>
                         </div>
                         <div className="flex items-center gap-2">
                             <div className="relative">
@@ -412,7 +412,7 @@ export const IndustryDashboard = ({ initialNace, onSelectCompany }: IndustryDash
                                     <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                                         Bransje
                                     </th>
-                                    <SortableHeader field="company_count" label="Selskaper" currentSort={sortBy} sortOrder={sortOrder} onSort={handleSort} />
+                                    <SortableHeader field="company_count" label="Virksomheter" currentSort={sortBy} sortOrder={sortOrder} onSort={handleSort} />
                                     <SortableHeader field="total_employees" label="Ansatte" currentSort={sortBy} sortOrder={sortOrder} onSort={handleSort} />
                                     <SortableHeader field="total_revenue" label="Omsetning" currentSort={sortBy} sortOrder={sortOrder} onSort={handleSort} />
                                     <SortableHeader field="avg_revenue" label="Gj.snitt" currentSort={sortBy} sortOrder={sortOrder} onSort={handleSort} />

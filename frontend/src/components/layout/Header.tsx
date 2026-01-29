@@ -1,4 +1,4 @@
-import { Search, AlertTriangle, Sparkles, BarChart3, Map, Info, Home, MapPin } from 'lucide-react'
+import { Search, AlertTriangle, Sparkles, BarChart3, Map, Info, Home, Globe } from 'lucide-react'
 import { Link, useRouterState } from '@tanstack/react-router'
 import logo from '../../img/bg_logo_small.webp'
 
@@ -7,7 +7,7 @@ const navItems = [
   { to: '/utforsk', label: 'Søk', icon: Search },
   { to: '/bransjer', label: 'Bransjer', icon: BarChart3 },
   { to: '/kart', label: 'Kart', icon: Map },
-  { to: '/kommuner', label: 'Kommuner', icon: MapPin },
+  { to: '/fylker', label: 'Regioner', icon: Globe },
   { to: '/nyetableringer', label: 'Nyetableringer', icon: Sparkles },
   { to: '/konkurser', label: 'Konkurser', icon: AlertTriangle },
   { to: '/om', label: 'Om', icon: Info },
@@ -40,7 +40,14 @@ export function Header() {
           {/* Navigation */}
           <nav className="flex items-center gap-1">
             {navItems.map(({ to, label, icon: Icon }) => {
-              const isActive = currentPath === to || (to !== '/' && currentPath.startsWith(to))
+              // Special case for "Regioner" - active on /fylker, /fylke/*, /kommuner, /kommune/*
+              const isRegionRoute = to === '/fylker' && (
+                currentPath.startsWith('/fylker') || 
+                currentPath.startsWith('/fylke/') ||
+                currentPath.startsWith('/kommuner') ||
+                currentPath.startsWith('/kommune/')
+              )
+              const isActive = currentPath === to || (to !== '/' && currentPath.startsWith(to)) || isRegionRoute
               return (
                 <Link
                   key={to}

@@ -209,6 +209,11 @@ class CrudMixin:
     async def update_coordinates(self, orgnr: str, lat: float, lon: float) -> None:
         """Update company coordinates and timestamp."""
         try:
+            # Acquire advisory lock to prevent deadlock with company sync (INSERT ON CONFLICT)
+            await self.db.execute(
+                text("SELECT pg_advisory_xact_lock(hashtext(:orgnr))"),
+                {"orgnr": str(orgnr)},
+            )
             stmt = (
                 update(models.Company)
                 .where(models.Company.orgnr == orgnr)

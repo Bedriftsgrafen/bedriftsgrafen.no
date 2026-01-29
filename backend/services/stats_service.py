@@ -568,3 +568,97 @@ class StatsService:
             "ranking_in_county_revenue": ranking_revenue,
             "ranking_in_county_population": ranking_population,
         }
+
+    async def get_county_premium_dashboard(self, county_code: str):
+        """
+        Consolidated premium dashboard data for a county.
+        Coordinates multiple repository calls for performance.
+        """
+        from constants.counties import get_county_name
+        from constants.county_coords import COUNTY_COORDS
+
+        # 1. Fetch all components
+        summary = await self.stats_repo.get_county_premium_summary(county_code)
+        sectors = await self.stats_repo.get_county_sector_distribution(county_code)
+        municipalities = await self.stats_repo.get_county_municipalities(county_code)
+
+        # National rankings
+        ranking_density = await self.stats_repo.get_county_rankings(county_code, metric="density")
+        ranking_revenue = await self.stats_repo.get_county_rankings(county_code, metric="revenue")
+        ranking_population = await self.stats_repo.get_county_rankings(county_code, metric="population")
+
+        trend = await self.stats_repo.get_county_establishment_trend(county_code)
+
+        # 2. Fetch company lists (Top earners, Newest, and Bankruptcies for the county)
+        # Top 5 by revenue
+        top_companies_res = await self.company_repo.get_all(
+            FilterParams(county=county_code),
+            limit=5,
+            sort_by="revenue",
+            sort_order="desc",
+        )
+
+        # Newest 40 (Exclude KBO to get real new companies)
+        new_companies_res = await self.company_repo.get_all(
+            FilterParams(county=county_code, exclude_org_form=["KBO"]),
+            limit=40,
+            sort_by="stiftelsesdato",
+            sort_order="desc",
+        )
+
+        # Siste konkurser (Top 5)
+        bankrupt_res = await self.company_repo.get_all(
+            FilterParams(county=county_code, is_bankrupt=True),
+            limit=5,
+            sort_by="konkursdato",
+            sort_order="desc",
+        )
+
+        # Post-processing: Exclude bankrupt estates from newest companies feed
+        filtered_newest = [c for c in new_companies_res if "KONKURSBO" not in (c.navn or "").upper()]
+
+        # Get coordinates (county centroid)
+        coords = COUNTY_COORDS.get(county_code)
+
+        population = summary.get("population") or 0
+        company_count = summary.get("company_count") or 0
+
+        return {
+            "code": county_code,
+            "name": get_county_name(county_code),
+            "lat": coords[0] if coords else None,
+            "lng": coords[1] if coords else None,
+            "population": population,
+            "population_growth_1y": summary.get("population_growth_1y"),
+            "company_count": company_count,
+            "municipality_count": summary.get("municipality_count") or 0,
+            "business_density": (company_count / population * 1000) if population > 0 else 0,
+            "business_density_national_avg": summary["national_density"],
+            "total_revenue": summary["total_revenue"],
+            "establishment_trend": trend,
+            "top_sectors": sectors,
+            "top_companies": top_companies_res,
+            "newest_companies": filtered_newest[:5],
+            "latest_bankruptcies": bankrupt_res,
+            "ranking_national_density": ranking_density,
+            "ranking_national_revenue": ranking_revenue,
+            "ranking_national_population": ranking_population,
+            "municipalities": municipalities,
+        }
+
+    async def get_all_counties_summary(self):
+        """Get summary stats for all counties (for index page)."""
+        from constants.counties import get_county_name
+
+        county_stats = await self.stats_repo.get_all_county_summaries()
+
+        return [
+            {
+                "code": cs["code"],
+                "name": get_county_name(cs["code"]),
+                "company_count": cs["company_count"],
+                "municipality_count": cs["municipality_count"],
+                "population": cs["population"],
+            }
+            for cs in county_stats
+        ]

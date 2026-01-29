@@ -143,7 +143,7 @@ export function KommunerPage() {
                 <div className="mt-8 pt-8 border-t border-slate-50 flex items-center justify-between relative z-10">
                   <div className="flex flex-col">
                     <span className="text-slate-900 font-black tabular-nums text-xl tracking-tighter">{m.company_count.toLocaleString('no-NO')}</span>
-                    <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest mt-0.5">Selskaper</span>
+                    <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest mt-0.5">Virksomheter</span>
                   </div>
                   <div className="flex flex-col items-end">
                     <span className="text-slate-900 font-black tabular-nums text-xl tracking-tighter">{m.population?.toLocaleString('no-NO') ?? '-'}</span>

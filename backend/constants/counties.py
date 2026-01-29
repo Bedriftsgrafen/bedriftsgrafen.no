@@ -2,6 +2,9 @@
 
 Based on 2024 regional structure (11 counties after 2020 reform).
 County codes are first 2 digits of kommunenummer.
+
+Note: Svalbard (21) is technically not a county but we treat it as one
+for consistency in our dashboards.
 """
 
 # County code -> County name mapping
@@ -10,6 +13,7 @@ COUNTY_NAMES = {
     "11": "Rogaland",
     "15": "Møre og Romsdal",
     "18": "Nordland",
+    "21": "Svalbard",  # Not technically a county, but treated as one
     "31": "Østfold",
     "32": "Akershus",
     "33": "Buskerud",

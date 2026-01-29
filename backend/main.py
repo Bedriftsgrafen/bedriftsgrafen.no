@@ -28,6 +28,7 @@ from routers.v1 import stats as v1_stats  # noqa: E402
 from routers.v1 import trends as v1_trends  # noqa: E402
 from routers.v1 import people as v1_people  # noqa: E402
 from routers.v1 import municipality as v1_municipality  # noqa: E402
+from routers.v1 import county as v1_county  # noqa: E402
 from routers.v1 import og_image as v1_og_image  # noqa: E402
 from services.company_service import CompanyService  # noqa: E402
 from services.scheduler import SchedulerService  # noqa: E402
@@ -159,6 +160,7 @@ app.include_router(v1_trends.router)
 app.include_router(v1_people.router)
 app.include_router(v1_people.router)
 app.include_router(v1_municipality.router)
+app.include_router(v1_county.router)
 app.include_router(v1_og_image.router)
 # Admin and utility routes
 app.include_router(admin_import.router)

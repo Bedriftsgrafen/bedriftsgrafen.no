@@ -12,7 +12,7 @@ from datetime import datetime
 
 from typing import Any, Sequence
 
-from sqlalchemy import Row, and_, func, select, update, or_
+from sqlalchemy import Row, and_, func, select, update, or_, text
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from models import Company
@@ -196,6 +196,12 @@ class GeocodingBatchService:
             # Use savepoint for each update to isolate failures
             try:
                 async with self.db.begin_nested():
+                    # Acquire advisory lock to prevent deadlock with company sync (INSERT ON CONFLICT)
+                    # Uses same lock pattern as company crud.create_or_update
+                    await self.db.execute(
+                        text("SELECT pg_advisory_xact_lock(hashtext(:orgnr))"),
+                        {"orgnr": str(orgnr)},
+                    )
                     if coords:
                         lat, lon = coords
                         await self.db.execute(
