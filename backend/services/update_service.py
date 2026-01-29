@@ -27,6 +27,7 @@ from repositories.company import CompanyRepository
 from repositories.role_repository import RoleRepository
 from repositories.subunit_repository import SubUnitRepository
 from repositories.system_repository import SystemRepository
+from services.brreg_mappers import map_subunit_from_api
 import models
 from schemas.brreg import FetchResult, UpdateBatchResult
 from services.brreg_api_service import BrregApiService
@@ -529,24 +530,7 @@ class UpdateService:
                                 )
                                 continue
 
-                            orgnr = subunit_data.get("organisasjonsnummer")
-                            all_subunits.append(
-                                models.SubUnit(
-                                    orgnr=orgnr,
-                                    navn=subunit_data.get("navn"),
-                                    parent_orgnr=parent_orgnr,
-                                    organisasjonsform=subunit_data.get("organisasjonsform", {}).get("kode"),
-                                    naeringskode=subunit_data.get("naeringskode1", {}).get("kode"),
-                                    antall_ansatte=subunit_data.get("antallAnsatte", 0),
-                                    beliggenhetsadresse=subunit_data.get("beliggenhetsadresse"),
-                                    postadresse=subunit_data.get("postadresse"),
-                                    stiftelsesdato=self._parse_date(subunit_data.get("stiftelsesdato")),
-                                    registreringsdato_enhetsregisteret=self._parse_date(
-                                        subunit_data.get("registreringsdatoEnhetsregisteret")
-                                    ),
-                                    raw_data=subunit_data,
-                                )
-                            )
+                            all_subunits.append(map_subunit_from_api(subunit_data, parent_orgnr))
                             result.companies_updated += 1
 
                         if all_subunits:

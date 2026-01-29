@@ -13,6 +13,7 @@ from repositories.company_filter_builder import FilterParams
 from repositories.role_repository import RoleRepository
 from repositories.subunit_repository import SubUnitRepository
 from services.brreg_api_service import BrregApiService
+from services.brreg_mappers import map_subunit_from_api
 from services.dtos import CompanyFilterDTO
 from services.geocoding_service import GeocodingService
 from services.nace_service import NaceService
@@ -279,7 +280,7 @@ class CompanyService:
         try:
             data = await self.brreg_api.fetch_subunits(parent_orgnr)
             if data:
-                subunits = [models.SubUnit(**s, parent_orgnr=parent_orgnr) for s in data]
+                subunits = [map_subunit_from_api(s, parent_orgnr) for s in data]
                 await self.subunit_repo.create_batch(subunits)
         except Exception as e:
             logger.warning(f"Subunit sync failed: {e}")

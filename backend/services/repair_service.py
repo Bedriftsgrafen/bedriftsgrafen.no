@@ -4,6 +4,7 @@ from sqlalchemy import select, func, text, delete
 from sqlalchemy.ext.asyncio import AsyncSession
 import models
 from services.brreg_api_service import BrregApiService
+from services.brreg_mappers import map_subunit_from_api
 from services.update_service import UpdateService
 from services.rate_limits import BRREG_RATE_LIMITER
 from repositories.company.repository import CompanyRepository
@@ -123,20 +124,7 @@ class RepairService:
                             logger.info(f"Fixing subunits for {company.orgnr}: {local_count} -> {len(api_subunits)}")
 
                             if self.repair:
-                                subunit_models = [
-                                    models.SubUnit(
-                                        orgnr=s.get("organisasjonsnummer"),
-                                        parent_orgnr=company.orgnr,
-                                        navn=s.get("navn"),
-                                        organisasjonsform=s.get("organisasjonsform", {}).get("kode"),
-                                        naeringskode=s.get("naeringskode1", {}).get("kode"),
-                                        antall_ansatte=s.get("antallAnsatte", 0),
-                                        beliggenhetsadresse=s.get("beliggenhetsadresse"),
-                                        postadresse=s.get("postadresse"),
-                                        stiftelsesdato=self.update_service._parse_date(s.get("stiftelsesdato")),
-                                    )
-                                    for s in api_subunits
-                                ]
+                                subunit_models = [map_subunit_from_api(s, company.orgnr) for s in api_subunits]
                                 await self.subunit_repo.create_batch(subunit_models)
                     except Exception as e:
                         logger.error(f"Subunit audit failed for {company.orgnr}: {e}")
