@@ -33,8 +33,15 @@ The following pages are audited (configured in `lighthouserc.cjs`):
 | Bankruptcies | `/konkurser` | Bankruptcy listings |
 | New Establishments | `/nyetableringer` | New company listings |
 | Explore | `/utforsk` | Data exploration |
+| Counties | `/fylker` | Counties overview |
+| County Detail | `/fylke/03` | Example county (Oslo) |
+| Municipalities | `/kommuner` | Municipalities overview |
+| Municipality Detail | `/kommune/0301` | Example municipality (Oslo) |
 
-**Excluded pages**: `/kart` (requires backend), `/bedrift/:orgnr` (dynamic data)
+**Excluded pages**: 
+- `/kart` - Requires backend for map data
+- `/bedrift/:orgnr` - Dynamic company pages
+- `/sammenlign` - Intentionally noindex (robots.txt disallow)
 
 > **Note**: The preview server runs on port **5174** (configured in `vite.config.ts`).
 

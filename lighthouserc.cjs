@@ -10,7 +10,7 @@ module.exports = {
     ci: {
         collect: {
             // URLs to audit - key user-facing pages
-            // Note: Excluding /kart (requires backend), /bedrift/:orgnr (dynamic)
+            // Note: Excluding /kart (requires backend), /bedrift/:orgnr (dynamic), /sammenlign (intentionally noindex)
             url: [
                 'http://localhost:5174/',             // Home/search
                 'http://localhost:5174/search',       // Search with results
@@ -19,6 +19,10 @@ module.exports = {
                 'http://localhost:5174/konkurser',    // Bankruptcies
                 'http://localhost:5174/nyetableringer', // New establishments
                 'http://localhost:5174/utforsk',      // Explore
+                'http://localhost:5174/fylker',       // Counties overview
+                'http://localhost:5174/fylke/03',     // Example county (Oslo)
+                'http://localhost:5174/kommuner',     // Municipalities overview
+                'http://localhost:5174/kommune/0301', // Example municipality (Oslo)
             ],
             // Start Vite preview server (handles SPA routing with fallback to index.html)
             startServerCommand: 'npm run preview --prefix frontend -- --port 5174 --strictPort',
