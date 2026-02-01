@@ -12,6 +12,7 @@ services:
       - .env
     environment:
       - START_SCHEDULER=false
+      - REDIS_HOST=bedriftsgrafen-redis
     volumes:
       - ./scripts:/app/ops_scripts:ro
       - ./backend/logs:/app/logs
@@ -20,6 +21,8 @@ services:
       - internal-net
     depends_on:
       db:
+        condition: service_healthy
+      redis:
         condition: service_healthy
     healthcheck:
       test: [ "CMD", "curl", "-f", "http://localhost:8000/health" ]
@@ -41,6 +44,7 @@ services:
       - START_SCHEDULER=true
       - DB_POOL_SIZE=2
       - DB_STATEMENT_TIMEOUT=60000
+      - REDIS_HOST=bedriftsgrafen-redis
     command: [ "uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000", "--workers", "1" ]
     volumes:
       - ./scripts:/app/ops_scripts:ro
@@ -49,6 +53,8 @@ services:
       - internal-net
     depends_on:
       db:
+        condition: service_healthy
+      redis:
         condition: service_healthy
 
   frontend:
@@ -95,8 +101,26 @@ services:
       retries: 5
       start_period: 30s
 
+  redis:
+    image: redis:7-alpine
+    container_name: bedriftsgrafen-redis
+    restart: always
+    command: [ "redis-server", "--appendonly", "yes", "--maxmemory", "256mb", "--maxmemory-policy", "allkeys-lru" ]
+    volumes:
+      - redis_data:/data
+    networks:
+      - internal-net
+    healthcheck:
+      test: [ "CMD", "redis-cli", "ping" ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
 networks:
   web-proxy:
     external: true
   internal-net:
     driver: bridge
+
+volumes:
+  redis_data:

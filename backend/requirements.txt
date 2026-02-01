@@ -10,6 +10,7 @@ ijson>=3.2.3
 pandas>=2.0.3
 alembic>=1.13.0
 slowapi>=0.1.8
+redis[hiredis]>=5.0.0
 
 httpx>=0.25.0
 aiolimiter>=1.1.0

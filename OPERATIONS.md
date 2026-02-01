@@ -127,7 +127,44 @@ docker restart bedriftsgrafen-backend
 
 ---
 
-## Troubleshooting
+## Redis Management
+
+### Redis Status
+```bash
+# Check if Redis is healthy
+docker exec bedriftsgrafen-redis redis-cli ping
+# Should return "PONG"
+
+# Check API reports Redis connectivity
+curl http://localhost:8000/health
+```
+
+### Redis Monitoring
+```bash
+# View Redis logs
+docker logs -f bedriftsgrafen-redis
+
+# Monitor memory usage and eviction stats
+docker exec bedriftsgrafen-redis redis-cli info memory
+# Look for:
+# used_memory_human
+# maxmemory_human (256.00M)
+# evicted_keys (Should be > 0 if maxmemory is reached)
+```
+
+### Redis CLI Access
+```bash
+# Enter interactive CLI
+docker exec -it bedriftsgrafen-redis redis-cli
+
+# Browse all keys (Warning: Avoid in high-load production)
+# docker exec bedriftsgrafen-redis redis-cli keys "*"
+
+# Recommended way to find keys (non-blocking)
+docker exec bedriftsgrafen-redis redis-cli --scan --pattern "cache:*"
+```
+
+---
 
 ### Service Not Running
 

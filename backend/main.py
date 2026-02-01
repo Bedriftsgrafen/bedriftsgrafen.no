@@ -99,6 +99,11 @@ async def lifespan(app):
         logger.info("Shutting down scheduler service...")
         await scheduler_service.shutdown()
 
+    # Close Redis connection pool
+    from utils.redis_client import close_redis
+
+    await close_redis()
+
 
 app = FastAPI(title="Bedriftsgrafen API", lifespan=lifespan)
 
