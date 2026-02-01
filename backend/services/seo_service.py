@@ -15,14 +15,15 @@ from constants.nace import get_nace_name
 from repositories.company.repository import CompanyRepository
 from repositories.role_repository import RoleRepository
 from repositories.stats_repository import StatsRepository
+from constants.concurrency import SITEMAP_URLS_PER_FILE, SITEMAP_CACHE_TIMEOUT
 
 logger = logging.getLogger(__name__)
 
 # Constants for sitemap pagination
-URLS_PER_SITEMAP = 50000
+URLS_PER_SITEMAP = SITEMAP_URLS_PER_FILE
 
 # Timeout for cache refresh operations (seconds)
-CACHE_REFRESH_TIMEOUT = 120.0
+CACHE_REFRESH_TIMEOUT = SITEMAP_CACHE_TIMEOUT
 
 STATIC_ROUTES = [
     "",  # Homepage

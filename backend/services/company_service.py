@@ -19,13 +19,23 @@ from services.geocoding_service import GeocodingService
 from services.nace_service import NaceService
 from schemas.companies import Naeringskode
 from utils.cache import AsyncLRUCache
+from constants.concurrency import (
+    SEARCH_CACHE_SIZE,
+    SEARCH_CACHE_TTL,
+    STATS_CACHE_SIZE,
+    STATS_CACHE_TTL,
+    PARENT_NAME_CACHE_SIZE,
+    PARENT_NAME_CACHE_TTL,
+)
 
 logger = logging.getLogger(__name__)
 
 # Module-level cache shared across service instances
-search_cache = AsyncLRUCache(maxsize=500, ttl=60)
-stats_cache = AsyncLRUCache(maxsize=100, ttl=60)  # 60s cache for stats
-parent_name_cache = AsyncLRUCache(maxsize=1000, ttl=3600)  # 1h cache for parent names
+search_cache = AsyncLRUCache(maxsize=SEARCH_CACHE_SIZE, ttl=SEARCH_CACHE_TTL)
+stats_cache = AsyncLRUCache(maxsize=STATS_CACHE_SIZE, ttl=STATS_CACHE_TTL)  # 60s cache for stats
+parent_name_cache = AsyncLRUCache(
+    maxsize=PARENT_NAME_CACHE_SIZE, ttl=PARENT_NAME_CACHE_TTL
+)  # 1h cache for parent names
 
 # Lock to prevent thundering herd on stats computation
 _stats_lock = asyncio.Lock()

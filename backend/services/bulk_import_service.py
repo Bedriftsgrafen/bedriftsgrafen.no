@@ -8,6 +8,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from models_import import BulkImportQueue, ImportBatch, ImportStatus
 from services.company_service import CompanyService
+from constants.concurrency import BULK_IMPORT_BATCH_SIZE
 
 logger = logging.getLogger(__name__)
 
@@ -43,7 +44,7 @@ class BulkImportService:
         # Rate limiting configuration
         self.requests_per_second = 10  # Conservative limit
         self.max_concurrent_workers = 5
-        self.batch_size = 100  # Process in batches for commit efficiency
+        self.batch_size = BULK_IMPORT_BATCH_SIZE  # Process in batches for commit efficiency
 
     async def populate_queue(self, orgnr_list: list[str], priority: int = 0) -> dict[str, int]:
         """

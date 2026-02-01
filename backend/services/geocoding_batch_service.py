@@ -15,7 +15,7 @@ from typing import Any, Sequence
 from sqlalchemy import Row, and_, func, select, update, or_, text
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from constants.concurrency import API_CONCURRENCY_LIMIT
+from constants.concurrency import API_CONCURRENCY_LIMIT, GEOCODING_BATCH_SIZE
 from models import Company
 from services.geocoding_service import GeocodingService
 
@@ -32,7 +32,7 @@ class GeocodingBatchService:
     # Conservative rate limiting - 1 request per second
     DELAY_BETWEEN_REQUESTS = 1.0  # seconds
     DELAY_ON_ERROR = 5.0  # seconds
-    DEFAULT_BATCH_SIZE = 100
+    DEFAULT_BATCH_SIZE = GEOCODING_BATCH_SIZE
     MAX_GEOCODING_ATTEMPTS = 3  # Skip after this many failed attempts
 
     def __init__(self, db: AsyncSession):

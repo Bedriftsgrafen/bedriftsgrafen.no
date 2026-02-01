@@ -9,13 +9,13 @@ from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.ext.asyncio import AsyncSession
 
 import models
+from constants.concurrency import SSB_REQUEST_TIMEOUT
 
 logger = logging.getLogger(__name__)
 
 # SSB PxWeb API configuration
 SSB_API_BASE = "https://data.ssb.no/api/v0/no/table"
 SSB_POPULATION_TABLE = "07459"  # Population by municipality
-SSB_REQUEST_TIMEOUT = 60.0  # seconds
 
 # Validation pattern for municipality codes (4 digits)
 MUNICIPALITY_CODE_PATTERN = re.compile(r"^\d{4}$")

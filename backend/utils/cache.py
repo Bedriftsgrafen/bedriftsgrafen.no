@@ -8,6 +8,8 @@ from collections.abc import Callable
 from functools import wraps
 from typing import Any
 
+from constants.concurrency import QUERY_CACHE_SIZE, QUERY_CACHE_TTL
+
 logger = logging.getLogger(__name__)
 
 
@@ -55,10 +57,12 @@ class AsyncLRUCache:
 
 
 # Global cache for decorated queries
-_query_cache = AsyncLRUCache(maxsize=100, ttl=300)
+_query_cache = AsyncLRUCache(maxsize=QUERY_CACHE_SIZE, ttl=QUERY_CACHE_TTL)
 
 
-def cached_query(ttl: int = 300, maxsize: int = 100, cache_instance: AsyncLRUCache | None = None):
+def cached_query(
+    ttl: int = QUERY_CACHE_TTL, maxsize: int = QUERY_CACHE_SIZE, cache_instance: AsyncLRUCache | None = None
+):
     """Decorator for caching async repository/service query methods
 
     Args:

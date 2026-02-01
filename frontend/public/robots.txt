@@ -29,4 +29,4 @@ Sitemap: https://bedriftsgrafen.no/sitemap.xml
 Sitemap: https://bedriftsgrafen.no/api/sitemap_index.xml
 
 # Crawl-delay for politeness
-Crawl-delay: 1
+Crawl-delay: 0.1

@@ -11,6 +11,7 @@ from abc import ABC
 from typing import Any
 
 import httpx
+from constants.concurrency import DEFAULT_EXTERNAL_TIMEOUT, CONNECT_TIMEOUT
 
 logger = logging.getLogger(__name__)
 
@@ -62,8 +63,8 @@ class BaseExternalService(ABC):
     BASE_URL: str = ""
 
     # Default configuration (can be overridden)
-    DEFAULT_TIMEOUT: float = 30.0
-    CONNECT_TIMEOUT: float = 10.0
+    DEFAULT_TIMEOUT: float = DEFAULT_EXTERNAL_TIMEOUT
+    CONNECT_TIMEOUT: float = CONNECT_TIMEOUT
     RETRY_ATTEMPTS: int = 3
     RETRY_DELAY: float = 1.0
     RATE_LIMIT_BACKOFF_MULTIPLIER: float = 2.0

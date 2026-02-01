@@ -22,7 +22,12 @@ from pydantic import ValidationError
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from constants.concurrency import API_CONCURRENCY_LIMIT, DB_COMMIT_CHUNK_SIZE
+from constants.concurrency import (
+    API_CONCURRENCY_LIMIT,
+    DB_COMMIT_CHUNK_SIZE,
+    UPDATE_PAGE_SIZE,
+    SUBUNIT_UPDATE_PAGE_SIZE,
+)
 from constants.urls import BRREG_UPDATES_URL, BRREG_SUBUNIT_UPDATES_URL, BRREG_ROLE_UPDATES_URL
 from repositories.accounting_repository import AccountingRepository
 from repositories.company import CompanyRepository
@@ -119,7 +124,7 @@ class UpdateService:
     async def fetch_updates(
         self,
         since_date: date | None = None,
-        page_size: int = 1000,
+        page_size: int = UPDATE_PAGE_SIZE,
         start_id: int | None = None,
     ) -> dict[str, Any]:
         """Fetch and process ALL company updates since the given date or ID.
@@ -451,7 +456,7 @@ class UpdateService:
     async def fetch_subunit_updates(
         self,
         since_date: date | None = None,
-        page_size: int = 1000,
+        page_size: int = SUBUNIT_UPDATE_PAGE_SIZE,
         start_id: int | None = None,
     ) -> dict[str, Any]:
         """Fetch and process ALL subunit updates since the given date or ID."""
