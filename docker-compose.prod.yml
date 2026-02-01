@@ -17,8 +17,11 @@ services:
       - ./scripts:/app/ops_scripts:ro
       - ./backend/logs:/app/logs
 
+    ports:
+      - "8000:8000"
     networks:
       - internal-net
+      - web-proxy
     depends_on:
       db:
         condition: service_healthy
