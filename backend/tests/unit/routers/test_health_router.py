@@ -28,4 +28,3 @@ def test_health_check_shows_redis_unavailable():
         data = response.json()
         assert data["status"] == "ok"
         assert data["redis"] == "unavailable"
-

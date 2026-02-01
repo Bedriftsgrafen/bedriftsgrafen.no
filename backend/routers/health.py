@@ -14,4 +14,3 @@ async def health_check(request: Request):
         "status": "ok",
         "redis": "connected" if redis_ok else "unavailable",
     }
-

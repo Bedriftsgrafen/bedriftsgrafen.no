@@ -47,7 +47,9 @@ def get_redis() -> Redis:
 async def check_redis_health() -> bool:
     """Check Redis connectivity (for health endpoint only)."""
     try:
-        await get_redis().ping()
+        # Use await on the coroutine directly.
+        # Mypy sometimes struggles with redis-py async types.
+        await get_redis().ping()  # type: ignore[misc]
         return True
     except Exception as e:
         logger.warning(f"Redis health check failed: {e}")

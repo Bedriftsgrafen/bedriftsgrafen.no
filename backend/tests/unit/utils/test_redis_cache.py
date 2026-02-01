@@ -89,10 +89,12 @@ class TestRedisCache:
         """Test that clear uses SCAN iterator, not KEYS."""
         mock_redis = AsyncMock()
         # Simulate SCAN returning keys then done
-        mock_redis.scan = AsyncMock(side_effect=[
-            (5, ["test:key1", "test:key2"]),  # First call: cursor 5, some keys
-            (0, []),  # Second call: cursor 0, done
-        ])
+        mock_redis.scan = AsyncMock(
+            side_effect=[
+                (5, ["test:key1", "test:key2"]),  # First call: cursor 5, some keys
+                (0, []),  # Second call: cursor 0, done
+            ]
+        )
         mock_redis.delete = AsyncMock()
 
         with patch("utils.redis_cache.get_redis", return_value=mock_redis):
