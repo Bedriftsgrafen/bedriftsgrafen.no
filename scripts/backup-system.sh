@@ -58,9 +58,10 @@ EXCLUDES=(
   "/home/*/.cache/*"
   "/swapfile"
   "/var/swap"
-  # Docker build cache
+  # Docker/Containerd layers (CRITICAL: saves ~40GB per snapshot)
   "/var/lib/docker/overlay2/*"
   "/var/lib/docker/tmp/*"
+  "/var/lib/containerd/*"
   # Node.js
   "*/node_modules/*"
   "*/.npm/*"
