@@ -66,7 +66,7 @@ function UtforskPage() {
     } = useCompanyCountQuery(filterParams)
 
     // Feedback for slow loading
-    useSlowLoadingToast(companiesLoading, 'Henter bedrifter. Dette kan ta litt tid...')
+    useSlowLoadingToast(companiesLoading, 'Henter virksomheter. Dette kan ta litt tid...')
 
     // Handlers
     const handleSearch = useCallback((query: string) => {
@@ -74,7 +74,7 @@ function UtforskPage() {
 
         // If 9-digit number, navigate directly to company page
         if (/^\d{9}$/.test(trimmed)) {
-            navigate({ to: '/bedrift/$orgnr', params: { orgnr: trimmed } })
+            navigate({ to: '/virksomhet/$orgnr', params: { orgnr: trimmed } })
             return
         }
 
@@ -82,7 +82,7 @@ function UtforskPage() {
     }, [navigate])
 
     const handleSelectCompany = useCallback((orgnr: string) => {
-        navigate({ to: '/bedrift/$orgnr', params: { orgnr } })
+        navigate({ to: '/virksomhet/$orgnr', params: { orgnr } })
     }, [navigate])
 
     const handleSortChange = useCallback((field: string) => {
@@ -107,8 +107,8 @@ function UtforskPage() {
     return (
         <>
             <SEOHead
-                title="Utforsk bedrifter | Bedriftsgrafen.no"
-                description="Søk og filtrer blant alle norske bedrifter. Finn informasjon om omsetning, ansatte, bransje og mer."
+                title="Utforsk virksomheter | Bedriftsgrafen.no"
+                description="Søk og filtrer blant alle norske virksomheter. Finn informasjon om omsetning, ansatte, bransje og mer."
             />
 
             {/* Page header */}
@@ -116,10 +116,10 @@ function UtforskPage() {
                 <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
                     <div className="w-full sm:w-auto flex-1 max-w-2xl">
                         <h1 className="text-3xl font-bold text-black mb-2">
-                            Utforsk bedrifter
+                            Utforsk virksomheter
                         </h1>
                         <p className="text-gray-700 text-lg mb-4">
-                            Søk, filtrer og analyser norske bedrifter.
+                            Søk, filtrer og analyser norske virksomheter.
                         </p>
 
                         <div className="flex flex-col md:flex-row items-center gap-4">
@@ -176,7 +176,7 @@ function UtforskPage() {
             <AffiliateBanner
                 bannerId="utforsk_bottom_placeholder"
                 placement="utforsk_bottom"
-                title="Vil du nå ut til norske bedrifter?"
+                title="Vil du nå ut til norske virksomheter?"
                 description="Vi åpner nå for utvalgte samarbeidspartnere. Ta kontakt for å vite mer om mulighetene."
                 buttonText="Bli partner"
                 link={`mailto:${CONTACT_EMAIL}`}

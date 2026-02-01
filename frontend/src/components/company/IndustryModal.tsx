@@ -41,7 +41,7 @@ export function IndustryModal({
         if (onSelectCompany) {
             onSelectCompany(clean)
         } else {
-            navigate({ to: '/bedrift/$orgnr', params: { orgnr: clean } })
+            navigate({ to: '/virksomhet/$orgnr', params: { orgnr: clean } })
         }
     }
 
@@ -73,7 +73,7 @@ export function IndustryModal({
                         )}
                         {data && (
                             <p className="text-sm text-gray-500 mt-1">
-                                {formatNumber(data.total)} bedrifter i denne bransjen
+                                {formatNumber(data.total)} virksomheter i denne bransjen
                             </p>
                         )}
                     </div>
@@ -91,13 +91,13 @@ export function IndustryModal({
                     {isLoading && (
                         <div className="flex items-center justify-center py-12">
                             <Loader className="h-8 w-8 animate-spin text-blue-600" />
-                            <span className="ml-3 text-gray-600">Laster bedrifter...</span>
+                            <span className="ml-3 text-gray-600">Laster virksomheter...</span>
                         </div>
                     )}
 
                     {isError && (
                         <div className="text-center py-12">
-                            <div className="text-red-600 mb-2">Kunne ikke laste bedrifter</div>
+                            <div className="text-red-600 mb-2">Kunne ikke laste virksomheter</div>
                             <div className="text-sm text-gray-500">
                                 {error instanceof Error ? error.message : 'Ukjent feil'}
                             </div>
@@ -106,7 +106,7 @@ export function IndustryModal({
 
                     {data && data.items.length === 0 && (
                         <div className="text-center py-12 text-gray-500">
-                            Ingen bedrifter funnet med denne næringskoden.
+                            Ingen virksomheter funnet med denne næringskoden.
                         </div>
                     )}
 

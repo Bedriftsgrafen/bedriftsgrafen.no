@@ -225,7 +225,7 @@ export function BankruptcyList({
                         <tr>
                             <SortableHeader
                                 field="navn"
-                                label="Selskap"
+                                label="Virksomhet"
                                 currentSort={sortBy}
                                 sortOrder={sortOrder}
                                 onSort={handleSort}

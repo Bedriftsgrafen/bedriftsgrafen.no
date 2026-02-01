@@ -67,7 +67,7 @@ export const CompanyListModal = ({
         if (onSelectCompany) {
             onSelectCompany(clean);
         } else {
-            navigate({ to: '/bedrift/$orgnr', params: { orgnr: clean } });
+            navigate({ to: '/virksomhet/$orgnr', params: { orgnr: clean } });
         }
     }, [navigate, onClose, onSelectCompany]);
 

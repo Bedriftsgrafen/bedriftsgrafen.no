@@ -182,7 +182,7 @@ function BransjerPage() {
         <>
             <SEOHead
                 title="Utforsk bransjer | Bedriftsgrafen.no"
-                description="Utforsk norske bedrifter etter bransje, region og selskapsform. Filtrer på omsetning, antall ansatte og mer."
+                description="Utforsk norske virksomheter etter bransje, region og virksomhetsform. Filtrer på omsetning, antall ansatte og mer."
             />
 
             {/* Page header */}
@@ -191,7 +191,7 @@ function BransjerPage() {
                     Utforsk bransjer
                 </h1>
                 <p className="text-gray-700 text-lg">
-                    Finn og analyser bedrifter etter bransje, område og finansielle kriterier.
+                    Finn og analyser virksomheter etter bransje, område og finansielle kriterier.
                 </p>
             </div>
 
@@ -218,7 +218,7 @@ function BransjerPage() {
                 <TabButton
                     active={activeTab === 'search'}
                     icon={<Search size={18} />}
-                    label="Søk bedrifter"
+                    label="Søk virksomheter"
                     onClick={() => setActiveTab('search')}
                 />
             </TabContainer>

@@ -200,7 +200,7 @@ function KonkurserPage() {
         <>
             <SEOHead
                 title="Konkurser i Norge | Bedriftsgrafen.no"
-                description="Oversikt over nylige konkurser og tvangsoppløsninger i Norge. Se hvilke selskaper som har gått konkurs det siste året."
+                description="Oversikt over nylige konkurser og tvangsoppløsninger i Norge. Se hvilke virksomheter som har gått konkurs det siste året."
             />
 
             {/* Page header */}
@@ -210,7 +210,7 @@ function KonkurserPage() {
                     Konkurser
                 </h1>
                 <p className="text-gray-700 text-lg">
-                    Oversikt over selskaper som har gått konkurs {periodLabel.toLowerCase()}.
+                    Oversikt over virksomheter som har gått konkurs {periodLabel.toLowerCase()}.
                 </p>
             </div>
 

@@ -115,11 +115,11 @@ export function Pagination({
       {/* Info text */}
       <p className="text-sm text-gray-600 text-center">
         {totalCount !== undefined ? (
-          <>Viser {start}-{end} av {formatNumber(totalCount)} bedrifter</>
+          <>Viser {start}-{end} av {formatNumber(totalCount)} virksomheter</>
         ) : (
           <span className="flex items-center justify-center gap-2">
             <span className="inline-block w-3 h-3 border-2 border-gray-400 border-t-transparent rounded-full animate-spin"></span>
-            Teller bedrifter...
+            Teller virksomheter...
           </span>
         )}
       </p>

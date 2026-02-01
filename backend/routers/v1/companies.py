@@ -121,7 +121,7 @@ async def export_companies(
         export_service = ExportService(db)
 
         # Generate filename with timestamp
-        filename = f"selskaper_{datetime.now().strftime('%Y%m%d_%H%M%S')}.csv"
+        filename = f"virksomheter_{datetime.now().strftime('%Y%m%d_%H%M%S')}.csv"
 
         return StreamingResponse(
             export_service.stream_companies_csv(filters),

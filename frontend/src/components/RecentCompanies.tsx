@@ -31,7 +31,7 @@ export const RecentCompanies = memo(function RecentCompanies() {
         {recentCompanies.map((company) => (
           <Link
             key={company.orgnr}
-            to="/bedrift/$orgnr"
+            to="/virksomhet/$orgnr"
             params={{ orgnr: company.orgnr }}
             className="group flex items-center gap-2 px-3 py-1.5 bg-gray-50 hover:bg-blue-50 text-gray-700 hover:text-blue-700 border border-gray-200 hover:border-blue-300 rounded-full transition-colors text-sm"
             title={`${company.navn} • ${company.orgnr} • Besøkt ${formatDistanceToNow(company.timestamp)}`}

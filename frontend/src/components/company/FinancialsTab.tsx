@@ -41,7 +41,7 @@ function getAdConfig(company: CompanyWithAccounting) {
     return {
       id: "premium_banking_financials",
       title: "Tilbyr dere Private Banking?",
-      description: `Nå ut til bedrifter med høy omsetning. Denne plassen er ledig for samarbeid. Kontakt oss på ${CONTACT_EMAIL}.`,
+      description: `Nå ut til virksomheter med høy omsetning. Denne plassen er ledig for samarbeid. Kontakt oss på ${CONTACT_EMAIL}.`,
       buttonText: "Send e-post",
       icon: Wallet,
       variant: "banking" as const,
@@ -106,7 +106,7 @@ export const FinancialsTab = React.memo(function FinancialsTab({
               {validAccountings.length > 0 ? ' Spesifikke lokale tall for denne underenheten vises nedenfor.' : ''}
             </p>
             <Link 
-              to="/bedrift/$orgnr" 
+              to="/virksomhet/$orgnr" 
               params={{ orgnr: company.parent_orgnr }}
               search={{ tab: 'okonomi' as const }}
               className="mt-2 inline-flex items-center text-sm font-medium text-blue-700 hover:text-blue-800 bg-blue-100/50 hover:bg-blue-100 px-3 py-1.5 rounded-md transition-colors w-fit"
@@ -124,7 +124,7 @@ export const FinancialsTab = React.memo(function FinancialsTab({
           <EmptyState
             icon={Database}
             title="Ingen regnskapsdata"
-            description="Denne bedriften har ingen lagrede regnskapsdata. Vil du hente data fra Brønnøysundregistrene?"
+            description="Denne virksomheten har ingen lagrede regnskapsdata. Vil du hente data fra Brønnøysundregistrene?"
             action={{
               label: isImporting ? 'Henter...' : 'Hent regnskapsdata',
               onClick: onImport

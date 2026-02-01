@@ -23,7 +23,7 @@ interface IndustryModalState {
     description: string | null
 }
 
-export const Route = createLazyFileRoute('/bedrift/$orgnr')({
+export const Route = createLazyFileRoute('/virksomhet/$orgnr')({
     component: CompanyPage,
 })
 
@@ -64,7 +64,7 @@ function CompanyPage() {
     const fetchMutation = useFetchCompanyMutation()
 
     // Slow loading feedback
-    useSlowLoadingToast(companyLoading, 'Henter bedriftsinformasjon...')
+    useSlowLoadingToast(companyLoading, 'Henter virksomhetsinformasjon...')
     useSlowLoadingToast(kpiLoading, 'Kalkulerer nøkkeltall...')
 
     const { copiedOrgnr, handleCopyOrgnr, handleShare } = useCompanyModal({
@@ -98,7 +98,7 @@ function CompanyPage() {
 
     const handleTabChange = useCallback((tab: TabType) => {
         navigate({
-            to: '/bedrift/$orgnr',
+            to: '/virksomhet/$orgnr',
             params: { orgnr },
             search: (prev: Record<string, unknown>) => ({ ...prev, tab }),
             replace: true
@@ -125,7 +125,7 @@ function CompanyPage() {
     const handleSelectCompany = useCallback((newOrgnr: string) => {
         // When selecting a related company, preserve the active tab
         navigate({
-            to: '/bedrift/$orgnr',
+            to: '/virksomhet/$orgnr',
             params: { orgnr: newOrgnr },
             search: (prev: Record<string, unknown>) => ({ ...prev, tab: 'oversikt' }),
             replace: true

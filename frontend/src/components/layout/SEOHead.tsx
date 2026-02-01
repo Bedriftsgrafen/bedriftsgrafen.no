@@ -115,7 +115,7 @@ export function SEOHead({
     : SEO_DEFAULTS.title)
 
   const description = customDescription || (companyName
-    ? `Utforsk finansielle nøkkeltall, regnskap og bedriftsinformasjon for ${companyName} (org.nr: ${orgnr}). Gratis data fra Brønnøysundregistrene.`
+    ? `Utforsk finansielle nøkkeltall, regnskap og virksomhetsinformasjon for ${companyName} (org.nr: ${orgnr}). Gratis data fra Brønnøysundregistrene.`
     : SEO_DEFAULTS.description)
 
   // SEO optimization: Ensure image URL is absolute for social bots
@@ -157,7 +157,7 @@ export function SEOHead({
       />
       <meta property="og:image:width" content="1200" />
       <meta property="og:image:height" content="630" />
-      <meta property="og:image:alt" content={companyName ? `Analyse av ${companyName}` : "Bedriftsgrafen.no - Analyse av norske bedrifter"} />
+      <meta property="og:image:alt" content={companyName ? `Analyse av ${companyName}` : "Bedriftsgrafen.no - Analyse av norske virksomheter"} />
       <meta property="og:locale" content="nb_NO" />
 
       {/* Twitter Card */}

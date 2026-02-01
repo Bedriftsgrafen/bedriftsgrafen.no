@@ -99,7 +99,7 @@ async def test_sitemap_company_page_1(mock_db_session, override_get_db):
         assert "<loc>https://bedriftsgrafen.no/kommune/0301</loc>" in content
         assert "<lastmod>2024-01-01</lastmod>" in content
         # Company with formatted date
-        assert "https://bedriftsgrafen.no/bedrift/123" in content
+        assert "https://bedriftsgrafen.no/virksomhet/123" in content
         assert "<lastmod>2024-01-01</lastmod>" in content
 
 
@@ -127,7 +127,7 @@ async def test_sitemap_company_page_2_with_anchors(mock_db_session, override_get
         assert response.status_code == 200
         # Verify get_paginated_orgnrs was called with after_orgnr="999888777"
         mock_company_repo.get_paginated_orgnrs.assert_called_with(offset=0, limit=50000, after_orgnr="999888777")
-        assert "https://bedriftsgrafen.no/bedrift/111222333" in response.text
+        assert "https://bedriftsgrafen.no/virksomhet/111222333" in response.text
 
 
 @pytest.mark.asyncio

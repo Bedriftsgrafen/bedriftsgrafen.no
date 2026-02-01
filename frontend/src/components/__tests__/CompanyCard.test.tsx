@@ -14,26 +14,31 @@ vi.mock('../comparison', () => ({
 
 const mockCompany: Company = {
     orgnr: '123456789',
-    navn: 'Test Bedrift AS',
+    navn: 'Test Virksomhet AS',
     organisasjonsform: 'AS',
     naeringskode: '62.010',
     antall_ansatte: 10,
-    latest_revenue: 1000000,
-    latest_profit: 100000,
-    postadresse: {
-        adresse: ['Vei 1'],
-        postnummer: '0101',
+    latest_revenue: 10000000,
+    latest_profit: 1000000,
+    latest_equity_ratio: 0.5,
+    stiftelsesdato: '2020-01-01',
+    naeringskoder: [],
+    forretningsadresse: {
+        adresse: ['Testveien 1'],
+        postnummer: '0123',
         poststed: 'Oslo',
         kommune: 'Oslo',
+        kommunenummer: '0301',
         land: 'Norge'
     }
 }
 
 describe('CompanyCard', () => {
-    it('renders company information correctly', () => {
-        render(<CompanyCard company={mockCompany} onClick={() => { }} />)
+    it('renders company basic information', () => {
+        const onClick = vi.fn()
+        render(<CompanyCard company={mockCompany} onClick={onClick} />)
 
-        expect(screen.getByText('Test Bedrift AS')).toBeInTheDocument()
+        expect(screen.getByText('Test Virksomhet AS')).toBeInTheDocument()
         expect(screen.getByText('Org.nr: 123456789')).toBeInTheDocument()
         expect(screen.getByText('AS')).toBeInTheDocument()
         // Check for formatted numbers (1.0 M for 1000000)

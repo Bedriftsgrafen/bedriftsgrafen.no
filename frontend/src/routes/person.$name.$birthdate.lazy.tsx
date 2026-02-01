@@ -139,11 +139,11 @@ export function PersonProfilePage() {
                                             </div>
                                         </div>
                                         <Link
-                                            to="/bedrift/$orgnr"
+                                            to="/virksomhet/$orgnr"
                                             params={{ orgnr: role.orgnr }}
                                             className="p-2 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-all"
-                                            title="Se bedriftsprofil"
-                                            aria-label={`Se bedriftsprofil for ${role.enhet_navn}`}
+                                            title="Se virksomhetsprofil"
+                                            aria-label={`Se virksomhetsprofil for ${role.enhet_navn}`}
                                         >
                                             <ExternalLink className="h-5 w-5" />
                                         </Link>

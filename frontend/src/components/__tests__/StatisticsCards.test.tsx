@@ -53,7 +53,7 @@ describe('StatisticsCards', () => {
     it('renders statistics correctly', () => {
         render(<StatisticsCards />)
 
-        expect(screen.getByText('Bedriftspopulasjonen')).toBeInTheDocument()
+        expect(screen.getByText('Virksomhetsuniverset')).toBeInTheDocument()
         expect(screen.getByText('1.0 k')).toBeInTheDocument()
 
         expect(screen.getByText('Næringslivets Roller')).toBeInTheDocument()
@@ -85,8 +85,8 @@ describe('StatisticsCards', () => {
     it('handles scroll action or click behavior on special cards', () => {
         render(<StatisticsCards />)
 
-        // Find card with onClick (Bedriftspopulasjonen)
-        const card = screen.getByText('Bedriftspopulasjonen').closest('button')
+        // Find card with onClick (Virksomhetsuniverset)
+        const card = screen.getByText('Virksomhetsuniverset').closest('button')
 
         // Mock the elements that focusSearch tries to find
         const mockBtn = document.createElement('button')

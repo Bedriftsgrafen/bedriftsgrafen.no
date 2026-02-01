@@ -146,10 +146,10 @@ function RoleCard({ role, onCompanyClick }: { role: Role, onCompanyClick?: (orgn
                                     onCompanyClick(role.enhet_orgnr!)
                                 }}
                                 className="flex items-center gap-2 px-3 py-2 bg-blue-50 text-blue-700 rounded-lg hover:bg-blue-100 transition-colors text-xs font-medium group"
-                                title={`Se bedriftsprofil for ${role.enhet_navn || 'revisor'}`}
+                                title={`Se virksomhetsprofil for ${role.enhet_navn || 'revisor'}`}
                             >
                                 <Building2 className="h-3 w-3 group-hover:scale-110 transition-transform" />
-                                Se {role.type_kode === 'REVI' ? 'revisorselskap' : 'bedrift'}
+                                Se {role.type_kode === 'REVI' ? 'revisorselskap' : 'virksomhet'}
                             </button>
                         )}
 
@@ -290,7 +290,7 @@ export function RolesTab({ orgnr, onCompanyClick }: RolesTabProps) {
                 <Users className="h-8 w-8 text-gray-400 mx-auto mb-2" />
                 <p className="text-gray-600 font-medium mb-1">Ingen roller funnet</p>
                 <p className="text-sm text-gray-500 mb-4">
-                    Denne bedriften har ingen registrerte roller i Brønnøysundregistrene.
+                    Denne virksomheten har ingen registrerte roller i Brønnøysundregistrene.
                 </p>
                 <button
                     onClick={handleFetchFromBrreg}

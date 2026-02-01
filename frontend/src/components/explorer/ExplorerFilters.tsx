@@ -191,7 +191,7 @@ export const ExplorerFilters = memo(function ExplorerFilters() {
                 <div>
                     <label className="flex items-center gap-2 text-sm font-medium text-gray-700 mb-2">
                         <Briefcase className="h-4 w-4 text-gray-400" aria-hidden="true" />
-                        Selskapsform
+                        Virksomhetsform
                     </label>
                     <OrganizationFormFilter
                         selectedForms={organizationForms}

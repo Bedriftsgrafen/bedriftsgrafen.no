@@ -14,7 +14,7 @@ export const FavoritesSection = memo(function FavoritesSection() {
     const clearFavorites = useFavoritesStore((s) => s.clearFavorites)
 
     const handleCompanyClick = useCallback((orgnr: string) => {
-        navigate({ to: '/bedrift/$orgnr', params: { orgnr } })
+        navigate({ to: '/virksomhet/$orgnr', params: { orgnr } })
     }, [navigate])
 
     const handleRemove = useCallback((e: React.MouseEvent, orgnr: string) => {
@@ -66,7 +66,7 @@ export const FavoritesSection = memo(function FavoritesSection() {
                                 {company.navn}
                             </p>
                             <p className="text-xs text-gray-500">
-                                {company.organisasjonsform || 'Bedrift'} • {company.orgnr}
+                                {company.organisasjonsform || 'Virksomhet'} • {company.orgnr}
                             </p>
                         </div>
                         <button

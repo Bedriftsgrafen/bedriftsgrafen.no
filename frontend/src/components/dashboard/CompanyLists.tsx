@@ -31,7 +31,7 @@ export function TopCompanyList({
         {companies.map((company, idx) => (
           <li key={company.orgnr}>
             <Link
-              to="/bedrift/$orgnr"
+              to="/virksomhet/$orgnr"
               params={{ orgnr: company.orgnr }}
               className="flex items-center justify-between p-6 bg-white hover:bg-slate-50 border border-slate-100 hover:border-blue-200 rounded-3xl transition-all group shadow-sm focus-visible:ring-2 focus-visible:ring-blue-600 outline-none hover:scale-[1.01]"
               aria-label={`${idx + 1}. plass: ${company.navn}${company.latest_revenue ? ` - omsetning ${formatLargeCurrency(company.latest_revenue)}` : ''}`}
@@ -105,7 +105,7 @@ export function NewestCompaniesList({
         {companies.map(company => (
           <li key={company.orgnr}>
             <Link
-              to="/bedrift/$orgnr"
+              to="/virksomhet/$orgnr"
               params={{ orgnr: company.orgnr }}
               className="flex items-center justify-between p-6 bg-white hover:bg-slate-50 border border-slate-100 hover:border-blue-200 rounded-3xl transition-all group shadow-sm focus-visible:ring-2 focus-visible:ring-blue-600 outline-none hover:scale-[1.01]"
               aria-label={`${company.navn}, stiftet ${new Date(company.stiftelsesdato || '').toLocaleDateString('no-NO', { day: '2-digit', month: 'long', year: 'numeric' })}`}

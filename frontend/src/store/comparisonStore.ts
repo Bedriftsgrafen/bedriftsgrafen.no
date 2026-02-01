@@ -46,7 +46,7 @@ export const useComparisonStore = create<ComparisonState>((set, get) => ({
 
         // Max reached
         if (companies.length >= MAX_COMPARISON) {
-            toast.warning(`Du kan maksimalt sammenligne ${MAX_COMPARISON} bedrifter`)
+            toast.warning(`Du kan maksimalt sammenligne ${MAX_COMPARISON} virksomheter`)
             return
         }
 

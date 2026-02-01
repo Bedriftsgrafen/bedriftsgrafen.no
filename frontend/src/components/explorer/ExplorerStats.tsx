@@ -90,7 +90,7 @@ export const ExplorerStats = memo(function ExplorerStats() {
     return (
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-4">
             <StatCard
-                label="Antall selskaper"
+                label="Antall virksomheter"
                 value={formattedStats?.count ?? '0'}
                 icon={STAT_ICONS.companies}
                 color="bg-blue-50"

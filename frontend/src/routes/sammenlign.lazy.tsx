@@ -69,7 +69,7 @@ function ComparisonCard({
                     {/* Company header */}
                     <div className="pr-8 min-w-0">
                         <Link
-                            to="/bedrift/$orgnr"
+                            to="/virksomhet/$orgnr"
                             params={{ orgnr: item.orgnr }}
                             className="text-lg font-bold text-gray-900 hover:text-blue-600 line-clamp-2 transition-colors leading-tight"
                         >
@@ -347,8 +347,8 @@ function ComparisonPage() {
     return (
         <>
             <SEOHead
-                title="Sammenlign bedrifter - Bedriftsgrafen.no"
-                description="Sammenlign nøkkeltall og økonomi mellom norske bedrifter side ved side."
+                title="Sammenlign virksomheter - Bedriftsgrafen.no"
+                description="Sammenlign nøkkeltall og økonomi mellom norske virksomheter side ved side."
             />
 
             <div className="max-w-7xl mx-auto px-4 pb-20">
@@ -368,7 +368,7 @@ function ComparisonPage() {
                                 Sammenligning
                             </h1>
                             <p className="text-sm font-medium text-slate-400 mt-1">
-                                {orgNumbers.length} bedrift{orgNumbers.length > 1 ? 'er' : ''} i utvalget
+                                {orgNumbers.length} virksomhet{orgNumbers.length > 1 ? 'er' : ''} i utvalget
                             </p>
                         </div>
                     </div>
@@ -408,16 +408,16 @@ function ComparisonPage() {
                             <Building2 className="h-10 w-10" />
                         </div>
                         <h2 className="text-2xl font-black text-slate-900 mb-3">
-                            Ingen bedrifter valgt
+                            Ingen virksomheter valgt
                         </h2>
                         <p className="text-slate-500 mb-8 max-w-md mx-auto font-medium">
-                            Søk etter bedrifter og bruk "Sammenlign"-knappen for å sette opp en analyse.
+                            Søk etter virksomheter og bruk "Sammenlign"-knappen for å sette opp en analyse.
                         </p>
                         <Link
                             to="/utforsk"
                             className="inline-flex items-center gap-2 px-8 py-4 bg-slate-900 text-white font-bold rounded-2xl hover:bg-blue-600 transition-all shadow-xl"
                         >
-                            Finn bedrifter
+                            Finn virksomheter
                         </Link>
                     </div>
                 )}

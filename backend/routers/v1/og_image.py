@@ -71,7 +71,7 @@ async def get_municipality_og_svg(request: Request, code: str, db: AsyncSession 
         </g>
         
         <g transform="translate(450, 420)">
-            <text x="0" y="0" font-family="sans-serif" font-size="24" fill="#94a3b8">BEDRIFTER</text>
+            <text x="0" y="0" font-family="sans-serif" font-size="24" fill="#94a3b8">VIRKSOMHETER</text>
             <text x="0" y="50" font-family="sans-serif" font-size="64" font-weight="bold" fill="white">{count}</text>
             <text x="0" y="90" font-family="sans-serif" font-size="24" fill="#3b82f6">Lokal innsikt</text>
         </g>

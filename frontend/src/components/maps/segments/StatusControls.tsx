@@ -18,10 +18,9 @@ export const StatusControls: React.FC<StatusControlsProps> = ({
     setInLiquidation,
 }) => {
     return (
-        <section className="space-y-4">
-            <h3 className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-3">Selskapsstatus</h3>
-
-            <div className="flex flex-wrap gap-2">
+        <div className="space-y-4">
+            <h3 className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-3">Virksomhetsstatus</h3>
+            <div className="grid grid-cols-1 gap-2">
                 <button
                     onClick={() => setIsBankrupt(isBankrupt === true ? null : true)}
                     className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all border ${isBankrupt === true
@@ -50,6 +49,6 @@ export const StatusControls: React.FC<StatusControlsProps> = ({
                     Avvikling
                 </button>
             </div>
-        </section>
+        </div>
     );
 };

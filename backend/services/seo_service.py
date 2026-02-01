@@ -179,10 +179,10 @@ class SEOService:
         if not row:
             return None
 
-        nace_desc = get_nace_name(row.naeringskode) if row.naeringskode else "Bedrift"
+        nace_desc = get_nace_name(row.naeringskode) if row.naeringskode else "Virksomhet"
 
         return {
-            "navn": row.navn or "Ukjent Bedrift",
+            "navn": row.navn or "Ukjent virksomhet",
             "orgnr": orgnr,
             "nace_name": nace_desc,
             "revenue": row.salgsinntekter,

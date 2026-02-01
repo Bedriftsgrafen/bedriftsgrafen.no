@@ -81,7 +81,7 @@ export function CompanyModalHeader({
               ? 'text-gray-400 hover:bg-gray-100 hover:text-blue-500'
               : 'text-gray-300 cursor-not-allowed'
             }`}
-          title={isSelected ? 'Fjern fra sammenligning' : canAddMore ? 'Legg til sammenligning' : 'Maks 3 bedrifter'}
+          title={isSelected ? 'Fjern fra sammenligning' : canAddMore ? 'Legg til sammenligning' : 'Maks 3 virksomheter'}
         >
           <GitCompareArrows className="h-5 w-5" />
         </button>
@@ -90,7 +90,7 @@ export function CompanyModalHeader({
       <button
         onClick={onShare}
         className="p-2.5 md:p-2 hover:bg-gray-100 rounded-lg transition-colors text-gray-400 hover:text-gray-600"
-        title="Del bedriftsprofil"
+        title="Del virksomhetsprofil"
       >
         <Share2 className="h-5 w-5" />
       </button>

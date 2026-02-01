@@ -77,7 +77,7 @@ export const CompanyCard = memo(function CompanyCard({ company, onClick }: Compa
                     label: 'Etablert',
                     icon: History,
                     className: 'bg-slate-50 text-slate-700 border-slate-100',
-                    title: `Veletablert selskap (Stiftet: ${stiftelse.getFullYear()})`
+                    title: `Veletablert virksomhet (Stiftet: ${stiftelse.getFullYear()})`
                 })
             }
         }

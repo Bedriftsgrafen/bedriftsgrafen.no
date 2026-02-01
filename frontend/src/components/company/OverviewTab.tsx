@@ -64,7 +64,7 @@ export function OverviewTab({ company, onOpenIndustry }: OverviewTabProps) {
             <div className="flex items-center justify-between mb-4">
               <h3 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
                 <Building2 className="h-5 w-5 text-blue-600" />
-                Bedriftsinformasjon
+                Virksomhetsinformasjon
               </h3>
               <a
                 href={getBrregEnhetsregisteretUrl(company.orgnr)}
@@ -98,7 +98,7 @@ export function OverviewTab({ company, onOpenIndustry }: OverviewTabProps) {
                   <div className="text-sm text-gray-600 flex items-center gap-2">
                     {getOrganizationFormLabel(company.organisasjonsform)}
                     {company.er_i_konsern && (
-                      <span className="inline-flex items-center px-1.5 py-0.5 rounded-full text-[10px] font-bold bg-blue-100 text-blue-700 uppercase tracking-tighter shadow-xs" title="Selskapet inngår i et konsern">
+                      <span className="inline-flex items-center px-1.5 py-0.5 rounded-full text-[10px] font-bold bg-blue-100 text-blue-700 uppercase tracking-tighter shadow-xs" title="Virksomheten inngår i et konsern">
                         Konsern
                       </span>
                     )}
@@ -112,7 +112,7 @@ export function OverviewTab({ company, onOpenIndustry }: OverviewTabProps) {
                   <div className="flex-1">
                     <div className="text-sm font-medium text-gray-900">Hovedenhet</div>
                     <Link
-                      to="/bedrift/$orgnr"
+                      to="/virksomhet/$orgnr"
                       params={{ orgnr: company.parent_orgnr }}
                       replace
                       className="mt-1 block p-3 rounded-lg border border-blue-100 bg-blue-50/30 hover:bg-blue-50 hover:border-blue-300 transition-all group"
@@ -143,7 +143,7 @@ export function OverviewTab({ company, onOpenIndustry }: OverviewTabProps) {
                             key={i}
                             onClick={() => onOpenIndustry?.(nk.kode, nk.beskrivelse)}
                             className="w-full text-left group flex items-center justify-between py-1.5 px-2 -mx-2 rounded-lg border border-transparent hover:border-blue-200 hover:bg-blue-50 transition-all min-w-0"
-                            title={`Se andre bedrifter med næringskode ${nk.kode}`}
+                            title={`Se andre virksomheter med næringskode ${nk.kode}`}
                           >
                             <span className="text-blue-600 group-hover:text-blue-700 group-hover:underline flex-1">
                               <span className="font-medium">{nk.kode}</span> {nk.beskrivelse}
@@ -160,7 +160,7 @@ export function OverviewTab({ company, onOpenIndustry }: OverviewTabProps) {
                             onOpenIndustry?.(code, formatNace(company.naeringskode).replace(code, '').replace(/^ - /, ''))
                           }}
                           className="w-full text-left group flex items-center justify-between py-1.5 px-2 -mx-2 rounded-lg border border-transparent hover:border-blue-200 hover:bg-blue-50 transition-all min-w-0"
-                          title={`Se andre bedrifter med næringskode ${getNaceCode(company.naeringskode)}`}
+                          title={`Se andre virksomheter med næringskode ${getNaceCode(company.naeringskode)}`}
                         >
                           <span className="text-blue-600 group-hover:text-blue-700 group-hover:underline flex-1">
                             <span className="font-medium">{getNaceCode(company.naeringskode)}</span> {formatNace(company.naeringskode).replace(getNaceCode(company.naeringskode) || '', '').replace(/^ - /, '')}

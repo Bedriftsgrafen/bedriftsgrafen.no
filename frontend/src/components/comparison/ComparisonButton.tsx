@@ -47,7 +47,7 @@ export const ComparisonButton = memo(function ComparisonButton({
                         ? 'text-gray-300 cursor-not-allowed'
                         : 'text-gray-400 hover:bg-gray-100 hover:text-gray-600'
                     }`}
-                title={isSelected ? 'Fjern fra sammenligning' : isMaxReached ? 'Maks 3 bedrifter' : 'Legg til sammenligning'}
+                title={isSelected ? 'Fjern fra sammenligning' : isMaxReached ? 'Maks 3 virksomheter' : 'Legg til sammenligning'}
             >
                 {isSelected ? (
                     <Check className="h-4 w-4" />
@@ -69,7 +69,7 @@ export const ComparisonButton = memo(function ComparisonButton({
                     ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
                     : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
                 }`}
-            title={isSelected ? 'Fjern fra sammenligning' : isMaxReached ? 'Maks 3 bedrifter' : 'Legg til sammenligning'}
+            title={isSelected ? 'Fjern fra sammenligning' : isMaxReached ? 'Maks 3 virksomheter' : 'Legg til sammenligning'}
         >
             {isSelected ? (
                 <>

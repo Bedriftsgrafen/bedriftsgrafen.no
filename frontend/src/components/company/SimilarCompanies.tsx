@@ -38,7 +38,7 @@ export function SimilarCompanies({ orgnr }: SimilarCompaniesProps) {
       <div className="mt-6">
         <h3 className="text-sm font-semibold text-gray-900 mb-3 flex items-center gap-2">
           <Building2 className="h-4 w-4 text-blue-600" />
-          Lignende bedrifter i nærheten
+          Lignende virksomheter i nærheten
         </h3>
         <SimilarCompaniesSkeleton />
       </div>
@@ -52,7 +52,7 @@ export function SimilarCompanies({ orgnr }: SimilarCompaniesProps) {
     <div className="mt-6">
       <h3 className="text-sm font-semibold text-gray-900 mb-3 flex items-center gap-2">
         <Building2 className="h-4 w-4 text-blue-600" />
-        Lignende bedrifter i nærheten
+        Lignende virksomheter i nærheten
       </h3>
       <div className="grid grid-cols-2 lg:grid-cols-3 gap-3">
         {companies.map((company) => {
@@ -62,7 +62,7 @@ export function SimilarCompanies({ orgnr }: SimilarCompaniesProps) {
           return (
             <Link
               key={company.orgnr}
-              to="/bedrift/$orgnr"
+              to="/virksomhet/$orgnr"
               params={{ orgnr: company.orgnr }}
               className="text-left p-3 bg-gray-50 rounded-lg border border-gray-200 hover:border-blue-300 hover:bg-blue-50/50 transition-colors group min-w-0"
             >

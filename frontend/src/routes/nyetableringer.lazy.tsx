@@ -201,8 +201,8 @@ function NyetableringerPage() {
     return (
         <>
             <SEOHead
-                title="Nyetablerte selskaper i Norge | Bedriftsgrafen.no"
-                description="Oversikt over nylig etablerte aksjeselskaper i Norge. Se hvilke bransjer som vokser og hvor nye selskaper etableres."
+                title="Nyetablerte virksomheter i Norge | Bedriftsgrafen.no"
+                description="Oversikt over nylig etablerte virksomheter i Norge. Se hvilke bransjer som vokser og hvor nye virksomheter etableres."
             />
 
             {/* Page header */}
@@ -212,7 +212,7 @@ function NyetableringerPage() {
                     Nyetableringer
                 </h1>
                 <p className="text-gray-700 text-lg">
-                    Oversikt over nye aksjeselskaper etablert {periodLabel.toLowerCase()}.
+                    Oversikt over nye virksomheter etablert {periodLabel.toLowerCase()}.
                 </p>
             </div>
 
@@ -220,7 +220,7 @@ function NyetableringerPage() {
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4 mb-8">
                 <SummaryCard
                     icon={<Building2 className="w-5 h-5" />}
-                    label="Nye selskaper"
+                    label="Nye virksomheter"
                     value={formatNumber(count ?? 0)}
                     color="green"
                 />

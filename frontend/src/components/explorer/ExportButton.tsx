@@ -66,7 +66,7 @@ function useExport(filterParams: Record<string, unknown>, sortBy: string, sortOr
             // Extract filename from Content-Disposition or use default
             const contentDisposition = response.headers.get('Content-Disposition')
             const filenameMatch = contentDisposition?.match(/filename="(.+)"/)
-            link.download = filenameMatch?.[1] ?? `selskaper_${new Date().toISOString().slice(0, 10)}.csv`
+            link.download = filenameMatch?.[1] ?? `virksomheter_${new Date().toISOString().slice(0, 10)}.csv`
 
             document.body.appendChild(link)
             link.click()
@@ -75,7 +75,7 @@ function useExport(filterParams: Record<string, unknown>, sortBy: string, sortOr
 
             // Show success toast
             const exportedCount = count !== undefined && count > EXPORT_LIMIT ? EXPORT_LIMIT : count
-            toast.success(`Eksporterte ${exportedCount !== undefined ? formatNumber(exportedCount) : ''} selskaper`)
+            toast.success(`Eksporterte ${exportedCount !== undefined ? formatNumber(exportedCount) : ''} virksomheter`)
 
             // Track successful export
             trackEvent('export_success', 'export', 'csv', exportedCount)
@@ -136,7 +136,7 @@ export const ExportButton = memo(function ExportButton({
                 className="flex items-center gap-1.5 px-3 py-1.5 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                 title={
                     isAtLimit
-                        ? `Eksporterer første ${formatNumber(EXPORT_LIMIT)} selskaper`
+                        ? `Eksporterer første ${formatNumber(EXPORT_LIMIT)} virksomheter`
                         : 'Last ned som CSV'
                 }
             >

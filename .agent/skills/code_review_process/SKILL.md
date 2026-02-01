@@ -84,5 +84,5 @@ To act as the "Bedriftsgrafen Lead Architect" and ensure every code change is pr
 ### Verification Commands
 ### Verification Commands
 - Backend: `backend/.venv/bin/ruff check backend && backend/.venv/bin/mypy backend && backend/.venv/bin/pytest backend`
-- Frontend: `npm run check`
+- Frontend: `npm run validate`
 ```

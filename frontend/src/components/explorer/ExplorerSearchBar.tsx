@@ -19,7 +19,7 @@ export function ExplorerSearchBar({
     initialValue,
     onSearch,
     isLoading = false,
-    placeholder = "Søk etter bedrift, bransje eller formål..."
+    placeholder = "Søk etter virksomhet, bransje eller formål..."
 }: ExplorerSearchBarProps) {
     const [localValue, setLocalValue] = useState(initialValue);
     const [showSuggestions, setShowSuggestions] = useState(false);
@@ -106,7 +106,7 @@ export function ExplorerSearchBar({
                                             </div>
                                         </div>
                                         <div className="flex items-center gap-2">
-                                            <span className="text-[10px] font-bold text-slate-400 tabular-nums">{m.company_count.toLocaleString('no-NO')} bedrifter</span>
+                                            <span className="text-[10px] font-bold text-slate-400 tabular-nums">{m.company_count.toLocaleString('no-NO')} virksomheter</span>
                                             <ChevronRight className="h-4 w-4 text-slate-300 group-hover:text-blue-600 transition-colors" />
                                         </div>
                                     </Link>
@@ -121,7 +121,7 @@ export function ExplorerSearchBar({
                                     </div>
                                     <div>
                                         <p className="text-sm font-bold text-slate-900">Søk etter "{localValue}"</p>
-                                        <p className="text-[10px] text-slate-500 font-medium uppercase tracking-tighter">I alle bedrifter</p>
+                                        <p className="text-[10px] text-slate-500 font-medium uppercase tracking-tighter">I alle virksomheter</p>
                                     </div>
                                 </div>
                             </div>

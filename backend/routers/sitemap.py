@@ -176,7 +176,7 @@ async def get_paginated_sitemap(
 
         for orgnr, updated_at in companies:
             xml_content += "  <url>\n"
-            xml_content += f"    <loc>{BASE_URL}/bedrift/{orgnr}</loc>\n"
+            xml_content += f"    <loc>{BASE_URL}/virksomhet/{orgnr}</loc>\n"
             xml_content += f"    <lastmod>{format_date(updated_at)}</lastmod>\n"
             xml_content += "    <changefreq>weekly</changefreq>\n"
             xml_content += "    <priority>0.8</priority>\n"

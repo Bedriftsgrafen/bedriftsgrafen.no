@@ -10,7 +10,7 @@ module.exports = {
     ci: {
         collect: {
             // URLs to audit - key user-facing pages
-            // Note: Excluding /kart (requires backend), /bedrift/:orgnr (dynamic), /sammenlign (intentionally noindex)
+            // Note: Excluding /kart (requires backend), /virksomhet/:orgnr (dynamic), /sammenlign (intentionally noindex)
             url: [
                 'http://localhost:5174/',             // Home/search
                 'http://localhost:5174/search',       // Search with results

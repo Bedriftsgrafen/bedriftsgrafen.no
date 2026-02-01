@@ -212,7 +212,7 @@ export const ComparisonModal = memo(function ComparisonModal() {
                 {/* Header */}
                 <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200">
                     <h2 className="text-xl font-semibold text-gray-900">
-                        Sammenligning av {companies.length} bedrifter
+                        Sammenligning av {companies.length} virksomheter
                     </h2>
                     <button
                         type="button"
@@ -237,7 +237,7 @@ export const ComparisonModal = memo(function ComparisonModal() {
                         <AffiliateBanner
                             bannerId="banking_comparison_modal"
                             placement="comparison_modal"
-                            title="Vil du nå bedrifter i vekst?"
+                            title="Vil du nå virksomheter i vekst?"
                             description={`Denne plassen er ledig for en bankpartner. Kontakt oss på ${CONTACT_EMAIL} for samarbeid.`}
                             buttonText="Send e-post"
                             link={`mailto:${CONTACT_EMAIL}`}

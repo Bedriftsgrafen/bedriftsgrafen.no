@@ -44,7 +44,7 @@ export const Route = createFileRoute('/kart')({
 })
 
 function KartPage() {
-    useDocumentTitle('Bedriftskart | Bedriftsgrafen.no')
+    useDocumentTitle('Virksomhetskart | Bedriftsgrafen.no')
     const navigate = useNavigate({ from: '/kart' })
     const search = useSearch({ from: '/kart' })
 
@@ -145,18 +145,18 @@ function KartPage() {
     return (
         <>
             <SEOHead
-                title="Bedriftskart | Bedriftsgrafen.no"
-                description="Interaktivt kart over norske bedrifter. Se geografisk fordeling av selskaper, ansatte og omsetning."
+                title="Virksomhetskart | Bedriftsgrafen.no"
+                description="Interaktivt kart over norske virksomheter. Se geografisk fordeling av virksomheter, ansatte og omsetning."
             />
 
             {/* Page header */}
             <div className="mb-6">
                 <h1 className="text-3xl font-bold text-black mb-2 flex items-center gap-3">
                     <MapIcon className="h-8 w-8 text-blue-500" />
-                    Bedriftskart
+                    Virksomhetskart
                 </h1>
                 <p className="text-gray-700 text-lg">
-                    Interaktivt kart over norske bedrifter fordelt på fylker og kommuner.
+                    Interaktivt kart over norske virksomheter fordelt på fylker og kommuner.
                 </p>
             </div>
 

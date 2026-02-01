@@ -53,7 +53,7 @@ This document consolidates feature ideas and strategic plans for the future deve
 
 ### ~~County (Fylker) Dashboards~~ ✅ (Jan 29, 2026)
 - **Goal**: Dedicated landing pages for Norwegian counties (e.g., `/fylke/46`).
-- **Why**: High-volume SEO terms ("Bedrifter i Vestland").
+- **Why**: High-volume SEO terms ("Virksomheter i Vestland").
 - **Tech**: `/fylke/[code]` route with premium dashboard, shared components with municipalities.
 - **Status**: **IMPLEMENTED**. Full premium dashboard with drill-down navigation to municipalities, DRY components, A11y improvements.
 
@@ -111,7 +111,7 @@ This document consolidates feature ideas and strategic plans for the future deve
 
 ### Bedriftsgrafen Assistant (AI Chatbot)
 - **Concept**: Conversational interface for complex data queries.
-- **Queries**: "Finn selskaper i Bergen med >10% margin og <10 ansatte".
+- **Queries**: "Finn virksomheter i Bergen med >10% margin og <10 ansatte".
 - **Tech**: RAG (Retrieval-Augmented Generation) using an LLM to generate safe SQL queries.
 
 ### Role Network & Ownership Graph

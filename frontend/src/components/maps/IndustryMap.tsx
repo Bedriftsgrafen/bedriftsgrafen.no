@@ -535,7 +535,7 @@ export function IndustryMap({
                         if (onCompanyClick) {
                             onCompanyClick(clean);
                         } else {
-                            navigate({ to: '/bedrift/$orgnr', params: { orgnr: clean } });
+                            navigate({ to: '/virksomhet/$orgnr', params: { orgnr: clean } });
                         }
                     }}
                     municipalityName={level === 'municipality' && selectedRegionData && selectedRegionData.code.length === 4 ? selectedRegionData.name : undefined}

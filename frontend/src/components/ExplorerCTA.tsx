@@ -21,7 +21,7 @@ export const ExplorerCTA = memo(function ExplorerCTA() {
                         Utforsk alle norske bransjer
                     </h2>
                     <p className="text-white/90 text-lg mb-6">
-                        Søk, filtrer og sammenlign bedrifter på tvers av 600+ industrier
+                        Søk, filtrer og sammenlign virksomheter på tvers av 600+ industrier
                     </p>
 
                     {/* CTA Button - white like search button for consistency */}

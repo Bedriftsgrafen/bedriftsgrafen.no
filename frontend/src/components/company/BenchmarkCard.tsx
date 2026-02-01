@@ -37,7 +37,7 @@ export const BenchmarkCard = memo(function BenchmarkCard({
     icon,
     formatter,
     color,
-    companyName = 'Din bedrift'
+    companyName = 'Din virksomhet'
 }: BenchmarkCardProps) {
     const displayName = truncateName(companyName)
 

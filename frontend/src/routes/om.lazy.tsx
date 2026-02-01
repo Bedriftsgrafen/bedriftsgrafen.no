@@ -11,8 +11,8 @@ function AboutPage() {
     return (
         <>
             <SEOHead
-                title="Om Bedriftsgrafen.no - Norske bedriftsdata"
-                description="Bedriftsgrafen.no gir deg gratis tilgang til offentlige data om norske bedrifter. Utforsk regnskap, nøkkeltall og finansiell informasjon."
+                title="Om Bedriftsgrafen.no - Norske virksomhetsdata"
+                description="Bedriftsgrafen.no gir deg gratis tilgang til offentlige data om norske virksomheter. Utforsk regnskap, nøkkeltall og finansiell informasjon."
             />
 
             <div className="max-w-4xl mx-auto">
@@ -21,7 +21,7 @@ function AboutPage() {
 
                     <div className="space-y-6">
                         <p className="text-gray-700 leading-relaxed">
-                            Bedriftsgrafen.no er et <strong>uavhengig hobbyprosjekt</strong> utviklet for å gjøre norske bedriftsdata
+                            Bedriftsgrafen.no er et <strong>uavhengig hobbyprosjekt</strong> utviklet for å gjøre norske virksomhetsdata
                             mer tilgjengelig og forståelig for alle. Vi henter åpne data fra Brønnøysundregistrene, SSB og Kartverket, og presenterer
                             dem i en brukervennlig visualisering.
                         </p>
@@ -54,7 +54,7 @@ function AboutPage() {
                                 <div>
                                     <h2 className="font-semibold text-gray-900 mb-1">Datakilder</h2>
                                     <p className="text-sm text-gray-600">
-                                        <strong>Enhetsregisteret & Regnskapsregisteret:</strong> Bedriftsinformasjon og finansielle tall (Brønnøysundregistrene)
+                                        <strong>Enhetsregisteret & Regnskapsregisteret:</strong> Virksomhetsinformasjon og finansielle tall (Brønnøysundregistrene)
                                         <br />
                                         <strong>SSB:</strong> Statistikk, næringskoder og bransjestrukturer
                                         <br />

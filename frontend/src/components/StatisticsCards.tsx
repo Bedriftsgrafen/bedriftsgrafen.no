@@ -64,13 +64,13 @@ export function StatisticsCards() {
 
   const cards: StatCard[] = [
     {
-      title: 'Bedriftspopulasjonen',
+      title: 'Virksomhetsuniverset',
       value: totalCount ?? stats.total_companies,
       icon: Building2,
       color: 'text-blue-700',
       bgColor: 'bg-blue-50',
       onClick: () => focusSearch('company'),
-      tooltip: 'Søk i alle norske bedrifter'
+      tooltip: 'Søk i alle norske virksomheter'
     },
     {
       title: 'Næringslivets Roller',
@@ -88,7 +88,7 @@ export function StatisticsCards() {
       color: 'text-red-700',
       bgColor: 'bg-red-50',
       href: '/kart',
-      tooltip: 'Se bedriftskartet og geografisk spredning'
+      tooltip: 'Se virksomhetskartet og geografisk spredning'
     },
     {
       title: 'Verdiskaping',
@@ -107,7 +107,7 @@ export function StatisticsCards() {
       color: 'text-teal-700',
       bgColor: 'bg-teal-50',
       href: '/nyetableringer',
-      tooltip: 'Nye selskaper stiftet de siste 30 dagene'
+      tooltip: 'Nye virksomheter stiftet de siste 30 dagene'
     },
     {
       title: 'Finansiell Robusthet',
@@ -116,7 +116,7 @@ export function StatisticsCards() {
       color: 'text-indigo-700',
       bgColor: 'bg-indigo-50',
       href: '/bransjer',
-      tooltip: 'Andel selskaper med over 20% egenkapitalandel (Siste regnskapsår)'
+      tooltip: 'Andel virksomheter med over 20% egenkapitalandel (Siste regnskapsår)'
     },
   ]
 

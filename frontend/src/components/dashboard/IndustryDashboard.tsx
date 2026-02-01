@@ -458,7 +458,7 @@ export const IndustryDashboard = ({ initialNace, onSelectCompany }: IndustryDash
                 <AffiliateBanner
                     bannerId="banking_industry_dashboard"
                     placement="industry_dashboard"
-                    title="Tilbyr dere bedriftskonto?"
+                    title="Tilbyr dere virksomhetskonto?"
                     description={`Nå ut til tusenvis av norske virksomheter. Denne annonseplassen er ledig for samarbeid. Kontakt oss på ${CONTACT_EMAIL}.`}
                     buttonText="Send e-post"
                     link={`mailto:${CONTACT_EMAIL}`}

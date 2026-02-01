@@ -1,81 +1,17 @@
-import { createFileRoute, Link } from '@tanstack/react-router'
-import { z } from 'zod'
-import { getCompanyDetailQueryOptions } from '../hooks/queries/useCompanyDetailQuery'
-import { queryClient } from '../lib/queryClient'
+import { createFileRoute, redirect } from '@tanstack/react-router'
 
-// Validation
-interface CompanySearchParams {
-  orgnr: string
-}
-
-const companySearchSchema = z.object({
-  tab: z.enum(['oversikt', 'okonomi', 'sammenligning', 'avdelinger', 'roller']).optional(),
-})
-
-const validateOrgnr = (orgnr: string): boolean => {
-  return /^\d{9}$/.test(orgnr)
-}
-
+/**
+ * Legacy route redirect: /bedrift/$orgnr -> /virksomhet/$orgnr
+ * Ensures that old links and bookmarks continue to work while
+ * promoting the new 'virksomhet' terminology.
+ */
 export const Route = createFileRoute('/bedrift/$orgnr')({
-  // Validate search params
-  validateSearch: (search) => companySearchSchema.parse(search),
-
-  // Validate params
-  params: {
-    parse: (params): CompanySearchParams => {
-      const orgnr = params.orgnr
-      if (!validateOrgnr(orgnr)) {
-        throw new Error('Ugyldig organisasjonsnummer. Må være 9 siffer.')
-      }
-      return { orgnr }
-    },
-    stringify: (params) => ({
-      orgnr: params.orgnr,
-    }),
+  beforeLoad: ({ params }) => {
+    throw redirect({
+      to: '/virksomhet/$orgnr',
+      params: { orgnr: params.orgnr },
+      replace: true, // Replace in history to avoid back-button traps
+    })
   },
-
-  // Pre-load data before rendering
-  loader: async ({ params }) => {
-    const { orgnr } = params
-
-    try {
-      // Pre-fetch company data with retry logic
-      await queryClient.ensureQueryData(
-        getCompanyDetailQueryOptions(orgnr)
-      )
-    } catch (error) {
-      // Fail gracefully - component can handle loading/error states
-      console.error('Failed to preload company:', error)
-    }
-
-    return { orgnr }
-  },
-
-  // Error handling
-  errorComponent: ({ error }) => {
-    const isValidationError = error.message.includes('Ugyldig organisasjonsnummer')
-
-    return (
-      <div className="text-center py-16">
-        <h1 className="text-3xl font-bold text-red-700 mb-4">
-          {isValidationError
-            ? 'Ugyldig organisasjonsnummer'
-            : 'Feil ved lasting av bedrift'}
-        </h1>
-        <p className="text-gray-600 mb-6">
-          {isValidationError
-            ? 'Organisasjonsnummeret må være 9 siffer.'
-            : 'Bedriften ble ikke funnet eller en nettverksfeil oppstod.'}
-        </p>
-        <Link
-          to="/"
-          className="inline-block text-blue-600 hover:underline font-medium hover:text-blue-700"
-        >
-          ← Tilbake til forsiden
-        </Link>
-      </div>
-    )
-  },
+  // No component needed as it always redirects
 })
-
-

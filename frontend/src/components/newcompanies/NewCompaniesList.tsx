@@ -136,7 +136,7 @@ export function NewCompaniesList({
             {/* Header with search and filters */}
             <div className="px-4 py-3 border-b border-gray-200 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                 <span className="text-sm text-gray-600">
-                    Viser {filteredData.length} av {formatNumber(totalCount ?? 0)} nye selskaper
+                    Viser {filteredData.length} av {formatNumber(totalCount ?? 0)} nye virksomheter
                 </span>
                 <div className="flex items-center gap-3">
                     {/* Filter button */}
@@ -242,7 +242,7 @@ export function NewCompaniesList({
                         <tr>
                             <SortableHeader
                                 field="navn"
-                                label="Selskap"
+                                label="Virksomhet"
                                 currentSort={sortBy}
                                 sortOrder={sortOrder}
                                 onSort={handleSort}
@@ -342,7 +342,7 @@ export function NewCompaniesList({
             {/* Empty state */}
             {companies?.length === 0 && (
                 <div className="p-8 text-center text-gray-500">
-                    Ingen nye selskaper funnet i perioden
+                    Ingen nye virksomheter funnet i perioden
                 </div>
             )}
         </div>

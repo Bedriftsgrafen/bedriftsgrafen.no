@@ -365,7 +365,7 @@ export function CompanyList({
                         companies.map(c => <CompanyCard key={c.orgnr} company={c} onClick={() => onSelectCompany(c.orgnr)} />)
                     ) : (
                         <div className="col-span-full">
-                            <EmptyState icon={Building2} title="Ingen treff" description="Ingen bedrifter funnet." />
+                            <EmptyState icon={Building2} title="Ingen treff" description="Ingen virksomheter funnet." />
                         </div>
                     )}
                 </div>

@@ -43,7 +43,7 @@ function HomePage() {
         // Company search logic...
         // If 9-digit number, navigate directly to company page
         if (/^\d{9}$/.test(trimmed)) {
-            navigate({ to: '/bedrift/$orgnr', params: { orgnr: trimmed } })
+            navigate({ to: '/virksomhet/$orgnr', params: { orgnr: trimmed } })
             return
         }
 
@@ -88,7 +88,7 @@ function HomePage() {
                                 }`}
                         >
                             <Building2 className="h-4 w-4" />
-                            Bedrifter
+                            Virksomheter
                         </button>
                         <button
                             id="search-mode-person"
@@ -118,7 +118,7 @@ function HomePage() {
                     </h1>
                     <p className="text-white/90 text-center mb-6 relative z-10">
                         {searchMode === 'company'
-                            ? 'Søk på bedriftsnavn, organisasjonsnummer, bransje, sted eller formål'
+                            ? 'Søk på virksomhetsnavn, organisasjonsnummer, bransje, sted eller formål'
                             : 'Søk etter navn på personer i styre og ledelse'}
                     </p>
 
@@ -136,7 +136,7 @@ function HomePage() {
                                     }}
                                     onKeyDown={handleKeyDown}
                                     placeholder={searchMode === 'company'
-                                        ? "Søk etter bedrift, orgnr, bransje eller formål..."
+                                        ? "Søk etter virksomhet, orgnr, bransje eller formål..."
                                         : "Søk etter navn på person..."}
                                     className="w-full px-4 py-3 bg-white border-0 rounded-lg focus:ring-2 focus:ring-blue-300 focus:outline-none text-blue-900 placeholder-blue-900/50 shadow-lg font-medium"
                                 />

@@ -42,7 +42,7 @@ export function BankruptciesSection({
             companies.map(company => (
               <li key={company.orgnr}>
                 <Link
-                  to="/bedrift/$orgnr"
+                  to="/virksomhet/$orgnr"
                   params={{ orgnr: company.orgnr }}
                   className="flex items-center justify-between p-6 bg-slate-50 hover:bg-white border border-transparent hover:border-slate-200 rounded-2xl transition-all group focus-visible:ring-2 focus-visible:ring-rose-600 outline-none hover:scale-[1.02]"
                   aria-label={`${company.navn}, konkurs ${company.konkursdato || 'nylig'}`}

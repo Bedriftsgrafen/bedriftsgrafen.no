@@ -24,7 +24,7 @@ The project uses a strict, AI-orchestrated workflow defined by **Skills** locate
 2.  **Safe Push** (`.agent/skills/safe_push`):
     *   **Mandatory Local Validation** before pushing.
     *   Backend: `backend/.venv/bin/ruff check backend && backend/.venv/bin/mypy backend && backend/.venv/bin/pytest backend`
-    *   Frontend: `cd frontend && npm run check`
+    *   Frontend: `cd frontend && npm run validate`
 
 3.  **Git Conventions** (`.agent/skills/git_commit_convention`):
     *   Format: `<type>(<scope>): <subject>` (e.g., `feat(api): add company endpoint`).
@@ -48,7 +48,7 @@ We use Docker for services (DB, Redis) but prefer **local execution** for code v
 | :--- | :--- |
 | **Start Services** | `docker compose -f docker-compose.dev.yml up -d` |
 | **Verify Backend** | See `safe_push` skill (Ruff, Mypy, Pytest) |
-| **Verify Frontend** | `cd frontend && npm run check` |
+| **Verify Frontend** | `cd frontend && npm run validate` |
 | **New Migration** | See `database_migration` skill |
 
 ## Data Management

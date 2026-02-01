@@ -126,7 +126,7 @@ export function IndustryBenchmark({ company }: IndustryBenchmarkProps) {
                             </span>
                         </h3>
                         <p className="text-sm text-gray-500">
-                            Sammenlignet med {benchmark.company_count} bedrifter
+                            Sammenlignet med {benchmark.company_count} virksomheter
                             {benchmark.municipality_code && municipalityName && (
                                 <> i <span className="font-medium">{municipalityName}</span></>
                             )}
@@ -135,7 +135,7 @@ export function IndustryBenchmark({ company }: IndustryBenchmarkProps) {
                         </p>
                         {gotNationalFallback && (
                             <p className="text-xs text-amber-600 mt-1">
-                                ⚠️ For få bedrifter i kommunen – viser nasjonal sammenligning
+                                ⚠️ For få virksomheter i kommunen – viser nasjonal sammenligning
                             </p>
                         )}
                     </div>

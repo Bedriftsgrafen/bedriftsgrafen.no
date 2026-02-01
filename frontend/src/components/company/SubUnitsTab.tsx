@@ -198,7 +198,7 @@ export function SubUnitsTab({ orgnr, onSubUnitClick }: SubUnitsTabProps) {
         <Building className="h-8 w-8 text-gray-400 mx-auto mb-2" />
         <p className="text-gray-600 font-medium mb-1">Ingen avdelinger funnet</p>
         <p className="text-sm text-gray-500 mb-4">
-          Denne bedriften har ingen registrerte underenheter eller avdelinger i Brønnøysundregistrene.
+          Denne virksomheten har ingen registrerte underenheter eller avdelinger i Brønnøysundregistrene.
         </p>
         <button
           onClick={handleFetchFromBrreg}

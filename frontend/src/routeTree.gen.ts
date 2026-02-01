@@ -20,6 +20,7 @@ import { Route as FylkerRouteImport } from './routes/fylker'
 import { Route as BransjerRouteImport } from './routes/bransjer'
 import { Route as SplatRouteImport } from './routes/$'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as VirksomhetOrgnrRouteImport } from './routes/virksomhet.$orgnr'
 import { Route as KommuneCodeRouteImport } from './routes/kommune.$code'
 import { Route as FylkeCodeRouteImport } from './routes/fylke.$code'
 import { Route as BedriftOrgnrRouteImport } from './routes/bedrift.$orgnr'
@@ -82,6 +83,13 @@ const IndexRoute = IndexRouteImport.update({
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any).lazy(() => import('./routes/index.lazy').then((d) => d.Route))
+const VirksomhetOrgnrRoute = VirksomhetOrgnrRouteImport.update({
+  id: '/virksomhet/$orgnr',
+  path: '/virksomhet/$orgnr',
+  getParentRoute: () => rootRouteImport,
+} as any).lazy(() =>
+  import('./routes/virksomhet.$orgnr.lazy').then((d) => d.Route),
+)
 const KommuneCodeRoute = KommuneCodeRouteImport.update({
   id: '/kommune/$code',
   path: '/kommune/$code',
@@ -96,9 +104,7 @@ const BedriftOrgnrRoute = BedriftOrgnrRouteImport.update({
   id: '/bedrift/$orgnr',
   path: '/bedrift/$orgnr',
   getParentRoute: () => rootRouteImport,
-} as any).lazy(() =>
-  import('./routes/bedrift.$orgnr.lazy').then((d) => d.Route),
-)
+} as any)
 const PersonNameBirthdateRoute = PersonNameBirthdateRouteImport.update({
   id: '/person/$name/$birthdate',
   path: '/person/$name/$birthdate',
@@ -122,6 +128,7 @@ export interface FileRoutesByFullPath {
   '/bedrift/$orgnr': typeof BedriftOrgnrRoute
   '/fylke/$code': typeof FylkeCodeRoute
   '/kommune/$code': typeof KommuneCodeRoute
+  '/virksomhet/$orgnr': typeof VirksomhetOrgnrRoute
   '/person/$name/$birthdate': typeof PersonNameBirthdateRoute
 }
 export interface FileRoutesByTo {
@@ -139,6 +146,7 @@ export interface FileRoutesByTo {
   '/bedrift/$orgnr': typeof BedriftOrgnrRoute
   '/fylke/$code': typeof FylkeCodeRoute
   '/kommune/$code': typeof KommuneCodeRoute
+  '/virksomhet/$orgnr': typeof VirksomhetOrgnrRoute
   '/person/$name/$birthdate': typeof PersonNameBirthdateRoute
 }
 export interface FileRoutesById {
@@ -157,6 +165,7 @@ export interface FileRoutesById {
   '/bedrift/$orgnr': typeof BedriftOrgnrRoute
   '/fylke/$code': typeof FylkeCodeRoute
   '/kommune/$code': typeof KommuneCodeRoute
+  '/virksomhet/$orgnr': typeof VirksomhetOrgnrRoute
   '/person/$name/$birthdate': typeof PersonNameBirthdateRoute
 }
 export interface FileRouteTypes {
@@ -176,6 +185,7 @@ export interface FileRouteTypes {
     | '/bedrift/$orgnr'
     | '/fylke/$code'
     | '/kommune/$code'
+    | '/virksomhet/$orgnr'
     | '/person/$name/$birthdate'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -193,6 +203,7 @@ export interface FileRouteTypes {
     | '/bedrift/$orgnr'
     | '/fylke/$code'
     | '/kommune/$code'
+    | '/virksomhet/$orgnr'
     | '/person/$name/$birthdate'
   id:
     | '__root__'
@@ -210,6 +221,7 @@ export interface FileRouteTypes {
     | '/bedrift/$orgnr'
     | '/fylke/$code'
     | '/kommune/$code'
+    | '/virksomhet/$orgnr'
     | '/person/$name/$birthdate'
   fileRoutesById: FileRoutesById
 }
@@ -228,6 +240,7 @@ export interface RootRouteChildren {
   BedriftOrgnrRoute: typeof BedriftOrgnrRoute
   FylkeCodeRoute: typeof FylkeCodeRoute
   KommuneCodeRoute: typeof KommuneCodeRoute
+  VirksomhetOrgnrRoute: typeof VirksomhetOrgnrRoute
   PersonNameBirthdateRoute: typeof PersonNameBirthdateRoute
 }
 
@@ -310,6 +323,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/virksomhet/$orgnr': {
+      id: '/virksomhet/$orgnr'
+      path: '/virksomhet/$orgnr'
+      fullPath: '/virksomhet/$orgnr'
+      preLoaderRoute: typeof VirksomhetOrgnrRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/kommune/$code': {
       id: '/kommune/$code'
       path: '/kommune/$code'
@@ -356,6 +376,7 @@ const rootRouteChildren: RootRouteChildren = {
   BedriftOrgnrRoute: BedriftOrgnrRoute,
   FylkeCodeRoute: FylkeCodeRoute,
   KommuneCodeRoute: KommuneCodeRoute,
+  VirksomhetOrgnrRoute: VirksomhetOrgnrRoute,
   PersonNameBirthdateRoute: PersonNameBirthdateRoute,
 }
 export const routeTree = rootRouteImport

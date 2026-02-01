@@ -118,7 +118,7 @@ export const ExplorerLayout = memo(function ExplorerLayout({ onSelectCompany }: 
             if (onSelectCompany) {
                 onSelectCompany(clean)
             } else {
-                navigate({ to: '/bedrift/$orgnr', params: { orgnr: clean } })
+                navigate({ to: '/virksomhet/$orgnr', params: { orgnr: clean } })
             }
         },
         [navigate, onSelectCompany]
@@ -181,7 +181,7 @@ export const ExplorerLayout = memo(function ExplorerLayout({ onSelectCompany }: 
                                 <span className="font-medium text-gray-900">
                                     {totalCount !== undefined ? formatNumber(totalCount) : 0}
                                 </span>
-                                {' '}<span className="hidden xs:inline">selskaper</span>
+                                {' '}<span className="hidden xs:inline">virksomheter</span>
                             </span>
                         )}
                     </div>

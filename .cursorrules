@@ -32,7 +32,7 @@ Your goal is to ensure every change is production-ready, performant, secure, and
 - **Frontend**: `vitest` + `@testing-library/react`.
 - **Verification**:
   - Backend: `backend/.venv/bin/ruff check backend && backend/.venv/bin/mypy backend && backend/.venv/bin/pytest backend`
-  - Frontend: `cd frontend && npm run check`
+  - Frontend: `cd frontend && npm run validate`
 
 ## 3. Skills & Workflows
 Refer to `.agent/skills/` for detailed workflows:

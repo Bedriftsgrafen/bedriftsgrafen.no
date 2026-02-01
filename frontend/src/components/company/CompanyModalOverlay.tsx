@@ -108,7 +108,7 @@ export function CompanyModalOverlay({ orgnr: rawOrgnr, onClose, onSelectCompany 
     }
 
     const handleOpenFullPage = () => {
-        navigate({ to: '/bedrift/$orgnr', params: { orgnr } })
+        navigate({ to: '/virksomhet/$orgnr', params: { orgnr } })
     }
 
     return (
