@@ -1,5 +1,5 @@
 # Development stage - for hot-reload dev environment
-FROM node:22.12.0-alpine AS development
+FROM node:24-alpine AS development
 
 WORKDIR /app
 
@@ -13,7 +13,7 @@ EXPOSE 5173
 CMD ["npm", "run", "dev", "--", "--host"]
 
 # Build stage - for creating production bundle
-FROM node:22.12.0-alpine AS build
+FROM node:24-alpine AS build
 
 # OCI Image Labels
 LABEL org.opencontainers.image.title="Bedriftsgrafen Frontend"
@@ -32,7 +32,7 @@ COPY . .
 RUN npm run build
 
 # Production stage - for serving static files with nginx
-FROM nginx:1.27.3-alpine AS production
+FROM nginx:1.27-alpine AS production
 
 # OCI Image Labels
 LABEL org.opencontainers.image.title="Bedriftsgrafen Frontend"
