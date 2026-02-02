@@ -16,7 +16,7 @@ The project leverages a modern, type-safe, and performance-oriented stack:
 
 - **Frontend**: ![React](https://img.shields.io/badge/-React-61DAFB?logo=react&logoColor=white) ![TypeScript](https://img.shields.io/badge/-TypeScript-3178C6?logo=typescript&logoColor=white) ![Vite](https://img.shields.io/badge/-Vite-646CFF?logo=vite&logoColor=white) ![Tailwind](https://img.shields.io/badge/-Tailwind-06B6D4?logo=tailwindcss&logoColor=white)
 - **Backend**: ![Python](https://img.shields.io/badge/-Python-3776AB?logo=python&logoColor=white) ![FastAPI](https://img.shields.io/badge/-FastAPI-009688?logo=fastapi&logoColor=white) ![SQLAlchemy](https://img.shields.io/badge/-SQLAlchemy-D71F00?logo=sqlalchemy&logoColor=white)
-- **Database**: ![PostgreSQL](https://img.shields.io/badge/-PostgreSQL-4169E1?logo=postgresql&logoColor=white) (with `asyncpg` & Full-Text Search)
+- **Database**: ![PostgreSQL](https://img.shields.io/badge/-PostgreSQL-4169E1?logo=postgresql&logoColor=white) (with `asyncpg` & Full-Text Search) ![Redis](https://img.shields.io/badge/-Redis-DC382D?logo=redis&logoColor=white)
 - **Infrastructure**: ![Docker](https://img.shields.io/badge/-Docker-2496ED?logo=docker&logoColor=white) ![Ubuntu](https://img.shields.io/badge/-Ubuntu-E95420?logo=ubuntu&logoColor=white) ![Nginx](https://img.shields.io/badge/-Nginx-009639?logo=nginx&logoColor=white)
 
 ## Key Features
@@ -45,6 +45,7 @@ The system is designed as a microservices-style architecture containerized with 
 graph TD
     Client["Frontend (React)"] <-->|REST API| API["Backend (FastAPI)"]
     API <-->|"Async Queries"| DB[("PostgreSQL")]
+    API <-->|"Cache"| Redis[("Redis")]
     API -->|"Background Tasks"| Sync["Scheduler Service"]
     Sync <-->|"Fetch Updates"| External["Brønnøysund API"]
     Sync -->|"Upsert Data"| DB
@@ -52,7 +53,7 @@ graph TD
 
 ### Optimization Highlights
 - **Database**: Heavy use of **Materialized Views** and **Generated Columns** for instant KPI calculations.
-- **Caching**: Multi-level caching (Frontend React Query + Backend LRU Cache) to minimize database load.
+- **Caching**: Multi-level caching: Redis for API responses, React Query for frontend state.
 - **Build**: Vite build optimization with **Code Splitting** to ensure fast load times (<1s).
 
 ## 👨‍💻 Development

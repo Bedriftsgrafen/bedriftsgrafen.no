@@ -1,3 +1,4 @@
+/* eslint-disable react-refresh/only-export-components */
 import { createLazyFileRoute } from '@tanstack/react-router'
 import { useCallback, useEffect } from 'react'
 import { SEOHead } from '../components/layout'
@@ -21,7 +22,7 @@ export const Route = createLazyFileRoute('/utforsk')({
     component: UtforskPage,
 })
 
-function UtforskPage() {
+export function UtforskPage() {
     const navigate = Route.useNavigate()
     const { q } = Route.useSearch()
 

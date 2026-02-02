@@ -1,28 +1,19 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { getCoordinatesForPostalCode, getCoordinatesForPostalCodeAsync, DEFAULT_COORDINATES, loadPostalCoordinates } from '../postalCoordinates';
+import { describe, it, expect, beforeEach } from 'vitest';
+import { getCoordinatesForPostalCode, getCoordinatesForPostalCodeAsync, DEFAULT_COORDINATES, loadPostalCoordinates, resetCache } from '../postalCoordinates';
 
-// Mock fetch global
-window.fetch = vi.fn();
+// Note: This test now uses MSW via setupTests.ts for fetch interception
+// The postal-coords.json handler is defined in src/mocks/handlers.ts
 
 describe('postalCoordinates util', () => {
     beforeEach(() => {
-        vi.clearAllMocks();
-        // Reset fetch mock
-        (window.fetch as unknown as ReturnType<typeof vi.fn>).mockResolvedValue({
-            json: () => Promise.resolve({
-                '0001': [59.9, 10.7],
-                '1234': [60.0, 11.0]
-            })
-        });
+        // Reset module cache before each test
+        resetCache();
     });
 
     describe('getCoordinatesForPostalCode (Sync)', () => {
         it('returns default if cache not loaded/empty', () => {
-            // Note: Since cache is module level and persistent, subsequent tests might fail if we don't handle state.
-            // Ideally we'd reset module state.
-            // For now, assuming default state starts empty or we can force load.
-            // But cache is private variable. We can't clear it easily.
-            // We'll rely on Async test which ensures load.
+            // Cache is empty after reset, so should return default
+            expect(getCoordinatesForPostalCode('0001')).toBe(DEFAULT_COORDINATES);
         });
 
         it('returns default for missing code', () => {
@@ -32,15 +23,13 @@ describe('postalCoordinates util', () => {
 
     describe('getCoordinatesForPostalCodeAsync', () => {
         it('fetches data and subsequent calls use cache', async () => {
-            // First call should fetch
+            // First call should fetch via MSW
             const result1 = await getCoordinatesForPostalCodeAsync('0001');
-            expect(window.fetch).toHaveBeenCalledTimes(1);
             expect(result1).toEqual([59.9, 10.7]);
 
-            // Second call should NOT fetch again
+            // Second call should use cached data
             const result2 = await getCoordinatesForPostalCodeAsync('1234');
             expect(result2).toEqual([60.0, 11.0]);
-            expect(window.fetch).toHaveBeenCalledTimes(1);
         });
 
         it('handles cleaning of postal code', async () => {

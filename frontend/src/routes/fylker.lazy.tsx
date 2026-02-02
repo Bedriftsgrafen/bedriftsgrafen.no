@@ -1,3 +1,4 @@
+/* eslint-disable react-refresh/only-export-components */
 import { createLazyFileRoute, Link } from '@tanstack/react-router'
 import { useCountiesListQuery } from '../hooks/queries/useCountyQuery'
 import { SEOHead, Breadcrumbs } from '../components/layout'
@@ -40,7 +41,7 @@ export function FylkerPage() {
             Norske <span className="text-blue-600">Fylker</span>
           </h1>
           <p className="text-slate-600 text-xl font-medium leading-relaxed">
-            Utforsk næringslivets regionale struktur og utvikling på tvers av alle 15 fylker. 
+            Utforsk næringslivets regionale struktur og utvikling på tvers av alle 15 fylker.
             Velg et fylke for å se detaljert statistikk, topplister og kommuneoversikt.
           </p>
         </div>
@@ -51,7 +52,7 @@ export function FylkerPage() {
             <p className="text-slate-500 font-black uppercase tracking-[0.2em] text-[10px]">Henter fylkesoversikt...</p>
           </div>
         ) : isError ? (
-          <div className="text-center py-32 bg-white rounded-[2.5rem] border border-dashed border-rose-200">
+          <div className="text-center py-32 bg-white rounded-3xl border border-dashed border-rose-200">
             <MapPin className="h-12 w-12 text-rose-300 mx-auto mb-4" />
             <p className="text-slate-600 font-bold text-lg mb-4">Kunne ikke laste fylkesoversikten.</p>
             <button
@@ -70,7 +71,7 @@ export function FylkerPage() {
                 params={{ code: createRouteCode(county.code, county.name) }}
                 className="group bg-white rounded-3xl p-10 border border-slate-200 hover:border-blue-200 shadow-sm hover:shadow-2xl hover:-translate-y-1.5 transition-all duration-500 flex flex-col justify-between relative overflow-hidden"
               >
-                {/* Static Map Background - Premium visual texture like municipality cards */}
+                {/* Static Map Background */}
                 {county.lat && county.lng && (
                   <div
                     className={COUNTY_MAP_CLASS}
@@ -79,7 +80,6 @@ export function FylkerPage() {
                     }}
                   />
                 )}
-                {/* Gradient overlay for text readability */}
                 <div className={COUNTY_MAP_OVERLAY_CLASS} />
 
                 <div className="relative z-10">
@@ -100,7 +100,7 @@ export function FylkerPage() {
                   <div className="h-1 w-8 bg-slate-200/80 rounded-full group-hover:w-12 group-hover:bg-blue-500 transition-all duration-300 mt-4" />
                 </div>
 
-                <div className="mt-10 pt-8 border-t border-slate-200/50 grid grid-cols-2 gap-6 relative z-10 bg-white/80 backdrop-blur-sm -mx-10 -mb-10 px-10 pb-10 pt-8 rounded-b-3xl">
+                <div className="mt-10 pt-8 border-t border-slate-200/50 grid grid-cols-2 gap-6 relative z-10 bg-white/80 backdrop-blur-sm -mx-10 -mb-10 px-10 pb-10 rounded-b-3xl">
                   <div className="flex flex-col">
                     <span className="text-slate-900 font-black tabular-nums text-2xl tracking-tighter">
                       {formatNumber(county.company_count)}
@@ -117,7 +117,7 @@ export function FylkerPage() {
                       Innbyggere
                     </span>
                   </div>
-                  
+
                   <div className="col-span-2 mt-6 flex items-center justify-center gap-2 text-blue-600 font-black uppercase text-[10px] tracking-widest group-hover:underline">
                     Utforsk fylket
                     <ChevronRight className="h-4 w-4 group-hover:translate-x-1 transition-transform" />
@@ -129,7 +129,7 @@ export function FylkerPage() {
         )}
 
         {!isLoading && (!counties || counties.length === 0) && (
-          <div className="text-center py-32 bg-white rounded-[2.5rem] border border-dashed border-slate-200">
+          <div className="text-center py-32 bg-white rounded-3xl border border-dashed border-slate-200">
             <MapPin className="h-12 w-12 text-slate-200 mx-auto mb-4" />
             <p className="text-slate-500 font-bold text-lg">Ingen fylker funnet.</p>
           </div>

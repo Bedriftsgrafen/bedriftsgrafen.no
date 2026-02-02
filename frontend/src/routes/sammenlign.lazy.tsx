@@ -1,3 +1,4 @@
+/* eslint-disable react-refresh/only-export-components */
 import { createLazyFileRoute, Link } from '@tanstack/react-router'
 import { useEffect, useState, useRef, startTransition, useMemo, useCallback } from 'react'
 import { Building2, Users, TrendingUp, TrendingDown, Wallet, X, ArrowLeft, Share2, Crown, Swords, LayoutGrid } from 'lucide-react'
@@ -21,14 +22,14 @@ interface ComparisonData {
     error: string | null
 }
 
-function ComparisonCard({ 
-    item, 
-    onRemove, 
-    isWinner, 
+function ComparisonCard({
+    item,
+    onRemove,
+    isWinner,
     maxValues,
     battleMode
-}: { 
-    item: ComparisonData; 
+}: {
+    item: ComparisonData;
     onRemove?: (orgnr: string) => void;
     isWinner: { revenue: boolean; profit: boolean; equity: boolean; employees: boolean };
     maxValues: MetricMax;
@@ -91,26 +92,26 @@ function ComparisonCard({
                             </div>
                         </div>
                         <div className="space-y-1.5">
-                                <div className="flex items-center justify-between gap-1.5 min-w-0">
-                                    <div className="flex items-center gap-2 text-slate-500 min-w-0">
-                                        <Users className="h-4 w-4 text-slate-300 shrink-0" />
-                                        <span className="truncate">Ansatte</span>
-                                    </div>
-                                    <div className="flex items-center gap-1.5 shrink-0">
-                                        <span className={`font-bold ${battleMode && isWinner.employees ? 'text-blue-600' : 'text-slate-900'}`}>
-                                            {item.company.antall_ansatte ?? '-'}
-                                        </span>
-                                        {battleMode && isWinner.employees && (
-                                            <Crown 
-                                                className="h-3.5 w-3.5 text-amber-500 fill-amber-500 shrink-0" 
-                                                aria-hidden="true"
-                                            />
-                                        )}
-                                    </div>
+                            <div className="flex items-center justify-between gap-1.5 min-w-0">
+                                <div className="flex items-center gap-2 text-slate-500 min-w-0">
+                                    <Users className="h-4 w-4 text-slate-300 shrink-0" />
+                                    <span className="truncate">Ansatte</span>
                                 </div>
+                                <div className="flex items-center gap-1.5 shrink-0">
+                                    <span className={`font-bold ${battleMode && isWinner.employees ? 'text-blue-600' : 'text-slate-900'}`}>
+                                        {item.company.antall_ansatte ?? '-'}
+                                    </span>
+                                    {battleMode && isWinner.employees && (
+                                        <Crown
+                                            className="h-3.5 w-3.5 text-amber-500 fill-amber-500 shrink-0"
+                                            aria-hidden="true"
+                                        />
+                                    )}
+                                </div>
+                            </div>
                             {battleMode && (
                                 <div className="w-full bg-slate-100 rounded-full h-1 overflow-hidden">
-                                    <div 
+                                    <div
                                         className={`h-full rounded-full transition-all duration-1000 ${isWinner.employees ? 'bg-blue-500' : 'bg-slate-300'}`}
                                         style={{ width: getRelativeWidth(item.company.antall_ansatte, maxValues.employees) }}
                                     />
@@ -138,8 +139,8 @@ function ComparisonCard({
                                             {formatLargeNumber(accounting.salgsinntekter)}
                                         </span>
                                         {battleMode && isWinner.revenue && (
-                                            <Crown 
-                                                className="h-3.5 w-3.5 text-amber-500 fill-amber-500 shrink-0" 
+                                            <Crown
+                                                className="h-3.5 w-3.5 text-amber-500 fill-amber-500 shrink-0"
                                                 aria-hidden="true"
                                             />
                                         )}
@@ -147,7 +148,7 @@ function ComparisonCard({
                                 </div>
                                 {battleMode && (
                                     <div className="w-full bg-slate-100 rounded-full h-1 overflow-hidden">
-                                        <div 
+                                        <div
                                             className={`h-full rounded-full transition-all duration-1000 ${isWinner.revenue ? 'bg-blue-500' : 'bg-slate-300'}`}
                                             style={{ width: getRelativeWidth(accounting.salgsinntekter, maxValues.revenue) }}
                                         />
@@ -174,8 +175,8 @@ function ComparisonCard({
                                             {formatLargeNumber(accounting.aarsresultat)}
                                         </span>
                                         {battleMode && isWinner.profit && (
-                                            <Crown 
-                                                className="h-3.5 w-3.5 text-amber-500 fill-amber-500 shrink-0" 
+                                            <Crown
+                                                className="h-3.5 w-3.5 text-amber-500 fill-amber-500 shrink-0"
                                                 aria-hidden="true"
                                             />
                                         )}
@@ -183,7 +184,7 @@ function ComparisonCard({
                                 </div>
                                 {battleMode && (
                                     <div className="w-full bg-slate-100 rounded-full h-1 overflow-hidden">
-                                        <div 
+                                        <div
                                             className={`h-full rounded-full transition-all duration-1000 ${isWinner.profit ? 'bg-emerald-500' : 'bg-slate-300'}`}
                                             style={{ width: getRelativeWidth(accounting.aarsresultat, maxValues.profit) }}
                                         />
@@ -203,8 +204,8 @@ function ComparisonCard({
                                             {formatLargeNumber(accounting.egenkapital)}
                                         </span>
                                         {battleMode && isWinner.equity && (
-                                            <Crown 
-                                                className="h-3.5 w-3.5 text-amber-500 fill-amber-500 shrink-0" 
+                                            <Crown
+                                                className="h-3.5 w-3.5 text-amber-500 fill-amber-500 shrink-0"
                                                 aria-hidden="true"
                                             />
                                         )}
@@ -212,7 +213,7 @@ function ComparisonCard({
                                 </div>
                                 {battleMode && (
                                     <div className="w-full bg-slate-100 rounded-full h-1 overflow-hidden">
-                                        <div 
+                                        <div
                                             className={`h-full rounded-full transition-all duration-1000 ${isWinner.equity ? 'bg-indigo-500' : 'bg-slate-300'}`}
                                             style={{ width: getRelativeWidth(accounting.egenkapital, maxValues.equity) }}
                                         />
@@ -268,7 +269,7 @@ function ComparisonPage() {
         const fetchId = ++fetchIdRef.current
 
         // Create loading state
-        const loadingState: ComparisonData[] = orgNumbers.map((orgnr) => ({
+        const loadingState: ComparisonData[] = orgNumbers.map((orgnr: string) => ({
             orgnr,
             company: null,
             loading: true,
@@ -308,18 +309,18 @@ function ComparisonPage() {
 
     // Update URL when removing a company
     const handleRemove = useCallback((orgnrToRemove: string) => {
-        const newOrgNumbers = orgNumbers.filter(o => o !== orgnrToRemove)
-        if (newOrgNumbers.length === 0) {
+        const existing = orgNumbers.filter((orgnr: string) => orgnr !== orgnrToRemove)
+        if (existing.length === 0) {
             clearStore()
             navigate({ to: '/' })
         } else {
             navigate({
                 to: '/sammenlign',
-                search: { orgnr: newOrgNumbers.join(',') },
-                replace: true
+                search: { orgnr: existing.join(',') },
+                replace: true,
             })
         }
-    }, [orgNumbers, navigate, clearStore])
+    }, [orgNumbers, clearStore, navigate])
 
     // Share URL
     const handleShare = useCallback(async () => {
@@ -378,11 +379,10 @@ function ComparisonPage() {
                         {orgNumbers.length > 1 && (
                             <button
                                 onClick={() => setBattleMode(!battleMode)}
-                                className={`flex items-center gap-2 px-6 py-3 rounded-2xl font-bold text-sm transition-all shadow-sm border ${
-                                    battleMode 
-                                    ? 'bg-blue-600 text-white border-blue-500 shadow-blue-200' 
+                                className={`flex items-center gap-2 px-6 py-3 rounded-2xl font-bold text-sm transition-all shadow-sm border ${battleMode
+                                    ? 'bg-blue-600 text-white border-blue-500 shadow-blue-200'
                                     : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-50'
-                                }`}
+                                    }`}
                             >
                                 {battleMode ? <LayoutGrid className="h-4 w-4" /> : <Swords className="h-4 w-4" />}
                                 {battleMode ? 'Standard visning' : 'Battle Mode'}
@@ -467,7 +467,7 @@ function ComparisonPage() {
                                 <p className="text-sm text-slate-500 font-medium">Aktiver "Battle Mode" for å kåre vinnere og se relative forskjeller i nøkkeltall.</p>
                             </div>
                         </div>
-                        <button 
+                        <button
                             onClick={() => setBattleMode(true)}
                             className="px-6 py-3 bg-white border border-slate-200 text-slate-900 font-bold rounded-xl hover:bg-white hover:border-blue-400 hover:text-blue-600 transition-all shadow-sm"
                         >

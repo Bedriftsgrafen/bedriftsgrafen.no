@@ -388,8 +388,14 @@ class TestGetMunicipalityPremiumDashboard:
             return_value=[{"nace": "G", "name": "Handel", "count": 5000}]
         )
 
-        # Mock rankings
-        service.stats_repo.get_municipality_rankings = AsyncMock(return_value={"rank": 1, "total": 15})
+        # Mock rankings - now using get_municipality_combined_rankings
+        service.stats_repo.get_municipality_combined_rankings = AsyncMock(
+            return_value={
+                "density": {"rank": 1, "out_of": 15},
+                "revenue": {"rank": 2, "out_of": 15},
+                "population": {"rank": 3, "out_of": 15},
+            }
+        )
 
         # Mock trend
         service.stats_repo.get_establishment_trend = AsyncMock(return_value=[{"year": 2024, "count": 500}])

@@ -41,6 +41,9 @@ services:
       # Direct localhost access - no Docker networking!
       - DATABASE_HOST=localhost
       - DATABASE_PORT=5432
+      - DATABASE_URL=postgresql://${DATABASE_USER}:${DATABASE_PASSWORD}@localhost:5432/${DATABASE_NAME}
+      - DATABASE_URL_ASYNC=postgresql+asyncpg://${DATABASE_USER}:${DATABASE_PASSWORD}@localhost:5432/${DATABASE_NAME}
+      - REDIS_HOST=localhost
       # Override port to avoid conflict with prod backend
       - API_PORT=8001
     deploy:

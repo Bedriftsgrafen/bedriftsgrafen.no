@@ -47,15 +47,15 @@ export const BenchmarkCard = memo(function BenchmarkCard({
         { name: 'Bransjesnitt', value: metric.industry_avg, type: 'industry' }
     ], [displayName, metric.company_value, metric.industry_avg])
 
-    if (metric.company_value === null || metric.industry_avg === null) return null
+    if (metric.industry_avg === null) return null
 
     // Calculate how much better/worse than average
     // Handle division by zero if industry average is 0
     let diffPercent = 0
-    if (metric.industry_avg !== 0) {
+    if (metric.industry_avg !== 0 && metric.company_value !== null) {
         diffPercent = ((metric.company_value - metric.industry_avg) / Math.abs(metric.industry_avg)) * 100
     }
-    
+
     const isPositive = diffPercent > 0
     const diffColor = isPositive ? 'text-green-600' : 'text-red-600'
 

@@ -1,3 +1,4 @@
+/* eslint-disable react-refresh/only-export-components */
 import { createLazyFileRoute } from '@tanstack/react-router'
 import { ExplorerLayout } from '../components/explorer'
 import { SEOHead } from '../components/layout'
@@ -101,7 +102,8 @@ function BransjerPage() {
 
         navigate({
             to: '/bransjer',
-            search: (prev) => {
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            search: (prev: any) => {
                 const newSearch: Record<string, unknown> = { ...prev }
                 if ('query' in updates) newSearch.q = updates.query || undefined
                 if ('naceCode' in updates) newSearch.nace = updates.naceCode || undefined
@@ -135,7 +137,8 @@ function BransjerPage() {
 
         navigate({
             to: '/bransjer',
-            search: (prev) => ({
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            search: (prev: any) => ({
                 tab: prev.tab,
             }),
             replace: true,
@@ -146,7 +149,8 @@ function BransjerPage() {
     const setActiveTab = useCallback((newTab: BransjerTab) => {
         navigate({
             to: '/bransjer',
-            search: (prev) => ({ ...prev, tab: newTab }),
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            search: (prev: any) => ({ ...prev, tab: newTab }),
             replace: true,
         })
     }, [navigate])
@@ -157,7 +161,8 @@ function BransjerPage() {
         const clean = cleanOrgnr(newOrgnr)
         navigate({
             to: '/bransjer',
-            search: (prev) => ({ ...prev, orgnr: clean ?? undefined }),
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            search: (prev: any) => ({ ...prev, orgnr: clean ?? undefined }),
             replace: true,
         })
     }, [navigate])

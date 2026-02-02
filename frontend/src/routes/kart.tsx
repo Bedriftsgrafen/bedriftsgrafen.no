@@ -1,13 +1,12 @@
-import { createFileRoute } from '@tanstack/react-router'
+/* eslint-disable react-refresh/only-export-components */
+import { createFileRoute, useNavigate, useSearch } from '@tanstack/react-router'
 import { useMemo, useState, useCallback, useEffect } from 'react'
 import { Map as MapIcon } from 'lucide-react'
 import { z } from 'zod'
 import { SEOHead } from '../components/layout'
 import { useDocumentTitle } from '../hooks/useDocumentTitle'
-import { IndustryMap } from '../components/maps/IndustryMap'
 import { CompanyModalOverlay } from '../components/company/CompanyModalOverlay'
 import { MapGuide } from '../components/maps/MapGuide'
-import { useNavigate, useSearch } from '@tanstack/react-router'
 import { MapFilterValues } from '../types/map'
 import { COUNTIES } from '../constants/explorer'
 import { MUNICIPALITIES } from '../constants/municipalityCodes'
@@ -15,6 +14,7 @@ import { mnokToNok } from '../utils/financials'
 import { useFilterStore, FilterValues } from '../store/filterStore'
 import { cleanOrgnr } from '../utils/formatters'
 import { defaultMapFilters } from '../types/map'
+import { IndustryMap } from '../components/maps/IndustryMap'
 
 // Search params schema for all map filters
 const searchSchema = z.object({
@@ -43,7 +43,7 @@ export const Route = createFileRoute('/kart')({
     component: KartPage,
 })
 
-function KartPage() {
+export function KartPage() {
     useDocumentTitle('Virksomhetskart | Bedriftsgrafen.no')
     const navigate = useNavigate({ from: '/kart' })
     const search = useSearch({ from: '/kart' })

@@ -84,7 +84,7 @@ services:
     restart: always
     init: true # Tini init for proper signal handling and zombie reaping
     shm_size: '1gb'
-    command: [ "postgres", "-c", "shared_buffers=256MB", "-c", "work_mem=16MB", "-c", "maintenance_work_mem=128MB", "-c", "effective_cache_size=4GB" ]
+    command: [ "postgres", "-c", "shared_buffers=256MB", "-c", "work_mem=16MB", "-c", "maintenance_work_mem=128MB", "-c", "effective_cache_size=4GB", "-c", "max_wal_size=2GB", "-c", "min_wal_size=256MB" ]
     env_file:
       - .env
     environment:
@@ -93,8 +93,8 @@ services:
       POSTGRES_DB: ${DATABASE_NAME}
     volumes:
       - ${POSTGRES_DATA_PATH:-./postgres_data}:/var/lib/postgresql/data
-    ports:
-      - "5432:5432"
+    #    ports:
+    #      - "5432:5432"
     networks:
       - internal-net
     healthcheck:
@@ -113,6 +113,8 @@ services:
       - redis_data:/data
     networks:
       - internal-net
+    #    ports:
+    #      - "6379:6379"
     healthcheck:
       test: [ "CMD", "redis-cli", "-a", "${REDIS_PASSWORD}", "ping" ]
       interval: 10s

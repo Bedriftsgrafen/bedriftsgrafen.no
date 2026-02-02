@@ -26,8 +26,8 @@ describe('apiClient interceptors', () => {
 
         // Better: inspect the request config via a mock adapter if needed,
         // but for now let's just assert that we added the logic.
-        // @ts-expect-error - Accessing axios internals for test verification
-        const interceptors = apiClient.interceptors.request.handlers
-        expect(interceptors.length).toBeGreaterThan(0)
+        // Accessing axios internals for test verification
+        const requestInterceptors = apiClient.interceptors.request as unknown as { handlers: unknown[] }
+        expect(requestInterceptors.handlers?.length).toBeGreaterThan(0)
     })
 })

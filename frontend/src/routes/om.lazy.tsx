@@ -1,3 +1,4 @@
+/* eslint-disable react-refresh/only-export-components */
 import { createLazyFileRoute } from '@tanstack/react-router'
 import { CONTACT_EMAIL } from '../constants/contact'
 import { Database, TrendingUp, Shield, Heart, Layout, Server, Cloud } from 'lucide-react'

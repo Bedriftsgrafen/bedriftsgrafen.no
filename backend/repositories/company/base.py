@@ -30,7 +30,12 @@ LIST_VIEW_OPTIONS = [
     noload(models.Company.regnskap),
 ]
 
-DETAIL_VIEW_OPTIONS = [selectinload(models.Company.regnskap), defer(models.Company.search_vector)]
+DETAIL_VIEW_OPTIONS = [
+    selectinload(models.Company.regnskap),
+    noload(models.Company.roller),
+    noload(models.Company.underenheter),
+    defer(models.Company.search_vector),
+]
 
 # Mapping of sort keys to SQLAlchemy columns (shared between queries.py methods)
 SORT_COLUMN_MAP = {

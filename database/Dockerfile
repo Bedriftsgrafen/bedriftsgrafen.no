@@ -1,7 +1,6 @@
-FROM postgres:15
+FROM postgres:18-alpine
 
-# Generate Norwegian locale
-RUN localedef -i nb_NO -c -f UTF-8 -A /usr/share/locale/locale.alias nb_NO.UTF-8
-
-# Set default locale
-ENV LANG=nb_NO.utf8
+# Alpine uses musl-locales for locale support
+# Norwegian locale is configured via environment variables
+ENV LANG=nb_NO.UTF-8
+ENV LC_ALL=nb_NO.UTF-8

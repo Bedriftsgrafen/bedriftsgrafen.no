@@ -1,3 +1,4 @@
+/* eslint-disable react-refresh/only-export-components */
 import { createLazyFileRoute, useNavigate, Link } from '@tanstack/react-router'
 import { useState, useCallback, type KeyboardEvent } from 'react'
 import { StatisticsCards } from '../components/StatisticsCards'
@@ -16,7 +17,7 @@ export const Route = createLazyFileRoute('/')(
         component: HomePage,
     })
 
-function HomePage() {
+export function HomePage() {
     const navigate = useNavigate()
     const [searchQuery, setSearchQuery] = useState('')
     const [committedPersonQuery, setCommittedPersonQuery] = useState('')

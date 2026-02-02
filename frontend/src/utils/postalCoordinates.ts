@@ -15,6 +15,12 @@ let postalCoordsCache: Record<string, Coordinates> | null = null
 /** Loading promise to prevent multiple fetches */
 let loadingPromise: Promise<Record<string, Coordinates>> | null = null
 
+/** Reset cache for testing purposes */
+export function resetCache(): void {
+    postalCoordsCache = null
+    loadingPromise = null
+}
+
 /**
  * Load the complete postal code database.
  * This is cached after first load (~87KB, 3375 entries).

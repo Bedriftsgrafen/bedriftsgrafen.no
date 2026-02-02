@@ -1,5 +1,11 @@
 import '@testing-library/jest-dom'
-import { vi } from 'vitest'
+import { vi, beforeAll, afterEach, afterAll } from 'vitest'
+import { server } from './mocks/server'
+
+// Start MSW Server
+beforeAll(() => server.listen({ onUnhandledRequest: 'warn' }))
+afterEach(() => server.resetHandlers())
+afterAll(() => server.close())
 
 // Mock matchesMedia for themeStore/jsdom
 Object.defineProperty(window, 'matchMedia', {

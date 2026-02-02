@@ -44,4 +44,12 @@ export default [
             '@typescript-eslint/no-explicit-any': 'error',
         },
     },
+    {
+        files: ['*.config.js', '*.config.ts'],
+        languageOptions: {
+            globals: {
+                ...globals.node,
+            }
+        }
+    }
 ];

@@ -360,16 +360,19 @@ async def test_get_municipality_sector_distribution(repo, mock_db_session):
 
 
 @pytest.mark.asyncio
-async def test_get_municipality_rankings_density(repo, mock_db_session):
-    """Test municipality ranking by business density within county."""
+async def test_get_municipality_combined_rankings_found(repo, mock_db_session):
+    """Test municipality ranking returns density, revenue, population rankings."""
     # Mock latest year
     mock_db_session.execute.return_value.scalar.return_value = 2024
 
-    # Mock ranking results
-    mock_ranks = [
-        MagicMock(municipality_code="3001", rank=3, total=10),
-        MagicMock(municipality_code="3002", rank=1, total=10),
-    ]
+    # Mock ranking results with combined structure
+    mock_rank = MagicMock(
+        municipality_code="3001",
+        rank_density=3,
+        rank_revenue=2,
+        rank_population=1,
+        total=10,
+    )
 
     call_count = [0]
 
@@ -379,25 +382,27 @@ async def test_get_municipality_rankings_density(repo, mock_db_session):
         if call_count[0] == 1:  # Year query
             result.scalar.return_value = 2024
         else:  # Ranking query
-            result.all.return_value = mock_ranks
+            result.all.return_value = [mock_rank]
         return result
 
     mock_db_session.execute.side_effect = mock_execute_side_effect
 
-    result = await repo.get_municipality_rankings("3001", metric="density")
+    result = await repo.get_municipality_combined_rankings("3001")
 
     assert result is not None
-    assert result["rank"] == 3
-    assert result["out_of"] == 10
+    assert result["density"]["rank"] == 3
+    assert result["revenue"]["rank"] == 2
+    assert result["population"]["rank"] == 1
+    assert result["density"]["out_of"] == 10
 
 
 @pytest.mark.asyncio
-async def test_get_municipality_rankings_not_found(repo, mock_db_session):
+async def test_get_municipality_combined_rankings_not_found(repo, mock_db_session):
     """Test municipality ranking when municipality not in results."""
     mock_db_session.execute.return_value.scalar.return_value = 2024
     mock_db_session.execute.return_value.all.return_value = []
 
-    result = await repo.get_municipality_rankings("9999", metric="revenue")
+    result = await repo.get_municipality_combined_rankings("9999")
 
     assert result is None
 

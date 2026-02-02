@@ -1,3 +1,4 @@
+/* eslint-disable react-refresh/only-export-components */
 import { createLazyFileRoute } from '@tanstack/react-router'
 import { useState, useEffect, useCallback } from 'react'
 import { CompanyModal } from '../components/company'
@@ -27,7 +28,7 @@ export const Route = createLazyFileRoute('/virksomhet/$orgnr')({
     component: CompanyPage,
 })
 
-function CompanyPage() {
+export function CompanyPage() {
     const navigate = Route.useNavigate()
     const { orgnr } = Route.useParams()
     const search = Route.useSearch() as CompanySearch

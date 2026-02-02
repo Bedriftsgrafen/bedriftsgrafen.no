@@ -1,3 +1,4 @@
+/* eslint-disable react-refresh/only-export-components */
 import { createLazyFileRoute } from '@tanstack/react-router'
 import { useMunicipalitiesListQuery } from '../hooks/queries/useMunicipalityQuery'
 import { SEOHead, Breadcrumbs } from '../components/layout'
@@ -124,7 +125,7 @@ export function KommunerPage() {
                 )}
                 {/* Subtle gradient overlay for text readability */}
                 <div className={MUNICIPALITY_MAP_OVERLAY_CLASS} />
-                
+
                 <div className="relative z-10">
                   <div className="flex items-center justify-between mb-8">
                     <div className="h-14 w-14 bg-slate-50 border border-slate-100 text-slate-400 rounded-2xl flex items-center justify-center group-hover:bg-blue-600 group-hover:text-white group-hover:border-blue-500 transition-all duration-300">
@@ -159,7 +160,7 @@ export function KommunerPage() {
           <div className="text-center py-32 bg-white rounded-[2.5rem] border border-dashed border-slate-200">
             <Search className="h-12 w-12 text-slate-200 mx-auto mb-4" />
             <p className="text-slate-500 font-bold text-lg">Ingen kommuner samsvarte med søket ditt.</p>
-            <button 
+            <button
               onClick={() => { setSearchQuery(''); setSelectedCounty('all'); }}
               className="mt-4 text-blue-600 font-black uppercase text-[10px] tracking-widest hover:underline"
             >

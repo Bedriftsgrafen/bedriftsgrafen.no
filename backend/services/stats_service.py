@@ -504,9 +504,10 @@ class StatsService:
         sectors = await self.stats_repo.get_municipality_sector_distribution(municipality_code)
 
         # Advanced rankings (Density, Revenue, and Population)
-        ranking_density = await self.stats_repo.get_municipality_rankings(municipality_code, metric="density")
-        ranking_revenue = await self.stats_repo.get_municipality_rankings(municipality_code, metric="revenue")
-        ranking_population = await self.stats_repo.get_municipality_rankings(municipality_code, metric="population")
+        rankings = await self.stats_repo.get_municipality_combined_rankings(municipality_code)
+        ranking_density = rankings.get("density") if rankings else None
+        ranking_revenue = rankings.get("revenue") if rankings else None
+        ranking_population = rankings.get("population") if rankings else None
 
         trend = await self.stats_repo.get_establishment_trend(municipality_code)
 

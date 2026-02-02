@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Search, X } from 'lucide-react';
 import { NacePicker } from '../NacePicker';
 
@@ -15,9 +15,8 @@ export const SearchControls: React.FC<SearchControlsProps> = ({
     naceCode,
     setNaceCode,
 }) => {
-    // Use useMemo to get initial value only once
-    const initialQuery = useMemo(() => query || '', []);  // eslint-disable-line react-hooks/exhaustive-deps
-    const [localQuery, setLocalQuery] = useState(initialQuery);
+    // Initialize state from props once at mount
+    const [localQuery, setLocalQuery] = useState(() => query || '');
 
     // Debounce query changes
     useEffect(() => {

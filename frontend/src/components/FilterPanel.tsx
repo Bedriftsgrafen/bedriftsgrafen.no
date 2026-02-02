@@ -93,19 +93,15 @@ export function FilterPanel() {
     }
   }, [])
 
-  // Local draft state initialized once
+  // Draft filters state
   const [draftFilters, setDraftFilters] = useState(getStoreSnapshot)
+  const [version, setVersion] = useState(filterVersion)
 
   // Sync draft filters when filterVersion changes (e.g. on Apply or Reset)
-  // Using useEffect instead of render-time setState to prevent infinite loops
-  const prevVersionRef = useRef(filterVersion)
-  useEffect(() => {
-    if (prevVersionRef.current !== filterVersion) {
-      prevVersionRef.current = filterVersion
-      // eslint-disable-next-line react-hooks/set-state-in-effect
-      setDraftFilters(getStoreSnapshot())
-    }
-  }, [filterVersion, getStoreSnapshot])
+  if (filterVersion !== version) {
+    setVersion(filterVersion)
+    setDraftFilters(getStoreSnapshot())
+  }
 
   // Keyboard shortcuts
   useEffect(() => {

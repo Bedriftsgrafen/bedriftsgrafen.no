@@ -1,3 +1,4 @@
+/* eslint-disable react-refresh/only-export-components */
 import { createFileRoute, Link } from '@tanstack/react-router'
 import { useMunicipalityQuery } from '../hooks/queries/useMunicipalityQuery'
 import { SEOHead, Breadcrumbs } from '../components/layout'
@@ -6,12 +7,12 @@ import { Loader2, TrendingUp, ChevronRight, Map } from 'lucide-react'
 import { formatNumber } from '../utils/formatters'
 import { HeroMap } from '../components/maps/HeroMap'
 import { createRouteCode } from '../utils/slugify'
-import { 
-  EstablishmentTrendChart, 
-  TopCompanyList, 
-  NewestCompaniesList, 
+import {
+  EstablishmentTrendChart,
+  TopCompanyList,
+  NewestCompaniesList,
   BankruptciesSection,
-  SectorDistribution 
+  SectorDistribution
 } from '../components/dashboard'
 
 // The route handles slugified codes like "0301-oslo"
@@ -19,14 +20,14 @@ export const Route = createFileRoute('/kommune/$code')({
   component: MunicipalityDashboardPage,
 })
 
-function MunicipalityDashboardPage() {
+export function MunicipalityDashboardPage() {
   const { code: slug } = Route.useParams()
 
   // Extract the 4-digit code and a safe display name for loading state
   const code = slug.split('-')[0]
   const displayName = slug.split('-').slice(1).join(' ')
     .toLowerCase()
-    .replace(/(^|\s)\S/g, l => l.toUpperCase()) || 'valgt kommune'
+    .replace(/(^|\s)\S/g, (l: string) => l.toUpperCase()) || 'valgt kommune'
 
   const {
     data: dashboard,
@@ -108,7 +109,7 @@ function MunicipalityDashboardPage() {
               </div>
 
               <div className="flex flex-col sm:flex-row gap-6">
-                <div className="bg-white/5 backdrop-blur-3xl rounded-[2rem] p-10 border border-white/10 shadow-2xl min-w-[240px]">
+                <div className="bg-white/5 backdrop-blur-3xl rounded-4xl p-10 border border-white/10 shadow-2xl min-w-[240px]">
                   <p className="text-blue-100/70 text-xs font-black uppercase tracking-widest mb-6">INNBYGGERE</p>
                   <div className="flex items-center gap-6">
                     <span className="text-6xl font-black tracking-tighter">{formatNumber(dashboard.population)}</span>
@@ -120,7 +121,7 @@ function MunicipalityDashboardPage() {
                     )}
                   </div>
                 </div>
-                <div className="bg-white/5 backdrop-blur-3xl rounded-[2rem] p-10 border border-white/10 shadow-2xl min-w-[240px]">
+                <div className="bg-white/5 backdrop-blur-3xl rounded-4xl p-10 border border-white/10 shadow-2xl min-w-[240px]">
                   <p className="text-blue-100/70 text-xs font-black uppercase tracking-widest mb-6">VIRKSOMHETER</p>
                   <span className="text-6xl font-black tracking-tighter">{formatNumber(dashboard.company_count)}</span>
                 </div>
@@ -210,7 +211,7 @@ function MunicipalityDashboardPage() {
           {/* Company Lists - Higher density professional look */}
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-16">
             <TopCompanyList companies={dashboard.top_companies} />
-            <NewestCompaniesList 
+            <NewestCompaniesList
               companies={dashboard.newest_companies}
               regionName={dashboard.name}
               regionCode={dashboard.code}

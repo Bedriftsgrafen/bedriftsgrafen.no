@@ -46,7 +46,6 @@ export default defineConfig({
     },
     proxy: {
       '/api': {
-        // eslint-disable-next-line no-undef
         target: process.env.VITE_API_TARGET || 'http://bedriftsgrafen-backend:8000',
         changeOrigin: true,
         rewrite: (path) => path.replace(/^\/api/, '')

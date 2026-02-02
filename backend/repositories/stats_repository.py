@@ -357,77 +357,85 @@ class StatsRepository:
             for r in rows
         ]
 
-    async def get_municipality_rankings(
-        self, municipality_code: str, metric: Literal["density", "revenue", "population"] = "density"
-    ):
-        """Get rankings for various metrics within the county."""
+    async def get_municipality_combined_rankings(self, municipality_code: str):
+        """Get rankings for density, revenue, and population in a single efficient query."""
         from sqlalchemy import Float, cast
 
         county_code = municipality_code[:2]
         latest_year = await self.get_latest_population_year() or 2024
 
-        if metric == "density":
-            # Subquery for all municipalities in the county with density
-            muni_data = (
-                select(
-                    models.MunicipalityStats.municipality_code,
-                    (
-                        cast(func.sum(models.MunicipalityStats.company_count), Float)
-                        / cast(models.MunicipalityPopulation.population, Float)
-                        * 1000
-                    ).label("value"),
-                )
-                .join(
-                    models.MunicipalityPopulation,
-                    and_(
-                        models.MunicipalityStats.municipality_code == models.MunicipalityPopulation.municipality_code,
-                        models.MunicipalityPopulation.year == latest_year,
-                    ),
-                )
-                .where(func.left(models.MunicipalityStats.municipality_code, 2) == county_code)
-                .group_by(models.MunicipalityStats.municipality_code, models.MunicipalityPopulation.population)
-                .subquery()
+        # 1. Density Query
+        density_data = (
+            select(
+                models.MunicipalityStats.municipality_code,
+                (
+                    cast(func.sum(models.MunicipalityStats.company_count), Float)
+                    / cast(models.MunicipalityPopulation.population, Float)
+                    * 1000
+                ).label("density"),
             )
-        elif metric == "population":
-            # Rank by population
-            muni_data = (
-                select(
-                    models.MunicipalityPopulation.municipality_code,
-                    models.MunicipalityPopulation.population.label("value"),
-                )
-                .where(
-                    and_(
-                        func.left(models.MunicipalityPopulation.municipality_code, 2) == county_code,
-                        models.MunicipalityPopulation.year == latest_year,
-                    )
-                )
-                .subquery()
+            .join(
+                models.MunicipalityPopulation,
+                and_(
+                    models.MunicipalityStats.municipality_code == models.MunicipalityPopulation.municipality_code,
+                    models.MunicipalityPopulation.year == latest_year,
+                ),
             )
-        else:
-            # Rank by total revenue
-            muni_data = (
-                select(
-                    models.MunicipalityStats.municipality_code,
-                    func.sum(models.MunicipalityStats.total_revenue).label("value"),
-                )
-                .where(func.left(models.MunicipalityStats.municipality_code, 2) == county_code)
-                .group_by(models.MunicipalityStats.municipality_code)
-                .subquery()
-            )
+            .where(func.left(models.MunicipalityStats.municipality_code, 2) == county_code)
+            .group_by(models.MunicipalityStats.municipality_code, models.MunicipalityPopulation.population)
+            .subquery()
+        )
 
-        # Rank by metric
-        rank_query = select(
-            muni_data.c.municipality_code,
-            func.rank().over(order_by=muni_data.c.value.desc()).label("rank"),
-            func.count().over().label("total"),
-        ).select_from(muni_data)
+        # 2. Revenue Query
+        revenue_data = (
+            select(
+                models.MunicipalityStats.municipality_code,
+                func.sum(models.MunicipalityStats.total_revenue).label("revenue"),
+            )
+            .where(func.left(models.MunicipalityStats.municipality_code, 2) == county_code)
+            .group_by(models.MunicipalityStats.municipality_code)
+            .subquery()
+        )
+
+        # 3. Population Query
+        pop_data = (
+            select(
+                models.MunicipalityPopulation.municipality_code,
+                models.MunicipalityPopulation.population.label("population"),
+            )
+            .where(
+                and_(
+                    func.left(models.MunicipalityPopulation.municipality_code, 2) == county_code,
+                    models.MunicipalityPopulation.year == latest_year,
+                )
+            )
+            .subquery()
+        )
+
+        # 4. Final Combined Ranking Query
+        rank_query = (
+            select(
+                density_data.c.municipality_code,
+                func.rank().over(order_by=density_data.c.density.desc()).label("rank_density"),
+                func.rank().over(order_by=revenue_data.c.revenue.desc()).label("rank_revenue"),
+                func.rank().over(order_by=pop_data.c.population.desc()).label("rank_population"),
+                func.count().over().label("total"),
+            )
+            .select_from(density_data)
+            .join(revenue_data, density_data.c.municipality_code == revenue_data.c.municipality_code)
+            .join(pop_data, density_data.c.municipality_code == pop_data.c.municipality_code)
+        )
 
         result = await self.db.execute(rank_query)
         ranks = result.all()
 
         for r in ranks:
             if r.municipality_code == municipality_code:
-                return {"rank": r.rank, "out_of": r.total}
+                return {
+                    "density": {"rank": r.rank_density, "out_of": r.total},
+                    "revenue": {"rank": r.rank_revenue, "out_of": r.total},
+                    "population": {"rank": r.rank_population, "out_of": r.total},
+                }
         return None
 
     async def get_establishment_trend(self, municipality_code: str, months: int = 12):

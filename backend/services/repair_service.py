@@ -166,6 +166,50 @@ class RepairService:
         if self.repair:
             await self.db.commit()
 
+    async def validate_municipality_data(self) -> dict:
+        """Diagnostic: Check for inconsistencies in municipality codes and names."""
+        logger.info("Repair: Validating municipality data consistency...")
+
+        # Query distinct (code, name) pairs from company addresses
+        query = (
+            select(
+                models.Company.forretningsadresse["kommunenummer"].astext.label("code"),
+                models.Company.forretningsadresse["kommune"].astext.label("name"),
+            )
+            .where(models.Company.forretningsadresse["kommunenummer"].isnot(None))
+            .distinct()
+        )
+
+        result = await self.db.execute(query)
+        rows = result.all()
+
+        codes: dict[str, list[str]] = {}
+        for row in rows:
+            if not row.code or not row.name:
+                continue
+            code = str(row.code).strip()
+            name = str(row.name).strip()
+            if code in codes:
+                if name not in codes[code]:
+                    codes[code].append(name)
+            else:
+                codes[code] = [name]
+
+        multi_names = {c: n for c, n in codes.items() if len(n) > 1}
+
+        if multi_names:
+            logger.warning(f"Found {len(multi_names)} municipality codes with multiple name variants.")
+            for code, names in multi_names.items():
+                logger.warning(f"Code {code} has variants: {names}")
+        else:
+            logger.info("Municipality data is consistent.")
+
+        return {
+            "total_unique_codes": len(codes),
+            "multi_name_codes_count": len(multi_names),
+            "multi_names": multi_names,
+        }
+
     async def _repair_company(self, orgnr: str) -> bool:
         async with repair_semaphore:
             async with BRREG_RATE_LIMITER:

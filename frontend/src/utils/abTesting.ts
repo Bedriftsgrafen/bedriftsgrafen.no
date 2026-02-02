@@ -6,39 +6,25 @@ import { trackEvent } from './analytics'
  * Assigns the user to a variant and persists it in localStorage
  */
 export function useABTest(experimentId: string, variants: string[]): string {
-    // Initialize from storage if available
-    const [variant, setVariant] = useState<string>(() => {
+    // Initialize variant: get from storage or assign new one immediately
+    const [variant] = useState<string>(() => {
         const storageKey = `bg_ab_${experimentId}`
         const stored = localStorage.getItem(storageKey)
         if (stored && variants.includes(stored)) return stored
-        return variants[0]
+
+        // Assign new variant if none exists
+        const randomIndex = Math.floor(Math.random() * variants.length)
+        const newVariant = variants[randomIndex]
+        localStorage.setItem(storageKey, newVariant)
+        return newVariant
     })
 
     useEffect(() => {
-        const storageKey = `bg_ab_${experimentId}`
-        const storedVariant = localStorage.getItem(storageKey)
-
-        // If we already have a valid stored variant, ensure state matches (it should)
-        if (storedVariant && variants.includes(storedVariant)) {
-            if (variant !== storedVariant) {
-                setVariant(storedVariant)
-            }
-            return
-        }
-
-        // Assign new variant
-        const randomIndex = Math.floor(Math.random() * variants.length)
-        const newVariant = variants[randomIndex]
-
-        localStorage.setItem(storageKey, newVariant)
-        setVariant(newVariant)
-
-        // Track assignment
+        // Track assignment once (on mount or if variant/experiment changes)
         trackEvent('ab_test_assignment', 'experiment', experimentId, undefined, {
-            variant: newVariant
+            variant: variant
         })
-        // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [experimentId]) // Only re-run if experiment ID changes
+    }, [experimentId, variant])
 
     return variant
 }

@@ -1,3 +1,4 @@
+/* eslint-disable react-refresh/only-export-components */
 import { createLazyFileRoute, Link } from '@tanstack/react-router'
 import { User, Building2, ExternalLink, ShieldCheck, Briefcase, AlertTriangle } from 'lucide-react'
 import { SEOHead, Breadcrumbs } from '../components/layout'
