@@ -1,22 +1,42 @@
+# Use specific Python version for reproducibility and security
 FROM python:3.14-slim
+
+# OCI Image Labels
+LABEL org.opencontainers.image.title="Bedriftsgrafen Backend"
+LABEL org.opencontainers.image.description="FastAPI backend for Bedriftsgrafen.no"
+LABEL org.opencontainers.image.source="https://github.com/Bedriftsgrafen/bedriftsgrafen.no"
+LABEL org.opencontainers.image.vendor="Bedriftsgrafen"
+LABEL maintainer="bedriftsgrafen@example.com"
 
 WORKDIR /app
 
 # System dependencies for psycopg2 and health check
+# Combine commands to reduce layers and clean up in same layer
 RUN apt-get update && \
-    apt-get install -y libpq-dev gcc curl && \
+    apt-get install -y --no-install-recommends libpq-dev gcc curl && \
     rm -rf /var/lib/apt/lists/*
+
+# Upgrade pip to latest version
+RUN pip install --no-cache-dir --upgrade pip
 
 # Install Python dependencies first (cached layer)
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
-# Copy application code (baked into image)
-COPY . .
+# Create non-root user for security
+RUN useradd -m -u 1000 -s /bin/bash appuser && \
+    chown -R appuser:appuser /app
+
+# Copy application code with correct ownership
+COPY --chown=appuser:appuser . .
+
+# Switch to non-root user
+USER appuser
 
 # Health check for container orchestration
 HEALTHCHECK --interval=30s --timeout=10s --retries=3 \
     CMD curl -f http://localhost:8000/health || exit 1
 
 # Production command with multiple workers for better throughput
-CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000", "--workers", "4"]
+# Add proxy headers support for proper reverse proxy handling
+CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000", "--workers", "4", "--proxy-headers", "--forwarded-allow-ips=*"]
