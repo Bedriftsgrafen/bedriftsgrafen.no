@@ -15,11 +15,17 @@ concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
+# Default permissions - most jobs only need read access
+permissions:
+  contents: read
+
 jobs:
   # Secret Scanning with GitGuardian
   secret-scanning:
     name: Secret Scanning (GitGuardian)
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
     continue-on-error: true  # Don't block builds on secret detection
     steps:
       - name: Checkout code
@@ -41,6 +47,8 @@ jobs:
   frontend-security:
     name: Frontend Security Audit
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -100,6 +108,8 @@ jobs:
   backend-security:
     name: Backend Security Audit
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
     defaults:
       run:
         working-directory: ./backend
@@ -195,6 +205,9 @@ jobs:
   container-scanning:
     name: Container Image Scanning
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      security-events: write  # For uploading SARIF results
     strategy:
       matrix:
         include:
@@ -267,6 +280,8 @@ jobs:
   license-check:
     name: License Compliance Check
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -320,6 +335,8 @@ jobs:
   security-summary:
     name: Security Summary
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
     needs: [secret-scanning, frontend-security, backend-security, codeql-analysis, container-scanning, license-check]
     if: always()
     steps:
