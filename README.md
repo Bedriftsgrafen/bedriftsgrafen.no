@@ -76,8 +76,8 @@ See [CONTRIBUTING.md](CONTRIBUTING.md) for details.
 
 ### Prerequisites
 - Docker & Docker Compose
-- Node.js 22+ (for local frontend development)
-- Python 3.11+ (for local backend development)
+- Node.js 24+ (for local frontend development)
+- Python 3.14+ (for local backend development)
 
 ### Quick Start
 

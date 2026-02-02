@@ -1,34 +1,43 @@
+# =============================================================================
+# Frontend Dockerfile (Monorepo/Workspace aware)
+# =============================================================================
+# This Dockerfile is designed to be run from the PROJECT ROOT context.
+# Example: docker build -f frontend/Dockerfile .
+
 # Development stage - for hot-reload dev environment
-FROM node:25-alpine AS development
+FROM node:24-alpine AS development
 
 WORKDIR /app
 
+# Copy workspace configuration
 COPY package*.json ./
-# Skip prepare script (husky) - git hooks not needed in containers
+COPY frontend/package*.json ./frontend/
+
+# Install dependencies for the whole workspace
+# (In dev we install everything because volumes will map the source)
 RUN npm ci --ignore-scripts
 
-COPY . .
-
+WORKDIR /app/frontend
 EXPOSE 5173
 CMD ["npm", "run", "dev", "--", "--host"]
 
 # Build stage - for creating production bundle
-FROM node:25-alpine AS build
-
-# OCI Image Labels
-LABEL org.opencontainers.image.title="Bedriftsgrafen Frontend"
-LABEL org.opencontainers.image.description="React frontend for Bedriftsgrafen.no"
-LABEL org.opencontainers.image.source="https://github.com/Bedriftsgrafen/bedriftsgrafen.no"
-LABEL org.opencontainers.image.vendor="Bedriftsgrafen"
-LABEL maintainer="bedriftsgrafen@example.com"
+FROM node:24-alpine AS build
 
 WORKDIR /app
 
+# Copy workspace configuration
 COPY package*.json ./
-# Skip prepare script (husky) - git hooks not needed in containers
+COPY frontend/package*.json ./frontend/
+
+# Install dependencies (only what's needed for frontend workspace)
 RUN npm ci --ignore-scripts
 
-COPY . .
+# Copy frontend source
+COPY frontend/ ./frontend/
+
+# Build the app
+WORKDIR /app/frontend
 RUN npm run build
 
 # Production stage - for serving static files with nginx
@@ -42,13 +51,13 @@ LABEL org.opencontainers.image.vendor="Bedriftsgrafen"
 LABEL maintainer="bedriftsgrafen@example.com"
 
 # Copy built assets with correct ownership for nginx user
-COPY --from=build --chown=nginx:nginx /app/dist /usr/share/nginx/html
+COPY --from=build --chown=nginx:nginx /app/frontend/dist /usr/share/nginx/html
 
 # Remove default nginx configs for security
 RUN rm -f /etc/nginx/conf.d/default.conf
 
 # Copy nginx configuration
-COPY --chown=nginx:nginx nginx.conf /etc/nginx/conf.d/default.conf
+COPY --from=build --chown=nginx:nginx /app/frontend/nginx.conf /etc/nginx/conf.d/default.conf
 
 # Switch to non-root nginx user
 USER nginx

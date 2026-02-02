@@ -58,16 +58,17 @@ services:
 
   frontend-dev:
     build:
-      context: ./frontend
-      dockerfile: Dockerfile
+      context: .
+      dockerfile: frontend/Dockerfile
       target: development
     container_name: bedriftsgrafen-frontend-dev
     restart: unless-stopped
     init: true
     network_mode: host
     volumes:
-      - ./frontend:/app
+      - ./frontend:/app/frontend
       - /app/node_modules
+      - /app/frontend/node_modules
     environment:
       - VITE_API_TARGET=http://localhost:8001
     deploy:

@@ -29,8 +29,8 @@
   },
   "lint-staged": {
     "frontend/src/**/*.{ts,tsx}": [
-      "./frontend/node_modules/.bin/eslint --config frontend/eslint.config.js --fix",
-      "bash -c \"./frontend/node_modules/.bin/tsc --noEmit --project frontend/tsconfig.json\""
+      "eslint --config frontend/eslint.config.js --fix",
+      "bash -c \"tsc --noEmit --project frontend/tsconfig.json\""
     ],
     "backend/**/*.py": [
       "bash scripts/lint-staged-backend.sh"

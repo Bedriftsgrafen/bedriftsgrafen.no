@@ -1,0 +1,12 @@
+node_modules
+**/node_modules
+frontend/dist
+backend/.venv
+backend/__pycache__
+.git
+.github
+*.log
+postgres_data
+postgres_data_v15_bak
+downloads
+logs

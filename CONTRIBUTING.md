@@ -22,8 +22,8 @@ You can find detailed workflows and standards in the `.agent/skills/` directory:
 See [README.md](README.md#-getting-started) for initial setup instructions.
 
 ### Quick Start
-1.  **Backend**: Uses Python 3.11+ and specific virtual environment paths.
-2.  **Frontend**: Uses Node.js 22+.
+1.  **Backend**: Uses Python 3.14+ and specific virtual environment paths.
+2.  **Frontend**: Uses Node.js 24+.
 
 Refer to the **Safe Push Skill** for the exact commands to run tests and linters locally.
 

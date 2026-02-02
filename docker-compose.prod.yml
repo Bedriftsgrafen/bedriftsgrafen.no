@@ -62,8 +62,8 @@ services:
 
   frontend:
     build:
-      context: ./frontend
-      dockerfile: Dockerfile
+      context: .
+      dockerfile: frontend/Dockerfile
     container_name: bedriftsgrafen-frontend
     restart: always
     init: true
