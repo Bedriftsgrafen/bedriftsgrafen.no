@@ -51,24 +51,18 @@ LABEL org.opencontainers.image.vendor="Bedriftsgrafen"
 LABEL maintainer="bedriftsgrafen@example.com"
 
 # Setup permissions for non-root execution
-# 1. Create necessary directories
-# 2. Touch the PID file
-# 3. Chown everything to nginx user
 RUN mkdir -p /var/cache/nginx/client_temp \
     /var/cache/nginx/proxy_temp \
     /var/cache/nginx/fastcgi_temp \
     /var/cache/nginx/uwsgi_temp \
     /var/cache/nginx/scgi_temp && \
-    touch /var/run/nginx.pid && \
-    chown -R nginx:nginx /var/cache/nginx /var/run/nginx.pid /var/log/nginx
+    chown -R nginx:nginx /var/cache/nginx /var/log/nginx /etc/nginx/conf.d
 
 # Copy built assets with correct ownership
 COPY --from=build --chown=nginx:nginx /app/frontend/dist /usr/share/nginx/html
 
-# Remove default nginx configs for security
-RUN rm -f /etc/nginx/conf.d/default.conf
-
-# Copy nginx configuration
+# Copy nginx configurations
+COPY --from=build --chown=nginx:nginx /app/frontend/nginx.master.conf /etc/nginx/nginx.conf
 COPY --from=build --chown=nginx:nginx /app/frontend/nginx.conf /etc/nginx/conf.d/default.conf
 
 # Switch to non-root nginx user
