@@ -1,12 +1,91 @@
 # Branch Protection Rules
 
+**🚨 SOLO DEVELOPER? [Jump to Quick Fix](#-important-solo-developer--single-user-setup)**
+
 This document provides guidelines for configuring branch protection rules via the GitHub UI to ensure code quality and security for Bedriftsgrafen.no.
 
 ## Overview
 
 Branch protection rules help maintain code quality by enforcing certain workflows before code can be merged. These rules must be configured manually through the GitHub repository settings.
 
-## How to Configure
+---
+
+## 🚨 IMPORTANT: Solo Developer / Single User Setup
+
+**If you're the only developer working on this repository, read this section first!**
+
+### The Problem You're Experiencing
+
+You set up branch protection rules, but now you can't approve your own PR or merge to `main`. GitHub says "needs user with write access" even though you're the owner.
+
+**Why this happens:** The standard branch protection settings include "Do not allow bypassing the above settings" which blocks even repository administrators (you!) from merging without a separate reviewer.
+
+### Quick Fix: Allow Administrator Bypass
+
+**To merge your current PR and continue working solo:**
+
+1. **Go to:** `Settings` → `Branches` → Find your `main` branch rule → Click `Edit`
+
+2. **Scroll down to:** "Rules applied to administrators"
+
+3. **✅ ENABLE (CHECK):** "Allow specified actors to bypass required pull requests"
+   - Click "Add bypass actor"
+   - Select yourself (your username)
+   - OR just leave it unchecked to allow all admins
+
+4. **Click:** "Save changes" at the bottom
+
+5. **Now you can:**
+   - Go back to your PR
+   - Click "Merge pull request" (no approval needed as admin)
+   - Or approve your own PR if you prefer
+
+### Recommended Settings for Solo Developers
+
+When you're the only developer, use these **relaxed** settings:
+
+**For `main` branch:**
+
+```
+✅ Require a pull request before merging
+   - Required approvals: 0 (or 1 if you want to force yourself to review)
+   
+✅ Require status checks to pass before merging
+   - Add: frontend-validate, frontend-test, backend-validate, backend-test
+   
+❌ Do NOT enable "Do not allow bypassing the above settings"
+   (This is what's blocking you!)
+   
+✅ Allow administrators to bypass (this is you!)
+```
+
+This setup gives you:
+- ✅ Automated CI/CD checks must pass
+- ✅ You can see PR diffs before merging
+- ✅ You can merge immediately when needed
+- ✅ Security scanning still runs
+- ✅ No blocking on approvals
+
+### Alternative: Temporarily Disable Branch Protection
+
+**If you need to merge RIGHT NOW:**
+
+1. Go to: `Settings` → `Branches`
+2. Find the `main` branch protection rule
+3. Click the `Delete` button (🗑️ icon) on the right
+4. Merge your PR
+5. Re-add the protection rule with the solo developer settings above
+
+### When to Use Team Settings
+
+The full protection rules at the bottom of this document are for teams with multiple developers. You can enable those stricter rules later when you:
+- Add collaborators to the project
+- Want mandatory code review
+- Need multiple approval layers
+
+---
+
+## How to Configure Branch Protection
 
 Navigate to: **Settings** → **Branches** → **Branch protection rules** → **Add rule**
 
@@ -55,8 +134,10 @@ Navigate to: **Settings** → **Branches** → **Branch protection rules** → *
   - Configure based on your team structure
 
 #### Rules Applied to Administrators
-- ✅ **Do not allow bypassing the above settings**
-  - Ensures even administrators follow the same rules
+- ⚠️ **"Do not allow bypassing the above settings"**
+  - ❌ **For Solo Developers:** Leave UNCHECKED (allow admin bypass)
+  - ✅ **For Teams:** Enable this to ensure even administrators follow the rules
+  - **Note:** This setting blocks repository owners from merging without approval!
 
 #### Additional Settings
 - ✅ **Allow force pushes:** ❌ Disabled
