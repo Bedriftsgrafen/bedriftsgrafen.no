@@ -1,5 +1,5 @@
 # Use specific Python version for reproducibility and security
-FROM python:3.11.11-slim-bookworm
+FROM python:3.14-slim
 
 # OCI Image Labels
 LABEL org.opencontainers.image.title="Bedriftsgrafen Backend"

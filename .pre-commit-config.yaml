@@ -84,8 +84,8 @@ repos:
 
 # Configuration
 default_language_version:
-  python: python3.11
-  node: 22.12.0
+  python: python3.14
+  node: 24.16.0
 
 # Performance optimization
 default_stages: [commit]
