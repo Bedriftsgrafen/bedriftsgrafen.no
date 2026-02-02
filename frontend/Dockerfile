@@ -50,7 +50,19 @@ LABEL org.opencontainers.image.source="https://github.com/Bedriftsgrafen/bedrift
 LABEL org.opencontainers.image.vendor="Bedriftsgrafen"
 LABEL maintainer="bedriftsgrafen@example.com"
 
-# Copy built assets with correct ownership for nginx user
+# Setup permissions for non-root execution
+# 1. Create necessary directories
+# 2. Touch the PID file
+# 3. Chown everything to nginx user
+RUN mkdir -p /var/cache/nginx/client_temp \
+    /var/cache/nginx/proxy_temp \
+    /var/cache/nginx/fastcgi_temp \
+    /var/cache/nginx/uwsgi_temp \
+    /var/cache/nginx/scgi_temp && \
+    touch /var/run/nginx.pid && \
+    chown -R nginx:nginx /var/cache/nginx /var/run/nginx.pid /var/log/nginx
+
+# Copy built assets with correct ownership
 COPY --from=build --chown=nginx:nginx /app/frontend/dist /usr/share/nginx/html
 
 # Remove default nginx configs for security
@@ -62,9 +74,9 @@ COPY --from=build --chown=nginx:nginx /app/frontend/nginx.conf /etc/nginx/conf.d
 # Switch to non-root nginx user
 USER nginx
 
-# Health check endpoint
+# Health check endpoint (now on 8080)
 HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
-    CMD wget --no-verbose --tries=1 --spider http://localhost/health || exit 1
+    CMD wget --no-verbose --tries=1 --spider http://localhost:8080/health || exit 1
 
-EXPOSE 80
+EXPOSE 8080
 CMD ["nginx", "-g", "daemon off;"]
