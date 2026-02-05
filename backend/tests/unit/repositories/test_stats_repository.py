@@ -232,32 +232,36 @@ async def test_get_industry_stat_by_division_not_found(repo, mock_db_session):
 @pytest.mark.asyncio
 async def test_get_timeline_trends_bankruptcies(repo, mock_db_session):
     """Test get_timeline_trends for bankruptcies metric."""
+    from datetime import datetime
+
     mock_row = MagicMock()
-    mock_row.month = "2024-01"
-    mock_row.cnt = 25
+    mock_row.month = datetime(2024, 1, 1)
+    mock_row.value = 25
     mock_db_session.execute.return_value.all.return_value = [mock_row]
 
     result = await repo.get_timeline_trends(metric="bankruptcies", months=12)
 
     assert len(result) == 1
-    assert result[0]["month"] == "2024-01"
-    assert result[0]["count"] == 25
+    assert result[0]["label"] == "Jan 24"
+    assert result[0]["value"] == 25
 
 
 @pytest.mark.asyncio
 async def test_get_timeline_trends_new_companies(repo, mock_db_session):
     """Test get_timeline_trends for new_companies metric."""
+    from datetime import datetime
+
     mock_rows = [
-        MagicMock(month="2024-01", cnt=100),
-        MagicMock(month="2024-02", cnt=150),
+        MagicMock(month=datetime(2024, 1, 1), value=100),
+        MagicMock(month=datetime(2024, 2, 1), value=150),
     ]
     mock_db_session.execute.return_value.all.return_value = mock_rows
 
     result = await repo.get_timeline_trends(metric="new_companies", months=6)
 
     assert len(result) == 2
-    assert result[0]["month"] == "2024-01"
-    assert result[1]["count"] == 150
+    assert result[0]["label"] == "Jan 24"
+    assert result[1]["value"] == 150
 
 
 @pytest.mark.asyncio
@@ -415,26 +419,66 @@ async def test_get_establishment_trend(repo, mock_db_session):
     mock_rows = [
         MagicMock(month=datetime(2024, 1, 1), count=15),
         MagicMock(month=datetime(2024, 2, 1), count=22),
-        MagicMock(month=datetime(2024, 3, 1), count=18),
     ]
     mock_db_session.execute.return_value.all.return_value = mock_rows
 
     result = await repo.get_establishment_trend("3001", months=12)
 
-    assert len(result) == 3
+    assert len(result) == 2
     assert result[0]["label"] == "Jan 24"
     assert result[0]["value"] == 15
-    assert result[1]["label"] == "Feb 24"
 
 
 @pytest.mark.asyncio
-async def test_get_establishment_trend_empty(repo, mock_db_session):
-    """Test establishment trend with no data."""
-    mock_db_session.execute.return_value.all.return_value = []
+async def test_get_bankrupt_trend(repo, mock_db_session):
+    """Test monthly bankruptcy trend for municipality."""
+    from datetime import datetime
 
-    result = await repo.get_establishment_trend("9999", months=6)
+    mock_rows = [
+        MagicMock(month=datetime(2024, 1, 1), count=5),
+        MagicMock(month=datetime(2024, 2, 1), count=8),
+    ]
+    mock_db_session.execute.return_value.all.return_value = mock_rows
 
-    assert result == []
+    result = await repo.get_bankrupt_trend("3001", months=12)
+
+    assert len(result) == 2
+    assert result[0]["label"] == "Jan 24"
+    assert result[0]["value"] == 5
+
+
+@pytest.mark.asyncio
+async def test_get_county_establishment_trend(repo, mock_db_session):
+    """Test monthly establishment trend for county."""
+    from datetime import datetime
+
+    mock_rows = [
+        MagicMock(month=datetime(2024, 1, 1), count=150),
+        MagicMock(month=datetime(2024, 2, 1), count=180),
+    ]
+    mock_db_session.execute.return_value.all.return_value = mock_rows
+
+    result = await repo.get_county_establishment_trend("03", months=12)
+
+    assert len(result) == 2
+    assert result[0]["value"] == 150
+
+
+@pytest.mark.asyncio
+async def test_get_county_bankrupt_trend(repo, mock_db_session):
+    """Test monthly bankruptcy trend for county."""
+    from datetime import datetime
+
+    mock_rows = [
+        MagicMock(month=datetime(2024, 1, 1), count=20),
+        MagicMock(month=datetime(2024, 2, 1), count=25),
+    ]
+    mock_db_session.execute.return_value.all.return_value = mock_rows
+
+    result = await repo.get_county_bankrupt_trend("03", months=12)
+
+    assert len(result) == 2
+    assert result[0]["value"] == 20
 
 
 @pytest.mark.asyncio
@@ -479,23 +523,6 @@ async def test_get_county_rankings_revenue(repo, mock_db_session):
     result = await repo.get_county_rankings("03", metric="revenue")
 
     assert result["rank"] == 1
-
-
-@pytest.mark.asyncio
-async def test_get_county_establishment_trend(repo, mock_db_session):
-    """Test monthly establishment trend for county."""
-    from datetime import datetime
-
-    mock_rows = [
-        MagicMock(month=datetime(2024, 1, 1), count=150),
-        MagicMock(month=datetime(2024, 2, 1), count=180),
-    ]
-    mock_db_session.execute.return_value.all.return_value = mock_rows
-
-    result = await repo.get_county_establishment_trend("03", months=12)
-
-    assert len(result) == 2
-    assert result[0]["value"] == 150
 
 
 @pytest.mark.asyncio

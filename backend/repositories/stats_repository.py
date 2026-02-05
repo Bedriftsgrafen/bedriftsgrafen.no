@@ -438,21 +438,53 @@ class StatsRepository:
                 }
         return None
 
-    async def get_establishment_trend(self, municipality_code: str, months: int = 12):
+    async def get_establishment_trend(self, municipality_code: str, months: int = 12) -> list[dict[str, Any]]:
         """Get monthly registration counts for the last X months."""
+        return await self.get_trend(
+            level="municipality", code=municipality_code, metric="establishments", months=months
+        )
+
+    async def get_bankrupt_trend(self, municipality_code: str, months: int = 12) -> list[dict[str, Any]]:
+        """Get monthly bankruptcy counts for the last X months."""
+        return await self.get_trend(level="municipality", code=municipality_code, metric="bankruptcies", months=months)
+
+    async def get_county_establishment_trend(self, county_code: str, months: int = 12) -> list[dict[str, Any]]:
+        """Get monthly registration counts for a county."""
+        return await self.get_trend(level="county", code=county_code, metric="establishments", months=months)
+
+    async def get_county_bankrupt_trend(self, county_code: str, months: int = 12) -> list[dict[str, Any]]:
+        """Get monthly bankruptcy counts for a county."""
+        return await self.get_trend(level="county", code=county_code, metric="bankruptcies", months=months)
+
+    async def get_trend(
+        self,
+        level: Literal["county", "municipality"],
+        code: str,
+        metric: Literal["establishments", "bankruptcies"],
+        months: int = 12,
+    ) -> list[dict[str, Any]]:
+        """Generic trend fetching for establishments or bankruptcies."""
         from datetime import date, timedelta
 
         start_date = date.today().replace(day=1) - timedelta(days=30 * months)
 
+        date_col = models.Company.stiftelsesdato if metric == "establishments" else models.Company.konkursdato
+
+        if level == "municipality":
+            geo_filter = models.Company.forretningsadresse["kommunenummer"].astext == code
+        else:
+            geo_filter = func.left(models.Company.forretningsadresse["kommunenummer"].astext, 2) == code
+
         query = (
             select(
-                func.date_trunc("month", models.Company.stiftelsesdato).label("month"),
+                func.date_trunc("month", date_col).label("month"),
                 func.count(models.Company.orgnr).label("count"),
             )
             .where(
                 and_(
-                    models.Company.forretningsadresse["kommunenummer"].astext == municipality_code,
-                    models.Company.stiftelsesdato >= start_date,
+                    geo_filter,
+                    date_col >= start_date,
+                    date_col.isnot(None),
                 )
             )
             .group_by("month")
@@ -687,32 +719,6 @@ class StatsRepository:
                 return {"rank": r.rank, "out_of": r.total}
         return None
 
-    async def get_county_establishment_trend(self, county_code: str, months: int = 12):
-        """Get monthly registration counts for a county."""
-        from datetime import date, timedelta
-
-        start_date = date.today().replace(day=1) - timedelta(days=30 * months)
-
-        query = (
-            select(
-                func.date_trunc("month", models.Company.stiftelsesdato).label("month"),
-                func.count(models.Company.orgnr).label("count"),
-            )
-            .where(
-                and_(
-                    func.left(models.Company.forretningsadresse["kommunenummer"].astext, 2) == county_code,
-                    models.Company.stiftelsesdato >= start_date,
-                )
-            )
-            .group_by("month")
-            .order_by("month")
-        )
-
-        result = await self.db.execute(query)
-        rows = result.all()
-
-        return [{"label": r.month.strftime("%b %y") if r.month else "Ukjent", "value": r.count} for r in rows]
-
     async def get_county_municipalities(self, county_code: str):
         """Get all municipalities in a county with their stats."""
         latest_year = await self.get_latest_population_year() or 2024
@@ -848,29 +854,47 @@ class StatsRepository:
         return result.scalar_one_or_none()
 
     async def get_timeline_trends(
-        self, metric: Literal["bankruptcies", "new_companies"], months: int
-    ) -> list[dict[str, int | str]]:
-        """Get monthly counts for bankruptcies or new companies.
+        self,
+        metric: Literal["bankruptcies", "new_companies"],
+        months: int,
+        filters: FilterParams | None = None,
+    ) -> list[dict[str, Any]]:
+        """Get monthly counts for bankruptcies or new companies with optional filtering.
 
         Args:
             metric: Type of trend to fetch
-            months: Number of months to look back (1-36, validated upstream)
+            months: Number of months to look back
+            filters: Optional FilterParams for NACE, county, etc.
         """
-        from sqlalchemy import text
+        from datetime import date, timedelta
+        from repositories.company_filter_builder import CompanyFilterBuilder
 
         # Defense-in-depth: ensure months is integer even though FastAPI validates upstream
         safe_months = int(months)
+        start_date = date.today().replace(day=1) - timedelta(days=30 * safe_months)
 
         date_col = models.Company.konkursdato if metric == "bankruptcies" else models.Company.stiftelsesdato
-        month_expr = func.to_char(date_col, "YYYY-MM")
 
-        query = (
-            select(month_expr.label("month"), func.count().label("cnt"))
-            .where(date_col.isnot(None), date_col >= text(f"CURRENT_DATE - interval '{safe_months} months'"))
-            .group_by(month_expr)
-            .order_by(month_expr)
+        query = select(
+            func.date_trunc("month", date_col).label("month"),
+            func.count(models.Company.orgnr).label("value"),
+        ).where(
+            and_(
+                date_col.isnot(None),
+                date_col >= start_date,
+            )
         )
+
+        # Apply filters if provided
+        if filters:
+            builder = CompanyFilterBuilder(filters)
+            # Apply all filters, but skip the date filter as we handle it here
+            # and exclude financial join unless strictly needed to keep it fast
+            query = builder.apply_to_query(query)
+
+        query = query.group_by("month").order_by("month")
 
         result = await self.db.execute(query)
         rows = result.all()
-        return [{"month": row.month, "count": row.cnt} for row in rows]
+
+        return [{"label": r.month.strftime("%b %y") if r.month else "Ukjent", "value": r.value} for r in rows]

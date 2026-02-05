@@ -55,6 +55,7 @@ class MunicipalityPremiumResponse(BaseModel):
 
     # Trends
     establishment_trend: list[TrendPoint] = []
+    bankrupt_trend: list[TrendPoint] = []
 
     # Categorical Data
     top_sectors: list[SectorStat] = []

@@ -509,7 +509,9 @@ class StatsService:
         ranking_revenue = rankings.get("revenue") if rankings else None
         ranking_population = rankings.get("population") if rankings else None
 
-        trend = await self.stats_repo.get_establishment_trend(municipality_code)
+        # Fetch trends sequentially to avoid SQLAlchemy session race conditions
+        establishment_trend = await self.stats_repo.get_establishment_trend(municipality_code)
+        bankrupt_trend = await self.stats_repo.get_bankrupt_trend(municipality_code)
 
         # 2. Fetch company lists (Top earners, Newest, and Bankruptcies)
         # Top 5 by revenue
@@ -560,7 +562,8 @@ class StatsService:
             else 0,
             "business_density_national_avg": summary["national_density"],
             "total_revenue": None,  # Future: sum from LatestAccountings join
-            "establishment_trend": trend,
+            "establishment_trend": establishment_trend,
+            "bankrupt_trend": bankrupt_trend,
             "top_sectors": sectors,
             "top_companies": top_companies_res,
             "newest_companies": filtered_newest[:5],
@@ -588,7 +591,9 @@ class StatsService:
         ranking_revenue = await self.stats_repo.get_county_rankings(county_code, metric="revenue")
         ranking_population = await self.stats_repo.get_county_rankings(county_code, metric="population")
 
-        trend = await self.stats_repo.get_county_establishment_trend(county_code)
+        # Fetch trends sequentially to avoid session race conditions
+        establishment_trend = await self.stats_repo.get_county_establishment_trend(county_code)
+        bankrupt_trend = await self.stats_repo.get_county_bankrupt_trend(county_code)
 
         # 2. Fetch company lists (Top earners, Newest, and Bankruptcies for the county)
         # Top 5 by revenue
@@ -636,7 +641,8 @@ class StatsService:
             "business_density": (company_count / population * 1000) if population > 0 else 0,
             "business_density_national_avg": summary["national_density"],
             "total_revenue": summary["total_revenue"],
-            "establishment_trend": trend,
+            "establishment_trend": establishment_trend,
+            "bankrupt_trend": bankrupt_trend,
             "top_sectors": sectors,
             "top_companies": top_companies_res,
             "newest_companies": filtered_newest[:5],

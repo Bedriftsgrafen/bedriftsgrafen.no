@@ -11,6 +11,7 @@ from database import get_db
 from dependencies.company_filters import CompanyQueryParams
 from repositories.stats_repository import StatsRepository
 from schemas.benchmark import IndustryBenchmarkResponse
+from schemas.municipality import TrendPoint
 from schemas.stats import GeoAveragesResponse, GeoStatResponse, IndustryStatResponse
 from services.stats_service import GeoLevel, GeoMetric, StatsService
 from repositories.company_filter_builder import FilterParams
@@ -207,3 +208,19 @@ async def get_geography_averages(
     return await service.get_geography_averages(
         level=level, metric=metric, filters=filters, county_code_context=county_code
     )
+
+
+@router.get("/timeline", response_model=list[TrendPoint])
+async def get_timeline_stats(
+    metric: Literal["bankruptcies", "new_companies"] = Query(..., description="Metric for trend"),
+    months: int = Query(12, ge=1, le=36, description="Months to look back"),
+    params: CompanyQueryParams = Depends(),
+    db: AsyncSession = Depends(get_db),
+) -> list[TrendPoint]:
+    """Get monthly registration or bankruptcy counts with optional filtering."""
+    # Build filters from query params
+    filters = FilterParams.from_dto(params.to_dto())
+
+    repo = StatsRepository(db)
+    data = await repo.get_timeline_trends(metric=metric, months=months, filters=filters)
+    return [TrendPoint.model_validate(p) for p in data]
