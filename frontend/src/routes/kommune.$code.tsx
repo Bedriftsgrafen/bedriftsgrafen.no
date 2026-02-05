@@ -8,6 +8,7 @@ import { formatNumber } from '../utils/formatters'
 import { HeroMap } from '../components/maps/HeroMap'
 import { createRouteCode } from '../utils/slugify'
 import {
+  TrendChart,
   EstablishmentTrendChart,
   TopCompanyList,
   NewestCompaniesList,
@@ -131,11 +132,20 @@ export function MunicipalityDashboardPage() {
         </div>
 
         <div className="max-w-7xl mx-auto px-4 pb-32">
-          {/* Trend & Grid layout */}
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-10 mb-16">
-            {/* Establishment Trend Chart */}
+          {/* Trends Row */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-10 mb-10">
             <EstablishmentTrendChart data={dashboard.establishment_trend} />
+            <TrendChart
+              data={dashboard.bankrupt_trend}
+              title="Konkurser"
+              color="#f59e0b"
+              gradientId="colorBankruptcies"
+              className=""
+            />
+          </div>
 
+          {/* Core Metrics Grid */}
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-10 mb-16">
             <section className="bg-slate-900 text-white rounded-[2.5rem] p-12 shadow-2xl flex flex-col justify-between relative overflow-hidden group">
               <div className="absolute top-0 right-0 p-12 opacity-5 group-hover:opacity-10 transition-opacity">
                 <Map className="h-48 w-48 rotate-12" />

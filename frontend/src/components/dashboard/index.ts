@@ -3,7 +3,7 @@
  * These components provide consistent UI patterns across regional dashboards.
  */
 
-export { EstablishmentTrendChart } from './EstablishmentTrendChart'
+export { TrendChart, EstablishmentTrendChart } from './TrendChart'
 export { TopCompanyList, NewestCompaniesList } from './CompanyLists'
 export { BankruptciesSection } from './BankruptciesSection'
 export { SectorDistribution } from './SectorDistribution'

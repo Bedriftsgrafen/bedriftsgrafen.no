@@ -59,6 +59,10 @@ const mockCountyDashboard: CountyPremiumResponse = {
         { label: 'Jan', value: 450 },
         { label: 'Feb', value: 480 },
     ],
+    bankrupt_trend: [
+        { label: 'Jan', value: 10 },
+        { label: 'Feb', value: 12 },
+    ],
     top_sectors: [
         { nace_division: '47', nace_name: 'Detaljhandel', company_count: 5000, percentage_of_total: 12.5 },
     ],

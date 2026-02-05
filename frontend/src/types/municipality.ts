@@ -43,6 +43,7 @@ export interface MunicipalityPremiumResponse {
 
     // Trends
     establishment_trend: TrendPoint[]
+    bankrupt_trend: TrendPoint[]
 
     // Categorical Data
     top_sectors: SectorStat[]

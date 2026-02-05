@@ -8,6 +8,7 @@ import { formatNumber } from '../utils/formatters'
 import { HeroMap } from '../components/maps/HeroMap'
 import { createRouteCode } from '../utils/slugify'
 import {
+  TrendChart,
   EstablishmentTrendChart,
   TopCompanyList,
   NewestCompaniesList,
@@ -129,29 +130,20 @@ function CountyDashboardPage() {
         </div>
 
         <div className="max-w-7xl mx-auto px-4 pb-32">
-          {/* Trend & Grid layout */}
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-10 mb-16">
-            {/*
-             - [x] Final Verification & Handover
-                - [x] Full system validation (Backend & Frontend)
-                - [x] Final Walkthrough Documentation
-            - [x] Phase 6: ESLint Disable Audit & Cleanup
-    - [x] Audit all `eslint-disable` usages
-    - [x] Fix `any` types in `AnalyticsService`
-    - [x] Fix state initialization in `SearchControls`
-    - [x] Refine `abTesting` hook dependencies
-    - [x] Final validation pass
-- [/] Phase 7: Dev Alignment & N+1 Audit
-    - [/] Resolve Dev 500/Connectivity issues
-    - [ ] Upgrade Dev Dockerfile to Python 3.14
-    - [ ] Sync/Compile requirements for dev
-    - [ ] Perform N+1 Query Audit in Repositories
-    - [ ] Final performance verification
-        - [ ] Audit and fix tests
-                - [ ] Final validation pass
-            */}
+          {/* Trends Row */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-10 mb-10">
             <EstablishmentTrendChart data={dashboard.establishment_trend} />
+            <TrendChart
+              data={dashboard.bankrupt_trend}
+              title="Konkurser"
+              color="#f59e0b"
+              gradientId="colorBankruptcies"
+              className=""
+            />
+          </div>
 
+          {/* Core Metrics Grid */}
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-10 mb-16">
             <section className="bg-slate-900 text-white rounded-[2.5rem] p-12 shadow-2xl flex flex-col justify-between relative overflow-hidden group">
               <div className="absolute top-0 right-0 p-12 opacity-5 group-hover:opacity-10 transition-opacity">
                 <Map className="h-48 w-48 rotate-12" />

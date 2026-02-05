@@ -189,6 +189,26 @@ function KonkurserPage() {
         staleTime: 1000 * 60 * 5,
     })
 
+    // Fetch trend data
+    const { data: trendData } = useQuery({
+        queryKey: ['bankruptcyTrend', 12, municipality_code, county_code, nace, q],
+        queryFn: async () => {
+            const params = new URLSearchParams({
+                metric: 'bankruptcies',
+                months: '12'
+            })
+            if (municipality_code) params.set('municipality_code', municipality_code)
+            if (county_code) params.set('county_code', county_code)
+            if (nace) params.set('naeringskode', nace)
+            if (q) params.set('name', q)
+
+            const res = await fetch(`${API_BASE}/v1/stats/timeline?${params.toString()}`)
+            if (!res.ok) throw new Error('Failed to fetch trend')
+            return res.json()
+        },
+        staleTime: 1000 * 60 * 60, // 1 hour
+    })
+
     // Stable callbacks for tabs
     const handleListTab = useCallback(() => setActiveTab('list'), [])
     const handleStatsTab = useCallback(() => setActiveTab('stats'), [])
@@ -293,10 +313,10 @@ function KonkurserPage() {
             {activeTab === 'stats' && (
                 <div className="space-y-6">
                     <TrendChart
-                        metric="bankruptcies"
+                        data={trendData || []}
                         title="Konkurser per måned"
                         color="#ef4444"
-                        months={12}
+                        gradientId="colorBankruptcies"
                     />
                     <IndustryBreakdownStats
                         metric="bankruptcies_last_year"

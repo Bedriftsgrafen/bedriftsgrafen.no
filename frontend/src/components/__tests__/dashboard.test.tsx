@@ -7,6 +7,7 @@
 import { describe, expect, it, vi } from 'vitest'
 import { render, screen } from '@testing-library/react'
 import { 
+  TrendChart,
   EstablishmentTrendChart, 
   TopCompanyList, 
   NewestCompaniesList,
@@ -84,6 +85,25 @@ const mockBankruptcies: Company[] = [
 ]
 
 // ============================================================================
+// TrendChart Tests
+// ============================================================================
+describe('TrendChart', () => {
+    it('renders with title and subtitle', () => {
+        render(<TrendChart data={mockTrendData} title="Test Trend" subtitle="Sub Title" />)
+        
+        expect(screen.getByText('Test Trend')).toBeInTheDocument()
+        expect(screen.getByText('Sub Title')).toBeInTheDocument()
+    })
+
+    it('passes data to chart component', () => {
+        render(<TrendChart data={mockTrendData} title="Test" />)
+        
+        const chart = screen.getByTestId('area-chart')
+        expect(chart).toHaveAttribute('data-points', JSON.stringify(mockTrendData))
+    })
+})
+
+// ============================================================================
 // EstablishmentTrendChart Tests
 // ============================================================================
 describe('EstablishmentTrendChart', () => {
@@ -96,7 +116,7 @@ describe('EstablishmentTrendChart', () => {
 
     it('renders with custom title and subtitle', () => {
         render(
-            <EstablishmentTrendChart 
+            <TrendChart 
                 data={mockTrendData} 
                 title="Custom Title"
                 subtitle="Custom Subtitle"
