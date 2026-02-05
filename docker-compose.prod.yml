@@ -3,8 +3,8 @@ name: bedriftsgrafen
 services:
   backend:
     build:
-      context: ./backend
-      dockerfile: Dockerfile.prod
+      context: .
+      dockerfile: backend/Dockerfile.prod
     container_name: bedriftsgrafen-backend
     restart: always
     init: true
@@ -36,8 +36,8 @@ services:
 
   backend-worker:
     build:
-      context: ./backend
-      dockerfile: Dockerfile.prod
+      context: .
+      dockerfile: backend/Dockerfile.prod
     container_name: bedriftsgrafen-worker
     restart: always
     init: true
