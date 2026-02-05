@@ -26,8 +26,8 @@ name: bedriftsgrafenno-dev
 services:
   backend-dev:
     build:
-      context: ./backend
-      dockerfile: Dockerfile
+      context: .
+      dockerfile: backend/Dockerfile
     container_name: bedriftsgrafen-backend-dev
     restart: unless-stopped
     init: true

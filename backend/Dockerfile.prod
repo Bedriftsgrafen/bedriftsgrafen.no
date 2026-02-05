@@ -20,7 +20,7 @@ RUN apt-get update && \
 RUN pip install --no-cache-dir --upgrade pip
 
 # Install Python dependencies first (cached layer)
-COPY requirements.txt .
+COPY backend/requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
 # Create non-root user for security
@@ -28,7 +28,7 @@ RUN useradd -m -u 1000 -s /bin/bash appuser && \
     chown -R appuser:appuser /app
 
 # Copy application code with correct ownership
-COPY --chown=appuser:appuser . .
+COPY --chown=appuser:appuser backend/ .
 
 # Switch to non-root user
 USER appuser

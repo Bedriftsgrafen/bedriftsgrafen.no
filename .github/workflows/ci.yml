@@ -53,7 +53,7 @@ jobs:
       - name: Set up Python
         uses: actions/setup-python@v6
         with:
-          python-version: '3.14-dev'
+          python-version: '3.14'
           cache: 'pip'
           cache-dependency-path: backend/requirements.txt
       
@@ -80,7 +80,7 @@ jobs:
       - name: Set up Python
         uses: actions/setup-python@v6
         with:
-          python-version: '3.14-dev'
+          python-version: '3.14'
           cache: 'pip'
           cache-dependency-path: backend/requirements.txt
       
