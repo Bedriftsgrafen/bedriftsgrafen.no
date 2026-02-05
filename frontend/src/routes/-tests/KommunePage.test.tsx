@@ -17,6 +17,7 @@ vi.mock('../../components/maps/HeroMap', () => ({
 }))
 
 vi.mock('../../components/dashboard', () => ({
+    TrendChart: () => <div data-testid="trend-chart-generic" />,
     EstablishmentTrendChart: () => <div data-testid="trend-chart" />,
     TopCompanyList: () => <div data-testid="top-companies" />,
     NewestCompaniesList: () => <div data-testid="newest-companies" />,
