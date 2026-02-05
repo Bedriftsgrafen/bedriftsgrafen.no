@@ -398,7 +398,8 @@ class TestGetMunicipalityPremiumDashboard:
         )
 
         # Mock trend
-        service.stats_repo.get_establishment_trend = AsyncMock(return_value=[{"year": 2024, "count": 500}])
+        service.stats_repo.get_establishment_trend = AsyncMock(return_value=[{"label": "Jan 24", "value": 500}])
+        service.stats_repo.get_bankrupt_trend = AsyncMock(return_value=[{"label": "Jan 24", "value": 10}])
 
         # Mock company lists
         mock_company = MagicMock()

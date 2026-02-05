@@ -3,6 +3,7 @@ Pytest configuration and shared fixtures for backend tests.
 """
 
 import sys
+import os
 from pathlib import Path
 from unittest.mock import AsyncMock, MagicMock
 
@@ -12,6 +13,9 @@ from dotenv import load_dotenv
 # Load env vars before importing anything else
 env_path = Path(__file__).parent.parent / ".env"
 load_dotenv(env_path)
+
+# Force memory storage for limiter during tests by unsetting REDIS_HOST
+os.environ["REDIS_HOST"] = ""
 
 # Add backend to Python path for imports
 sys.path.insert(0, str(Path(__file__).parent.parent))

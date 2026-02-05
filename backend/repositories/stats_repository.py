@@ -463,38 +463,21 @@ class StatsRepository:
         metric: Literal["establishments", "bankruptcies"],
         months: int = 12,
     ) -> list[dict[str, Any]]:
-        """Generic trend fetching for establishments or bankruptcies."""
-        from datetime import date, timedelta
-
-        start_date = date.today().replace(day=1) - timedelta(days=30 * months)
-
-        date_col = models.Company.stiftelsesdato if metric == "establishments" else models.Company.konkursdato
-
+        """Generic trend fetching for establishments or bankruptcies.
+        Refactored to use get_timeline_trends for DRY consistency.
+        """
+        filters = FilterParams()
         if level == "municipality":
-            geo_filter = models.Company.forretningsadresse["kommunenummer"].astext == code
+            filters.municipality_code = code
         else:
-            geo_filter = func.left(models.Company.forretningsadresse["kommunenummer"].astext, 2) == code
+            filters.county = code
 
-        query = (
-            select(
-                func.date_trunc("month", date_col).label("month"),
-                func.count(models.Company.orgnr).label("count"),
-            )
-            .where(
-                and_(
-                    geo_filter,
-                    date_col >= start_date,
-                    date_col.isnot(None),
-                )
-            )
-            .group_by("month")
-            .order_by("month")
+        # Map internal metric names to timeline metric names
+        timeline_metric: Literal["bankruptcies", "new_companies"] = (
+            "new_companies" if metric == "establishments" else "bankruptcies"
         )
 
-        result = await self.db.execute(query)
-        rows = result.all()
-
-        return [{"label": r.month.strftime("%b %y") if r.month else "Ukjent", "value": r.count} for r in rows]
+        return await self.get_timeline_trends(metric=timeline_metric, months=months, filters=filters)
 
     async def get_all_municipality_codes(self) -> Sequence[str]:
         """Fetch all municipality codes that have companies or population data."""

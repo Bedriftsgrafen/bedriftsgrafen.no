@@ -417,8 +417,8 @@ async def test_get_establishment_trend(repo, mock_db_session):
     from datetime import datetime
 
     mock_rows = [
-        MagicMock(month=datetime(2024, 1, 1), count=15),
-        MagicMock(month=datetime(2024, 2, 1), count=22),
+        MagicMock(month=datetime(2024, 1, 1), value=15),
+        MagicMock(month=datetime(2024, 2, 1), value=22),
     ]
     mock_db_session.execute.return_value.all.return_value = mock_rows
 
@@ -435,8 +435,8 @@ async def test_get_bankrupt_trend(repo, mock_db_session):
     from datetime import datetime
 
     mock_rows = [
-        MagicMock(month=datetime(2024, 1, 1), count=5),
-        MagicMock(month=datetime(2024, 2, 1), count=8),
+        MagicMock(month=datetime(2024, 1, 1), value=5),
+        MagicMock(month=datetime(2024, 2, 1), value=8),
     ]
     mock_db_session.execute.return_value.all.return_value = mock_rows
 
@@ -453,8 +453,8 @@ async def test_get_county_establishment_trend(repo, mock_db_session):
     from datetime import datetime
 
     mock_rows = [
-        MagicMock(month=datetime(2024, 1, 1), count=150),
-        MagicMock(month=datetime(2024, 2, 1), count=180),
+        MagicMock(month=datetime(2024, 1, 1), value=150),
+        MagicMock(month=datetime(2024, 2, 1), value=180),
     ]
     mock_db_session.execute.return_value.all.return_value = mock_rows
 
@@ -470,8 +470,8 @@ async def test_get_county_bankrupt_trend(repo, mock_db_session):
     from datetime import datetime
 
     mock_rows = [
-        MagicMock(month=datetime(2024, 1, 1), count=20),
-        MagicMock(month=datetime(2024, 2, 1), count=25),
+        MagicMock(month=datetime(2024, 1, 1), value=20),
+        MagicMock(month=datetime(2024, 2, 1), value=25),
     ]
     mock_db_session.execute.return_value.all.return_value = mock_rows
 

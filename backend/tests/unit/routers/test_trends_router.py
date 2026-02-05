@@ -26,9 +26,11 @@ def mock_db_session(monkeypatch):
 
 def test_get_trends_timeline_bankruptcies(client, mock_db_session):
     # Arrange
+    from datetime import datetime
+
     mock_row = MagicMock()
-    mock_row.month = "2023-01"
-    mock_row.cnt = 50  # 'cnt' is the column alias used in the repository
+    mock_row.month = datetime(2023, 1, 1)
+    mock_row.value = 50
 
     mock_result = mock_db_session.execute.return_value
     mock_result.all.return_value = [mock_row]
@@ -40,15 +42,17 @@ def test_get_trends_timeline_bankruptcies(client, mock_db_session):
     assert response.status_code == 200
     data = response.json()
     assert len(data) == 1
-    assert data[0]["month"] == "2023-01"
-    assert data[0]["count"] == 50
+    assert data[0]["label"] == "Jan 23"
+    assert data[0]["value"] == 50
 
 
 def test_get_trends_timeline_new_companies(client, mock_db_session):
     # Arrange
+    from datetime import datetime
+
     mock_row = MagicMock()
-    mock_row.month = "2023-02"
-    mock_row.cnt = 100  # 'cnt' is the column alias used in the repository
+    mock_row.month = datetime(2023, 2, 1)
+    mock_row.value = 100
 
     mock_result = mock_db_session.execute.return_value
     mock_result.all.return_value = [mock_row]
@@ -59,8 +63,8 @@ def test_get_trends_timeline_new_companies(client, mock_db_session):
     # Assert
     assert response.status_code == 200
     data = response.json()
-    assert data[0]["month"] == "2023-02"
-    assert data[0]["count"] == 100
+    assert data[0]["label"] == "Feb 23"
+    assert data[0]["value"] == 100
 
 
 def test_get_trends_timeline_invalid_metric(client, mock_db_session):
