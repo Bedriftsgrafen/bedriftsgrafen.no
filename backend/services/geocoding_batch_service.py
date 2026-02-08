@@ -149,7 +149,9 @@ class GeocodingBatchService:
 
         Returns statistics about the batch run.
         """
-        start_time = datetime.now()
+        from datetime import timezone
+
+        start_time = datetime.now(timezone.utc)
 
         # Get companies to geocode (already optimized to fetch only needed columns)
         companies = await self.get_companies_needing_geocoding(batch_size)
@@ -238,7 +240,7 @@ class GeocodingBatchService:
                         "success": success_count,
                         "failed": len(companies) - success_count,
                         "remaining": await self.count_companies_needing_geocoding(),
-                        "duration_seconds": round((datetime.now() - start_time).total_seconds(), 1),
+                        "duration_seconds": round((datetime.now(timezone.utc) - start_time).total_seconds(), 1),
                         "error": "Transaction aborted",
                     }
                 fail_count += 1
@@ -255,7 +257,7 @@ class GeocodingBatchService:
         remaining = await self.count_companies_needing_geocoding()
         total_geocoded = await self.count_geocoded_companies()
 
-        duration = (datetime.now() - start_time).total_seconds()
+        duration = (datetime.now(timezone.utc) - start_time).total_seconds()
 
         stats = {
             "processed": len(companies),
@@ -304,7 +306,9 @@ class GeocodingBatchService:
             return {"error": "File not found", "checked_paths": possible_paths}
 
         logger.info(f"Starting postal code backfill from {file_path}")
-        start_time = datetime.now()
+        from datetime import timezone
+
+        start_time = datetime.now(timezone.utc)
 
         try:
             # Load postal codes into a dictionary for fast lookup
@@ -403,7 +407,9 @@ class GeocodingBatchService:
 
             await self.db.commit()
 
-            duration = (datetime.now() - start_time).total_seconds()
+            from datetime import timezone
+
+            duration = (datetime.now(timezone.utc) - start_time).total_seconds()
 
             logger.info(f"Backfill complete. Updated {updated_count} companies in {duration:.1f}s")
 

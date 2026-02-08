@@ -71,8 +71,10 @@ class RoleRepository:
         if not last_updated:
             return False
 
-        # Handle timezone-aware vs naive datetime
-        now = datetime.now(last_updated.tzinfo) if last_updated.tzinfo else datetime.now()
+        # Handle timezone-aware datetimes (assume UTC as per project standard)
+        from datetime import timezone
+
+        now = datetime.now(timezone.utc)
         cache_expiry = last_updated + timedelta(days=ROLE_CACHE_DAYS)
         return now < cache_expiry
 

@@ -73,7 +73,9 @@ class SEOService:
         cache = cls._sitemap_cache
         if cache["expiry"] is None:
             return False
-        return datetime.now() < cache["expiry"]
+        from datetime import timezone
+
+        return datetime.now(timezone.utc) < cache["expiry"]
 
     @classmethod
     def is_cache_warming(cls) -> bool:
@@ -113,13 +115,17 @@ class SEOService:
                 logger.error(f"Cache refresh timed out after {CACHE_REFRESH_TIMEOUT}s")
                 # If we have any data, keep using it with extended expiry
                 if cache["total_companies"] is not None:
-                    cache["expiry"] = datetime.now() + timedelta(minutes=30)
+                    from datetime import timezone
+
+                    cache["expiry"] = datetime.now(timezone.utc) + timedelta(minutes=30)
                     logger.warning("Using stale cache data due to timeout")
             except Exception as e:
                 logger.error(f"Cache refresh failed: {e}")
                 # Circuit breaker: extend expiry on failure to avoid retry storm
                 if cache["total_companies"] is not None:
-                    cache["expiry"] = datetime.now() + timedelta(minutes=5)
+                    from datetime import timezone
+
+                    cache["expiry"] = datetime.now(timezone.utc) + timedelta(minutes=5)
             finally:
                 cache["is_warming"] = False
 
@@ -134,7 +140,9 @@ class SEOService:
         """Perform the actual cache refresh."""
         cache = SEOService._sitemap_cache
         logger.info("Refreshing sitemap anchors and counts...")
-        start_time = datetime.now()
+        from datetime import timezone
+
+        start_time = datetime.now(timezone.utc)
 
         # Refresh cache - counts first (fast)
         company_stmt = select(func.count(models.Company.orgnr))
@@ -155,8 +163,8 @@ class SEOService:
         logger.debug("Fetching person sitemap anchors...")
         cache["person_anchors"] = await self.role_repo.get_person_sitemap_anchors_optimized(URLS_PER_SITEMAP)
 
-        cache["expiry"] = datetime.now() + SEOService.CACHE_TTL
-        elapsed = (datetime.now() - start_time).total_seconds()
+        cache["expiry"] = datetime.now(timezone.utc) + SEOService.CACHE_TTL
+        elapsed = (datetime.now(timezone.utc) - start_time).total_seconds()
         logger.info(f"Sitemap cache refreshed in {elapsed:.2f}s. Next expiry: {cache['expiry']}")
 
     async def get_company_og_data(self, orgnr: str) -> Dict[str, Any] | None:

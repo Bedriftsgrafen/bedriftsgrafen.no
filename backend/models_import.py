@@ -1,3 +1,4 @@
+from __future__ import annotations
 import enum
 from datetime import datetime, timezone
 
@@ -8,7 +9,7 @@ from sqlalchemy.orm import Mapped, mapped_column
 from database import Base
 
 
-class ImportStatus(str, enum.Enum):
+class ImportStatus(enum.StrEnum):
     """Status of bulk import for a company"""
 
     PENDING = "pending"
@@ -31,9 +32,9 @@ class BulkImportQueue(Base):
     priority: Mapped[int] = mapped_column(Integer, default=0, index=True)  # Higher = more important
 
     # Timestamps
-    queued_at: Mapped[datetime] = mapped_column(DateTime, default=lambda: datetime.now(timezone.utc))
-    started_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
-    completed_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+    queued_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc))
+    started_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    completed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
 
     # Tracking
     attempt_count: Mapped[int] = mapped_column(Integer, default=0)
@@ -55,8 +56,8 @@ class ImportBatch(Base):
     batch_name: Mapped[str] = mapped_column(String, index=True)
 
     # Timestamps
-    started_at: Mapped[datetime] = mapped_column(DateTime, default=lambda: datetime.now(timezone.utc))
-    completed_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+    started_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc))
+    completed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
 
     # Statistics
     total_companies: Mapped[int] = mapped_column(Integer, default=0)
@@ -66,4 +67,4 @@ class ImportBatch(Base):
 
     # Progress tracking
     companies_per_hour: Mapped[int] = mapped_column(Integer, default=0)
-    estimated_completion: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+    estimated_completion: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)

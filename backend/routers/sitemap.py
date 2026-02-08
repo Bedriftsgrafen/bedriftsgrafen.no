@@ -38,14 +38,16 @@ def get_seo_service(db: AsyncSession = Depends(get_db)) -> SEOService:
 
 def format_date(dt: Any) -> str:
     """Format datetime or string date to sitemap-compliant ISO string (YYYY-MM-DD)"""
+    from datetime import timezone
+
     if dt is None:
-        return datetime.now().strftime("%Y-%m-%d")
+        return datetime.now(timezone.utc).strftime("%Y-%m-%d")
     if isinstance(dt, datetime):
         return dt.strftime("%Y-%m-%d")
     if isinstance(dt, str):
         # Brreg format often contains T
         return dt.split("T")[0]
-    return datetime.now().strftime("%Y-%m-%d")
+    return datetime.now(timezone.utc).strftime("%Y-%m-%d")
 
 
 def calculate_sitemap_pages(total_count: int, offset: int = 0) -> int:

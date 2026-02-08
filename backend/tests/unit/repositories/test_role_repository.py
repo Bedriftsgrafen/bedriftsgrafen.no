@@ -91,7 +91,9 @@ class TestIsCacheValid:
     @pytest.mark.asyncio
     async def test_valid_when_fresh(self, repo, mock_db_session):
         """Cache is valid when updated within 7 days."""
-        fresh = datetime.now() - timedelta(days=1)
+        from datetime import timezone
+
+        fresh = datetime.now(timezone.utc) - timedelta(days=1)
         mock_db_session.execute.return_value.scalar_one_or_none.return_value = fresh
 
         assert await repo.is_cache_valid("123") is True
@@ -99,7 +101,9 @@ class TestIsCacheValid:
     @pytest.mark.asyncio
     async def test_invalid_when_stale(self, repo, mock_db_session):
         """Cache is invalid when older than 7 days."""
-        stale = datetime.now() - timedelta(days=8)
+        from datetime import timezone
+
+        stale = datetime.now(timezone.utc) - timedelta(days=8)
         mock_db_session.execute.return_value.scalar_one_or_none.return_value = stale
 
         assert await repo.is_cache_valid("123") is False
@@ -107,7 +111,9 @@ class TestIsCacheValid:
     @pytest.mark.asyncio
     async def test_boundary_exactly_7_days(self, repo, mock_db_session):
         """Cache is invalid at exactly 7 days boundary."""
-        boundary = datetime.now() - timedelta(days=7)
+        from datetime import timezone
+
+        boundary = datetime.now(timezone.utc) - timedelta(days=7)
         mock_db_session.execute.return_value.scalar_one_or_none.return_value = boundary
 
         # At exactly 7 days, cache should be invalid

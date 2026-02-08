@@ -75,12 +75,14 @@ class SsbService:
         # 3. Upsert into database (batch operation)
         inserted_count = await self._upsert_population(year, population_data)
 
+        from datetime import timezone
+
         logger.info(f"Successfully synced {inserted_count} municipality populations for year {year}")
         return {
             "status": "success",
             "year": year,
             "municipality_count": inserted_count,
-            "synced_at": datetime.now().isoformat(),
+            "synced_at": datetime.now(timezone.utc).isoformat(),
         }
 
     def _parse_json_stat2(self, data: dict) -> tuple[int, dict[str, int]] | None:
@@ -156,9 +158,11 @@ class SsbService:
 
         # Use PostgreSQL INSERT ... ON CONFLICT DO UPDATE (upsert)
         stmt = insert(models.MunicipalityPopulation).values(rows)
+        from datetime import timezone
+
         stmt = stmt.on_conflict_do_update(
             index_elements=["municipality_code", "year"],
-            set_={"population": stmt.excluded.population, "updated_at": datetime.now()},
+            set_={"population": stmt.excluded.population, "updated_at": datetime.now(timezone.utc)},
         )
 
         await self.db.execute(stmt)

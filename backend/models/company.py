@@ -1,3 +1,4 @@
+from __future__ import annotations
 from datetime import date, datetime
 from sqlalchemy import (
     Boolean,
@@ -223,7 +224,7 @@ class Company(Base):
     latitude: Mapped[float | None] = mapped_column(Float, nullable=True)
     longitude: Mapped[float | None] = mapped_column(Float, nullable=True)
     geocoding_attempts: Mapped[int] = mapped_column(Integer, default=0)
-    geocoded_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+    geocoded_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
 
     # Search vector
     search_vector: Mapped[Any] = mapped_column(TSVECTOR, nullable=True)

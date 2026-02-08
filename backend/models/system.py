@@ -1,3 +1,4 @@
+from __future__ import annotations
 from datetime import datetime
 from sqlalchemy import BigInteger, CheckConstraint, DateTime, Integer, String
 from sqlalchemy.orm import Mapped, mapped_column
@@ -13,7 +14,9 @@ class DashboardStats(Base):
     total_employees: Mapped[int] = mapped_column(BigInteger, default=0)
     new_companies_ytd: Mapped[int] = mapped_column(Integer, default=0)
     bankruptcies: Mapped[int] = mapped_column(Integer, default=0)
-    updated_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now(), onupdate=func.now())
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), onupdate=func.now()
+    )
 
     __table_args__ = (CheckConstraint("id = 1", name="dashboard_stats_id_check"),)
 
@@ -23,7 +26,9 @@ class OrgFormCounts(Base):
 
     kode: Mapped[str] = mapped_column(String(10), primary_key=True)
     count: Mapped[int] = mapped_column(Integer, default=0)
-    updated_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now(), onupdate=func.now())
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), onupdate=func.now()
+    )
 
 
 class SystemState(Base):
