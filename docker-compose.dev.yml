@@ -1,23 +1,17 @@
 # =============================================================================
-# DEV STACK - Host Network Mode
+# DEV STACK - Bridge Mode (Standard Docker)
 # =============================================================================
 #
 # Denne filen definerer dev-containere som:
-# - Kjører på HOST-nettverket (ingen Docker-nettverk opprettes)
-# - Kobler direkte til localhost:5432 for database
-# - Har hot-reload og debugging
-# - Påvirker IKKE iptables eller andre containere
+# - Bruker prod's database (ingen egen db)
+# - Kobler til prod's nettverk (internal-net)
+# - Fungerer uavhengig av om porter er eksponert på host
 #
-# KRAV: Prod må kjøre først (for database tilgang på localhost:5432)
+# KRAV: Prod må kjøre først (for nettverk og database)
 #
 # Start:  docker compose -f docker-compose.dev.yml up -d
 # Stopp:  docker compose -f docker-compose.dev.yml down
 # Logs:   docker compose -f docker-compose.dev.yml logs -f
-#
-# TILGANG:
-#   - Backend API: http://localhost:8001
-#   - Frontend:    http://localhost:5173
-#   - Debugger:    localhost:5678
 #
 # =============================================================================
 
@@ -31,20 +25,21 @@ services:
     container_name: bedriftsgrafen-backend-dev
     restart: unless-stopped
     init: true
-    network_mode: host
     env_file:
       - .env
     volumes:
       - ./backend:/app
       - ./scripts:/app/ops_scripts
+    ports:
+      - "8001:8001"
+    networks:
+      - bedriftsgrafen_internal-net
     environment:
-      # Direct localhost access - no Docker networking!
-      - DATABASE_HOST=localhost
+      - DATABASE_HOST=db
       - DATABASE_PORT=5432
-      - DATABASE_URL=postgresql://${DATABASE_USER}:${DATABASE_PASSWORD}@localhost:5432/${DATABASE_NAME}
-      - DATABASE_URL_ASYNC=postgresql+asyncpg://${DATABASE_USER}:${DATABASE_PASSWORD}@localhost:5432/${DATABASE_NAME}
-      - REDIS_HOST=localhost
-      # Override port to avoid conflict with prod backend
+      - DATABASE_URL=postgresql://${DATABASE_USER}:${DATABASE_PASSWORD}@db:5432/${DATABASE_NAME}
+      - DATABASE_URL_ASYNC=postgresql+asyncpg://${DATABASE_USER}:${DATABASE_PASSWORD}@db:5432/${DATABASE_NAME}
+      - REDIS_HOST=redis
       - API_PORT=8001
     deploy:
       resources:
@@ -53,7 +48,6 @@ services:
           memory: 2G
         reservations:
           memory: 512M
-    # Simple command - debugpy can be added manually if needed
     command: python -m uvicorn main:app --host 0.0.0.0 --port 8001 --reload
 
   frontend-dev:
@@ -64,13 +58,16 @@ services:
     container_name: bedriftsgrafen-frontend-dev
     restart: unless-stopped
     init: true
-    network_mode: host
+    ports:
+      - "5173:5173"
     volumes:
       - ./frontend:/app/frontend
       - /app/node_modules
       - /app/frontend/node_modules
     environment:
-      - VITE_API_TARGET=http://localhost:8001
+      - VITE_API_TARGET=http://backend-dev:8001
+    networks:
+      - bedriftsgrafen_internal-net
     deploy:
       resources:
         limits:
@@ -81,4 +78,6 @@ services:
     depends_on:
       - backend-dev
 
-# NO networks section! Host mode = no Docker networks created
+networks:
+  bedriftsgrafen_internal-net:
+    external: true

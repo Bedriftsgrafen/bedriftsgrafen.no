@@ -34,10 +34,10 @@ alias prod-frontend-logs='docker logs -f bedriftsgrafen-frontend'
 # =============================================================================
 
 # Start/stop dev
-alias dev-up='docker compose -f $BEDRIFTSGRAFEN_DIR/docker-compose.dev.yml up -d --remove-orphans'
+alias dev-up='docker compose -f $BEDRIFTSGRAFEN_DIR/docker-compose.dev.yml up -d --remove-orphans && (xdg-open http://localhost:5173 &>/dev/null &)'
 alias dev-down='docker compose -f $BEDRIFTSGRAFEN_DIR/docker-compose.dev.yml down'
 alias dev-restart='docker compose -f $BEDRIFTSGRAFEN_DIR/docker-compose.dev.yml restart --remove-orphans'
-alias dev-build='docker compose -f $BEDRIFTSGRAFEN_DIR/docker-compose.dev.yml up -d --build --remove-orphans'
+alias dev-build='docker compose -f $BEDRIFTSGRAFEN_DIR/docker-compose.dev.yml up -d --build --remove-orphans && (xdg-open http://localhost:5173 &>/dev/null &)'
 alias dev-logs='docker compose -f $BEDRIFTSGRAFEN_DIR/docker-compose.dev.yml logs -f'
 alias dev-ps='docker compose -f $BEDRIFTSGRAFEN_DIR/docker-compose.dev.yml ps'
 

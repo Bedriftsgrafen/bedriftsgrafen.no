@@ -41,6 +41,7 @@ export default defineConfig({
   server: {
     host: true, // Needed for Docker
     port: 5173,
+    open: true,
     watch: {
       usePolling: true // Needed for Docker on some systems
     },
