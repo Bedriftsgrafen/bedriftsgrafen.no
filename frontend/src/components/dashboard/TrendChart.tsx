@@ -91,5 +91,5 @@ export function TrendChart({
  * Legacy wrapper for backward compatibility
  */
 export function EstablishmentTrendChart(props: Omit<TrendChartProps, 'title' | 'color' | 'gradientId'>) {
-  return <TrendChart {...props} title="Nyetableringer" color="#2563eb" gradientId="colorEstablishments" />
+  return <TrendChart {...props} title="Nyetableringer" color="#22c55e" gradientId="colorEstablishments" />
 }

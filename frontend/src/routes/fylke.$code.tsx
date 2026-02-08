@@ -136,9 +136,8 @@ function CountyDashboardPage() {
             <TrendChart
               data={dashboard.bankrupt_trend}
               title="Konkurser"
-              color="#f59e0b"
+              color="#ef4444"
               gradientId="colorBankruptcies"
-              className=""
             />
           </div>
 
