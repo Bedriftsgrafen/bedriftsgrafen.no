@@ -14,7 +14,7 @@
   },
   "dependencies": {
     "@tanstack/react-query": "^5.90.20",
-    "@tanstack/react-router": "^1.157.18",
+    "@tanstack/react-router": "^1.159.4",
     "@tanstack/router-devtools": "^1.157.18",
     "@tanstack/router-plugin": "^1.157.18",
     "@types/leaflet": "^1.9.21",
