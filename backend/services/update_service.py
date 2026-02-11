@@ -750,7 +750,10 @@ class UpdateService:
                     all_batch_roles: list[models.Role] = []
                     processed_orgnrs: set[str] = set()
 
-                    for orgnr in orgnrs_to_sync:
+                    # Sort orgnrs to ensure consistent lock acquisition order and prevent deadlocks
+                    sorted_orgnrs_to_sync = sorted(orgnrs_to_sync)
+
+                    for orgnr in sorted_orgnrs_to_sync:
                         # Skip companies that still don't exist (couldn't be fetched)
                         if orgnr not in existing_orgnrs:
                             logger.warning(f"Skipping role sync for {orgnr}: company not found in bedrifter table")

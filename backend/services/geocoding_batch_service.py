@@ -194,8 +194,11 @@ class GeocodingBatchService:
             results = await asyncio.gather(*tasks)
 
         # Step 2: Sequential DB updates (Session safety)
+        # Sort results by orgnr to ensure consistent lock acquisition order and prevent deadlocks
+        sorted_results = sorted(results, key=lambda x: x[0])
+
         logger.info("Geocoding lookups complete. Starting sequential database updates...")
-        for orgnr, coords, address_or_error in results:
+        for orgnr, coords, address_or_error in sorted_results:
             # Use savepoint for each update to isolate failures
             try:
                 async with self.db.begin_nested():

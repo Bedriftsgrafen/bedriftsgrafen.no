@@ -88,7 +88,9 @@ class RepairService:
         logger.info(f"Found {len(ghost_orgnrs)} ghost parents.")
 
         if self.repair:
-            tasks = [self._repair_company(orgnr) for orgnr in ghost_orgnrs]
+            # Sort orgnrs to ensure consistent lock acquisition order
+            sorted_ghost_orgnrs = sorted(ghost_orgnrs)
+            tasks = [self._repair_company(orgnr) for orgnr in sorted_ghost_orgnrs]
             results = await asyncio.gather(*tasks)
             success_count = sum(1 for r in results if r)
             logger.info(f"Ghost Repair: {success_count}/{len(ghost_orgnrs)} fixed.")
