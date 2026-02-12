@@ -91,8 +91,9 @@ services:
       POSTGRES_USER: ${DATABASE_USER}
       POSTGRES_PASSWORD: ${DATABASE_PASSWORD}
       POSTGRES_DB: ${DATABASE_NAME}
+      PGDATA: /var/lib/postgresql/data
     volumes:
-      - ${POSTGRES_DATA_PATH:-./postgres_data}:/var/lib/postgresql/data
+      - ${POSTGRES_DATA_PATH:-./postgres_data}:/var/lib/postgresql
     #    ports:
     #      - "5432:5432"
     networks:
