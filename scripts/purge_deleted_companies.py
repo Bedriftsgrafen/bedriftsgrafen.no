@@ -40,10 +40,7 @@ if not all([db_user, db_pass, db_host, db_name]):
 
 
 # Override for host-based execution
-
-if db_host == "bedriftsgrafen-db":
-
-    db_host = "localhost"
+# Removed: if db_host == "bedriftsgrafen-db": db_host = "localhost"
 
 
 

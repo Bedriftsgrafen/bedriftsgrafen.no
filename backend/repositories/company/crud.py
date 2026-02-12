@@ -8,7 +8,7 @@ import logging
 from datetime import datetime, timezone
 from typing import Any
 
-from sqlalchemy import text, update
+from sqlalchemy import delete, text, update
 from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.exc import DBAPIError
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -245,3 +245,40 @@ class CrudMixin:
             .values(last_polled_roles=datetime.now(timezone.utc).date())
         )
         await self.db.execute(stmt)
+
+    async def delete_by_orgnr(self, orgnr: str, autocommit: bool = False) -> int:
+        """
+        Purge a company and all its related data (cascading).
+
+        Args:
+            orgnr: Company organization number
+            autocommit: Whether to commit the transaction (default False)
+
+        Returns:
+            Number of companies deleted (0 or 1)
+        """
+        try:
+            # 1. Delete dependent data first
+            # Roles
+            await self.db.execute(delete(models.Role).where(models.Role.orgnr == orgnr))
+            # Subunits (where this company is the parent)
+            await self.db.execute(delete(models.SubUnit).where(models.SubUnit.parent_orgnr == orgnr))
+            # Accounting
+            await self.db.execute(delete(models.Accounting).where(models.Accounting.orgnr == orgnr))
+
+            # 2. Delete the company itself
+            stmt = delete(models.Company).where(models.Company.orgnr == orgnr)
+            result = await self.db.execute(stmt)
+
+            if autocommit:
+                await self.db.commit()
+
+            deleted: int = result.rowcount  # type: ignore[attr-defined]
+            if deleted:
+                logger.info(f"Purged company {orgnr} and all related data")
+            return deleted
+        except Exception as e:
+            if autocommit:
+                await self.db.rollback()
+            logger.error(f"Failed to purge company {orgnr}: {e}")
+            return 0

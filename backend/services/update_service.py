@@ -371,10 +371,15 @@ class UpdateService:
                 continue
 
             try:
+                # Handle deleted companies (None returned from API)
+                if fetch_result.company_data is None:
+                    deleted_count = await self.company_repo.delete_by_orgnr(fetch_result.orgnr)
+                    if deleted_count:
+                        result.companies_deleted += 1
+                    continue
+
                 # Persist company data
-                company = await self.company_repo.create_or_update(
-                    fetch_result.company_data  # type: ignore[arg-type]
-                )
+                company = await self.company_repo.create_or_update(fetch_result.company_data)
 
                 # Check if this is a new company (never polled for financials)
                 is_new = company.last_polled_regnskap is None

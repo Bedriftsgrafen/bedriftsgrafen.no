@@ -72,18 +72,19 @@ class BrregApiService(BaseExternalService):
     async def _fetch_and_handle_404(
         self, url: str, params: dict[str, Any] | None = None, context: str = "request"
     ) -> Any | None:
-        """Helper to fetch data and return None on 404."""
+        """Helper to fetch data and return None ONLY on 404/410."""
         try:
             response = await self._get(url, params=params, context=context)
             if response.status_code in (404, 410):
-                logger.info(f"{context} not found (status {response.status_code})")
+                logger.info(f"{context} gone/deleted (status {response.status_code})")
                 return None
             return response.json()
         except ExternalApiException:
             raise
         except Exception as e:
-            logger.warning(f"Unexpected error fetching {context}: {e}")
-            return None
+            logger.error(f"Unexpected error fetching {context}: {e}", exc_info=True)
+            # Re-raise so the service doesn't interpret this as "Deleted"
+            raise
 
     async def parse_financial_data(self, raw_data: dict[str, Any]) -> dict[str, Any]:
         """
