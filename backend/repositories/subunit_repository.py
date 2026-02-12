@@ -197,6 +197,32 @@ class SubUnitRepository:
                 await self.db.rollback()
             return 0
 
+    async def delete_by_orgnr(self, orgnr: str, commit: bool = True) -> int:
+        """
+        Delete a specific subunit.
+
+        Args:
+            orgnr: Subunit organization number
+            commit: Whether to commit the transaction (default True)
+
+        Returns:
+            Number of subunits deleted (0 or 1)
+        """
+        try:
+            stmt = delete(models.SubUnit).where(models.SubUnit.orgnr == orgnr)
+            result = await self.db.execute(stmt)
+            if commit:
+                await self.db.commit()
+            deleted: int = result.rowcount  # type: ignore[attr-defined]
+            if deleted:
+                logger.info(f"Deleted subunit {orgnr} (marked as deleted in API)")
+            return deleted
+        except Exception as e:
+            logger.error(f"Failed to delete subunit {orgnr}: {e}")
+            if commit:
+                await self.db.rollback()
+            return 0
+
     async def count_by_parent(self, parent_orgnr: str) -> int:
         """Efficiently count subunits for a parent company."""
         try:

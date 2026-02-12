@@ -142,6 +142,7 @@ class UpdateBatchResult(BaseModel):
     companies_processed: int = 0
     companies_updated: int = 0
     companies_created: int = 0
+    companies_deleted: int = 0
     companies_skipped: int = 0  # Deletions or invalid orgnr
     financials_updated: int = 0
     api_errors: int = 0

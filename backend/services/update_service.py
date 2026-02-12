@@ -516,11 +516,25 @@ class UpdateService:
                         all_subunits = []
                         for subunit_data in all_subunits_data:
                             parent_orgnr = subunit_data.get("overordnetEnhet")
+                            orgnr = subunit_data.get("organisasjonsnummer")
 
-                            # Skip subunits without parent_orgnr (required field)
+                            # Handle deleted subunits
                             if not parent_orgnr:
+                                # Brreg omits overordnetEnhet for deleted subunits
+                                is_deleted = (
+                                    subunit_data.get("respons_klasse") == "SlettetUnderEnhet"
+                                    or subunit_data.get("slettedato") is not None
+                                )
+
+                                if is_deleted:
+                                    if orgnr:
+                                        deleted_count = await self.subunit_repo.delete_by_orgnr(orgnr)
+                                        if deleted_count:
+                                            result.companies_deleted += 1
+                                    continue
+
                                 logger.warning(
-                                    f"Skipping subunit {subunit_data.get('organisasjonsnummer')} "
+                                    f"Skipping subunit {orgnr} "
                                     f"because it has no parent_orgnr (overordnetEnhet is missing)."
                                 )
                                 continue

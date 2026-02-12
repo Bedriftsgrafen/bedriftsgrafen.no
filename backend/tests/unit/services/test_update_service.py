@@ -126,6 +126,38 @@ class TestFetchSubunitUpdates:
             update_service.company_repo.create_or_update.assert_called_once()
             update_service.subunit_repo.create_batch.assert_called_once()
 
+    @pytest.mark.asyncio
+    async def test_fetch_subunit_updates_purges_deleted(self, update_service, mock_db):
+        """Verify that subunits marked as deleted in Brreg are purged from DB."""
+        # 1. Mock page response
+        mock_page_response = MagicMock(status_code=200)
+        mock_page_response.json.return_value = {
+            "_embedded": {"oppdaterteUnderenheter": [{"organisasjonsnummer": "999", "oppdateringsid": 1}]},
+            "_links": {},
+        }
+
+        # 2. Mock deleted subunit response (no parent, has respons_klasse)
+        update_service.brreg_api.fetch_subunit = AsyncMock(
+            return_value={
+                "organisasjonsnummer": "999",
+                "navn": "Deleted Co",
+                "respons_klasse": "SlettetUnderEnhet",
+            }
+        )
+
+        # 3. Mock repo
+        update_service.subunit_repo.delete_by_orgnr = AsyncMock(return_value=1)
+        update_service.subunit_repo.create_batch = AsyncMock()
+
+        with patch("httpx.AsyncClient") as mock_client:
+            mock_client.return_value.__aenter__.return_value.get.return_value = mock_page_response
+
+            result_dict = await update_service.fetch_subunit_updates(page_size=10)
+
+            update_service.subunit_repo.delete_by_orgnr.assert_called_once_with("999")
+            update_service.subunit_repo.create_batch.assert_not_called()
+            assert result_dict["companies_deleted"] == 1
+
 
 @pytest.mark.asyncio
 async def test_ensure_parent_companies_exist_sorts_missing_orgnrs(update_service, mock_db):
