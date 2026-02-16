@@ -491,10 +491,12 @@ class StatsService:
             },
         }
 
-    async def get_municipality_premium_dashboard(self, municipality_code: str):
+    async def get_municipality_premium_dashboard(self, municipality_code: str) -> dict[str, Any]:
         """
         Consolidated premium dashboard data for a municipality.
-        Coordinates multiple repository calls in parallel for performance.
+
+        Fetches stats, trends, rankings, and company lists sequentially
+        (same async session constraint). National density is Redis-cached.
         """
         # Ensure name cache is loaded for fallback
         await self._ensure_municipality_names_loaded()
@@ -573,10 +575,12 @@ class StatsService:
             "ranking_in_county_population": ranking_population,
         }
 
-    async def get_county_premium_dashboard(self, county_code: str):
+    async def get_county_premium_dashboard(self, county_code: str) -> dict[str, Any]:
         """
         Consolidated premium dashboard data for a county.
-        Coordinates multiple repository calls for performance.
+
+        Fetches stats, trends, rankings, and company lists sequentially
+        (same async session constraint). National density is Redis-cached.
         """
         from constants.counties import get_county_name
         from constants.county_coords import COUNTY_COORDS

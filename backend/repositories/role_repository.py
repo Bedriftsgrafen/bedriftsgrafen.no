@@ -134,8 +134,37 @@ class RoleRepository:
             logger.info(f"Deleted {deleted} roles for {orgnr}")
             return deleted
         except Exception as e:
-            logger.error(f"Error deleting roles for {orgnr}: {e}")
-            await self.db.rollback()
+            logger.error(f"Failed to delete roles for {orgnr}: {e}")
+            if commit:
+                await self.db.rollback()
+            return 0
+
+    async def delete_batch(self, orgnrs: list[str], commit: bool = True) -> int:
+        """
+        Efficiently delete all roles for a list of companies.
+
+        Args:
+            orgnrs: List of company organization numbers
+            commit: Whether to commit the transaction (default True)
+
+        Returns:
+            Total number of roles deleted
+        """
+        if not orgnrs:
+            return 0
+
+        try:
+            stmt = delete(models.Role).where(models.Role.orgnr.in_(orgnrs))
+            result = await self.db.execute(stmt)
+            if commit:
+                await self.db.commit()
+            deleted: int = result.rowcount  # type: ignore[attr-defined]
+            logger.info(f"Deleted {deleted} roles across {len(orgnrs)} companies")
+            return deleted
+        except Exception as e:
+            logger.error(f"Failed to delete roles batch: {e}")
+            if commit:
+                await self.db.rollback()
             return 0
 
     async def count_by_orgnr(self, orgnr: str) -> int:

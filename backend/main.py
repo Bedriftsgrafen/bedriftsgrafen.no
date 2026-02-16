@@ -5,6 +5,7 @@ from contextlib import asynccontextmanager
 from fastapi import Depends, FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
+from prometheus_fastapi_instrumentator import Instrumentator
 from slowapi.errors import RateLimitExceeded
 from slowapi.middleware import SlowAPIMiddleware
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -14,9 +15,13 @@ from database import get_db, AsyncSessionLocal
 from exceptions import BedriftsgrafenException
 from middleware import RequestIdMiddleware, SecurityHeadersMiddleware
 from utils.logging_config import setup_logging
+from utils.metrics import init_metrics
 
 # Setup structured logging before creating app
 setup_logging(level=logging.INFO)
+
+# Initialize Prometheus metrics
+init_metrics()
 
 logger = logging.getLogger(__name__)
 
@@ -202,7 +207,6 @@ app.include_router(v1_companies.router)
 app.include_router(v1_stats.router)
 app.include_router(v1_trends.router)
 app.include_router(v1_people.router)
-app.include_router(v1_people.router)
 app.include_router(v1_municipality.router)
 app.include_router(v1_county.router)
 app.include_router(v1_og_image.router)
@@ -210,13 +214,27 @@ app.include_router(v1_og_image.router)
 app.include_router(admin_import.router)
 app.include_router(sitemap.router)
 
+# Instrument app with Prometheus metrics (but don't expose publicly)
+Instrumentator(
+    should_instrument_requests_inprogress=True,
+    excluded_handlers=["/metrics", "/health", "/health/ready"],
+).instrument(app)
 
-# NOTE: Table creation is now handled by Alembic migrations
-# @app.on_event("startup")
-# async def startup():
-#     async with engine.begin() as conn:
-#         await conn.run_sync(models.Base.metadata.create_all)
-#         await conn.run_sync(models_import.Base.metadata.create_all)
+
+# Secured /metrics endpoint — requires ?key=ADMIN_KEY
+ADMIN_KEY = os.getenv("ADMIN_KEY", "")
+
+
+@app.get("/metrics", include_in_schema=False)
+async def metrics_endpoint(request: Request):
+    """Prometheus metrics endpoint, secured with ADMIN_KEY query param."""
+    from starlette.responses import Response
+    from prometheus_client import generate_latest, CONTENT_TYPE_LATEST
+
+    key = request.query_params.get("key", "")
+    if not ADMIN_KEY or key != ADMIN_KEY:
+        return JSONResponse(status_code=403, content={"detail": "Forbidden"})
+    return Response(content=generate_latest(), media_type=CONTENT_TYPE_LATEST)
 
 
 @app.get("/")

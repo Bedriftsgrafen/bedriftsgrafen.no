@@ -9,8 +9,12 @@ import models
 from constants.nace import NACE_SECTION_MAPPING
 from repositories.company_filter_builder import FilterParams
 from services.dtos import IndustryStatsDTO
+from utils.redis_cache import RedisCache
 
 logger = logging.getLogger(__name__)
+
+# National density changes at most nightly (materialized view refresh)
+_national_density_cache = RedisCache(prefix="stats:national_density", ttl=3600)
 
 GeoMetric = Literal["company_count", "new_last_year", "bankrupt_count", "total_employees"]
 
@@ -18,6 +22,32 @@ GeoMetric = Literal["company_count", "new_last_year", "bankrupt_count", "total_e
 class StatsRepository:
     def __init__(self, db: AsyncSession):
         self.db = db
+
+    async def _get_national_density(self, year: int) -> float:
+        """Get national business density (companies per 1000 population), cached 1hr.
+
+        Eliminates 2 heavy SUM() queries on every dashboard request.
+        Cache is keyed by year to avoid cross-year mismatches.
+        """
+        cache_key = f"year:{year}"
+        cached = await _national_density_cache.get(cache_key)
+        if cached is not None:
+            return float(cached)
+
+        national_stats_query = select(func.sum(models.MunicipalityStats.company_count).label("total_companies"))
+        national_pop_query = select(func.sum(models.MunicipalityPopulation.population)).where(
+            models.MunicipalityPopulation.year == year
+        )
+
+        n_stats_res = await self.db.execute(national_stats_query)
+        n_pop_res = await self.db.execute(national_pop_query)
+
+        total_n_companies = n_stats_res.scalar() or 0
+        total_n_pop = n_pop_res.scalar() or 1  # avoid div zero
+        density = total_n_companies / total_n_pop * 1000
+
+        await _national_density_cache.set(cache_key, density)
+        return density
 
     async def get_industry_stats(self, nace_division: str) -> models.IndustryStats | None:
         """Get aggregated statistics for a specific NACE division (2-digit) or section (1-letter)."""
@@ -271,12 +301,12 @@ class StatsRepository:
         result = await self.db.execute(query)
         return result.all()
 
-    async def get_municipality_premium_summary(self, municipality_code: str):
+    async def get_municipality_premium_summary(self, municipality_code: str) -> dict[str, Any]:
         """
         Get high-level summary for a municipality:
         - Population (latest + growth if available)
         - Total companies, employees, new last year
-        - National density comparison
+        - National density comparison (cached)
         """
         # 1. Fetch population (latest and previous year for growth)
         pop_query = (
@@ -303,19 +333,9 @@ class StatsRepository:
         stats_res = await self.db.execute(stats_query)
         stats_row = stats_res.one_or_none()
 
-        # 3. Get national density (all companies / all population)
-        # Performance: This could be cached or pre-calculated in a real scenario
-        national_stats_query = select(func.sum(models.MunicipalityStats.company_count).label("total_companies"))
-        national_pop_query = select(func.sum(models.MunicipalityPopulation.population)).where(
-            models.MunicipalityPopulation.year == (pop_rows[0].year if pop_rows else 2024)
-        )
-
-        n_stats_res = await self.db.execute(national_stats_query)
-        n_pop_res = await self.db.execute(national_pop_query)
-
-        total_n_companies = n_stats_res.scalar() or 0
-        total_n_pop = n_pop_res.scalar() or 1  # avoid div zero
-        national_density = total_n_companies / total_n_pop * 1000
+        # 3. Get national density (cached — eliminates 2 heavy SUM queries)
+        year = pop_rows[0].year if pop_rows else 2024
+        national_density = await self._get_national_density(year)
 
         return {
             "population": latest_pop,
@@ -508,12 +528,12 @@ class StatsRepository:
     # COUNTY (FYLKE) DASHBOARD METHODS
     # =========================================================================
 
-    async def get_county_premium_summary(self, county_code: str):
+    async def get_county_premium_summary(self, county_code: str) -> dict[str, Any]:
         """
         Get high-level summary for a county:
         - Population (aggregated from municipalities)
         - Total companies, employees, municipality count
-        - National density comparison
+        - National density comparison (cached)
         """
         # 1. Fetch aggregated population for the county (latest year)
         latest_year = await self.get_latest_population_year() or 2024
@@ -561,18 +581,8 @@ class StatsRepository:
         stats_res = await self.db.execute(stats_query)
         stats_row = stats_res.one_or_none()
 
-        # 3. Get national totals for density comparison
-        national_stats_query = select(func.sum(models.MunicipalityStats.company_count).label("total_companies"))
-        national_pop_query = select(func.sum(models.MunicipalityPopulation.population)).where(
-            models.MunicipalityPopulation.year == latest_year
-        )
-
-        n_stats_res = await self.db.execute(national_stats_query)
-        n_pop_res = await self.db.execute(national_pop_query)
-
-        total_n_companies = n_stats_res.scalar() or 0
-        total_n_pop = n_pop_res.scalar() or 1
-        national_density = total_n_companies / total_n_pop * 1000
+        # 3. Get national density (cached — eliminates 2 heavy SUM queries)
+        national_density = await self._get_national_density(latest_year)
 
         return {
             "population": population,

@@ -306,7 +306,8 @@ async def test_get_municipality_premium_summary(repo, mock_db_session):
     mock_stats_row.total_employees = 15000
     mock_stats_row.new_last_year = 120
 
-    # Setup mock chain for multiple queries
+    # Setup mock chain for 2 queries (pop + stats)
+    # National density is now handled by _get_national_density (mocked)
     call_count = [0]
 
     def mock_execute_side_effect(*args, **kwargs):
@@ -316,13 +317,10 @@ async def test_get_municipality_premium_summary(repo, mock_db_session):
             result.scalars.return_value.all.return_value = [mock_pop_current, mock_pop_previous]
         elif call_count[0] == 2:  # Stats query
             result.one_or_none.return_value = mock_stats_row
-        elif call_count[0] == 3:  # National company count
-            result.scalar.return_value = 500000
-        elif call_count[0] == 4:  # National population
-            result.scalar.return_value = 5500000
         return result
 
     mock_db_session.execute.side_effect = mock_execute_side_effect
+    repo._get_national_density = AsyncMock(return_value=90.9)  # Cached
 
     result = await repo.get_municipality_premium_summary("3001")
 
@@ -331,20 +329,25 @@ async def test_get_municipality_premium_summary(repo, mock_db_session):
     assert result["total_employees"] == 15000
     assert result["new_last_year"] == 120
     assert result["year"] == 2024
+    assert result["national_density"] == 90.9
     # Population growth: (50000 - 48000) / 48000 * 100 ≈ 4.17%
     assert result["population_growth_1y"] is not None
     assert abs(result["population_growth_1y"] - 4.17) < 0.1
+    repo._get_national_density.assert_called_once_with(2024)
 
 
 @pytest.mark.asyncio
 async def test_get_municipality_premium_summary_no_data(repo, mock_db_session):
     """Test municipality summary when no population data exists."""
     mock_db_session.execute.return_value.scalars.return_value.all.return_value = []
+    repo._get_national_density = AsyncMock(return_value=90.0)
 
     result = await repo.get_municipality_premium_summary("9999")
 
     assert result["population"] == 0
     assert result["population_growth_1y"] is None
+    # Falls back to year 2024 when no pop data
+    repo._get_national_density.assert_called_once_with(2024)
 
 
 @pytest.mark.asyncio
@@ -738,20 +741,19 @@ async def test_get_county_premium_summary(repo, mock_db_session):
             row.new_last_year = 5000
             row.total_revenue = 500000000000.0
             result.one_or_none.return_value = row
-        elif call_count[0] == 5:  # National company count
-            result.scalar.return_value = 600000
-        elif call_count[0] == 6:  # National population
-            result.scalar.return_value = 5500000
         return result
 
     mock_db_session.execute.side_effect = mock_execute_side_effect
+    repo._get_national_density = AsyncMock(return_value=109.1)  # Cached
 
     result = await repo.get_county_premium_summary("03")
 
     assert result["population"] == 700000
     assert result["company_count"] == 50000
     assert result["municipality_count"] == 15
+    assert result["national_density"] == 109.1
     assert result["population_growth_1y"] is not None
+    repo._get_national_density.assert_called_once_with(2024)
 
 
 @pytest.mark.asyncio
@@ -850,3 +852,74 @@ async def test_get_municipality_populations_auto_year(repo, mock_db_session):
     result = await repo.get_municipality_populations()
 
     assert len(result) == 1
+
+
+# =============================================================================
+# Tests for _get_national_density caching
+# =============================================================================
+
+
+@pytest.mark.asyncio
+async def test_national_density_cache_hit(repo, mock_db_session):
+    """When cache has value, no DB queries are made."""
+    from unittest.mock import patch
+
+    with patch("repositories.stats_repository._national_density_cache") as mock_cache:
+        mock_cache.get = AsyncMock(return_value=90.9)
+
+        result = await repo._get_national_density(2024)
+
+        assert result == 90.9
+        mock_cache.get.assert_called_once_with("year:2024")
+        mock_db_session.execute.assert_not_called()
+
+
+@pytest.mark.asyncio
+async def test_national_density_cache_miss_computes_and_stores(repo, mock_db_session):
+    """When cache misses, computes from DB and stores in cache."""
+    from unittest.mock import patch
+
+    with patch("repositories.stats_repository._national_density_cache") as mock_cache:
+        mock_cache.get = AsyncMock(return_value=None)
+        mock_cache.set = AsyncMock()
+
+        call_count = [0]
+
+        def mock_execute_side_effect(*args, **kwargs):
+            call_count[0] += 1
+            result = MagicMock()
+            if call_count[0] == 1:  # National companies SUM
+                result.scalar.return_value = 500000
+            elif call_count[0] == 2:  # National population SUM
+                result.scalar.return_value = 5500000
+            return result
+
+        mock_db_session.execute.side_effect = mock_execute_side_effect
+
+        result = await repo._get_national_density(2024)
+
+        expected = 500000 / 5500000 * 1000
+        assert abs(result - expected) < 0.01
+        mock_cache.set.assert_called_once_with("year:2024", result)
+
+
+@pytest.mark.asyncio
+async def test_national_density_cache_keyed_by_year(repo, mock_db_session):
+    """Different years use different cache keys."""
+    from unittest.mock import patch
+
+    with patch("repositories.stats_repository._national_density_cache") as mock_cache:
+        mock_cache.get = AsyncMock(side_effect=[95.0, None])
+        mock_cache.set = AsyncMock()
+
+        # First call: 2024 hits cache
+        result_2024 = await repo._get_national_density(2024)
+        assert result_2024 == 95.0
+        mock_cache.get.assert_any_call("year:2024")
+
+        # Second call: 2023 misses cache, triggers DB
+        mock_db_session.execute.return_value.scalar.side_effect = [400000, 5000000]
+        result_2023 = await repo._get_national_density(2023)
+
+        mock_cache.get.assert_any_call("year:2023")
+        assert result_2023 != result_2024  # Different year, different result

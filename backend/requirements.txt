@@ -189,3 +189,5 @@ wrapt==2.1.0
 # The following packages are considered to be unsafe in a requirements file:
 # pip
 # setuptools
+prometheus-fastapi-instrumentator==7.1.0
+prometheus-client==0.24.1

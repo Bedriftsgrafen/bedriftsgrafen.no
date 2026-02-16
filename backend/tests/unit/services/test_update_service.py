@@ -377,6 +377,7 @@ class TestRefreshMaterializedView:
         result = UpdateBatchResult(
             since_date=date.today(),
             since_iso="2026-01-26T00:00:00.000Z",
+            companies_updated=1,  # Set change to trigger refresh logic
         )
 
         mock_db.execute.side_effect = Exception("Database error")

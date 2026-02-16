@@ -187,7 +187,65 @@ class TestDeleteByOrgnr:
 
 
 # ============================================================================
-# Category 5: search_people (NEW)
+# Category 4b: delete_batch
+# ============================================================================
+class TestDeleteBatch:
+    """Tests for batch role deletion across multiple companies."""
+
+    @pytest.mark.asyncio
+    async def test_deletes_roles_for_multiple_orgnrs(self, repo, mock_db_session):
+        """Deletes roles across multiple companies and returns total count."""
+        mock_result = MagicMock()
+        mock_result.rowcount = 15
+        mock_db_session.execute.return_value = mock_result
+
+        deleted = await repo.delete_batch(["111111111", "222222222", "333333333"])
+
+        assert deleted == 15
+        mock_db_session.execute.assert_called_once()
+        mock_db_session.commit.assert_called_once()
+
+    @pytest.mark.asyncio
+    async def test_returns_zero_for_empty_list(self, repo, mock_db_session):
+        """Returns 0 immediately when given an empty list (no DB call)."""
+        deleted = await repo.delete_batch([])
+
+        assert deleted == 0
+        mock_db_session.execute.assert_not_called()
+
+    @pytest.mark.asyncio
+    async def test_rollback_on_error(self, repo, mock_db_session):
+        """Rolls back transaction on database error."""
+        mock_db_session.execute.side_effect = Exception("DB Error")
+
+        deleted = await repo.delete_batch(["123456789"])
+
+        assert deleted == 0
+        mock_db_session.rollback.assert_called_once()
+
+    @pytest.mark.asyncio
+    async def test_no_commit_when_flag_is_false(self, repo, mock_db_session):
+        """Does not commit when commit=False."""
+        mock_result = MagicMock()
+        mock_result.rowcount = 3
+        mock_db_session.execute.return_value = mock_result
+
+        deleted = await repo.delete_batch(["123456789"], commit=False)
+
+        assert deleted == 3
+        mock_db_session.commit.assert_not_called()
+
+    @pytest.mark.asyncio
+    async def test_no_rollback_on_error_when_commit_false(self, repo, mock_db_session):
+        """Does not rollback when commit=False and error occurs."""
+        mock_db_session.execute.side_effect = Exception("DB Error")
+
+        deleted = await repo.delete_batch(["123456789"], commit=False)
+
+        assert deleted == 0
+        mock_db_session.rollback.assert_not_called()
+
+
 # ============================================================================
 class TestSearchPeople:
     """Tests for person name search functionality."""
