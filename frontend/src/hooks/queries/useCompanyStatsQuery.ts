@@ -41,6 +41,7 @@ export interface UseCompanyStatsQueryParams {
     municipality?: string
     municipality_code?: string
     county?: string
+    county_code?: string
     founded_from?: string
     founded_to?: string
     bankrupt_from?: string

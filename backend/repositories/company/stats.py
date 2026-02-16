@@ -30,11 +30,20 @@ class StatsMixin:
         financial_sort_fields = ("revenue", "profit", "operating_profit", "operating_margin")
         needs_financial_join = sort_by in financial_sort_fields
 
-        # Fast path: no filters at all and no financial sort
+        # Fast path 1: no filters at all and no financial sort - Use O(1) materialized view
         if filters.is_empty() and not needs_financial_join:
+            try:
+                result = await self.db.execute(text("SELECT total_count FROM company_totals WHERE id = 1"))
+                count = result.scalar()
+                if count is not None:
+                    return int(count)
+            except Exception as e:
+                logger.warning(f"Error in count O(1) optimization: {e}")
+
+            # Fallback to standard count
             return await self.count()
 
-        # Fast path: only organisasjonsform filter - use pre-computed counts
+        # Fast path 2: only organisasjonsform filter - use pre-computed counts
         if filters.has_only_org_form_filter() and not needs_financial_join:
             try:
                 stmt = text("SELECT COALESCE(SUM(count), 0) FROM orgform_counts WHERE kode IN :org_forms")
@@ -73,27 +82,27 @@ class StatsMixin:
             # Fast path: no filters and no financial join requirements
             if filters.is_empty() and not needs_financial_join:
                 try:
-                    async with self.db.begin_nested():
-                        result = await self.db.execute(text("SELECT * FROM company_totals WHERE id = 1"))
-                        row = result.fetchone()
-                        if row:
-                            # Extract row data handle both tuple and mapping
-                            data = row._asdict() if hasattr(row, "_asdict") else dict(row._mapping)
+                    # Removed begin_nested() for sub-millisecond read-only SELECT
+                    result = await self.db.execute(text("SELECT * FROM company_totals WHERE id = 1"))
+                    row = result.fetchone()
+                    if row:
+                        # Extract row data handle both tuple and mapping
+                        data = row._asdict() if hasattr(row, "_asdict") else dict(row._mapping)
 
-                            breakdown_result = await self.db.execute(
-                                text("SELECT kode, count FROM orgform_counts ORDER BY count DESC LIMIT 5")
-                            )
-                            breakdown = [dict(r._mapping) for r in breakdown_result.fetchall()]
-                            return {
-                                "total_count": int(data.get("total_count", 0)),
-                                "total_revenue": float(data.get("total_revenue", 0.0)),
-                                "total_profit": float(data.get("total_profit", 0.0)),
-                                "total_employees": int(data.get("total_employees", 0)),
-                                "geocoded_count": int(data.get("geocoded_count", 0)),
-                                "new_companies_30d": int(data.get("new_companies_30d", 0)),
-                                "total_roles": int(data.get("total_roles", 0)),
-                                "by_organisasjonsform": breakdown,
-                            }
+                        breakdown_result = await self.db.execute(
+                            text("SELECT kode as form, count FROM orgform_counts ORDER BY count DESC LIMIT 5")
+                        )
+                        breakdown = [dict(r._mapping) for r in breakdown_result.fetchall()]
+                        return {
+                            "total_count": int(data.get("total_count", 0)),
+                            "total_revenue": float(data.get("total_revenue", 0.0)),
+                            "total_profit": float(data.get("total_profit", 0.0)),
+                            "total_employees": int(data.get("total_employees", 0)),
+                            "geocoded_count": int(data.get("geocoded_count", 0)),
+                            "new_companies_30d": int(data.get("new_companies_30d", 0)),
+                            "total_roles": int(data.get("total_roles", 0)),
+                            "by_organisasjonsform": breakdown,
+                        }
                 except Exception as e:
                     logger.warning(f"Materialized view query failed, falling back: {e}")
 
@@ -111,7 +120,7 @@ class StatsMixin:
 
             # Query 2: Organisation form breakdown
             group_query = (
-                select(models.Company.organisasjonsform, func.count())
+                select(models.Company.organisasjonsform.label("form"), func.count().label("count"))
                 .select_from(models.Company)
                 .group_by(models.Company.organisasjonsform)
                 .order_by(func.count().desc())
@@ -168,8 +177,17 @@ class StatsMixin:
     async def count(self, fast: bool = False) -> int:
         """
         Count all companies.
-        If fast=True, uses pg_class estimate for instant results on large tables.
+        If fast=True, uses company_totals materialized view for instant results.
+        Falls back to pg_class estimate if view fails.
         """
+        try:
+            result = await self.db.execute(text("SELECT total_count FROM company_totals WHERE id = 1"))
+            count = result.scalar()
+            if count is not None:
+                return int(count)
+        except Exception as e:
+            logger.warning(f"company_totals count failed: {e}")
+
         if fast:
             try:
                 result = await self.db.execute(

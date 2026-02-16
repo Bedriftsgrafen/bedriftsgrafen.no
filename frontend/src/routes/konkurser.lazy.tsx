@@ -3,6 +3,7 @@ import { createLazyFileRoute } from '@tanstack/react-router'
 import { useState, useCallback, useEffect, useMemo } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { AlertTriangle, BarChart3, List, Map, Building2, TrendingDown, Users, Calendar } from 'lucide-react'
+import { useCompanyStatsQuery } from '../hooks/queries/useCompanyStatsQuery'
 import { SEOHead } from '../components/layout'
 import { useDocumentTitle } from '../hooks/useDocumentTitle'
 import { BankruptcyList } from '../components/bankruptcy'
@@ -27,15 +28,6 @@ import { mnokToNok } from '../utils/financials'
 export const Route = createLazyFileRoute('/konkurser')({
     component: KonkurserPage,
 })
-
-// ============================================================================
-// Types
-// ============================================================================
-
-interface BankruptcyStats {
-    total_employees: number
-    total_revenue: number
-}
 
 // ============================================================================
 // Main Component
@@ -149,45 +141,18 @@ function KonkurserPage() {
     const oneYearAgo = getStartingDate(period)
     const periodLabel = period === '30d' ? 'Siste 30 dager' : period === '90d' ? 'Siste 90 dager' : 'Siste 12 mnd'
 
-    // Fetch bankruptcy count for stats
-    const { data: count } = useQuery<number>({
-        queryKey: ['bankruptcyCount', oneYearAgo, municipality_code, county_code, nace, q],
-        queryFn: async () => {
-            const params = new URLSearchParams({
-                is_bankrupt: 'true',
-                bankrupt_from: oneYearAgo
-            })
-            if (municipality_code) params.set('municipality_code', municipality_code)
-            if (county_code) params.set('county_code', county_code)
-            if (nace) params.set('naeringskode', nace)
-            if (q) params.set('name', q)
-
-            const res = await fetch(`${API_BASE}/v1/companies/count?${params.toString()}`)
-            if (!res.ok) throw new Error('Failed to fetch count')
-            return res.json()
-        },
-        staleTime: 1000 * 60 * 5,
+    // Consolidated stats query using optimized hook
+    const { data: statsData } = useCompanyStatsQuery({
+        is_bankrupt: true,
+        bankrupt_from: oneYearAgo,
+        municipality_code: municipality_code || undefined,
+        county_code: county_code || undefined,
+        naeringskode: nace || undefined,
+        name: q || undefined
     })
 
-    // Fetch aggregate stats
-    const { data: stats } = useQuery<BankruptcyStats>({
-        queryKey: ['bankruptcyStats', oneYearAgo, municipality_code, county_code, nace, q],
-        queryFn: async () => {
-            const params = new URLSearchParams({
-                is_bankrupt: 'true',
-                bankrupt_from: oneYearAgo
-            })
-            if (municipality_code) params.set('municipality_code', municipality_code)
-            if (county_code) params.set('county_code', county_code)
-            if (nace) params.set('naeringskode', nace)
-            if (q) params.set('name', q)
-
-            const res = await fetch(`${API_BASE}/v1/companies/stats?${params.toString()}`)
-            if (!res.ok) throw new Error('Failed to fetch stats')
-            return res.json()
-        },
-        staleTime: 1000 * 60 * 5,
-    })
+    const count = statsData?.total_count ?? 0
+    const stats = statsData
 
     // Fetch trend data
     const { data: trendData } = useQuery({

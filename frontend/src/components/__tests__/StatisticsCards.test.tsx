@@ -10,14 +10,9 @@ vi.mock('@tanstack/react-router', () => ({
 
 // Mock hooks
 const mockUseStatsQuery = vi.fn()
-const mockUseCompanyCountQuery = vi.fn()
 
 vi.mock('../../hooks/queries/useStatsQuery', () => ({
     useStatsQuery: () => mockUseStatsQuery()
-}))
-
-vi.mock('../../hooks/queries/useCompanyCountQuery', () => ({
-    useCompanyCountQuery: (args: Record<string, unknown>) => mockUseCompanyCountQuery(args)
 }))
 
 // Mock scrollIntoView
@@ -38,8 +33,6 @@ describe('StatisticsCards', () => {
             },
             isLoading: false
         })
-
-        mockUseCompanyCountQuery.mockReturnValue({ data: 1000 })
     })
 
     it('renders loading skeletons when loading', () => {

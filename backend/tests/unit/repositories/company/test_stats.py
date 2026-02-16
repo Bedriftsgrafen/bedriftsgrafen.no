@@ -273,15 +273,15 @@ async def test_count_fast_estimate_fallback(repo, mock_db_session):
 
 
 @pytest.mark.asyncio
-async def test_count_fast_estimate_zero_fallback(repo, mock_db_session):
-    """Test fast count falls back when estimate returns 0."""
+async def test_count_fast_estimate_fallback_trigger(repo, mock_db_session):
+    """Test fast count falls back when view returns None."""
+    mock_result_view = MagicMock()
+    mock_result_view.scalar.return_value = None
+
     mock_result_estimate = MagicMock()
-    mock_result_estimate.scalar.return_value = 0
+    mock_result_estimate.scalar.return_value = 100
 
-    mock_result_actual = MagicMock()
-    mock_result_actual.scalar.return_value = 100
-
-    mock_db_session.execute.side_effect = [mock_result_estimate, mock_result_actual]
+    mock_db_session.execute.side_effect = [mock_result_view, mock_result_estimate]
 
     count = await repo.count(fast=True)
 
@@ -365,23 +365,16 @@ async def test_get_aggregate_stats_materialized_view_error(repo, mock_db_session
     """Test materialized view error falls back to regular query."""
     filters = FilterParams()
 
-    # Mock nested context manager that raises error
-    nested_cm = MagicMock()
-    nested_cm.__aenter__ = AsyncMock(side_effect=Exception("MV not available"))
-    nested_cm.__aexit__ = AsyncMock(return_value=None)
-    mock_db_session.begin_nested.return_value = nested_cm
-
-    # After MV fails, regular query should work
-    mock_row_stats = (10, 500.0, 50.0, 20)
-    mock_rows_breakdown = [("AS", 10)]
-
+    # First call (MV) fails
     mock_result_stats = MagicMock()
-    mock_result_stats.fetchone.return_value = mock_row_stats
+    mock_result_stats.fetchone.return_value = (10, 500.0, 50.0, 20)
 
-    mock_result_breakdown = MagicMock()
-    mock_result_breakdown.fetchall.return_value = mock_rows_breakdown
-
-    mock_db_session.execute.side_effect = [mock_result_stats, mock_result_breakdown]
+    # Side effect: Exception for first call, success for fallback queries
+    mock_db_session.execute.side_effect = [
+        Exception("MV not available"),
+        mock_result_stats,
+        MagicMock(fetchall=MagicMock(return_value=[("AS", 10)])),
+    ]
 
     stats = await repo.get_aggregate_stats(filters)
 
