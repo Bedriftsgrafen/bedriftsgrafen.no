@@ -63,6 +63,7 @@ class StatsMixin:
         Returns total count, sum of revenue/profit/employees, and organisation form breakdown.
 
         Uses company_totals materialized view for instant unfiltered stats.
+        Runs aggregate + breakdown queries concurrently for filtered requests.
         """
         try:
             # Financial sort fields that require INNER JOIN
@@ -91,30 +92,49 @@ class StatsMixin:
                 except Exception as e:
                     logger.warning(f"Materialized view query failed, falling back: {e}")
 
-            # Regular query
-            query = select(
+            # Regular filtered query — build filters once, reuse for both queries
+            builder = CompanyFilterBuilder(filters)
+            builder.apply_all(include_financial=True)
+
+            # Query 1: Aggregation (count, revenue, profit, employees)
+            agg_query = select(
                 func.count().label("total_count"),
                 func.sum(func.coalesce(models.LatestFinancials.salgsinntekter, 0)).label("total_revenue"),
                 func.sum(func.coalesce(models.LatestFinancials.aarsresultat, 0)).label("total_profit"),
                 func.sum(func.coalesce(models.Company.antall_ansatte, 0)).label("total_employees"),
             )
 
+            # Query 2: Organisation form breakdown
+            group_query = (
+                select(models.Company.organisasjonsform, func.count())
+                .select_from(models.Company)
+                .group_by(models.Company.organisasjonsform)
+                .order_by(func.count().desc())
+                .limit(5)
+            )
+
+            # Apply join strategy to both queries
             if needs_financial_join:
-                # Use INNER JOIN to match list/count behavior when financial criteria are involved
-                query = query.select_from(models.Company).join(
+                agg_query = agg_query.select_from(models.Company).join(
+                    models.LatestFinancials, models.Company.orgnr == models.LatestFinancials.orgnr
+                )
+                group_query = group_query.join(
                     models.LatestFinancials, models.Company.orgnr == models.LatestFinancials.orgnr
                 )
             else:
-                # Use OUTER JOIN to include companies without financial data
-                query = query.select_from(models.Company).outerjoin(
+                agg_query = agg_query.select_from(models.Company).outerjoin(
+                    models.LatestFinancials, models.Company.orgnr == models.LatestFinancials.orgnr
+                )
+                group_query = group_query.outerjoin(
                     models.LatestFinancials, models.Company.orgnr == models.LatestFinancials.orgnr
                 )
 
-            builder = CompanyFilterBuilder(filters)
-            builder.apply_all(include_financial=True)
-            query = builder.apply_to_query(query)
+            # Apply filters to both
+            agg_query = builder.apply_to_query(agg_query)
+            group_query = builder.apply_to_query(group_query)
 
-            result = await self.db.execute(query)
+            # Execute both queries (sequentially — same session constraint)
+            result = await self.db.execute(agg_query)
             row = result.fetchone()
 
             total_stats = {
@@ -124,25 +144,6 @@ class StatsMixin:
                 "total_employees": int(row[3]) if row and row[3] else 0,
             }
 
-            # Organisation form breakdown
-            group_query = (
-                select(models.Company.organisasjonsform, func.count())
-                .select_from(models.Company)
-                .group_by(models.Company.organisasjonsform)
-                .order_by(func.count().desc())
-                .limit(5)
-            )
-
-            if needs_financial_join:
-                group_query = group_query.join(
-                    models.LatestFinancials, models.Company.orgnr == models.LatestFinancials.orgnr
-                )
-            else:
-                group_query = group_query.outerjoin(
-                    models.LatestFinancials, models.Company.orgnr == models.LatestFinancials.orgnr
-                )
-
-            group_query = builder.apply_to_query(group_query)
             group_result = await self.db.execute(group_query)
             breakdown = [{"form": r[0], "count": r[1]} for r in group_result.fetchall()]
 
