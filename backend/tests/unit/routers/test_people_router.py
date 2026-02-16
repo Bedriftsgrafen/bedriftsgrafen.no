@@ -195,7 +195,7 @@ class TestResponseModels:
 
     def test_person_search_result_model(self):
         """PersonSearchResult model serializes correctly."""
-        from routers.v1.people import PersonSearchResult
+        from schemas.people import PersonSearchResult
 
         result = PersonSearchResult(name="Test Person", birthdate=date(1990, 1, 1), role_count=5)
 
@@ -205,17 +205,17 @@ class TestResponseModels:
 
     def test_person_search_result_allows_null_birthdate(self):
         """PersonSearchResult allows null birthdate."""
-        from routers.v1.people import PersonSearchResult
+        from schemas.people import PersonSearchResult
 
         result = PersonSearchResult(name="Test Person", birthdate=None, role_count=1)
 
         assert result.birthdate is None
 
     def test_role_response_model(self):
-        """RoleResponse model serializes correctly."""
-        from routers.v1.people import RoleResponse
+        """PersonRoleResponse model serializes correctly."""
+        from schemas.people import PersonRoleResponse
 
-        result = RoleResponse(
+        result = PersonRoleResponse(
             orgnr="123456789",
             type_kode="DAGL",
             type_beskrivelse="Daglig leder",
@@ -229,10 +229,10 @@ class TestResponseModels:
         assert result.rekkefoelge == 1
 
     def test_role_response_allows_null_rekkefoelge(self):
-        """RoleResponse allows null rekkefoelge."""
-        from routers.v1.people import RoleResponse
+        """PersonRoleResponse allows null rekkefoelge."""
+        from schemas.people import PersonRoleResponse
 
-        result = RoleResponse(
+        result = PersonRoleResponse(
             orgnr="123",
             type_kode="STYR",
             type_beskrivelse="Styremedlem",

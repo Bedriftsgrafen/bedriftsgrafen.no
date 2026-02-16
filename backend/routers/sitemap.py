@@ -20,8 +20,6 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from constants.urls import BASE_URL
 from database import get_db
 from limiter import limiter
-from repositories.company.repository import CompanyRepository
-from repositories.role_repository import RoleRepository
 from services.seo_service import SEOService, STATIC_ROUTES, URLS_PER_SITEMAP
 
 router: APIRouter = APIRouter(tags=["SEO"])
@@ -106,7 +104,6 @@ async def get_sitemap_index(
 async def get_paginated_sitemap(
     request: Request,
     filename: str = Path(..., description="Sitemap filename (e.g., company_1, person_1)"),
-    db: AsyncSession = Depends(get_db),
     seo_service: SEOService = Depends(get_seo_service),
 ):
     """
@@ -173,8 +170,7 @@ async def get_paginated_sitemap(
                 # Handle out of bounds by falling back to potentially slow offset
                 offset = (page - 1) * URLS_PER_SITEMAP - len(STATIC_ROUTES) - len(municipalities)
 
-        company_repo = CompanyRepository(db)
-        companies = await company_repo.get_paginated_orgnrs(offset=offset, limit=limit, after_orgnr=after_orgnr)
+        companies = await seo_service.get_paginated_orgnrs(offset=offset, limit=limit, after_orgnr=after_orgnr)
 
         for orgnr, updated_at in companies:
             xml_content += "  <url>\n"
@@ -199,8 +195,7 @@ async def get_paginated_sitemap(
             else:
                 offset = (page - 1) * URLS_PER_SITEMAP
 
-        role_repo = RoleRepository(db)
-        people = await role_repo.get_paginated_commercial_people(
+        people = await seo_service.get_paginated_commercial_people(
             offset=offset, limit=limit, after_name=after_name, after_birthdate=after_birthdate
         )
 

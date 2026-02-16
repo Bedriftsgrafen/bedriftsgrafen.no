@@ -16,7 +16,7 @@ async def test_enrich_nace_codes_dict(service):
 
     with patch("services.nace_service.NaceService.get_nace_name", side_effect=lambda x: f"Name for {x}"):
         # Act
-        await service._enrich_nace_codes(items)
+        await service.enrich_nace_codes(items)
 
     # Assert
     assert items[0]["naeringskode"] == Naeringskode(kode="62.010", beskrivelse="Name for 62.010")
@@ -37,7 +37,7 @@ async def test_enrich_nace_codes_mixed_types(service):
     items = [MockObj("62.010", ["62.010"])]
 
     with patch("services.nace_service.NaceService.get_nace_name", return_value="Test Industry"):
-        await service._enrich_nace_codes(items)
+        await service.enrich_nace_codes(items)
 
     assert items[0].naeringskode == Naeringskode(kode="62.010", beskrivelse="Test Industry")
     assert items[0].naeringskoder == [Naeringskode(kode="62.010", beskrivelse="Test Industry")]

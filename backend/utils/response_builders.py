@@ -2,7 +2,7 @@
 
 from datetime import datetime, timezone
 
-from services.response_models import ResponseMetadata
+from schemas.responses import ResponseMetadata
 
 
 def build_response_metadata(last_updated: datetime | None = None, source: str = "database") -> ResponseMetadata:

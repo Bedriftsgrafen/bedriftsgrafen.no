@@ -3,14 +3,12 @@ from datetime import datetime
 
 from fastapi import APIRouter, Depends, HTTPException, Path, Query, Request, Response
 from fastapi.responses import StreamingResponse
-from pydantic import BaseModel, ConfigDict
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from database import get_db
 from dependencies.company_filters import CompanyQueryParams
 from exceptions import BrregApiException
 from limiter import limiter
-from repositories.accounting_repository import AccountingRepository
 from repositories.company_filter_builder import FilterParams
 from schemas.companies import (
     AccountingWithKpis,
@@ -19,14 +17,14 @@ from schemas.companies import (
     FetchCompanyRequest,
     FetchCompanyResponse,
     IndustryCompaniesResponse,
+    MarkersResponse,
     NaceSubclass,
 )
 from services.company_service import CompanyService
 from services.export_service import ExportService
-from services.kpi_service import KpiService
 from services.nace_service import NaceService
-from services.response_models import (
-    RoleResponse,
+from schemas.responses import (
+    CompanyRoleResponse,
     RolesWithMetadata,
     SubUnitResponse,
     SubUnitsWithMetadata,
@@ -229,27 +227,6 @@ async def get_companies_by_industry(
 # =============================================================================
 
 
-class MapMarker(BaseModel):
-    """Minimal marker data for map display."""
-
-    orgnr: str
-    navn: str
-    lat: float
-    lng: float
-    nace: str | None = None
-    ansatte: int | None = None
-
-    model_config = ConfigDict(from_attributes=True)
-
-
-class MarkersResponse(BaseModel):
-    """Response for markers with count."""
-
-    markers: list[MapMarker]
-    total: int
-    truncated: bool = False  # True if more markers exist than returned
-
-
 @router.get("/markers", response_model=MarkersResponse)
 @limiter.limit("10/second")
 async def get_company_markers(
@@ -267,8 +244,6 @@ async def get_company_markers(
 
     Performance optimized for large datasets with clustering on frontend.
     """
-    from repositories.company import CompanyRepository
-
     # Parse bounding box if provided
     parsed_bbox = None
     if bbox:
@@ -278,26 +253,12 @@ async def get_company_markers(
         except (ValueError, TypeError):
             raise HTTPException(400, "Invalid bbox format. Use: west,south,east,north")
 
-    # Use repository for query
-    repo = CompanyRepository(db)
-    rows, total = await repo.get_map_markers(
+    service = CompanyService(db)
+    markers, total = await service.get_map_markers(
         filters=FilterParams.from_dto(params.to_dto()),
         bbox=parsed_bbox,
         limit=limit,
     )
-
-    # Build markers
-    markers = [
-        MapMarker(
-            orgnr=row[0],
-            navn=row[1] or "",
-            lat=row[2],
-            lng=row[3],
-            nace=row[4],
-            ansatte=row[5],
-        )
-        for row in rows
-    ]
 
     return MarkersResponse(markers=markers, total=total, truncated=total > limit)
 
@@ -310,9 +271,8 @@ async def get_company(request: Request, orgnr: str, db: AsyncSession = Depends(g
     if company is None:
         raise HTTPException(status_code=404, detail="Company not found")
 
-    # Enrich with NACE descriptions
+    # Enrich with NACE descriptions (now handled by service.get_company_detail)
     response = CompanyWithAccounting.model_validate(company)
-    await service._enrich_nace_codes([response])
 
     return response
 
@@ -344,20 +304,13 @@ async def get_accounting_with_kpis(request: Request, orgnr: str, year: int, db: 
     """
     Get accounting data for a specific year with calculated KPIs
     """
-    repo = AccountingRepository(db)
-    accounting = await repo.get_by_orgnr_and_year(orgnr, year)
+    service = CompanyService(db)
+    result = await service.get_accounting_with_kpis(orgnr, year)
 
-    if accounting is None:
+    if result is None:
         raise HTTPException(status_code=404, detail="Accounting data not found")
 
-    # Calculate KPIs
-    kpis = KpiService.calculate_all_kpis(accounting)
-
-    # Convert to response model
-    response = AccountingWithKpis.model_validate(accounting)
-    response.kpis = kpis
-
-    return response
+    return result
 
 
 @router.post("/{orgnr}/fetch", response_model=FetchCompanyResponse)
@@ -411,9 +364,9 @@ async def get_company_subunits(
     # Apply pagination
     paginated = all_subunits[skip : skip + limit]
 
-    # Convert to response models
+    # Convert to response models and enrich NACE codes
     subunit_responses = [SubUnitResponse.model_validate(s) for s in paginated]
-    await service._enrich_nace_codes(subunit_responses)
+    await service.enrich_nace_codes(subunit_responses)
 
     # Set HTTP caching headers for subunit details
     if response:
@@ -445,7 +398,7 @@ async def get_company_roles(
         roles = await role_service.get_roles(orgnr, force_refresh=force_refresh)
 
         # Convert to response models
-        role_responses = [RoleResponse.model_validate(r) for r in roles]
+        role_responses = [CompanyRoleResponse.model_validate(r) for r in roles]
 
         return RolesWithMetadata(data=role_responses, total=len(role_responses), metadata=build_response_metadata())
 

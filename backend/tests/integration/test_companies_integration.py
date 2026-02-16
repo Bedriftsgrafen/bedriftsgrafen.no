@@ -25,7 +25,7 @@ app.dependency_overrides[get_db] = mock_get_db
 def test_get_company_success(MockServiceClass):
     # Arrange
     mock_service = MockServiceClass.return_value
-    mock_service._enrich_nace_codes = AsyncMock()
+    mock_service.enrich_nace_codes = AsyncMock()
 
     mock_company = MagicMock(spec=Company)
     mock_company.orgnr = "123456789"

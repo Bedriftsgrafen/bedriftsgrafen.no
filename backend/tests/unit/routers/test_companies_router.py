@@ -26,7 +26,7 @@ MOCK_COMPANY_DATA = {
 @pytest.fixture
 def mock_company_service(monkeypatch):
     service_mock = AsyncMock(spec=CompanyService)
-    service_mock._enrich_nace_codes = AsyncMock()
+    service_mock.enrich_nace_codes = AsyncMock()
 
     # We need to patch the DEPENDENCY which yields the db,
     # but more importantly, we assume the router instantiates CompanyService(db).

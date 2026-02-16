@@ -4,7 +4,7 @@ import asyncio
 import html
 import logging
 import textwrap
-from datetime import datetime, timedelta
+from datetime import date, datetime, timedelta
 from typing import Any
 
 from sqlalchemy import func, select
@@ -166,6 +166,31 @@ class SEOService:
         cache["expiry"] = datetime.now(timezone.utc) + SEOService.CACHE_TTL
         elapsed = (datetime.now(timezone.utc) - start_time).total_seconds()
         logger.info(f"Sitemap cache refreshed in {elapsed:.2f}s. Next expiry: {cache['expiry']}")
+
+    # ------------------------------------------------------------------
+    # Sitemap pagination — thin delegations so routers don't touch repos
+    # ------------------------------------------------------------------
+
+    async def get_paginated_orgnrs(
+        self,
+        offset: int = 0,
+        limit: int = 50000,
+        after_orgnr: str | None = None,
+    ) -> list[tuple[str, Any]]:
+        """Get paginated org numbers for sitemap generation."""
+        return await self.company_repo.get_paginated_orgnrs(offset=offset, limit=limit, after_orgnr=after_orgnr)
+
+    async def get_paginated_commercial_people(
+        self,
+        offset: int = 0,
+        limit: int = 50000,
+        after_name: str | None = None,
+        after_birthdate: date | None = None,
+    ) -> list[tuple[str, Any, Any]]:
+        """Get paginated people for sitemap generation."""
+        return await self.role_repo.get_paginated_commercial_people(
+            offset=offset, limit=limit, after_name=after_name, after_birthdate=after_birthdate
+        )
 
     async def get_company_og_data(self, orgnr: str) -> dict[str, Any] | None:
         """Fetch optimized data for company OG image."""

@@ -74,7 +74,7 @@ async def test_sitemap_company_page_1(mock_db_session, override_get_db):
     # Mock municipality codes
     with (
         patch("routers.sitemap.SEOService.get_sitemap_data") as MockGetSitemap,
-        patch("routers.sitemap.CompanyRepository") as MockCompanyRepo,
+        patch("routers.sitemap.SEOService.get_paginated_orgnrs") as MockGetOrgnrs,
     ):
         MockGetSitemap.return_value = {
             "total_companies": 1000,
@@ -84,9 +84,7 @@ async def test_sitemap_company_page_1(mock_db_session, override_get_db):
             "person_anchors": [],
         }
 
-        mock_company_repo = MockCompanyRepo.return_value
-        mock_company_repo.get_paginated_orgnrs = AsyncMock(return_value=[("123", "2024-01-01T12:00:00")])
-        mock_company_repo.get_sitemap_anchors = AsyncMock(return_value=[])
+        MockGetOrgnrs.return_value = [("123", "2024-01-01T12:00:00")]
 
         response = client.get("/sitemaps/company-1.xml")
 
@@ -108,7 +106,7 @@ async def test_sitemap_company_page_2_with_anchors(mock_db_session, override_get
     """Test that page 2 uses anchors for keyset pagination"""
     with (
         patch("routers.sitemap.SEOService.get_sitemap_data") as MockGetSitemap,
-        patch("routers.sitemap.CompanyRepository") as MockCompanyRepo,
+        patch("routers.sitemap.SEOService.get_paginated_orgnrs") as MockGetOrgnrs,
     ):
         # Total companies: enough for 2 pages (50,000 + 1)
         MockGetSitemap.return_value = {
@@ -119,25 +117,23 @@ async def test_sitemap_company_page_2_with_anchors(mock_db_session, override_get
             "person_anchors": [],
         }
 
-        mock_company_repo = MockCompanyRepo.return_value
-        mock_company_repo.get_paginated_orgnrs = AsyncMock(return_value=[("111222333", "2024-01-01")])
+        MockGetOrgnrs.return_value = [("111222333", "2024-01-01")]
 
         response = client.get("/sitemaps/company_2.xml")
 
         assert response.status_code == 200
         # Verify get_paginated_orgnrs was called with after_orgnr="999888777"
-        mock_company_repo.get_paginated_orgnrs.assert_called_with(offset=0, limit=50000, after_orgnr="999888777")
+        MockGetOrgnrs.assert_called_with(offset=0, limit=50000, after_orgnr="999888777")
         assert "https://bedriftsgrafen.no/virksomhet/111222333" in response.text
 
 
 @pytest.mark.asyncio
 async def test_sitemap_person_page_1(mock_db_session, override_get_db):
-    # Mock result for people (name, birthdate, updated_at) via RoleRepository
+    # Mock result for people via SEOService
     with (
-        patch("routers.sitemap.RoleRepository") as MockRoleRepo,
+        patch("routers.sitemap.SEOService.get_paginated_commercial_people") as MockGetPeople,
         patch("routers.sitemap.SEOService.get_sitemap_data") as MockGetSitemap,
     ):
-        mock_role_repo = MockRoleRepo.return_value
         MockGetSitemap.return_value = {
             "total_companies": 100,
             "total_people": 100,
@@ -146,9 +142,7 @@ async def test_sitemap_person_page_1(mock_db_session, override_get_db):
             "person_anchors": [],
         }
 
-        mock_role_repo.get_paginated_commercial_people = AsyncMock(
-            return_value=[("Ola Nordmann", date(1980, 1, 1), datetime(2024, 2, 2))]
-        )
+        MockGetPeople.return_value = [("Ola Nordmann", date(1980, 1, 1), datetime(2024, 2, 2))]
 
         response = client.get("/sitemaps/person-1.xml")
 
@@ -164,11 +158,9 @@ async def test_sitemap_person_page_1(mock_db_session, override_get_db):
 async def test_sitemap_person_page_2_with_anchors(mock_db_session, override_get_db):
     """Test that person page 2 uses anchors for keyset pagination"""
     with (
-        patch("routers.sitemap.RoleRepository") as MockRoleRepo,
+        patch("routers.sitemap.SEOService.get_paginated_commercial_people") as MockGetPeople,
         patch("routers.sitemap.SEOService.get_sitemap_data") as MockGetSitemap,
     ):
-        mock_role_repo = MockRoleRepo.return_value
-
         # Total people: enough for 2 pages (50,000 + 1)
         MockGetSitemap.return_value = {
             "total_companies": 100,
@@ -178,15 +170,13 @@ async def test_sitemap_person_page_2_with_anchors(mock_db_session, override_get_
             "person_anchors": [("Zzz Last", date(1990, 12, 31))],
         }
 
-        mock_role_repo.get_paginated_commercial_people = AsyncMock(
-            return_value=[("Ola Nordmann", date(1980, 1, 1), datetime(2024, 2, 2))]
-        )
+        MockGetPeople.return_value = [("Ola Nordmann", date(1980, 1, 1), datetime(2024, 2, 2))]
 
         response = client.get("/sitemaps/person_2.xml")
 
         assert response.status_code == 200
         # Verify get_paginated_commercial_people was called with person anchors
-        mock_role_repo.get_paginated_commercial_people.assert_called_with(
+        MockGetPeople.assert_called_with(
             offset=0, limit=50000, after_name="Zzz Last", after_birthdate=date(1990, 12, 31)
         )
         assert "Ola%20Nordmann" in response.text

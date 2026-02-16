@@ -140,3 +140,24 @@ class NaceSubclass(BaseModel):
     code: str
     name: str
     count: int
+
+
+class MapMarker(BaseModel):
+    """Minimal marker data for map display."""
+
+    orgnr: str
+    navn: str
+    lat: float
+    lng: float
+    nace: str | None = None
+    ansatte: int | None = None
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+class MarkersResponse(BaseModel):
+    """Response for markers with count."""
+
+    markers: list[MapMarker]
+    total: int
+    truncated: bool = False  # True if more markers exist than returned

@@ -6,7 +6,7 @@ from fastapi import APIRouter, Depends, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from database import get_db
-from repositories.stats_repository import StatsRepository
+from services.stats_service import StatsService
 
 router: APIRouter = APIRouter(prefix="/v1/trends", tags=["Trends"])
 
@@ -24,5 +24,5 @@ async def get_trends_timeline(
 
     Returns array of {month: "2024-01", count: 123} objects sorted by month.
     """
-    repo = StatsRepository(db)
-    return await repo.get_timeline_trends(metric, months)
+    service = StatsService(db)
+    return await service.get_timeline_trends(metric, months)

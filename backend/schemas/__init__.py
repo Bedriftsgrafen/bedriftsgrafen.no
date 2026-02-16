@@ -19,10 +19,26 @@ from schemas.companies import (
     FetchCompanyRequest,
     FetchCompanyResponse,
     IndustryCompaniesResponse,
+    MapMarker,
+    MarkersResponse,
     NaceSubclass,
     Naeringskode,
 )
-
+from schemas.municipality import (
+    MunicipalityListResponse,
+    MunicipalityPremiumResponse,
+)
+from schemas.people import (
+    PersonRoleResponse,
+    PersonSearchResult,
+)
+from schemas.responses import (
+    CompanyRoleResponse,
+    ResponseMetadata,
+    RolesWithMetadata,
+    SubUnitResponse,
+    SubUnitsWithMetadata,
+)
 from schemas.stats import (
     GeoAveragesResponse,
     GeoLevel,
@@ -30,11 +46,6 @@ from schemas.stats import (
     GeoStatResponse,
     IndustryStatResponse,
     IndustryStatsDTO,
-)
-
-from schemas.municipality import (
-    MunicipalityListResponse,
-    MunicipalityPremiumResponse,
 )
 
 __all__ = [
@@ -49,15 +60,29 @@ __all__ = [
     "FetchResult",
     "UpdateBatchResult",
     # Company schemas
-    "Naeringskode",
-    "CompanyBase",
     "AccountingBase",
     "AccountingWithKpis",
+    "CompanyBase",
     "CompanyWithAccounting",
     "FetchCompanyRequest",
     "FetchCompanyResponse",
     "IndustryCompaniesResponse",
+    "MapMarker",
+    "MarkersResponse",
     "NaceSubclass",
+    "Naeringskode",
+    # Municipality schemas
+    "MunicipalityListResponse",
+    "MunicipalityPremiumResponse",
+    # People schemas
+    "PersonRoleResponse",
+    "PersonSearchResult",
+    # Response schemas
+    "CompanyRoleResponse",
+    "ResponseMetadata",
+    "RolesWithMetadata",
+    "SubUnitResponse",
+    "SubUnitsWithMetadata",
     # Stats schemas
     "GeoAveragesResponse",
     "GeoLevel",
@@ -65,7 +90,4 @@ __all__ = [
     "GeoStatResponse",
     "IndustryStatResponse",
     "IndustryStatsDTO",
-    # Municipality schemas
-    "MunicipalityPremiumResponse",
-    "MunicipalityListResponse",
 ]

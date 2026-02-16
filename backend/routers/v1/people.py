@@ -8,39 +8,16 @@ import logging
 from datetime import date
 
 from fastapi import APIRouter, Depends, Header, Query, Request
-from pydantic import BaseModel, Field
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from database import get_db
 from repositories.role_repository import RoleRepository
+from schemas.people import PersonRoleResponse, PersonSearchResult
 from utils.auth import is_admin
 
 logger = logging.getLogger(__name__)
 
 router: APIRouter = APIRouter(prefix="/v1/people", tags=["people"])
-
-
-class PersonSearchResult(BaseModel):
-    """A unique person found in the roles database."""
-
-    name: str = Field(..., description="Full name of the person")
-    birthdate: date | None = Field(None, description="Birth date if available")
-    role_count: int = Field(..., description="Number of commercial roles held")
-
-    model_config = {"from_attributes": True}
-
-
-class RoleResponse(BaseModel):
-    """A commercial role held by a person."""
-
-    orgnr: str = Field(..., description="Organization number")
-    type_kode: str = Field(..., description="Role type code (e.g., DAGL, STYR)")
-    type_beskrivelse: str = Field(..., description="Human-readable role description")
-    enhet_navn: str = Field(..., description="Company name")
-    fratraadt: bool = Field(..., description="Whether the person has resigned from this role")
-    rekkefoelge: int | None = Field(None, description="Role sequence/priority")
-
-    model_config = {"from_attributes": True}
 
 
 @router.get("/search", response_model=list[PersonSearchResult])
@@ -62,14 +39,14 @@ async def search_people(
     return [PersonSearchResult(**r) for r in results]
 
 
-@router.get("/roles", response_model=list[RoleResponse])
+@router.get("/roles", response_model=list[PersonRoleResponse])
 async def get_person_roles(
     request: Request,
     name: str = Query(..., description="Person's full name"),
     birthdate: date | None = Query(None, description="Birth date for disambiguation"),
     x_admin_key: str | None = Header(None, alias="X-Admin-Key"),
     db: AsyncSession = Depends(get_db),
-) -> list[RoleResponse]:
+) -> list[PersonRoleResponse]:
     """
     Fetch all LEGALLY ALLOWED roles for a person.
 
@@ -81,7 +58,7 @@ async def get_person_roles(
     roles = await role_repo.get_person_commercial_roles(name, birthdate, include_all=is_admin(x_admin_key))
 
     return [
-        RoleResponse(
+        PersonRoleResponse(
             orgnr=r.orgnr or "",
             type_kode=r.type_kode or "UKJENT",
             type_beskrivelse=r.type_beskrivelse or "Ukjent rolle",

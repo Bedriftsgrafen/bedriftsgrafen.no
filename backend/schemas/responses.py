@@ -1,6 +1,7 @@
-"""Data Transfer Objects for API responses
+"""Shared API response models.
 
-Shared response models to avoid duplication across router versions.
+Moved from services/response_models.py to follow separation of concerns:
+response models are presentation-layer concerns, not service-layer.
 """
 
 from datetime import date, datetime
@@ -43,8 +44,11 @@ class SubUnitsWithMetadata(BaseModel):
     metadata: ResponseMetadata | None = None
 
 
-class RoleResponse(BaseModel):
-    """Response model for company role data"""
+class CompanyRoleResponse(BaseModel):
+    """Response model for company role data (roles belonging to a company).
+
+    Renamed from RoleResponse to avoid collision with PersonRoleResponse.
+    """
 
     id: int | None = None
     type_kode: str | None = None
@@ -62,6 +66,6 @@ class RoleResponse(BaseModel):
 class RolesWithMetadata(BaseModel):
     """Roles response with metadata about freshness"""
 
-    data: list[RoleResponse]
+    data: list[CompanyRoleResponse]
     total: int
     metadata: ResponseMetadata | None = None

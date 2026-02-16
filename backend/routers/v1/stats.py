@@ -5,11 +5,10 @@ from typing import Literal
 from fastapi import APIRouter, Depends, HTTPException, Path, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 
-import models
+
 from constants.nace import get_nace_name
 from database import get_db
 from dependencies.company_filters import CompanyQueryParams
-from repositories.stats_repository import StatsRepository
 from schemas.benchmark import IndustryBenchmarkResponse
 from schemas.municipality import TrendPoint
 from schemas.stats import GeoAveragesResponse, GeoLevel, GeoMetric, GeoStatResponse, IndustryStatResponse
@@ -34,17 +33,6 @@ SortField = Literal[
 ]
 
 
-def _enrich_with_nace_name(stat: models.IndustryStats) -> IndustryStatResponse:
-    """Convert ORM model to response with NACE name enrichment.
-
-    Single source of truth for model -> response conversion (DRY).
-    """
-    response = IndustryStatResponse.model_validate(stat)
-    if stat.nace_division:
-        response.nace_name = get_nace_name(stat.nace_division)
-    return response
-
-
 @router.get("/industries", response_model=list[IndustryStatResponse])
 async def get_industry_stats(
     sort_by: SortField = Query("company_count", description="Field to sort by"),
@@ -58,9 +46,8 @@ async def get_industry_stats(
     Data is served from the `industry_stats` materialized view which is
     refreshed nightly. Results are cached for 1 hour on the frontend.
     """
-    repo = StatsRepository(db)
-    stats = await repo.get_industry_stats_list(sort_by, sort_order, limit)
-    return [_enrich_with_nace_name(stat) for stat in stats]
+    service = StatsService(db)
+    return await service.get_industry_stats_list(sort_by, sort_order, limit)
 
 
 @router.get("/industries/{nace_division}", response_model=IndustryStatResponse)
@@ -75,13 +62,13 @@ async def get_industry_stat(
     db: AsyncSession = Depends(get_db),
 ) -> IndustryStatResponse:
     """Get statistics for a specific industry (NACE division)."""
-    repo = StatsRepository(db)
-    stat = await repo.get_industry_stat_by_division(nace_division)
+    service = StatsService(db)
+    result = await service.get_industry_stat_by_division(nace_division)
 
-    if not stat:
+    if not result:
         raise HTTPException(status_code=404, detail=f"Industry with NACE division '{nace_division}' not found")
 
-    return _enrich_with_nace_name(stat)
+    return result
 
 
 @router.get("/industries/{nace_code}/benchmark/{orgnr}", response_model=IndustryBenchmarkResponse)
@@ -221,6 +208,6 @@ async def get_timeline_stats(
     # Build filters from query params
     filters = FilterParams.from_dto(params.to_dto())
 
-    repo = StatsRepository(db)
-    data = await repo.get_timeline_trends(metric=metric, months=months, filters=filters)
+    service = StatsService(db)
+    data = await service.get_timeline_trends(metric=metric, months=months, filters=filters)
     return [TrendPoint.model_validate(p) for p in data]

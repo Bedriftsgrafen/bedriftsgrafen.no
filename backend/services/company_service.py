@@ -17,8 +17,9 @@ from services.brreg_api_service import BrregApiService
 from services.brreg_mappers import map_subunit_from_api
 from services.dtos import CompanyFilterDTO
 from services.geocoding_service import GeocodingService
+from services.kpi_service import KpiService
 from services.nace_service import NaceService
-from schemas.companies import Naeringskode
+from schemas.companies import AccountingWithKpis, MapMarker, Naeringskode
 from utils.cache import AsyncLRUCache
 from utils.redis_cache import RedisCache
 from constants.concurrency import (
@@ -66,7 +67,7 @@ class CompanyService:
             sort_by=filters.sort_by,
             sort_order=filters.sort_order,
         )
-        await self._enrich_nace_codes(results)
+        await self.enrich_nace_codes(results)
         return results
 
     async def stream_companies(self, filters: CompanyFilterDTO):
@@ -171,6 +172,9 @@ class CompanyService:
         if not isinstance(company, dict) and company.latitude is None:
             await self.ensure_geocoded(company)
 
+        # Enrich NACE codes before returning
+        await self.enrich_nace_codes([company])
+
         return company
 
     async def _background_parent_sync(self, parent_orgnr: str) -> None:
@@ -189,7 +193,7 @@ class CompanyService:
     async def get_similar_companies(self, orgnr: str, limit: int = 5) -> list[CompanyWithFinancials]:
         """Find similar companies in proximity."""
         results = await self.company_repo.get_similar_companies(orgnr, limit)
-        await self._enrich_nace_codes(results)
+        await self.enrich_nace_codes(results)
         return results
 
     async def get_aggregate_stats(self, filters: CompanyFilterDTO) -> dict[str, Any]:
@@ -215,7 +219,7 @@ class CompanyService:
         """Get paginated companies in an industry."""
         offset = (page - 1) * limit
         companies, total = await self.company_repo.get_by_industry_code(nace_code, limit, offset, include_inactive)
-        await self._enrich_nace_codes(companies)
+        await self.enrich_nace_codes(companies)
         total_pages = (total + limit - 1) // limit if total > 0 else 0
         return {
             "items": companies,
@@ -235,7 +239,7 @@ class CompanyService:
             return cached
 
         results = await self.company_repo.search_by_name(name, limit)
-        await self._enrich_nace_codes(results)
+        await self.enrich_nace_codes(results)
         await search_cache.set(cache_key, results)
         return results
 
@@ -308,7 +312,7 @@ class CompanyService:
         except Exception as e:
             logger.warning(f"Subunit sync failed: {e}")
 
-    async def _enrich_nace_codes(self, items: list[Any]) -> None:
+    async def enrich_nace_codes(self, items: list[Any]) -> None:
         """Enrich NACE codes with descriptions."""
         nace = NaceService(self.db)
         for item in items:
@@ -371,3 +375,51 @@ class CompanyService:
         except Exception as e:
             logger.error(f"Error fetching platform statistics: {e}", exc_info=True)
             return {}
+
+    # ------------------------------------------------------------------
+    # Accounting + KPIs — moved from router to follow Repo→Service→Router
+    # ------------------------------------------------------------------
+
+    async def get_accounting_with_kpis(self, orgnr: str, year: int) -> AccountingWithKpis | None:
+        """Get accounting data for a specific year with calculated KPIs.
+
+        Returns None if no accounting data found for the given orgnr+year.
+        """
+        accounting = await self.accounting_repo.get_by_orgnr_and_year(orgnr, year)
+
+        if accounting is None:
+            return None
+
+        response = AccountingWithKpis.model_validate(accounting)
+        response.kpis = KpiService.calculate_all_kpis(accounting)
+        return response
+
+    # ------------------------------------------------------------------
+    # Map markers — moved from router to follow Repo→Service→Router
+    # ------------------------------------------------------------------
+
+    async def get_map_markers(
+        self,
+        filters: FilterParams,
+        bbox: tuple[float, float, float, float] | None = None,
+        limit: int = 5000,
+    ) -> tuple[list[MapMarker], int]:
+        """Get company markers for map display.
+
+        Returns (markers_list, total_count).
+        """
+        rows, total = await self.company_repo.get_map_markers(filters=filters, bbox=bbox, limit=limit)
+
+        markers = [
+            MapMarker(
+                orgnr=row[0],
+                navn=row[1] or "",
+                lat=row[2],
+                lng=row[3],
+                nace=row[4],
+                ansatte=row[5],
+            )
+            for row in rows
+        ]
+
+        return markers, total

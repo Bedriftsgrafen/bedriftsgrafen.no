@@ -24,7 +24,7 @@ app.dependency_overrides[get_db] = override_get_db
 @pytest.fixture
 def mock_company_service():
     with patch("routers.v1.companies.CompanyService") as mock:
-        mock.return_value._enrich_nace_codes = AsyncMock()
+        mock.return_value.enrich_nace_codes = AsyncMock()
         yield mock.return_value
 
 

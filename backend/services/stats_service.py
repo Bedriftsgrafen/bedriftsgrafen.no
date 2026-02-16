@@ -1,6 +1,6 @@
 import asyncio
 import logging
-from typing import Any, Sequence
+from typing import Any, Literal, Sequence
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -10,7 +10,7 @@ from constants.municipality_coords import MUNICIPALITY_COORDS
 from repositories.company_filter_builder import FilterParams
 from repositories.company import CompanyRepository
 from repositories.stats_repository import StatsRepository
-from schemas.stats import GeoAveragesResponse, GeoMetric, GeoLevel, GeoStatResponse
+from schemas.stats import GeoAveragesResponse, GeoMetric, GeoLevel, GeoStatResponse, IndustryStatResponse
 from sqlalchemy import func, select
 
 logger = logging.getLogger(__name__)
@@ -669,3 +669,55 @@ class StatsService:
             }
             for cs in county_stats
         ]
+
+    # ------------------------------------------------------------------
+    # Industry stats — thin wrappers around repo + NACE name enrichment
+    # ------------------------------------------------------------------
+
+    def _enrich_with_nace_name(self, stat: models.IndustryStats) -> IndustryStatResponse:
+        """Convert ORM model to response with NACE name enrichment.
+
+        Single source of truth for model -> response conversion (DRY).
+        """
+        from constants.nace import get_nace_name
+
+        response = IndustryStatResponse.model_validate(stat)
+        if stat.nace_division:
+            response.nace_name = get_nace_name(stat.nace_division)
+        return response
+
+    async def get_industry_stats_list(
+        self,
+        sort_by: Literal[
+            "company_count",
+            "total_revenue",
+            "avg_revenue",
+            "total_employees",
+            "bankrupt_count",
+            "new_last_year",
+            "bankruptcies_last_year",
+            "avg_profit",
+            "avg_operating_margin",
+        ],
+        sort_order: Literal["asc", "desc"],
+        limit: int,
+    ) -> list[IndustryStatResponse]:
+        """Get aggregated statistics per industry with NACE name enrichment."""
+        stats = await self.stats_repo.get_industry_stats_list(sort_by, sort_order, limit)
+        return [self._enrich_with_nace_name(stat) for stat in stats]
+
+    async def get_industry_stat_by_division(self, nace_division: str) -> IndustryStatResponse | None:
+        """Get statistics for a specific industry division."""
+        stat = await self.stats_repo.get_industry_stat_by_division(nace_division)
+        if not stat:
+            return None
+        return self._enrich_with_nace_name(stat)
+
+    async def get_timeline_trends(
+        self,
+        metric: Literal["bankruptcies", "new_companies"],
+        months: int,
+        filters: FilterParams | None = None,
+    ) -> list[dict[str, Any]]:
+        """Get monthly trend data for bankruptcies or new companies."""
+        return await self.stats_repo.get_timeline_trends(metric=metric, months=months, filters=filters)

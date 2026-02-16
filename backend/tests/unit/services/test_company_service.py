@@ -336,7 +336,7 @@ class TestEnrichNaceCodes:
             mock_nace_class.return_value = mock_nace
 
             # Act
-            await service._enrich_nace_codes([mock_item])
+            await service.enrich_nace_codes([mock_item])
 
             # Assert
             mock_nace.get_nace_name.assert_called_once_with("62.010")
@@ -352,7 +352,7 @@ class TestEnrichNaceCodes:
             mock_nace_class.return_value = mock_nace
 
             # Act
-            await service._enrich_nace_codes([mock_item])
+            await service.enrich_nace_codes([mock_item])
 
             # Assert
             # Should enrich dict in place
