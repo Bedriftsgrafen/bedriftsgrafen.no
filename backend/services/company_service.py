@@ -357,19 +357,26 @@ class CompanyService:
             total_companies = await self.company_repo.count(fast=True)
             total_employees = await self.company_repo.get_total_employees()
 
-        # Concurrent fetching of additional stats
-        results = await asyncio.gather(
-            self.accounting_repo.get_aggregated_stats(),
-            self.company_repo.get_geocoded_count(),
-            self.company_repo.get_new_companies_30d(),
-            self.role_repo.count_total_roles(),
-            return_exceptions=True,
-        )
+        # Sequential fetching — async sessions cannot handle concurrent operations
+        try:
+            financial_stats = await self.accounting_repo.get_aggregated_stats()
+        except Exception:
+            financial_stats = {}
 
-        financial_stats = results[0] if not isinstance(results[0], Exception) else {}
-        geocoded_count = results[1] if not isinstance(results[1], Exception) else 0
-        new_companies_30d = results[2] if not isinstance(results[2], Exception) else 0
-        total_roles = results[3] if not isinstance(results[3], Exception) else 0
+        try:
+            geocoded_count = await self.company_repo.get_geocoded_count()
+        except Exception:
+            geocoded_count = 0
+
+        try:
+            new_companies_30d = await self.company_repo.get_new_companies_30d()
+        except Exception:
+            new_companies_30d = 0
+
+        try:
+            total_roles = await self.role_repo.count_total_roles()
+        except Exception:
+            total_roles = 0
 
         return {
             "total_companies": total_companies,
