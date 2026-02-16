@@ -113,7 +113,7 @@ services:
     restart: always
     init: true # Tini init for proper signal handling and zombie reaping
     shm_size: '1gb'
-    command: [ "postgres", "-c", "shared_buffers=256MB", "-c", "work_mem=16MB", "-c", "maintenance_work_mem=128MB", "-c", "effective_cache_size=4GB", "-c", "max_wal_size=2GB", "-c", "min_wal_size=256MB" ]
+    command: [ "postgres", "-c", "shared_buffers=512MB", "-c", "work_mem=16MB", "-c", "maintenance_work_mem=128MB", "-c", "effective_cache_size=4GB", "-c", "max_wal_size=2GB", "-c", "min_wal_size=256MB", "-c", "jit=off" ]
     env_file:
       - .env
     environment:
@@ -131,7 +131,7 @@ services:
       resources:
         limits:
           cpus: '1.0'
-          memory: 1G
+          memory: 1536M
         reservations:
           memory: 256M
     healthcheck:

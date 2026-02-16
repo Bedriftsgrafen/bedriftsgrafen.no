@@ -43,7 +43,7 @@ export function useCompanyCountQuery(params: UseCompanyCountQueryParams) {
     return useQuery({
         queryKey: ['companyCount', params],
         queryFn: () => fetchCompanyCount(params),
-        staleTime: 30_000, // Cache for 30 seconds to reduce API calls
+        staleTime: 300_000, // 5 minutes – data changes nightly via materialized view refresh
         // Don't keep old data when filters change
     })
 }

@@ -59,6 +59,6 @@ export function useCompanyStatsQuery(params: UseCompanyStatsQueryParams) {
     return useQuery({
         queryKey: ['companyStats', params],
         queryFn: () => fetchCompanyStats(params),
-        staleTime: 30_000, // Cache for 30 seconds
+        staleTime: 300_000, // 5 minutes – data changes nightly via materialized view refresh
     })
 }

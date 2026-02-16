@@ -19,11 +19,10 @@ from services.geocoding_service import GeocodingService
 from services.nace_service import NaceService
 from schemas.companies import Naeringskode
 from utils.cache import AsyncLRUCache
+from utils.redis_cache import RedisCache
 from constants.concurrency import (
     SEARCH_CACHE_SIZE,
     SEARCH_CACHE_TTL,
-    STATS_CACHE_SIZE,
-    STATS_CACHE_TTL,
     PARENT_NAME_CACHE_SIZE,
     PARENT_NAME_CACHE_TTL,
 )
@@ -32,7 +31,9 @@ logger = logging.getLogger(__name__)
 
 # Module-level cache shared across service instances
 search_cache = AsyncLRUCache(maxsize=SEARCH_CACHE_SIZE, ttl=SEARCH_CACHE_TTL)
-stats_cache = AsyncLRUCache(maxsize=STATS_CACHE_SIZE, ttl=STATS_CACHE_TTL)  # 60s cache for stats
+# Redis-backed caches: shared across all uvicorn workers, 5-min TTL
+stats_cache = RedisCache(prefix="stats:aggregate", ttl=300)
+count_cache = RedisCache(prefix="stats:count", ttl=300)
 parent_name_cache = AsyncLRUCache(
     maxsize=PARENT_NAME_CACHE_SIZE, ttl=PARENT_NAME_CACHE_TTL
 )  # 1h cache for parent names
@@ -80,9 +81,20 @@ class CompanyService:
             yield company
 
     async def count_companies(self, filters: CompanyFilterDTO) -> int:
-        """Count companies matching filters."""
+        """Count companies matching filters with Redis caching."""
+        params = filters.to_count_params()
+        if filters.sort_by:
+            params["sort_by"] = filters.sort_by
+        cache_key = hashlib.md5(str(sorted(params.items())).encode()).hexdigest()
+
+        cached = await count_cache.get(cache_key)
+        if cached is not None:
+            return int(cached)
+
         repo_filters = FilterParams(**filters.to_count_params())
-        return await self.company_repo.count_companies(filters=repo_filters, sort_by=filters.sort_by)
+        result = await self.company_repo.count_companies(filters=repo_filters, sort_by=filters.sort_by)
+        await count_cache.set(cache_key, result)
+        return result
 
     async def get_company_with_accounting(self, orgnr: str) -> models.Company | None:
         """Fetch company by orgnr with financials eager loaded. Falls back to subunit lookup if main fails."""

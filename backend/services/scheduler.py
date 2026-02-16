@@ -187,6 +187,7 @@ class SchedulerService:
 
         Uses CONCURRENTLY to prevent table locks so reads can continue.
         Views must have unique indexes to support concurrent refresh.
+        Runs ANALYZE after refresh so the query planner has up-to-date statistics.
         """
         logger.info("Starting materialized view refresh (CONCURRENTLY)...")
         try:
@@ -202,6 +203,11 @@ class SchedulerService:
                 # Financial caching views (latest year per company)
                 await conn.execute(text("REFRESH MATERIALIZED VIEW CONCURRENTLY latest_financials;"))
                 await conn.execute(text("REFRESH MATERIALIZED VIEW CONCURRENTLY latest_accountings;"))
+
+                # Update planner statistics so queries use optimal plans
+                await conn.execute(text("ANALYZE latest_financials;"))
+                await conn.execute(text("ANALYZE latest_accountings;"))
+                await conn.execute(text("ANALYZE company_totals;"))
 
             logger.info("Materialized view refresh completed successfully", extra={"views_refreshed": 8})
         except Exception as e:
