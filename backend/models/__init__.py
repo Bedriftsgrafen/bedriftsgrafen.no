@@ -5,6 +5,7 @@ from .accounting import Accounting, LatestFinancials, LatestAccountings
 from .company import Company, Role, SubUnit
 from .geo import MunicipalityPopulation
 from .stats import (
+    CompanyTotals,
     CountyStats,
     IndustryStats,
     IndustrySubclassStats,
@@ -28,6 +29,7 @@ __all__ = [
     "MunicipalityPopulation",
     "BulkImportQueue",
     "ImportBatch",
+    "CompanyTotals",
     "DashboardStats",
     "OrgFormCounts",
     "SystemState",

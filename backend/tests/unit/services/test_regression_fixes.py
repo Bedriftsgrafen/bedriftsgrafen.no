@@ -11,25 +11,21 @@ async def test_get_statistics_includes_missing_fields():
     mock_db = AsyncMock()
     service = CompanyService(mock_db)
 
-    # Mock database execution for consolidated stats
-    data = {
-        "total_count": 100,
-        "total_roles": 200,
-        "total_employees": 500,
-        "geocoded_count": 80,
-        "new_companies_30d": 5,
-        "total_revenue": 1000.0,
-        "total_ebitda": 200.0,
-        "profitable_percentage": 75.0,
-        "solid_company_percentage": 50.0,
-        "avg_operating_margin": 10.0,
-    }
+    # Mock database execution for ORM-based query
     mock_row = MagicMock()
-    mock_row._mapping = data
-    mock_row._asdict.return_value = data
+    mock_row.total_count = 100
+    mock_row.total_roles = 200
+    mock_row.total_employees = 500
+    mock_row.geocoded_count = 80
+    mock_row.new_companies_30d = 5
+    mock_row.total_revenue = 1000.0
+    mock_row.total_ebitda = 200.0
+    mock_row.profitable_percentage = 75.0
+    mock_row.solid_company_percentage = 50.0
+    mock_row.avg_operating_margin = 10.0
 
     mock_result = MagicMock()
-    mock_result.fetchone.return_value = mock_row
+    mock_result.scalar_one_or_none.return_value = mock_row
     mock_db.execute.return_value = mock_result
 
     # Act

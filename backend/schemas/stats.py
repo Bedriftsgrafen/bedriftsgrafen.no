@@ -1,6 +1,25 @@
 """Statistics-related Pydantic schemas for API request/response models."""
 
+from typing import Literal
+
 from pydantic import BaseModel, ConfigDict, Field
+
+# ──────────────────────────────────────────────────────────────────────────────
+# Shared type aliases — single source of truth for geographic stats typing
+# ──────────────────────────────────────────────────────────────────────────────
+GeoMetric = Literal["company_count", "new_last_year", "bankrupt_count", "total_employees"]
+GeoLevel = Literal["county", "municipality"]
+
+
+class IndustryStatsDTO(BaseModel):
+    """DTO for aggregated industry statistics."""
+
+    company_count: int = 0
+    avg_revenue: float | None = None
+    avg_profit: float | None = None
+    avg_employees: float | None = None
+    avg_operating_margin: float | None = None
+    median_revenue: float | None = None
 
 
 class IndustryStatResponse(BaseModel):

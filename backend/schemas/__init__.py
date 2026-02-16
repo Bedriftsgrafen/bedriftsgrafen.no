@@ -23,6 +23,15 @@ from schemas.companies import (
     Naeringskode,
 )
 
+from schemas.stats import (
+    GeoAveragesResponse,
+    GeoLevel,
+    GeoMetric,
+    GeoStatResponse,
+    IndustryStatResponse,
+    IndustryStatsDTO,
+)
+
 from schemas.municipality import (
     MunicipalityListResponse,
     MunicipalityPremiumResponse,
@@ -49,6 +58,13 @@ __all__ = [
     "FetchCompanyResponse",
     "IndustryCompaniesResponse",
     "NaceSubclass",
+    # Stats schemas
+    "GeoAveragesResponse",
+    "GeoLevel",
+    "GeoMetric",
+    "GeoStatResponse",
+    "IndustryStatResponse",
+    "IndustryStatsDTO",
     # Municipality schemas
     "MunicipalityPremiumResponse",
     "MunicipalityListResponse",

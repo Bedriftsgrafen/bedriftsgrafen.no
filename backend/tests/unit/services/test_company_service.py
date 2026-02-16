@@ -289,28 +289,22 @@ async def test_ensure_geocoded(service):
 
 @pytest.mark.asyncio
 async def test_get_statistics(service, mock_db):
-    """Should return platform-wide statistics from company_totals view."""
+    """Should return platform-wide statistics from company_totals ORM model."""
     # Arrange
-    data = {
-        "total_count": 1000000,
-        "total_roles": 3000000,
-        "total_employees": 2500000,
-        "geocoded_count": 900000,
-        "new_companies_30d": 5000,
-        "total_revenue": 1000000000.0,
-        "total_ebitda": 50000000.0,
-        "profitable_percentage": 65.5,
-        "solid_company_percentage": 42.0,
-        "avg_operating_margin": 12.5,
-    }
     mock_row = MagicMock()
-    # Configure both mapping and asdict to be safe
-    mock_row._mapping = data
-    mock_row._asdict.return_value = data
+    mock_row.total_count = 1000000
+    mock_row.total_roles = 3000000
+    mock_row.total_employees = 2500000
+    mock_row.geocoded_count = 900000
+    mock_row.new_companies_30d = 5000
+    mock_row.total_revenue = 1000000000.0
+    mock_row.total_ebitda = 50000000.0
+    mock_row.profitable_percentage = 65.5
+    mock_row.solid_company_percentage = 42.0
+    mock_row.avg_operating_margin = 12.5
 
     mock_result = MagicMock()
-    mock_result.fetchone.return_value = mock_row
-    # execute is an AsyncMock because it's on AsyncSession
+    mock_result.scalar_one_or_none.return_value = mock_row
     mock_db.execute.return_value = mock_result
 
     # Act
@@ -321,7 +315,7 @@ async def test_get_statistics(service, mock_db):
     assert result["total_roles"] == 3000000
     assert result["total_revenue"] == 1000000000.0
     mock_db.execute.assert_called_once()
-    # Verify it queries the materialized view
+    # Verify it queries the CompanyTotals model (company_totals table)
     args = mock_db.execute.call_args[0][0]
     assert "company_totals" in str(args)
 

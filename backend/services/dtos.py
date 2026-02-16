@@ -5,7 +5,7 @@ DTOs provide type-safe input validation and encapsulation for complex service me
 
 from datetime import date
 
-from typing import Annotated
+from typing import Annotated, Any
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 
@@ -23,17 +23,6 @@ class RangeFilter(BaseModel):
         if self.min is not None and self.max is not None and self.min > self.max:
             raise ValueError(f"min ({self.min}) cannot be greater than max ({self.max})")
         return self
-
-
-class IndustryStatsDTO(BaseModel):
-    """DTO for aggregated industry statistics."""
-
-    company_count: int = 0
-    avg_revenue: float | None = None
-    avg_profit: float | None = None
-    avg_employees: float | None = None
-    avg_operating_margin: float | None = None
-    median_revenue: float | None = None
 
 
 class CompanyFilterDTO(BaseModel):
@@ -167,7 +156,7 @@ class CompanyFilterDTO(BaseModel):
             params[f"min_{field_name}"] = range_filter.min if range_filter else None
             params[f"max_{field_name}"] = range_filter.max if range_filter else None
 
-    def to_repository_params(self) -> dict:
+    def to_repository_params(self) -> dict[str, Any]:
         """Convert DTO to repository method parameters
 
         Unpacks grouped range filters into individual min/max parameters
@@ -207,7 +196,7 @@ class CompanyFilterDTO(BaseModel):
 
         return params
 
-    def to_count_params(self) -> dict:
+    def to_count_params(self) -> dict[str, Any]:
         """Convert DTO to count parameters (excludes pagination and sorting)
 
         More efficient than to_repository_params() as it skips unnecessary fields.

@@ -4,7 +4,7 @@ import hashlib
 import logging
 from typing import Any
 
-from sqlalchemy import text
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 import models
@@ -308,7 +308,7 @@ class CompanyService:
         except Exception as e:
             logger.warning(f"Subunit sync failed: {e}")
 
-    async def _enrich_nace_codes(self, items: Any) -> None:
+    async def _enrich_nace_codes(self, items: list[Any]) -> None:
         """Enrich NACE codes with descriptions."""
         nace = NaceService(self.db)
         for item in items:
@@ -341,7 +341,7 @@ class CompanyService:
                 else:
                     setattr(item, "naeringskoder", enriched_list)
 
-    async def get_statistics(self) -> dict[str, Any]:
+    async def get_statistics(self) -> dict[str, int | float]:
         """Get high-level statistics for the landing page.
 
         PERFORMANCE OPTIMIZATION:
@@ -349,29 +349,24 @@ class CompanyService:
         response time. This replaces 5+ sequential scans that previously took 26+ seconds.
         """
         try:
-            # Single O(1) query for all platform-level metrics
-            stmt = text("SELECT * FROM company_totals WHERE id = 1")
+            stmt = select(models.CompanyTotals).where(models.CompanyTotals.id == 1)
             result = await self.db.execute(stmt)
-            row = result.fetchone()
+            row = result.scalar_one_or_none()
 
             if not row:
                 return {}
 
-            # Convert row to dictionary - handle both tuple and mapping result types
-            # (sqlalchemy results behave like mappings in 2.0+ but we handle both)
-            data = row._asdict() if hasattr(row, "_asdict") else dict(row._mapping)
-
             return {
-                "total_companies": int(data.get("total_count", 0)),
-                "total_roles": int(data.get("total_roles", 0)),
-                "total_employees": int(data.get("total_employees", 0)),
-                "geocoded_count": int(data.get("geocoded_count", 0)),
-                "new_companies_30d": int(data.get("new_companies_30d", 0)),
-                "total_revenue": float(data.get("total_revenue", 0.0)),
-                "total_ebitda": float(data.get("total_ebitda", 0.0)),
-                "profitable_percentage": float(data.get("profitable_percentage", 0.0)),
-                "solid_company_percentage": float(data.get("solid_company_percentage", 0.0)),
-                "avg_operating_margin": float(data.get("avg_operating_margin", 0.0)),
+                "total_companies": row.total_count,
+                "total_roles": row.total_roles,
+                "total_employees": row.total_employees,
+                "geocoded_count": row.geocoded_count,
+                "new_companies_30d": row.new_companies_30d,
+                "total_revenue": row.total_revenue,
+                "total_ebitda": row.total_ebitda,
+                "profitable_percentage": row.profitable_percentage,
+                "solid_company_percentage": row.solid_company_percentage,
+                "avg_operating_margin": row.avg_operating_margin,
             }
         except Exception as e:
             logger.error(f"Error fetching platform statistics: {e}", exc_info=True)

@@ -32,7 +32,7 @@ from services.response_models import (
     SubUnitsWithMetadata,
 )
 from services.role_service import RoleService
-from utils.caching import set_subunit_detail_cache, set_subunit_search_cache
+from utils.caching import set_http_cache_headers
 from utils.response_builders import build_response_metadata
 
 router: APIRouter = APIRouter(prefix="/v1/companies", tags=["companies-v1"])
@@ -173,7 +173,7 @@ async def search_subunits(
 
     # Set HTTP caching headers for search results
     if response:
-        set_subunit_search_cache(response, q, limit, len(result))
+        set_http_cache_headers(response, etag=f"{q}-{limit}-{len(result)}", ttl_seconds=1800, stale_seconds=3600)
 
     return SubUnitsWithMetadata(data=result, total=len(result), metadata=build_response_metadata())
 
@@ -417,7 +417,9 @@ async def get_company_subunits(
 
     # Set HTTP caching headers for subunit details
     if response:
-        set_subunit_detail_cache(response, orgnr, len(all_subunits))
+        set_http_cache_headers(
+            response, etag=f"{orgnr}-subunits-{len(all_subunits)}", ttl_seconds=3600, stale_seconds=86400
+        )
 
     return SubUnitsWithMetadata(
         data=subunit_responses,

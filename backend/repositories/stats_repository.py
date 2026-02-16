@@ -8,15 +8,13 @@ from sqlalchemy.ext.asyncio import AsyncSession
 import models
 from constants.nace import NACE_SECTION_MAPPING
 from repositories.company_filter_builder import FilterParams
-from services.dtos import IndustryStatsDTO
+from schemas.stats import GeoLevel, GeoMetric, IndustryStatsDTO
 from utils.redis_cache import RedisCache
 
 logger = logging.getLogger(__name__)
 
 # National density changes at most nightly (materialized view refresh)
 _national_density_cache = RedisCache(prefix="stats:national_density", ttl=3600)
-
-GeoMetric = Literal["company_count", "new_last_year", "bankrupt_count", "total_employees"]
 
 
 class StatsRepository:
@@ -252,7 +250,7 @@ class StatsRepository:
 
     async def get_filtered_geography_stats(
         self,
-        level: Literal["county", "municipality"],
+        level: GeoLevel,
         metric: GeoMetric,
         filters: FilterParams,
     ) -> Sequence[Any]:
@@ -478,7 +476,7 @@ class StatsRepository:
 
     async def get_trend(
         self,
-        level: Literal["county", "municipality"],
+        level: GeoLevel,
         code: str,
         metric: Literal["establishments", "bankruptcies"],
         months: int = 12,

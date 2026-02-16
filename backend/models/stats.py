@@ -103,3 +103,25 @@ class MunicipalityStats(Base):
     bankrupt_count: Mapped[int | None] = mapped_column(Integer, nullable=True)
     total_employees: Mapped[int | None] = mapped_column(Integer, nullable=True)
     total_revenue: Mapped[float | None] = mapped_column(Float, nullable=True)
+
+
+class CompanyTotals(Base):
+    """
+    Read-only model mapping to materialized view 'company_totals'.
+    Single-row aggregate with platform-wide statistics for the landing page.
+    """
+
+    __tablename__ = "company_totals"
+    __table_args__ = {"extend_existing": True}
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    total_count: Mapped[int] = mapped_column(Integer, default=0)
+    total_roles: Mapped[int] = mapped_column(Integer, default=0)
+    total_employees: Mapped[int] = mapped_column(Integer, default=0)
+    geocoded_count: Mapped[int] = mapped_column(Integer, default=0)
+    new_companies_30d: Mapped[int] = mapped_column(Integer, default=0)
+    total_revenue: Mapped[float] = mapped_column(Float, default=0.0)
+    total_ebitda: Mapped[float] = mapped_column(Float, default=0.0)
+    profitable_percentage: Mapped[float] = mapped_column(Float, default=0.0)
+    solid_company_percentage: Mapped[float] = mapped_column(Float, default=0.0)
+    avg_operating_margin: Mapped[float] = mapped_column(Float, default=0.0)

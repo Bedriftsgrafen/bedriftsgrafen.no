@@ -1,6 +1,6 @@
 import asyncio
 import logging
-from typing import Literal, Any, Sequence
+from typing import Any, Sequence
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -10,14 +10,10 @@ from constants.municipality_coords import MUNICIPALITY_COORDS
 from repositories.company_filter_builder import FilterParams
 from repositories.company import CompanyRepository
 from repositories.stats_repository import StatsRepository
-from schemas.stats import GeoAveragesResponse, GeoStatResponse
+from schemas.stats import GeoAveragesResponse, GeoMetric, GeoLevel, GeoStatResponse
 from sqlalchemy import func, select
 
 logger = logging.getLogger(__name__)
-
-# Type aliases
-GeoMetric = Literal["company_count", "new_last_year", "bankrupt_count", "total_employees"]
-GeoLevel = Literal["county", "municipality"]
 
 # Percentile estimation thresholds (assumes normal distribution)
 # Maps ratio (company_value / industry_avg) to estimated percentile

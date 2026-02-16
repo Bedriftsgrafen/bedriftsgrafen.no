@@ -5,7 +5,7 @@ import html
 import logging
 import textwrap
 from datetime import datetime, timedelta
-from typing import Any, Dict
+from typing import Any
 
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -40,7 +40,7 @@ STATIC_ROUTES = [
 class SEOService:
     # Class-level cache to persist across instances (FastAPI creates a new service per request)
     # Using a dictionary shared by all instances
-    _sitemap_cache: Dict[str, Any] = {
+    _sitemap_cache: dict[str, Any] = {
         "total_companies": None,
         "total_people": None,
         "municipalities": None,
@@ -82,7 +82,7 @@ class SEOService:
         """Check if cache warm-up is in progress."""
         return cls._sitemap_cache.get("is_warming", False)
 
-    async def get_sitemap_data(self, force_refresh: bool = False) -> Dict[str, Any]:
+    async def get_sitemap_data(self, force_refresh: bool = False) -> dict[str, Any]:
         """
         Get total counts and pagination anchors with 6-hour caching.
 
@@ -167,7 +167,7 @@ class SEOService:
         elapsed = (datetime.now(timezone.utc) - start_time).total_seconds()
         logger.info(f"Sitemap cache refreshed in {elapsed:.2f}s. Next expiry: {cache['expiry']}")
 
-    async def get_company_og_data(self, orgnr: str) -> Dict[str, Any] | None:
+    async def get_company_og_data(self, orgnr: str) -> dict[str, Any] | None:
         """Fetch optimized data for company OG image."""
         # Query only needed fields for performance
         query = (
@@ -199,7 +199,7 @@ class SEOService:
             "employees": row.antall_ansatte,
         }
 
-    def generate_company_og_svg(self, data: Dict[str, Any]) -> str:
+    def generate_company_og_svg(self, data: dict[str, Any]) -> str:
         """Generates a dynamic SVG OpenGraph card for a company."""
         # Sanitize inputs for SVG safety
         name = html.escape(data["navn"])

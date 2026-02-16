@@ -12,8 +12,8 @@ from dependencies.company_filters import CompanyQueryParams
 from repositories.stats_repository import StatsRepository
 from schemas.benchmark import IndustryBenchmarkResponse
 from schemas.municipality import TrendPoint
-from schemas.stats import GeoAveragesResponse, GeoStatResponse, IndustryStatResponse
-from services.stats_service import GeoLevel, GeoMetric, StatsService
+from schemas.stats import GeoAveragesResponse, GeoLevel, GeoMetric, GeoStatResponse, IndustryStatResponse
+from services.stats_service import StatsService
 from repositories.company_filter_builder import FilterParams
 
 router: APIRouter = APIRouter(prefix="/v1/stats", tags=["statistics"])
