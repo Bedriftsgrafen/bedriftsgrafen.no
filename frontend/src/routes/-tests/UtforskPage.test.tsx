@@ -5,7 +5,7 @@ import { useUiStore } from '../../store/uiStore'
 import { useExplorerStore } from '../../store/explorerStore'
 import { useFilterStore } from '../../store/filterStore'
 import { useCompaniesQuery } from '../../hooks/queries/useCompaniesQuery'
-import { useCompanyCountQuery } from '../../hooks/queries/useCompanyCountQuery'
+import { useCompanyStatsQuery } from '../../hooks/queries/useCompanyStatsQuery'
 
 // Mock components
 vi.mock('../../components/layout', () => ({ SEOHead: () => <div /> }))
@@ -37,8 +37,8 @@ vi.mock('../../store/filterStore', () => ({
 vi.mock('../../hooks/queries/useCompaniesQuery', () => ({
     useCompaniesQuery: vi.fn()
 }))
-vi.mock('../../hooks/queries/useCompanyCountQuery', () => ({
-    useCompanyCountQuery: vi.fn()
+vi.mock('../../hooks/queries/useCompanyStatsQuery', () => ({
+    useCompanyStatsQuery: vi.fn()
 }))
 vi.mock('../../hooks/useFilterParams', () => ({
     useFilterParams: () => ({ filterParams: {}, sortBy: 'revenue', sortOrder: 'desc' })
@@ -89,7 +89,7 @@ describe('UtforskPage', () => {
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         vi.mocked(useCompaniesQuery).mockReturnValue({ data: [{ orgnr: '123' }], isLoading: false } as any)
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        vi.mocked(useCompanyCountQuery).mockReturnValue({ data: 100, isLoading: false } as any)
+        vi.mocked(useCompanyStatsQuery).mockReturnValue({ data: { total_count: 100 }, isLoading: false } as any)
     })
 
     it('renders and syncs initial search query from URL', () => {

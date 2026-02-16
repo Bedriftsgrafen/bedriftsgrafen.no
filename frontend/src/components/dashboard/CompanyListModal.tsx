@@ -4,7 +4,7 @@ import { useNavigate } from '@tanstack/react-router';
 import { getOneYearAgo } from '../../utils/dates';
 import { formatNumber, formatCurrency, formatDate, cleanOrgnr, normalizeText } from '../../utils/formatters';
 import { useCompaniesQuery, UseCompaniesQueryParams } from '../../hooks/queries/useCompaniesQuery';
-import { useCompanyCountQuery, UseCompanyCountQueryParams } from '../../hooks/queries/useCompanyCountQuery';
+import { useCompanyStatsQuery, UseCompanyStatsQueryParams } from '../../hooks/queries/useCompanyStatsQuery';
 import { SortableHeader } from '../common/SortableHeader';
 import { LoadingState } from '../common/LoadingState';
 import { ErrorState } from '../common/ErrorState';
@@ -90,7 +90,7 @@ export const CompanyListModal = ({
         sort_order: sortOrder,
     };
 
-    const countParams: UseCompanyCountQueryParams = {
+    const countParams: UseCompanyStatsQueryParams = {
         naeringskode: naceCode,
     }
 
@@ -113,8 +113,10 @@ export const CompanyListModal = ({
     // Fetch companies
     const { data: companies, isLoading, isError } = useCompaniesQuery(queryParams);
 
-    // Fetch count
-    const { data: totalCount } = useCompanyCountQuery(countParams);
+    // Fetch count via stats endpoint (optimized)
+    const { data: stats } = useCompanyStatsQuery(countParams);
+
+    const totalCount = stats?.total_count;
 
     const totalPages = totalCount ? Math.ceil(totalCount / pageSize) : 0;
 

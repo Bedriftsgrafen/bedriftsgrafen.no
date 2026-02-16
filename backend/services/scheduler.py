@@ -194,6 +194,7 @@ class SchedulerService:
             async with engine.begin() as conn:
                 # Core statistics views (refreshed every 5 minutes)
                 await conn.execute(text("REFRESH MATERIALIZED VIEW CONCURRENTLY company_totals;"))
+                await conn.execute(text("ANALYZE company_totals;"))  # Added ANALYZE here
                 await conn.execute(text("REFRESH MATERIALIZED VIEW CONCURRENTLY industry_stats;"))
                 await conn.execute(text("REFRESH MATERIALIZED VIEW CONCURRENTLY industry_subclass_stats;"))
                 await conn.execute(text("REFRESH MATERIALIZED VIEW CONCURRENTLY county_stats;"))

@@ -13,6 +13,9 @@ export interface CompanyStatsResponse {
     total_revenue: number
     total_profit: number
     total_employees: number
+    geocoded_count: number
+    new_companies_30d: number
+    total_roles: number
     by_organisasjonsform: OrgFormBreakdown[]
 }
 
@@ -46,6 +49,7 @@ export interface UseCompanyStatsQueryParams {
     in_liquidation?: boolean
     in_forced_liquidation?: boolean
     has_accounting?: boolean
+    registered_from?: string
     exclude_org_form?: string[]
     sort_by?: string
 }

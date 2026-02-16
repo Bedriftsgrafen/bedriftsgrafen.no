@@ -78,11 +78,13 @@ async def test_get_aggregated_stats(accounting_repo, mock_db):
     # Arrange
     mock_row = MagicMock()
     mock_row.total_revenue = 1000.0
+    mock_row.total_ebitda = 500.0
     mock_row.profitable_percentage = 80.0
+    mock_row.solid_company_percentage = 40.0
     mock_row.avg_operating_margin = 15.0
 
     mock_result = MagicMock()
-    mock_result.one.return_value = mock_row
+    mock_result.fetchone.return_value = mock_row
     mock_db.execute.return_value = mock_result
 
     # Act
@@ -116,7 +118,7 @@ async def test_get_aggregated_stats_null_values(accounting_repo, mock_db):
     mock_row.avg_operating_margin = None
 
     mock_result = MagicMock()
-    mock_result.one.return_value = mock_row
+    mock_result.fetchone.return_value = mock_row
     mock_db.execute.return_value = mock_result
 
     stats = await accounting_repo.get_aggregated_stats()

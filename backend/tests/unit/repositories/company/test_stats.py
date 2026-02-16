@@ -79,10 +79,26 @@ async def test_get_aggregate_stats_materialized_view(repo, mock_db_session):
     filters = FilterParams()
 
     # Mock row for SELECT * FROM company_totals
-    # Schema expects: id, count, revenue, profit, employees
-    mock_row_totals = (1, 100, 1000.0, 100.0, 50)
+    # Schema expects: id, total_count, total_revenue, total_profit, total_employees, etc.
+    data = {
+        "id": 1,
+        "total_count": 100,
+        "total_revenue": 1000.0,
+        "total_profit": 100.0,
+        "total_employees": 50,
+        "geocoded_count": 90,
+        "new_companies_30d": 10,
+        "total_roles": 500,
+    }
+    mock_row_totals = MagicMock()
+    mock_row_totals._mapping = data
+    mock_row_totals._asdict.return_value = data
+
     # Mock rows for orgform breakdown
-    mock_rows_breakdown = [("AS", 50), ("ENK", 50)]
+    mock_rows_breakdown = [
+        MagicMock(_mapping={"kode": "AS", "count": 50}),
+        MagicMock(_mapping={"kode": "ENK", "count": 50}),
+    ]
 
     # Side effects for execute
     mock_result_totals = MagicMock()
@@ -92,7 +108,6 @@ async def test_get_aggregate_stats_materialized_view(repo, mock_db_session):
     mock_result_breakdown.fetchall.return_value = mock_rows_breakdown
 
     # Using AsyncMock side_effect is tricky for execute if it's called multiple times.
-    # Logic: 1. totals, 2. breakdown
     mock_db_session.execute.side_effect = [mock_result_totals, mock_result_breakdown]
 
     stats = await repo.get_aggregate_stats(filters)

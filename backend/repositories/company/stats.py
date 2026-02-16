@@ -74,19 +74,24 @@ class StatsMixin:
             if filters.is_empty() and not needs_financial_join:
                 try:
                     async with self.db.begin_nested():
-                        result = await self.db.execute(text("SELECT * FROM company_totals"))
+                        result = await self.db.execute(text("SELECT * FROM company_totals WHERE id = 1"))
                         row = result.fetchone()
                         if row:
+                            # Extract row data handle both tuple and mapping
+                            data = row._asdict() if hasattr(row, "_asdict") else dict(row._mapping)
+
                             breakdown_result = await self.db.execute(
                                 text("SELECT kode, count FROM orgform_counts ORDER BY count DESC LIMIT 5")
                             )
-                            breakdown = [{"form": r[0], "count": r[1]} for r in breakdown_result.fetchall()]
-
+                            breakdown = [dict(r._mapping) for r in breakdown_result.fetchall()]
                             return {
-                                "total_count": int(row[1]) if row[1] else 0,
-                                "total_revenue": float(row[2]) if row[2] else 0.0,
-                                "total_profit": float(row[3]) if row[3] else 0.0,
-                                "total_employees": int(row[4]) if row[4] else 0,
+                                "total_count": int(data.get("total_count", 0)),
+                                "total_revenue": float(data.get("total_revenue", 0.0)),
+                                "total_profit": float(data.get("total_profit", 0.0)),
+                                "total_employees": int(data.get("total_employees", 0)),
+                                "geocoded_count": int(data.get("geocoded_count", 0)),
+                                "new_companies_30d": int(data.get("new_companies_30d", 0)),
+                                "total_roles": int(data.get("total_roles", 0)),
                                 "by_organisasjonsform": breakdown,
                             }
                 except Exception as e:

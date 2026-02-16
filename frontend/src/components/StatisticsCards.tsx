@@ -10,7 +10,6 @@ import {
 import type { ComponentType } from 'react'
 import { useNavigate } from '@tanstack/react-router'
 import { useStatsQuery } from '../hooks/queries/useStatsQuery'
-import { useCompanyCountQuery } from '../hooks/queries/useCompanyCountQuery'
 import { formatLargeNumber } from '../utils/formatters'
 
 interface StatCard {
@@ -29,7 +28,6 @@ interface StatCard {
 export function StatisticsCards() {
   const navigate = useNavigate()
   const { data: stats, isLoading: statsLoading } = useStatsQuery()
-  const { data: totalCount } = useCompanyCountQuery({})
 
   const isLoading = statsLoading
 
@@ -65,7 +63,7 @@ export function StatisticsCards() {
   const cards: StatCard[] = [
     {
       title: 'Virksomhetsuniverset',
-      value: totalCount ?? stats.total_companies,
+      value: stats.total_companies,
       icon: Building2,
       color: 'text-blue-700',
       bgColor: 'bg-blue-50',

@@ -13,7 +13,7 @@ import { LoadingState } from '../common/LoadingState'
 import { ErrorState } from '../common/ErrorState'
 import { useTableState } from '../../hooks/useTableState'
 import { useCompaniesQuery } from '../../hooks/queries/useCompaniesQuery'
-import { useCompanyCountQuery } from '../../hooks/queries/useCompanyCountQuery'
+import { useCompanyStatsQuery } from '../../hooks/queries/useCompanyStatsQuery'
 
 
 interface NewCompaniesListProps {
@@ -80,8 +80,8 @@ export function NewCompaniesList({
         municipality_code: filters.municipality_code || undefined
     })
 
-    // Fetch total count with filters
-    const { data: totalCount } = useCompanyCountQuery({
+    // Fetch total count with filters via stats endpoint (optimized)
+    const { data: stats } = useCompanyStatsQuery({
         registered_from: registeredFrom,
         organisasjonsform: ['AS'],
         exclude_org_form: ['KBO'],
@@ -90,6 +90,8 @@ export function NewCompaniesList({
         municipality: filters.municipality || undefined,
         municipality_code: filters.municipality_code || undefined
     })
+
+    const totalCount = stats?.total_count
 
     const totalPages = totalCount ? Math.ceil(totalCount / itemsPerPage) : 1
 

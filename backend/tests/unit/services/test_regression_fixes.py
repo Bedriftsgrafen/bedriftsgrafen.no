@@ -11,17 +11,26 @@ async def test_get_statistics_includes_missing_fields():
     mock_db = AsyncMock()
     service = CompanyService(mock_db)
 
-    # Mock repositories
-    service.company_repo = AsyncMock()
-    service.accounting_repo = AsyncMock()
-    service.role_repo = AsyncMock()
+    # Mock database execution for consolidated stats
+    data = {
+        "total_count": 100,
+        "total_roles": 200,
+        "total_employees": 500,
+        "geocoded_count": 80,
+        "new_companies_30d": 5,
+        "total_revenue": 1000.0,
+        "total_ebitda": 200.0,
+        "profitable_percentage": 75.0,
+        "solid_company_percentage": 50.0,
+        "avg_operating_margin": 10.0,
+    }
+    mock_row = MagicMock()
+    mock_row._mapping = data
+    mock_row._asdict.return_value = data
 
-    # Mock the service method get_aggregate_stats (not the repo method)
-    service.get_aggregate_stats = AsyncMock(return_value={"total_count": 100, "total_employees": 500})
-    service.accounting_repo.get_aggregated_stats.return_value = {"total_revenue": 1000.0}
-    service.company_repo.get_geocoded_count.return_value = 80
-    service.company_repo.get_new_companies_30d.return_value = 5
-    service.role_repo.count_total_roles.return_value = 200
+    mock_result = MagicMock()
+    mock_result.fetchone.return_value = mock_row
+    mock_db.execute.return_value = mock_result
 
     # Act
     stats = await service.get_statistics()

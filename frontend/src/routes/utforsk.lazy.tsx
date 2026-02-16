@@ -10,7 +10,7 @@ import { ExportButton } from '../components/explorer'
 import { AffiliateBanner } from '../components/ads/AffiliateBanner'
 import { useFilterParams } from '../hooks/useFilterParams'
 import { useCompaniesQuery } from '../hooks/queries/useCompaniesQuery'
-import { useCompanyCountQuery } from '../hooks/queries/useCompanyCountQuery'
+import { useCompanyStatsQuery } from '../hooks/queries/useCompanyStatsQuery'
 import { useUiStore } from '../store/uiStore'
 import { useExplorerStore } from '../store/explorerStore'
 import { useFilterStore } from '../store/filterStore'
@@ -62,9 +62,12 @@ export function UtforskPage() {
     })
 
     const {
-        data: totalCount,
-        isLoading: countLoading
-    } = useCompanyCountQuery(filterParams)
+        data: stats,
+        isLoading: statsLoading
+    } = useCompanyStatsQuery(filterParams)
+
+    const totalCount = stats?.total_count
+    const countLoading = statsLoading
 
     // Feedback for slow loading
     useSlowLoadingToast(companiesLoading, 'Henter virksomheter. Dette kan ta litt tid...')

@@ -13,7 +13,7 @@ import { LoadingState } from '../common/LoadingState'
 import { ErrorState } from '../common/ErrorState'
 import { useTableState } from '../../hooks/useTableState'
 import { useCompaniesQuery } from '../../hooks/queries/useCompaniesQuery'
-import { useCompanyCountQuery } from '../../hooks/queries/useCompanyCountQuery'
+import { useCompanyStatsQuery } from '../../hooks/queries/useCompanyStatsQuery'
 
 
 interface BankruptcyListProps {
@@ -79,8 +79,8 @@ export function BankruptcyList({
         municipality_code: filters.municipality_code || undefined
     })
 
-    // Fetch total count with filters
-    const { data: totalCount } = useCompanyCountQuery({
+    // Fetch total count with filters via stats endpoint (optimized)
+    const { data: stats } = useCompanyStatsQuery({
         is_bankrupt: true,
         bankrupt_from: bankruptFrom,
         naeringskode: filters.nace || undefined,
@@ -88,6 +88,8 @@ export function BankruptcyList({
         municipality: filters.municipality || undefined,
         municipality_code: filters.municipality_code || undefined
     })
+
+    const totalCount = stats?.total_count
 
     const totalPages = totalCount ? Math.ceil(totalCount / itemsPerPage) : 1
 
@@ -100,7 +102,7 @@ export function BankruptcyList({
         if (!searchQuery.trim()) return companies
         const query = searchQuery.toLowerCase()
         return companies.filter(
-            c => (c.navn?.toLowerCase().includes(query) || c.orgnr.includes(query))
+            (c) => (c.navn?.toLowerCase().includes(query) || c.orgnr.includes(query))
         )
     }, [companies, searchQuery])
 

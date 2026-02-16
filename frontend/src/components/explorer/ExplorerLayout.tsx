@@ -12,7 +12,7 @@ import { ActiveFilterChips } from '../filter/ActiveFilterChips'
 import { useFilterParams } from '../../hooks/useFilterParams'
 import { useExplorerShortcuts } from '../../hooks/useExplorerShortcuts'
 import { useCompaniesQuery } from '../../hooks/queries/useCompaniesQuery'
-import { useCompanyCountQuery } from '../../hooks/queries/useCompanyCountQuery'
+import { useCompanyStatsQuery } from '../../hooks/queries/useCompanyStatsQuery'
 import { useUiStore } from '../../store/uiStore'
 import { useFilterStore, type FilterValues } from '../../store/filterStore'
 import { useExplorerStore } from '../../store/explorerStore'
@@ -101,8 +101,16 @@ export const ExplorerLayout = memo(function ExplorerLayout({ onSelectCompany }: 
         sort_order: sortOrder,
     })
 
-    const { data: totalCount, isLoading: countLoading } =
-        useCompanyCountQuery(filterParams)
+    const {
+        data: stats,
+        isLoading: statsLoading
+    } = useCompanyStatsQuery({
+        ...filterParams,
+        sort_by: sortBy,
+    })
+
+    const totalCount = stats?.total_count;
+    const countLoading = statsLoading;
 
 
     // Handlers - memoized for stable references
@@ -169,7 +177,11 @@ export const ExplorerLayout = memo(function ExplorerLayout({ onSelectCompany }: 
                 )}
 
                 {/* Stats cards */}
-                <ExplorerStats />
+                <ExplorerStats
+                    stats={stats}
+                    isLoading={statsLoading}
+                    isError={!!statsLoading && !stats} // Simplified for now
+                />
 
                 {/* Toolbar - Sort and count */}
                 <div className="flex flex-wrap items-center justify-between gap-2 bg-white rounded-lg border border-gray-200 px-3 py-2 sm:px-4 sm:py-3 mb-4">

@@ -1,7 +1,6 @@
 import React, { memo, useMemo } from 'react'
 import { Building2, TrendingUp, Users, PiggyBank, RefreshCw } from 'lucide-react'
-import { useCompanyStatsQuery } from '../../hooks/queries/useCompanyStatsQuery'
-import { useFilterParams } from '../../hooks/useFilterParams'
+import type { CompanyStatsResponse } from '../../hooks/queries/useCompanyStatsQuery'
 
 import { formatLargeNumber } from '../../utils/formatters'
 
@@ -46,17 +45,23 @@ const STAT_ICONS = {
     employees: <Users className="h-5 w-5 text-orange-600" aria-hidden="true" />,
 } as const
 
+interface ExplorerStatsProps {
+    stats?: CompanyStatsResponse
+    isLoading: boolean
+    isError: boolean
+    onRetry?: () => void
+}
+
 /**
  * Statistics cards showing aggregate data for filtered companies.
  * Displays total companies, revenue, profit, and employees.
  */
-export const ExplorerStats = memo(function ExplorerStats() {
-    const { filterParams, sortBy } = useFilterParams()
-    const { data: stats, isLoading, isError, refetch } = useCompanyStatsQuery({
-        ...filterParams,
-        sort_by: sortBy,
-    })
-
+export const ExplorerStats = memo(function ExplorerStats({
+    stats,
+    isLoading,
+    isError,
+    onRetry,
+}: ExplorerStatsProps) {
     // Memoize formatted values
     const formattedStats = useMemo(() => {
         if (!stats) return null
@@ -74,14 +79,16 @@ export const ExplorerStats = memo(function ExplorerStats() {
             <div className="bg-red-50 border border-red-200 rounded-lg p-4 mb-4">
                 <div className="flex items-center justify-between">
                     <p className="text-sm text-red-700">Kunne ikke laste statistikk</p>
-                    <button
-                        type="button"
-                        onClick={() => refetch()}
-                        className="flex items-center gap-1 text-sm text-red-700 hover:text-red-800"
-                    >
-                        <RefreshCw className="h-4 w-4" aria-hidden="true" />
-                        Prøv igjen
-                    </button>
+                    {onRetry && (
+                        <button
+                            type="button"
+                            onClick={onRetry}
+                            className="flex items-center gap-1 text-sm text-red-700 hover:text-red-800"
+                        >
+                            <RefreshCw className="h-4 w-4" aria-hidden="true" />
+                            Prøv igjen
+                        </button>
+                    )}
                 </div>
             </div>
         )

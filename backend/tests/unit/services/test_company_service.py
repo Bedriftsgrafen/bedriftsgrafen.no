@@ -288,23 +288,42 @@ async def test_ensure_geocoded(service):
 
 
 @pytest.mark.asyncio
-async def test_get_statistics(service):
-    """Should return platform-wide statistics."""
-    # Arrange - use AsyncMock for async methods
-    service.get_aggregate_stats = AsyncMock(return_value={"total_count": 1000000, "total_employees": 2500000})
-    service.company_repo.count = AsyncMock(return_value=1000000)
-    service.company_repo.get_total_employees = AsyncMock(return_value=2500000)
-    service.accounting_repo.get_aggregated_stats = AsyncMock(return_value={"total_revenue": 1000000000})
-    service.company_repo.get_geocoded_count = AsyncMock(return_value=900000)
-    service.company_repo.get_new_companies_30d = AsyncMock(return_value=5000)
-    service.role_repo.count_total_roles = AsyncMock(return_value=3000000)
+async def test_get_statistics(service, mock_db):
+    """Should return platform-wide statistics from company_totals view."""
+    # Arrange
+    data = {
+        "total_count": 1000000,
+        "total_roles": 3000000,
+        "total_employees": 2500000,
+        "geocoded_count": 900000,
+        "new_companies_30d": 5000,
+        "total_revenue": 1000000000.0,
+        "total_ebitda": 50000000.0,
+        "profitable_percentage": 65.5,
+        "solid_company_percentage": 42.0,
+        "avg_operating_margin": 12.5,
+    }
+    mock_row = MagicMock()
+    # Configure both mapping and asdict to be safe
+    mock_row._mapping = data
+    mock_row._asdict.return_value = data
+
+    mock_result = MagicMock()
+    mock_result.fetchone.return_value = mock_row
+    # execute is an AsyncMock because it's on AsyncSession
+    mock_db.execute.return_value = mock_result
 
     # Act
     result = await service.get_statistics()
 
     # Assert
     assert result["total_companies"] == 1000000
-    assert result["total_employees"] == 2500000
+    assert result["total_roles"] == 3000000
+    assert result["total_revenue"] == 1000000000.0
+    mock_db.execute.assert_called_once()
+    # Verify it queries the materialized view
+    args = mock_db.execute.call_args[0][0]
+    assert "company_totals" in str(args)
 
 
 class TestEnrichNaceCodes:
