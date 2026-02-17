@@ -1,14 +1,12 @@
 /* eslint-disable react-refresh/only-export-components */
 import { createLazyFileRoute } from '@tanstack/react-router'
-import { ExplorerLayout } from '../components/explorer'
 import { SEOHead } from '../components/layout'
 import { useDocumentTitle } from '../hooks/useDocumentTitle'
 import { IndustryDashboard } from '../components/dashboard/IndustryDashboard'
-import { IndustryMap } from '../components/maps/IndustryMap'
 import { IndustryTopList } from '../components/dashboard/IndustryTopList'
 import { CompanyModalOverlay } from '../components/company/CompanyModalOverlay'
-import { useMemo, useCallback, useEffect } from 'react'
-import { BarChart3, Search, Map, Award } from 'lucide-react'
+import { useMemo, useCallback, useEffect, lazy, Suspense } from 'react'
+import { BarChart3, Search, Map, Award, Loader2 } from 'lucide-react'
 import { TabButton, TabContainer } from '../components/common'
 import { MapFilterValues, defaultMapFilters } from '../types/map'
 import { COUNTIES } from '../constants/explorer'
@@ -16,6 +14,11 @@ import { MUNICIPALITIES } from '../constants/municipalityCodes'
 import { useFilterStore, FilterValues } from '../store/filterStore'
 import { formatMunicipalityName } from '../constants/municipalities'
 import { cleanOrgnr } from '../utils/formatters'
+
+// Lazy-load heavy components: IndustryMap (leaflet ~154KB) and ExplorerLayout (~56KB)
+// Only downloaded when the user activates the corresponding tab
+const IndustryMap = lazy(() => import('../components/maps/IndustryMap').then(m => ({ default: m.IndustryMap })))
+const ExplorerLayout = lazy(() => import('../components/explorer').then(m => ({ default: m.ExplorerLayout })))
 
 // Tab type for type safety
 type BransjerTab = 'stats' | 'search' | 'map' | 'toplist'
@@ -228,9 +231,11 @@ function BransjerPage() {
                 />
             </TabContainer>
 
-            {/* Content */}
+            {/* Content — min-height prevents CLS from footer shifting when data loads */}
+            <div className="min-h-[600px]">
             {activeTab === 'stats' && <IndustryDashboard initialNace={nace} onSelectCompany={setSelectedCompanyOrgnr} />}
             {activeTab === 'map' && (
+                <Suspense fallback={<div className="flex items-center justify-center h-[800px]"><Loader2 className="h-8 w-8 animate-spin text-blue-600" /></div>}>
                 <div className="space-y-4">
                     <div className="rounded-2xl overflow-hidden border border-gray-100 shadow-sm h-[900px] md:h-[800px] relative">
                         <IndustryMap
@@ -279,9 +284,15 @@ function BransjerPage() {
                         />
                     </div>
                 </div>
+                </Suspense>
             )}
             {activeTab === 'toplist' && <IndustryTopList naceCode={nace} onSelectCompany={setSelectedCompanyOrgnr} />}
-            {activeTab === 'search' && <ExplorerLayout onSelectCompany={setSelectedCompanyOrgnr} />}
+            {activeTab === 'search' && (
+                <Suspense fallback={<div className="flex items-center justify-center py-16"><Loader2 className="h-8 w-8 animate-spin text-blue-600" /></div>}>
+                    <ExplorerLayout onSelectCompany={setSelectedCompanyOrgnr} />
+                </Suspense>
+            )}
+            </div>
 
             {/* Company Modal Overlay - rendered when clicking company */}
             {selectedCompanyOrgnr && (

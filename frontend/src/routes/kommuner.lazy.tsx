@@ -86,6 +86,7 @@ export function KommunerPage() {
             <select
               value={selectedCounty}
               onChange={(e) => setSelectedCounty(e.target.value)}
+              aria-label="Filtrer etter fylke"
               className="w-full h-full pl-6 pr-12 py-4 bg-white border border-slate-200 rounded-2xl focus:ring-4 focus:ring-blue-500/5 focus:border-blue-500 outline-none shadow-sm transition-all text-lg font-medium appearance-none cursor-pointer"
             >
               {counties.map(c => (
@@ -135,9 +136,9 @@ export function KommunerPage() {
                       {m.code}
                     </span>
                   </div>
-                  <h3 className="text-2xl font-black text-slate-900 mb-2 group-hover:text-blue-700 transition-colors leading-tight tracking-tight">
+                  <h2 className="text-2xl font-black text-slate-900 mb-2 group-hover:text-blue-700 transition-colors leading-tight tracking-tight">
                     {m.name}
-                  </h3>
+                  </h2>
                   <div className="h-1 w-8 bg-slate-100 rounded-full group-hover:w-12 group-hover:bg-blue-500 transition-all duration-300 mb-4" />
                 </div>
 

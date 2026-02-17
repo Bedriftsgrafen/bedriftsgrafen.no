@@ -166,6 +166,37 @@ class FilterParams:
             ]
         )
 
+    def is_simple_geo_filter(self) -> bool:
+        """
+        Check if the filter set can be satisfied by a materialized view.
+        Materialized views (county_stats/municipality_stats) only support:
+        - NACE division/section (naeringskode)
+        - County code (county)
+        """
+        return not any(
+            v is not None
+            for v in [
+                self.name,
+                self.organisasjonsform,
+                self.min_employees,
+                self.max_employees,
+                self.municipality,
+                self.municipality_code,
+                self.founded_from,
+                self.founded_to,
+                self.bankrupt_from,
+                self.bankrupt_to,
+                self.registered_from,
+                self.registered_to,
+                self.is_bankrupt,
+                self.in_liquidation,
+                self.in_forced_liquidation,
+                self.has_financial_filters() or None,
+                self.has_accounting,
+                self.exclude_org_form,
+            ]
+        )
+
     def has_only_org_form_filter(self) -> bool:
         """Check if only organisasjonsform filter is set (for pre-computed counts)."""
         return bool(self.organisasjonsform) and not any(

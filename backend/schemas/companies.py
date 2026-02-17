@@ -6,7 +6,7 @@ Extracted from routers/v1/companies.py to follow separation of concerns.
 from datetime import date, datetime
 from typing import Any
 
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, model_validator
 
 
 class Naeringskode(BaseModel):
@@ -30,6 +30,19 @@ class CompanyBase(BaseModel):
     stiftelsesdato: date | None = None
     hjemmeside: str | None = None
     is_subunit: bool = False
+
+    @model_validator(mode="wrap")
+    @classmethod
+    def _pick_enriched_naeringskode(cls, values: Any, handler: Any) -> Any:
+        """Use enriched NACE code from service layer if available."""
+        # When constructing from an ORM object, check for enriched values
+        if not isinstance(values, dict) and hasattr(values, "__dict__"):
+            enriched = values.__dict__.get("_enriched_naeringskode")
+            if enriched is not None:
+                # Temporarily set the enriched value so Pydantic picks it up
+                values.__dict__["naeringskode"] = enriched
+        return handler(values)
+
     # Contact info (from raw_data)
     telefon: str | None = None
     mobil: str | None = None

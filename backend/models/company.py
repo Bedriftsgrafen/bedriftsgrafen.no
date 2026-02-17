@@ -187,6 +187,8 @@ class Company(Base):
             sa_text("konkursdato DESC NULLS LAST"),
             postgresql_where=sa_text("konkurs IS TRUE"),
         ),
+        # New: BBox index for map markers performance
+        Index("idx_bedrifter_location", "latitude", "longitude"),
     )
 
     orgnr: Mapped[str] = mapped_column(String, primary_key=True, index=True)
@@ -252,7 +254,16 @@ class Company(Base):
 
     @property
     def naeringskoder(self):
-        """Helper to get all NACE codes from raw_data json."""
+        """Helper to get all NACE codes from raw_data json.
+
+        Returns enriched Naeringskode objects if enrich_nace_codes() has been called,
+        otherwise returns raw code strings.
+        """
+        # Return enriched data if available (set by enrich_nace_codes)
+        enriched = self.__dict__.get("_enriched_naeringskoder")
+        if enriched is not None:
+            return enriched
+
         codes = []
         if self.naeringskode:
             codes.append(self.naeringskode)

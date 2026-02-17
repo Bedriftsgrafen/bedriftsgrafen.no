@@ -1,7 +1,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { render, screen, fireEvent } from '@testing-library/react'
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { KartPage } from '../kart'
+import { KartPage } from '../kart.lazy'
 import { useFilterStore } from '../../store/filterStore'
 
 // Mock components
@@ -41,6 +41,7 @@ vi.mock('lucide-react', () => ({ Map: () => <div /> }))
 const mockNavigate = vi.fn()
 vi.mock('@tanstack/react-router', () => ({
     createFileRoute: () => (config: any) => config,
+    createLazyFileRoute: () => (config: any) => config,
     useNavigate: () => mockNavigate,
     useSearch: () => ({}),
     useLocation: () => ({ pathname: '/kart' }),

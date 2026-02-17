@@ -28,7 +28,7 @@ async def test_enrich_nace_codes_dict(service):
 
 @pytest.mark.asyncio
 async def test_enrich_nace_codes_mixed_types(service):
-    # Test with objects
+    # Test with objects (simulating ORM model behavior)
     class MockObj:
         def __init__(self, code, codes):
             self.naeringskode = code
@@ -39,5 +39,6 @@ async def test_enrich_nace_codes_mixed_types(service):
     with patch("services.nace_service.NaceService.get_nace_name", return_value="Test Industry"):
         await service.enrich_nace_codes(items)
 
-    assert items[0].naeringskode == Naeringskode(kode="62.010", beskrivelse="Test Industry")
-    assert items[0].naeringskoder == [Naeringskode(kode="62.010", beskrivelse="Test Industry")]
+    # Enriched values are stored in __dict__ to avoid overwriting ORM columns/properties
+    assert items[0].__dict__["_enriched_naeringskode"] == Naeringskode(kode="62.010", beskrivelse="Test Industry")
+    assert items[0].__dict__["_enriched_naeringskoder"] == [Naeringskode(kode="62.010", beskrivelse="Test Industry")]

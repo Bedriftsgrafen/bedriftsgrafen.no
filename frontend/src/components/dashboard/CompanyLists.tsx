@@ -34,7 +34,6 @@ export function TopCompanyList({
               to="/virksomhet/$orgnr"
               params={{ orgnr: company.orgnr }}
               className="flex items-center justify-between p-6 bg-white hover:bg-slate-50 border border-slate-100 hover:border-blue-200 rounded-3xl transition-all group shadow-sm focus-visible:ring-2 focus-visible:ring-blue-600 outline-none hover:scale-[1.01]"
-              aria-label={`${idx + 1}. plass: ${company.navn}${company.latest_revenue ? ` - omsetning ${formatLargeCurrency(company.latest_revenue)}` : ''}`}
             >
               <div className="flex items-center gap-8 min-w-0">
                 <span className="text-slate-200 font-black text-3xl tabular-nums w-12 group-hover:text-blue-100" aria-hidden="true">

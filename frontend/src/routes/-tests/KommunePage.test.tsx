@@ -1,7 +1,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { render, screen, waitFor } from '@testing-library/react'
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { MunicipalityDashboardPage } from '../kommune.$code'
+import { MunicipalityDashboardPage } from '../kommune.$code.lazy'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { server } from '../../mocks/server'
 import { http, HttpResponse } from 'msw'
@@ -28,6 +28,10 @@ vi.mock('../../components/dashboard', () => ({
 // Mock router
 vi.mock('@tanstack/react-router', () => ({
     createFileRoute: () => (config: any) => ({
+        useParams: () => ({ code: '0301-oslo' }),
+        ...config
+    }),
+    createLazyFileRoute: () => (config: any) => ({
         useParams: () => ({ code: '0301-oslo' }),
         ...config
     }),

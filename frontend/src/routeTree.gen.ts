@@ -62,7 +62,7 @@ const KartRoute = KartRouteImport.update({
   id: '/kart',
   path: '/kart',
   getParentRoute: () => rootRouteImport,
-} as any)
+} as any).lazy(() => import('./routes/kart.lazy').then((d) => d.Route))
 const FylkerRoute = FylkerRouteImport.update({
   id: '/fylker',
   path: '/fylker',
@@ -94,12 +94,12 @@ const KommuneCodeRoute = KommuneCodeRouteImport.update({
   id: '/kommune/$code',
   path: '/kommune/$code',
   getParentRoute: () => rootRouteImport,
-} as any)
+} as any).lazy(() => import('./routes/kommune.$code.lazy').then((d) => d.Route))
 const FylkeCodeRoute = FylkeCodeRouteImport.update({
   id: '/fylke/$code',
   path: '/fylke/$code',
   getParentRoute: () => rootRouteImport,
-} as any)
+} as any).lazy(() => import('./routes/fylke.$code.lazy').then((d) => d.Route))
 const BedriftOrgnrRoute = BedriftOrgnrRouteImport.update({
   id: '/bedrift/$orgnr',
   path: '/bedrift/$orgnr',

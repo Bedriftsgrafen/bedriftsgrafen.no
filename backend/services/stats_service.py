@@ -192,7 +192,7 @@ class StatsService:
         """Get aggregated statistics per region for geographic visualization."""
         # Check if we have any advanced filters that require live aggregation
         # (Materialized views only support NACE-based aggregations)
-        if not filters.is_empty():
+        if not filters.is_simple_geo_filter():
             rows = await self.stats_repo.get_filtered_geography_stats(level, metric, filters)
 
             # Populate names and population
@@ -267,7 +267,7 @@ class StatsService:
         """Get national and county averages for comparison."""
         # For mapping averages, we also need to respect filters if they are present
         # If filters are present, we should aggregate live
-        if not filters.is_empty():
+        if not filters.is_simple_geo_filter():
             # Get national total
             # We can use get_filtered_geography_stats and sum it up
             rows = await self.stats_repo.get_filtered_geography_stats(level, metric, filters)

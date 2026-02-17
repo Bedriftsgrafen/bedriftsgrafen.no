@@ -1,19 +1,17 @@
 /* eslint-disable react-refresh/only-export-components */
 import { createLazyFileRoute } from '@tanstack/react-router'
-import { useState, useCallback, useEffect, useMemo } from 'react'
+import { useState, useCallback, useEffect, useMemo, lazy, Suspense } from 'react'
 import { useQuery } from '@tanstack/react-query'
-import { AlertTriangle, BarChart3, List, Map, Building2, TrendingDown, Users, Calendar } from 'lucide-react'
+import { AlertTriangle, BarChart3, List, Map, Building2, TrendingDown, Users, Calendar, Loader2 } from 'lucide-react'
 import { useCompanyStatsQuery } from '../hooks/queries/useCompanyStatsQuery'
 import { SEOHead } from '../components/layout'
 import { useDocumentTitle } from '../hooks/useDocumentTitle'
 import { BankruptcyList } from '../components/bankruptcy'
-import { IndustryMap } from '../components/maps/IndustryMap'
 import { MapFilterValues, defaultMapFilters } from '../types/map'
 import { CompanyModalOverlay } from '../components/company/CompanyModalOverlay'
 import { CompanyListModal } from '../components/dashboard/CompanyListModal'
 import { SummaryCard, TabButton, TabContainer } from '../components/common'
 import { IndustryBreakdownStats } from '../components/dashboard/IndustryBreakdownStats'
-import { TrendChart } from '../components/dashboard/TrendChart'
 import { formatNumber, formatCurrency, cleanOrgnr } from '../utils/formatters'
 import { getStartingDate } from '../utils/dates'
 import { API_BASE } from '../utils/apiClient'
@@ -24,6 +22,10 @@ import { useFilterStore, FilterValues } from '../store/filterStore'
 import { COUNTIES } from '../constants/explorer'
 import { MUNICIPALITIES } from '../constants/municipalityCodes'
 import { mnokToNok } from '../utils/financials'
+
+// Lazy-load heavy components: IndustryMap (leaflet ~154KB), TrendChart (recharts ~325KB)
+const IndustryMap = lazy(() => import('../components/maps/IndustryMap').then(m => ({ default: m.IndustryMap })))
+const TrendChart = lazy(() => import('../components/dashboard/TrendChart').then(m => ({ default: m.TrendChart })))
 
 export const Route = createLazyFileRoute('/konkurser')({
     component: KonkurserPage,
@@ -265,6 +267,7 @@ function KonkurserPage() {
             </TabContainer>
 
             {/* Content */}
+            <div className="min-h-[600px]">
             {activeTab === 'list' && (
                 <BankruptcyList
                     onSelectCompany={setSelectedCompanyOrgnr}
@@ -276,61 +279,66 @@ function KonkurserPage() {
             )}
 
             {activeTab === 'stats' && (
-                <div className="space-y-6">
-                    <TrendChart
-                        data={trendData || []}
-                        title="Konkurser per måned"
-                        color="#ef4444"
-                        gradientId="colorBankruptcies"
-                    />
-                    <IndustryBreakdownStats
-                        metric="bankruptcies_last_year"
-                        title="Konkurser etter bransje"
-                        colorScheme="red"
-                        onIndustryClick={handleIndustryClick}
-                    />
-                </div>
+                <Suspense fallback={<div className="flex items-center justify-center py-16"><Loader2 className="h-8 w-8 animate-spin text-red-500" /></div>}>
+                    <div className="space-y-6">
+                        <TrendChart
+                            data={trendData || []}
+                            title="Konkurser per måned"
+                            color="#ef4444"
+                            gradientId="colorBankruptcies"
+                        />
+                        <IndustryBreakdownStats
+                            metric="bankruptcies_last_year"
+                            title="Konkurser etter bransje"
+                            colorScheme="red"
+                            onIndustryClick={handleIndustryClick}
+                        />
+                    </div>
+                </Suspense>
             )}
 
             {activeTab === 'map' && (
-                <div className="space-y-4">
-                    <div className="rounded-2xl overflow-hidden border border-gray-100 shadow-sm h-[900px] md:h-[800px] relative">
-                        <IndustryMap
-                            filters={mapFilters}
-                            onFilterChange={handleFilterChange}
-                            onClearFilters={handleClearFilters}
-                            metric="bankrupt_count"
-                            onCompanyClick={setSelectedCompanyOrgnr}
-                            selectedNace={mapFilters.naceCode}
-                            countyCodeFromExplorer={mapFilters.countyCode || undefined}
-                            municipalityCodeFromExplorer={mapFilters.municipalityCode || undefined}
-                            organizationForms={mapFilters.organizationForms}
-                            revenueMin={mapFilters.revenueMin}
-                            revenueMax={mapFilters.revenueMax}
-                            profitMin={mapFilters.profitMin}
-                            profitMax={mapFilters.profitMax}
-                            equityMin={mapFilters.equityMin}
-                            equityMax={mapFilters.equityMax}
-                            operatingProfitMin={mapFilters.operatingProfitMin}
-                            operatingProfitMax={mapFilters.operatingProfitMax}
-                            liquidityRatioMin={mapFilters.liquidityRatioMin}
-                            liquidityRatioMax={mapFilters.liquidityRatioMax}
-                            equityRatioMin={mapFilters.equityRatioMin}
-                            equityRatioMax={mapFilters.equityRatioMax}
-                            employeeMin={mapFilters.employeeMin}
-                            employeeMax={mapFilters.employeeMax}
-                            foundedFrom={mapFilters.foundedFrom}
-                            foundedTo={mapFilters.foundedTo}
-                            bankruptFrom={mapFilters.bankruptFrom}
-                            bankruptTo={mapFilters.bankruptTo}
-                            isBankrupt={mapFilters.isBankrupt}
-                            inLiquidation={mapFilters.inLiquidation}
-                            inForcedLiquidation={mapFilters.inForcedLiquidation}
-                            hasAccounting={mapFilters.hasAccounting}
-                        />
+                <Suspense fallback={<div className="flex items-center justify-center h-[800px]"><Loader2 className="h-8 w-8 animate-spin text-red-500" /></div>}>
+                    <div className="space-y-4">
+                        <div className="rounded-2xl overflow-hidden border border-gray-100 shadow-sm h-[900px] md:h-[800px] relative">
+                            <IndustryMap
+                                filters={mapFilters}
+                                onFilterChange={handleFilterChange}
+                                onClearFilters={handleClearFilters}
+                                metric="bankrupt_count"
+                                onCompanyClick={setSelectedCompanyOrgnr}
+                                selectedNace={mapFilters.naceCode}
+                                countyCodeFromExplorer={mapFilters.countyCode || undefined}
+                                municipalityCodeFromExplorer={mapFilters.municipalityCode || undefined}
+                                organizationForms={mapFilters.organizationForms}
+                                revenueMin={mapFilters.revenueMin}
+                                revenueMax={mapFilters.revenueMax}
+                                profitMin={mapFilters.profitMin}
+                                profitMax={mapFilters.profitMax}
+                                equityMin={mapFilters.equityMin}
+                                equityMax={mapFilters.equityMax}
+                                operatingProfitMin={mapFilters.operatingProfitMin}
+                                operatingProfitMax={mapFilters.operatingProfitMax}
+                                liquidityRatioMin={mapFilters.liquidityRatioMin}
+                                liquidityRatioMax={mapFilters.liquidityRatioMax}
+                                equityRatioMin={mapFilters.equityRatioMin}
+                                equityRatioMax={mapFilters.equityRatioMax}
+                                employeeMin={mapFilters.employeeMin}
+                                employeeMax={mapFilters.employeeMax}
+                                foundedFrom={mapFilters.foundedFrom}
+                                foundedTo={mapFilters.foundedTo}
+                                bankruptFrom={mapFilters.bankruptFrom}
+                                bankruptTo={mapFilters.bankruptTo}
+                                isBankrupt={mapFilters.isBankrupt}
+                                inLiquidation={mapFilters.inLiquidation}
+                                inForcedLiquidation={mapFilters.inForcedLiquidation}
+                                hasAccounting={mapFilters.hasAccounting}
+                            />
+                        </div>
                     </div>
-                </div>
+                </Suspense>
             )}
+            </div>
 
             {/* Company Modal */}
             {selectedCompanyOrgnr && (

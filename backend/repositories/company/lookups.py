@@ -404,15 +404,15 @@ class LookupsMixin:
         # Apply accumulated filters from builder
         query = builder.apply_to_query(query)
 
-        # Get total count BEFORE limit
-        count_query = select(func.count()).select_from(query.subquery())
-        total = await self.db.scalar(count_query) or 0
-
-        # Apply limit and execute
-        result = await self.db.execute(query.limit(limit))
+        # Fetch limit + 1 to check for truncation without an expensive COUNT(*) subquery
+        # This saves a full scan of the filtered 1.1M row dataset.
+        result = await self.db.execute(query.limit(limit + 1))
         rows = list(result.all())
 
-        return [tuple(r) for r in rows], total
+        total = len(rows)
+        # If we got limit + 1, it means there are more results available
+        # The router uses (total > limit) to set the 'truncated' flag.
+        return [tuple(r) for r in rows[:limit]], total
 
     async def get_company_og_data(self, orgnr: str) -> Row | None:
         """Fetch minimal data needed for OG image generation efficiently."""

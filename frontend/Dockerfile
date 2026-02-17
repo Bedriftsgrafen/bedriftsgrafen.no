@@ -40,6 +40,12 @@ COPY frontend/ ./frontend/
 WORKDIR /app/frontend
 RUN npm run build
 
+# Pre-compress static assets at maximum gzip level
+# This allows nginx gzip_static to serve pre-compressed files without CPU cost
+RUN find /app/frontend/dist -type f \
+  \( -name "*.js" -o -name "*.css" -o -name "*.html" -o -name "*.json" -o -name "*.svg" \) \
+  -exec gzip -9 -k {} \;
+
 # Production stage - for serving static files with nginx
 FROM nginx:1.29-alpine AS production
 

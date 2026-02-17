@@ -5,7 +5,7 @@
 export const SEO_DEFAULTS = {
   title: 'Bedriftsgrafen.no - Gratis Søk i Norske Virksomheter',
   description: 'Søk, analyser og sammenlign 1.1 millioner norske virksomheter gratis. Få innsikt i regnskapstall, soliditet og utvikling med interaktive grafer.',
-  ogImage: 'https://bedriftsgrafen.no/og-image.png',
+  ogImage: 'https://bedriftsgrafen.no/og-image.webp',
   siteUrl: 'https://bedriftsgrafen.no',
 }
 

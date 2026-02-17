@@ -28,7 +28,7 @@ export function Header() {
               alt="Bedriftsgrafen Logo"
               width="40"
               height="40"
-              className="h-10 w-10 drop-shadow-md"
+              className="h-10 w-10 shrink-0 drop-shadow-md"
             />
             <div className="hidden sm:block">
               <span className="text-xl font-bold tracking-tight text-white">

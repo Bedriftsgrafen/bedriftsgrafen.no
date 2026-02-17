@@ -154,6 +154,7 @@ export function BankruptcyList({
                             onClick={prevPage}
                             disabled={page === 1}
                             className="p-1 rounded hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed"
+                            aria-label="Forrige side"
                         >
                             <ChevronLeft className="h-5 w-5" />
                         </button>
@@ -164,6 +165,7 @@ export function BankruptcyList({
                             onClick={() => nextPage(totalPages)}
                             disabled={page >= totalPages}
                             className="p-1 rounded hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed"
+                            aria-label="Neste side"
                         >
                             <ChevronRight className="h-5 w-5" />
                         </button>

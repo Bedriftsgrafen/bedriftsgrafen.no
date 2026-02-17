@@ -57,11 +57,11 @@ sharp('src/img/bg_logo.webp')
           left: 440
         }
       ])
-      .png()
-      .toFile('public/og-image.png');
+      .webp()
+      .toFile('public/og-image.webp');
   })
   .then(() => {
-    console.log('✅ og-image.png created successfully at public/og-image.png');
+    console.log('✅ og-image.webp created successfully at public/og-image.webp');
     console.log('   Size: 1200×630 (optimized for social media)');
   })
   .catch(err => {

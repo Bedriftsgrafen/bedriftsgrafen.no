@@ -1,14 +1,16 @@
 import { Building2, Building, MapPin, Users, Calendar, Briefcase, ChevronRight, AlertTriangle, ExternalLink, Home, Coins } from 'lucide-react'
-import { useMemo } from 'react'
+import { useMemo, lazy, Suspense } from 'react'
 import type { CompanyWithAccounting, Naeringskode } from '../../types'
 import { Link } from '@tanstack/react-router'
 import { formatDate, getBrregEnhetsregisteretUrl, normalizeText, formatLargeCurrency } from '../../utils/formatters'
 import { getOrganizationFormLabel } from '../../utils/organizationForms'
 import { formatNace, getNaceCode } from '../../utils/nace'
-import { LocationMap } from '../common/LocationMap'
 import { ContactCard } from './ContactCard'
 import { AffiliateBanner } from '../ads/AffiliateBanner'
 import { AFFILIATIONS } from '../../constants/affiliations'
+
+// Lazy-load LocationMap to avoid pulling leaflet (~154KB) into the main CompanyModal bundle
+const LocationMap = lazy(() => import('../common/LocationMap').then(m => ({ default: m.LocationMap })))
 
 interface OverviewTabProps {
   company: CompanyWithAccounting
@@ -356,6 +358,7 @@ export function OverviewTab({ company, onOpenIndustry }: OverviewTabProps) {
             {/* Map */}
             {(company.forretningsadresse || company.postadresse) && (
               <div className="mt-4">
+                <Suspense fallback={<div className="h-48 bg-gray-100 rounded-lg animate-pulse" />}>
                 <LocationMap
                   companyName={company.navn ?? ''}
                   address={(() => {
@@ -371,6 +374,7 @@ export function OverviewTab({ company, onOpenIndustry }: OverviewTabProps) {
                   longitude={company.longitude}
                   geocodedAt={company.geocoded_at}
                 />
+                </Suspense>
               </div>
             )}
 

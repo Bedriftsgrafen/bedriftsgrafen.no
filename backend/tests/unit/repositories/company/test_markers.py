@@ -37,9 +37,6 @@ async def test_get_map_markers_basic(repo, mock_db_session):
     query = args[0]
     assert isinstance(query, Select)
 
-    # Verify scalar (for count) was called
-    assert mock_db_session.scalar.called
-
 
 @pytest.mark.asyncio
 async def test_get_map_markers_with_bankruptcy(repo, mock_db_session):

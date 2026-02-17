@@ -40,7 +40,7 @@ export const SummaryCard = memo(function SummaryCard({
                 {icon}
             </div>
             <div className="flex-1 min-w-0 flex flex-col justify-center">
-                <p className="text-[10px] text-slate-400 uppercase font-bold tracking-wider mb-0.5">{label}</p>
+                <p className="text-[10px] text-slate-600 uppercase font-bold tracking-wider mb-0.5">{label}</p>
                 {loading ? (
                     <div className="h-8 w-24 bg-slate-100 animate-pulse rounded-lg" />
                 ) : (

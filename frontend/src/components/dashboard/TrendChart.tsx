@@ -46,7 +46,7 @@ export function TrendChart({
         Totalt {total.toLocaleString('no-NO')}, 
         gjennomsnitt {avg.toLocaleString('no-NO')} per måned.
       </p>
-      <div className="h-[350px] w-full" aria-hidden="true">
+      <div className="h-[350px] w-full pointer-events-none" aria-hidden="true">
         <ResponsiveContainer width="100%" height="100%">
           <AreaChart data={data}>
             <defs>

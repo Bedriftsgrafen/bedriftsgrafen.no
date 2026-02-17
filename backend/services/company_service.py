@@ -327,7 +327,8 @@ class CompanyService:
                 if is_dict:
                     item["naeringskode"] = enriched
                 else:
-                    setattr(item, "naeringskode", enriched)
+                    # Use instance dict to avoid overwriting the ORM column value
+                    item.__dict__["_enriched_naeringskode"] = enriched
 
             # Enrich secondary NACEs
             secondary_codes = item.get("naeringskoder") if is_dict else getattr(item, "naeringskoder", None)
@@ -343,7 +344,8 @@ class CompanyService:
                 if is_dict:
                     item["naeringskoder"] = enriched_list
                 else:
-                    setattr(item, "naeringskoder", enriched_list)
+                    # Use instance dict to bypass the read-only @property
+                    item.__dict__["_enriched_naeringskoder"] = enriched_list
 
     async def get_statistics(self) -> dict[str, int | float]:
         """Get high-level statistics for the landing page.
