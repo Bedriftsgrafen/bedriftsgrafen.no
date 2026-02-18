@@ -94,12 +94,13 @@ class TestSEOServiceCache:
     def reset_cache(self):
         """Reset class-level cache before each test."""
         SEOService._sitemap_cache = {
-            "total_companies": None,
-            "total_people": None,
-            "municipalities": None,
+            "total_companies": 0,
+            "total_people": 0,
+            "municipalities": [],
             "company_anchors": [],
             "person_anchors": [],
             "expiry": None,
+            "populated": False,
             "is_warming": False,
         }
         SEOService._cache_lock = None
@@ -141,6 +142,7 @@ class TestSEOServiceCache:
             "company_anchors": ["123456789"],
             "person_anchors": [("Test Person", "1990-01-01")],
             "expiry": datetime.now(timezone.utc) + timedelta(hours=1),
+            "populated": True,
             "is_warming": False,
         }
 
@@ -194,6 +196,7 @@ class TestSEOServiceCache:
             "company_anchors": [],
             "person_anchors": [],
             "expiry": datetime.now(timezone.utc) - timedelta(hours=1),  # Expired
+            "populated": True,
             "is_warming": False,
         }
 
@@ -228,6 +231,7 @@ class TestSEOServiceCache:
             "company_anchors": [],
             "person_anchors": [],
             "expiry": datetime.now(timezone.utc) - timedelta(hours=1),  # Expired
+            "populated": True,
             "is_warming": False,
         }
 

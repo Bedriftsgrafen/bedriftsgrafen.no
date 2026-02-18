@@ -41,12 +41,13 @@ class SEOService:
     # Class-level cache to persist across instances (FastAPI creates a new service per request)
     # Using a dictionary shared by all instances
     _sitemap_cache: dict[str, Any] = {
-        "total_companies": None,
-        "total_people": None,
-        "municipalities": None,
+        "total_companies": 0,
+        "total_people": 0,
+        "municipalities": [],
         "company_anchors": [],
         "person_anchors": [],
         "expiry": None,
+        "populated": False,  # True once first successful refresh completes
         "is_warming": False,  # Flag to indicate warm-up in progress
     }
     CACHE_TTL = timedelta(hours=6)
@@ -99,7 +100,7 @@ class SEOService:
         lock = SEOService._get_lock()
 
         # If another request is already refreshing and we have stale data, return it
-        if lock.locked() and cache["total_companies"] is not None:
+        if lock.locked() and cache["populated"]:
             logger.debug("Cache refresh in progress, returning stale data")
             return cache
 
@@ -113,8 +114,8 @@ class SEOService:
                 await self._refresh_cache_with_timeout()
             except asyncio.TimeoutError:
                 logger.error(f"Cache refresh timed out after {CACHE_REFRESH_TIMEOUT}s")
-                # If we have any data, keep using it with extended expiry
-                if cache["total_companies"] is not None:
+                # If we have successfully populated data before, extend expiry
+                if cache["populated"]:
                     from datetime import timezone
 
                     cache["expiry"] = datetime.now(timezone.utc) + timedelta(minutes=30)
@@ -122,7 +123,7 @@ class SEOService:
             except Exception as e:
                 logger.error(f"Cache refresh failed: {e}")
                 # Circuit breaker: extend expiry on failure to avoid retry storm
-                if cache["total_companies"] is not None:
+                if cache["populated"]:
                     from datetime import timezone
 
                     cache["expiry"] = datetime.now(timezone.utc) + timedelta(minutes=5)
@@ -137,32 +138,41 @@ class SEOService:
             await self._do_refresh_cache()
 
     async def _do_refresh_cache(self) -> None:
-        """Perform the actual cache refresh."""
+        """Perform the actual cache refresh.
+
+        Builds all results in temporary variables first, then assigns
+        to the shared cache dict atomically to avoid partial updates
+        on failure.
+        """
         cache = SEOService._sitemap_cache
         logger.info("Refreshing sitemap anchors and counts...")
         from datetime import timezone
 
         start_time = datetime.now(timezone.utc)
 
-        # Refresh cache - counts first (fast)
+        # Build all results in temp vars before touching the shared cache
         company_stmt = select(func.count(models.Company.orgnr))
         company_result = await self.db.execute(company_stmt)
-        cache["total_companies"] = company_result.scalar() or 0
+        total_companies = company_result.scalar() or 0
 
-        cache["total_people"] = await self.role_repo.count_commercial_people()
-        cache["municipalities"] = await self.stats_repo.get_municipality_codes_with_updates()
+        total_people = await self.role_repo.count_commercial_people()
+        municipalities = await self.stats_repo.get_municipality_codes_with_updates() or []
 
-        # Fetch anchors for keyset pagination (optimized single-query methods)
-        first_page_meta_count = len(STATIC_ROUTES) + len(cache["municipalities"])
+        first_page_meta_count = len(STATIC_ROUTES) + len(municipalities)
 
         logger.debug("Fetching company sitemap anchors...")
-        cache["company_anchors"] = await self.company_repo.get_sitemap_anchors_optimized(
-            URLS_PER_SITEMAP, first_page_meta_count
-        )
+        company_anchors = await self.company_repo.get_sitemap_anchors_optimized(URLS_PER_SITEMAP, first_page_meta_count)
 
         logger.debug("Fetching person sitemap anchors...")
-        cache["person_anchors"] = await self.role_repo.get_person_sitemap_anchors_optimized(URLS_PER_SITEMAP)
+        person_anchors = await self.role_repo.get_person_sitemap_anchors_optimized(URLS_PER_SITEMAP)
 
+        # All queries succeeded — assign to shared cache atomically
+        cache["total_companies"] = total_companies
+        cache["total_people"] = total_people
+        cache["municipalities"] = municipalities
+        cache["company_anchors"] = company_anchors
+        cache["person_anchors"] = person_anchors
+        cache["populated"] = True
         cache["expiry"] = datetime.now(timezone.utc) + SEOService.CACHE_TTL
         elapsed = (datetime.now(timezone.utc) - start_time).total_seconds()
         logger.info(f"Sitemap cache refreshed in {elapsed:.2f}s. Next expiry: {cache['expiry']}")

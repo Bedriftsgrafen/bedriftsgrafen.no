@@ -133,8 +133,8 @@ async def get_paginated_sitemap(
     cache = await seo_service.get_sitemap_data()
 
     if sitemap_type == "company":
-        municipalities = cache["municipalities"]
-        anchors = cache["company_anchors"]
+        municipalities = cache["municipalities"] or []
+        anchors = cache["company_anchors"] or []
 
         # Handle static routes + municipalities on page 1
         limit = URLS_PER_SITEMAP
@@ -181,7 +181,7 @@ async def get_paginated_sitemap(
             xml_content += "  </url>\n"
 
     elif sitemap_type == "person":
-        anchors = cache["person_anchors"]
+        anchors = cache["person_anchors"] or []
 
         offset = 0
         limit = URLS_PER_SITEMAP

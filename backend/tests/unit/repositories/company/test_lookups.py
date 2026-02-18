@@ -181,13 +181,9 @@ class TestGetSimilarCompanies:
     @pytest.mark.asyncio
     async def test_returns_empty_when_source_has_no_naeringskode(self, lookups_repo, mock_db):
         """Should return empty list when source company has no naeringskode."""
-        # Arrange
-        mock_source = MagicMock()
-        mock_source.naeringskode = None  # No NACE code
-        mock_source.kommune = "OSLO"
-        mock_source.postnummer = "0150"
+        # Arrange: source query returns row with None naeringskode (tuple index 0)
         mock_source_result = MagicMock()
-        mock_source_result.fetchone.return_value = mock_source
+        mock_source_result.fetchone.return_value = (None,)
         mock_db.execute.return_value = mock_source_result
 
         # Act
