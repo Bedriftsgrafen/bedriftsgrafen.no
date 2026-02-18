@@ -84,123 +84,112 @@ class LookupsMixin:
     async def get_similar_companies(self, orgnr: str, limit: int = 5) -> list[CompanyWithFinancials]:
         """Find similar companies based on industry (naeringskode) and location.
 
-        Priority order (uses short-circuit queries for efficiency):
+        Uses a single SQL query with prioritized UNION ALL for efficiency.
+        Priority order:
         1. Exact NACE + same postal code
         2. Exact NACE + same kommune
         3. Same NACE prefix + same kommune
         4. Same NACE prefix, any location
+
+        IMPORTANT: Uses ``= false`` (not ``IS FALSE``) in WHERE clauses to match
+        the partial index predicates on idx_similar_postnummer, idx_similar_kommune,
+        and idx_similar_nace_prefix.
+        PostgreSQL requires exact predicate match for partial index eligibility.
+
+        ORDER BY uses only ``antall_ansatte DESC NULLS LAST`` (no ``navn``) so
+        PostgreSQL can satisfy the sort directly from the partial indexes without
+        needing to fetch and sort additional columns.
         """
-        # Get source company data
+        # Guard: companies without NACE code cannot have meaningful "similar" results
         source_query = text("""
-            SELECT
-                naeringskode,
-                UPPER(forretningsadresse->>'kommune') as kommune,
-                forretningsadresse->>'postnummer' as postnummer
+            SELECT naeringskode
             FROM bedrifter
             WHERE orgnr = :orgnr
         """)
-        result = await self.db.execute(source_query, {"orgnr": orgnr})
-        source = result.fetchone()
-
-        if not source or not source.naeringskode:
+        source_result = await self.db.execute(source_query, {"orgnr": orgnr})
+        source_row = source_result.fetchone()
+        if not source_row or not source_row[0]:
             return []
 
-        naeringskode = source.naeringskode
-        naeringskode_prefix = naeringskode[:3] if len(naeringskode) >= 3 else naeringskode
-        kommune = source.kommune or ""
-        postnummer = source.postnummer or ""
-
-        similar_orgnrs: list[Any] = []
-
-        # Priority 1: Exact NACE + same postnummer
-        if postnummer and len(similar_orgnrs) < limit:
-            remaining = limit - len(similar_orgnrs)
-
-            stmt = (
-                select(models.Company.orgnr)
-                .where(
-                    models.Company.naeringskode == naeringskode,
-                    models.Company.forretningsadresse["postnummer"].astext == postnummer,
-                    models.Company.orgnr != orgnr,
-                    models.Company.konkurs.is_(False),
-                    models.Company.under_avvikling.is_(False),
-                    models.Company.under_tvangsavvikling.is_(False),
-                )
-                .order_by(models.Company.antall_ansatte.desc().nullslast(), models.Company.navn.asc())
-                .limit(remaining)
+        # Single query: get source company data + all similar candidates via UNION ALL
+        similar_query = text("""
+            WITH source AS (
+                SELECT
+                    naeringskode,
+                    UPPER(forretningsadresse->>'kommune') as kommune,
+                    forretningsadresse->>'postnummer' as postnummer,
+                    left(naeringskode, 3) as nace_prefix
+                FROM bedrifter
+                WHERE orgnr = :orgnr
+            ),
+            candidates AS (
+                -- Priority 1: Exact NACE + same postnummer (uses idx_similar_postnummer)
+                (SELECT b.orgnr, 1 as priority
+                 FROM bedrifter b, source s
+                 WHERE b.naeringskode = s.naeringskode
+                   AND b.forretningsadresse->>'postnummer' = s.postnummer
+                   AND b.orgnr != :orgnr
+                   AND b.konkurs = false
+                   AND b.under_avvikling = false
+                   AND b.under_tvangsavvikling = false
+                   AND s.postnummer IS NOT NULL AND s.postnummer != ''
+                 ORDER BY b.antall_ansatte DESC NULLS LAST
+                 LIMIT :lim)
+                UNION ALL
+                -- Priority 2: Exact NACE + same kommune (uses idx_similar_kommune)
+                (SELECT b.orgnr, 2 as priority
+                 FROM bedrifter b, source s
+                 WHERE b.naeringskode = s.naeringskode
+                   AND upper(b.forretningsadresse->>'kommune') = s.kommune
+                   AND b.orgnr != :orgnr
+                   AND b.konkurs = false
+                   AND b.under_avvikling = false
+                   AND b.under_tvangsavvikling = false
+                   AND s.kommune IS NOT NULL AND s.kommune != ''
+                 ORDER BY b.antall_ansatte DESC NULLS LAST
+                 LIMIT :lim)
+                UNION ALL
+                -- Priority 3: Same NACE prefix + same kommune (uses idx_similar_kommune)
+                (SELECT b.orgnr, 3 as priority
+                 FROM bedrifter b, source s
+                 WHERE left(b.naeringskode, 3) = s.nace_prefix
+                   AND b.naeringskode != s.naeringskode
+                   AND upper(b.forretningsadresse->>'kommune') = s.kommune
+                   AND b.orgnr != :orgnr
+                   AND b.konkurs = false
+                   AND b.under_avvikling = false
+                   AND b.under_tvangsavvikling = false
+                   AND s.kommune IS NOT NULL AND s.kommune != ''
+                 ORDER BY b.antall_ansatte DESC NULLS LAST
+                 LIMIT :lim)
+                UNION ALL
+                -- Priority 4: Same NACE prefix, any location (uses idx_similar_nace_prefix)
+                (SELECT b.orgnr, 4 as priority
+                 FROM bedrifter b, source s
+                 WHERE left(b.naeringskode, 3) = s.nace_prefix
+                   AND b.orgnr != :orgnr
+                   AND b.konkurs = false
+                   AND b.under_avvikling = false
+                   AND b.under_tvangsavvikling = false
+                 ORDER BY b.antall_ansatte DESC NULLS LAST
+                 LIMIT :lim)
+            ),
+            ranked AS (
+                SELECT orgnr, priority,
+                       ROW_NUMBER() OVER (
+                           PARTITION BY orgnr
+                           ORDER BY priority
+                       ) as rn
+                FROM candidates
             )
+            SELECT orgnr FROM ranked
+            WHERE rn = 1
+            ORDER BY priority, orgnr
+            LIMIT :lim
+        """)
 
-            result = await self.db.execute(stmt)
-            similar_orgnrs.extend(row[0] for row in result.fetchall())
-
-        # Priority 2: Exact NACE + same kommune
-        if kommune and len(similar_orgnrs) < limit:
-            remaining = limit - len(similar_orgnrs)
-
-            stmt = select(models.Company.orgnr).where(
-                models.Company.naeringskode == naeringskode,
-                func.upper(models.Company.forretningsadresse["kommune"].astext) == kommune,
-                models.Company.orgnr != orgnr,
-                models.Company.konkurs.is_(False),
-                models.Company.under_avvikling.is_(False),
-                models.Company.under_tvangsavvikling.is_(False),
-            )
-
-            if similar_orgnrs:
-                stmt = stmt.where(models.Company.orgnr.notin_(similar_orgnrs))
-
-            stmt = stmt.order_by(models.Company.antall_ansatte.desc().nullslast(), models.Company.navn.asc()).limit(
-                remaining
-            )
-
-            result = await self.db.execute(stmt)
-            similar_orgnrs.extend(row[0] for row in result.fetchall())
-
-        # Priority 3: Same NACE prefix + same kommune
-        if kommune and len(similar_orgnrs) < limit:
-            remaining = limit - len(similar_orgnrs)
-
-            stmt = select(models.Company.orgnr).where(
-                func.left(models.Company.naeringskode, 3) == naeringskode_prefix,
-                models.Company.naeringskode != naeringskode,
-                func.upper(models.Company.forretningsadresse["kommune"].astext) == kommune,
-                models.Company.orgnr != orgnr,
-                models.Company.konkurs.is_(False),
-                models.Company.under_avvikling.is_(False),
-                models.Company.under_tvangsavvikling.is_(False),
-            )
-
-            if similar_orgnrs:
-                stmt = stmt.where(models.Company.orgnr.notin_(similar_orgnrs))
-
-            stmt = stmt.order_by(models.Company.antall_ansatte.desc().nullslast(), models.Company.navn.asc()).limit(
-                remaining
-            )
-
-            result = await self.db.execute(stmt)
-            similar_orgnrs.extend(row[0] for row in result.fetchall())
-
-        # Priority 4: Same NACE prefix, any location
-        if len(similar_orgnrs) < limit:
-            remaining = limit - len(similar_orgnrs)
-
-            stmt = select(models.Company.orgnr).where(
-                func.left(models.Company.naeringskode, 3) == naeringskode_prefix,
-                models.Company.orgnr != orgnr,
-                models.Company.konkurs.is_(False),
-                models.Company.under_avvikling.is_(False),
-                models.Company.under_tvangsavvikling.is_(False),
-            )
-
-            if similar_orgnrs:
-                stmt = stmt.where(models.Company.orgnr.notin_(similar_orgnrs))
-
-            stmt = stmt.order_by(models.Company.antall_ansatte.desc().nullslast(), models.Company.navn.asc()).limit(
-                remaining
-            )
-
-            result = await self.db.execute(stmt)
-            similar_orgnrs.extend(row[0] for row in result.fetchall())
+        result = await self.db.execute(similar_query, {"orgnr": orgnr, "lim": limit})
+        similar_orgnrs = [row[0] for row in result.fetchall()]
 
         if not similar_orgnrs:
             return []
