@@ -350,6 +350,9 @@ class UpdateService:
         """Fetch and persist financial statements for a company.
 
         Called only for newly discovered companies.
+        Always marks last_polled_regnskap afterwards (even on failure)
+        to prevent infinite retry loops for companies whose financials
+        consistently return server errors from Brønnøysund.
         """
         try:
             statements = await self.brreg_api.fetch_financial_statements(orgnr)
@@ -365,13 +368,18 @@ class UpdateService:
                 except Exception as e:
                     logger.warning(f"Error persisting financial for {orgnr}: {e}")
 
-            # Mark as polled regardless of success
-            await self.company_repo.update_last_polled_regnskap(orgnr)
-
         except Exception as e:
             error_msg = f"Failed to fetch financials for {orgnr}: {e}"
             logger.warning(error_msg)
             result.errors.append(error_msg)
+        finally:
+            # Always mark as polled to prevent infinite retry loops.
+            # Companies with persistent API errors will be retried after
+            # the 30-day cutoff in sync_accounting_batch.
+            try:
+                await self.company_repo.update_last_polled_regnskap(orgnr)
+            except Exception as e:
+                logger.error(f"Failed to update last_polled_regnskap for {orgnr}: {e}")
 
     async def _refresh_materialized_view(self, result: Any) -> None:
         """Helper to refresh materialized view after updates."""
