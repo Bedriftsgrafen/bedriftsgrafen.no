@@ -34,7 +34,7 @@ jobs:
           fetch-depth: 0  # Full history for comprehensive scanning
 
       - name: GitGuardian scan
-        uses: GitGuardian/ggshield-action@v1.47.0
+        uses: GitGuardian/ggshield-action@v1.48.0
         continue-on-error: true
         env:
           GITHUB_PUSH_BEFORE_SHA: ${{ github.event.before }}
@@ -243,7 +243,7 @@ jobs:
           cache-to: type=gha,mode=max
 
       - name: Run Trivy vulnerability scanner
-        uses: aquasecurity/trivy-action@0.33.1
+        uses: aquasecurity/trivy-action@0.34.1
         with:
           image-ref: ${{ matrix.image }}:latest
           format: 'sarif'
@@ -260,7 +260,7 @@ jobs:
         continue-on-error: true
 
       - name: Run Trivy JSON report
-        uses: aquasecurity/trivy-action@0.33.1
+        uses: aquasecurity/trivy-action@0.34.1
         with:
           image-ref: ${{ matrix.image }}:latest
           format: 'json'
