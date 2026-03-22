@@ -79,7 +79,7 @@ describe('PersonProfilePage', () => {
         renderPage()
 
         await waitFor(() => {
-            expect(screen.getByText(/Ingen aktive eller historiske næringsroller funnet/)).toBeInTheDocument()
+            expect(screen.getByText(/Denne personen har ingen registrerte roller i næringsvirksomhet/)).toBeInTheDocument()
         })
     })
 

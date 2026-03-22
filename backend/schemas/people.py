@@ -31,5 +31,6 @@ class PersonRoleResponse(BaseModel):
     enhet_navn: str = Field(..., description="Company name")
     fratraadt: bool = Field(..., description="Whether the person has resigned from this role")
     rekkefoelge: int | None = Field(None, description="Role sequence/priority")
+    foedselsdato: date | None = Field(None, description="Birth date for disambiguation (year-only URLs)")
 
     model_config = ConfigDict(from_attributes=True)

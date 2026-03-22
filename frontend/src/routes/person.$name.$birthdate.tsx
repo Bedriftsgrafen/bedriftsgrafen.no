@@ -1,4 +1,4 @@
-import { createFileRoute } from '@tanstack/react-router'
+import { createFileRoute, redirect } from '@tanstack/react-router'
 
 interface PersonSearchParams {
     name: string
@@ -17,6 +17,17 @@ export const Route = createFileRoute('/person/$name/$birthdate')({
             name: encodeURIComponent(params.name),
             birthdate: params.birthdate,
         }),
+    },
+    beforeLoad: ({ params }) => {
+        // GDPR: Redirect full-date URLs (e.g. /person/Name/1996-03-12) to year-only
+        if (/^\d{4}-\d{2}-\d{2}$/.test(params.birthdate)) {
+            const year = params.birthdate.slice(0, 4)
+            throw redirect({
+                to: '/person/$name/$birthdate',
+                params: { name: params.name, birthdate: year },
+                statusCode: 302,
+            })
+        }
     },
     loader: ({ params }) => {
         return {

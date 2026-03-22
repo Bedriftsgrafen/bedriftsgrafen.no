@@ -150,7 +150,7 @@ async def test_sitemap_person_page_1(mock_db_session, override_get_db):
         content = response.text
         assert "<urlset" in content
         safe_ola = urllib.parse.quote("Ola Nordmann")
-        assert f"https://bedriftsgrafen.no/person/{safe_ola}/1980-01-01" in content
+        assert f"https://bedriftsgrafen.no/person/{safe_ola}/1980" in content
         assert "<lastmod>2024-02-02</lastmod>" in content
 
 

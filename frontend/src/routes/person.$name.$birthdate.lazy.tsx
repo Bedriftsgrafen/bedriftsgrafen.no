@@ -17,6 +17,7 @@ export function PersonProfilePage() {
     const { name, birthdate } = Route.useParams()
     const decodedName = decodeURIComponent(name)
     const normalizedBirthdate = birthdate === 'unknown' ? null : birthdate
+    const isYearOnly = normalizedBirthdate ? /^\d{4}$/.test(normalizedBirthdate) : false
 
     const {
         data: roles,
@@ -26,11 +27,14 @@ export function PersonProfilePage() {
 
     useSlowLoadingToast(isLoading, 'Henter rolleoversikt...')
 
+    const hasNoRoles = !isLoading && !isError && roles?.length === 0
+
     return (
         <>
             <SEOHead
                 title={`${decodedName} - Roller og verv | Bedriftsgrafen`}
                 description={`Oversikt over roller og verv for ${decodedName} i norsk næringsvirksomhet.`}
+                noindex={hasNoRoles}
             />
 
             <Breadcrumbs
@@ -52,9 +56,9 @@ export function PersonProfilePage() {
                                 <div>
                                     <h1 className="text-3xl font-bold mb-1">{decodedName}</h1>
                                     <div className="flex items-center gap-4 text-blue-100/90">
-                                        {normalizedBirthdate && (
+                                        {normalizedBirthdate && !hasNoRoles && (
                                             <span className="flex items-center gap-1.5 text-sm">
-                                                Født: {normalizedBirthdate}
+                                                {isYearOnly ? `Fødselsår: ${normalizedBirthdate}` : `Født: ${normalizedBirthdate}`}
                                             </span>
                                         )}
                                         <span className="flex items-center gap-1.5 text-sm px-2 py-0.5 bg-blue-500/30 rounded-full border border-blue-400/30">
@@ -107,7 +111,11 @@ export function PersonProfilePage() {
                             </div>
                         ) : roles?.length === 0 ? (
                             <div className="text-center py-12 bg-gray-50 rounded-xl border border-gray-100">
-                                <p className="text-gray-500">Ingen aktive eller historiske næringsroller funnet.</p>
+                                <User className="h-10 w-10 text-gray-300 mx-auto mb-3" />
+                                <p className="text-gray-500 font-medium">Denne personen har ingen registrerte roller i næringsvirksomhet.</p>
+                                <p className="text-gray-400 text-sm mt-2">
+                                    Informasjonen kan ha blitt fjernet etter forespørsel, eller personen har kun roller i ikke-næringsdrivende enheter.
+                                </p>
                             </div>
                         ) : (
                             <div className="grid gap-4">

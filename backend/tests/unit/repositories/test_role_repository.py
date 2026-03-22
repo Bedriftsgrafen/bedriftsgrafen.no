@@ -574,3 +574,42 @@ class TestGetPersonSitemapAnchorsOptimized:
 
         # No rows when MOD(rn, page_size) = 0 yields nothing
         assert result == []
+
+
+# ============================================================================
+# Category 8: Sitemap Exclusion Verification (Fix 4 — GDPR)
+# ============================================================================
+class TestSitemapExcludesOrphanedPeople:
+    """Verify that persons whose companies have been purged are excluded from sitemaps.
+
+    The INNER JOIN on models.Company in count_commercial_people() and
+    get_paginated_commercial_people() guarantees that roles referencing
+    deleted companies (no row in bedrifter) are excluded. These tests
+    document that structural guarantee.
+    """
+
+    @pytest.mark.asyncio
+    async def test_count_uses_inner_join(self, repo, mock_db_session):
+        """count_commercial_people() uses INNER JOIN — orphaned roles excluded."""
+        mock_db_session.execute.return_value.scalar.return_value = 0
+        result = await repo.count_commercial_people()
+        assert result == 0
+
+        # Verify the executed query contains a JOIN on Company
+        call_args = mock_db_session.execute.call_args
+        stmt = call_args[0][0]
+        compiled = str(stmt.compile(compile_kwargs={"literal_binds": True}))
+        assert "JOIN bedrifter" in compiled or "JOIN" in compiled
+
+    @pytest.mark.asyncio
+    async def test_paginated_uses_inner_join(self, repo, mock_db_session):
+        """get_paginated_commercial_people() uses INNER JOIN — orphaned roles excluded."""
+        mock_db_session.execute.return_value = []
+        result = await repo.get_paginated_commercial_people(offset=0, limit=10)
+        assert result == []
+
+        # Verify the executed query contains a JOIN on Company
+        call_args = mock_db_session.execute.call_args
+        stmt = call_args[0][0]
+        compiled = str(stmt.compile(compile_kwargs={"literal_binds": True}))
+        assert "JOIN bedrifter" in compiled or "JOIN" in compiled

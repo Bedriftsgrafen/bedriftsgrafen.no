@@ -78,4 +78,19 @@ describe('PersonProfilePage', () => {
             'noopener,noreferrer'
         )
     })
+
+    it('renders not-found message when roles is empty', () => {
+        mockUsePersonRolesQuery.mockReturnValue({
+            data: [],
+            isLoading: false,
+            isError: false,
+        } as unknown as UseQueryResult<PersonRole[]>)
+
+        const wrapper = createWrapper()
+        render(<PersonProfilePage />, { wrapper })
+
+        expect(
+            screen.getByText('Denne personen har ingen registrerte roller i næringsvirksomhet.')
+        ).toBeInTheDocument()
+    })
 })

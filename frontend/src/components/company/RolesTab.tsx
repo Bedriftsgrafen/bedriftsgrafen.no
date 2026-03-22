@@ -76,7 +76,7 @@ function RoleCard({ role, onCompanyClick }: { role: Role, onCompanyClick?: (orgn
 
     const personProfileParams = role.person_navn ? {
         name: role.person_navn,
-        birthdate: role.foedselsdato || 'unknown'
+        birthdate: role.foedselsdato ? role.foedselsdato.slice(0, 4) : 'unknown'
     } : null
 
     const toggleExpanded = () => setIsExpanded(!isExpanded)

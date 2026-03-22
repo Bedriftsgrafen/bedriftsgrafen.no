@@ -9,6 +9,7 @@ export interface PersonRole {
     enhet_navn: string
     fratraadt: boolean
     rekkefoelge: number | null
+    foedselsdato: string | null
 }
 
 /**
