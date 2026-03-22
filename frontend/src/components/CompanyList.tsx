@@ -71,10 +71,10 @@ const getCellValue = (company: Company, column: CompanyColumn): React.ReactNode 
             return <span title={getOrganizationFormLabel(company.organisasjonsform)}>{company.organisasjonsform}</span>
         case 'naeringskode':
             return (
-                <div className="max-w-[200px] truncate" title={company.naeringskoder?.[0]
+                <div className="max-w-[200px] truncate" title={company.naeringskoder?.[0] && typeof company.naeringskoder[0] === 'object'
                     ? `${company.naeringskoder[0].kode} - ${company.naeringskoder[0].beskrivelse}`
                     : formatNace(company.naeringskode) || '-'}>
-                    {company.naeringskoder?.[0]
+                    {company.naeringskoder?.[0] && typeof company.naeringskoder[0] === 'object'
                         ? `${company.naeringskoder[0].kode} - ${company.naeringskoder[0].beskrivelse}`
                         : formatNace(company.naeringskode) || '-'}
                 </div>

@@ -2,6 +2,7 @@
 
 import logging
 from datetime import date, datetime, timedelta
+from typing import Any
 
 from sqlalchemy import Select, delete, select, text, tuple_
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -24,7 +25,7 @@ class RoleRepository:
         self.db = db
 
     @staticmethod
-    def _commercial_filter(stmt: Select) -> Select:  # type: ignore[type-arg]
+    def _commercial_filter(stmt: "Select[Any]") -> "Select[Any]":
         """Apply Enhetsregisterloven § 22 commercial entity filter.
 
         Rule 1: Registered in Foretaksregisteret → ALWAYS commercial.
