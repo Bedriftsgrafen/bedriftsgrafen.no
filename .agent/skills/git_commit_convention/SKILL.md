@@ -1,5 +1,5 @@
 ---
-name: Git Commit Convention
+name: git_commit_convention
 description: Enforces the Bedriftsgrafen project's strict git commit message format and policies.
 ---
 

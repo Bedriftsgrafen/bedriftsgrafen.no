@@ -1,5 +1,5 @@
 ---
-name: Safe Push
+name: safe_push
 description: Validates code locally before pushing to prevent CI failures.
 ---
 

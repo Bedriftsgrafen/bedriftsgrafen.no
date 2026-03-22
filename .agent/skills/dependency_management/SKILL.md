@@ -1,5 +1,5 @@
 ---
-name: Dependency Management
+name: dependency_management
 description: Standard instructions for adding or updating backend (pip) and frontend (npm) dependencies.
 ---
 

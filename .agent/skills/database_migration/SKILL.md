@@ -1,5 +1,5 @@
 ---
-name: Database Migration
+name: database_migration
 description: How to safely create, apply, and verify database migrations using Alembic.
 ---
 
