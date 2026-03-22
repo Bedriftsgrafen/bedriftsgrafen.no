@@ -451,7 +451,7 @@ class SchedulerService:
             async with engine.connect() as conn:
                 # Set isolation level to autocommit for VACUUM
                 # execution_options is async on AsyncConnection (returns coroutine)
-                conn = await conn.execution_options(isolation_level="AUTOCOMMIT")  # type: ignore[assignment]
+                conn = await conn.execution_options(isolation_level="AUTOCOMMIT")
                 for table in MAINTENANCE_TABLES:
                     await conn.execute(text(f"VACUUM ANALYZE {table}"))
                 logger.info(

@@ -5,28 +5,31 @@ description: Standard instructions for adding or updating backend (pip) and fron
 
 # Dependency Management Skill
 
-## Backend (Pip/Requirements)
+## Backend (Pip/pyproject.toml)
 
-The backend uses `requirements.txt`.
+Dependencies are declared in `pyproject.toml` and pinned in `requirements.txt` (the generated lock file — do NOT edit by hand).
 
-### 1. Identify Package
-Find the package and version you need.
-
-### 2. Update `requirements.txt`
-Add the package to `backend/requirements.txt`:
-```text
-package-name==1.2.3
+### 1. Add to `pyproject.toml`
+Add runtime deps under `[project.dependencies]`, dev-only deps under `[project.optional-dependencies.dev]`:
+```toml
+[project.dependencies]
+"package-name>=1.2.3"
 ```
 
-### 3. Install locally
+### 2. Regenerate lock file
 ```bash
-# In backend root
+cd backend
+.venv/bin/pip-compile --output-file=requirements.txt pyproject.toml
+```
+
+### 3. Sync local venv
+```bash
 ./.venv/bin/pip install -r requirements.txt
 ```
 
 ### 4. Commit
 ```bash
-git add backend/requirements.txt
+git add backend/pyproject.toml backend/requirements.txt
 git commit -m "chore(backend): add package-name"
 ```
 

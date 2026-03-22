@@ -2,12 +2,43 @@
 name = "bedriftsgrafen-backend"
 version = "1.0.0"
 description = "Backend for Bedriftsgrafen.no"
-requires-python = ">=3.11"
+requires-python = ">=3.14"
+dependencies = [
+    "fastapi>=0.128.0",
+    "uvicorn[standard]>=0.40.0",
+    "pydantic>=2.12.5",
+    "slowapi>=0.1.9",
+    "sqlalchemy[asyncio]>=2.0.46",
+    "asyncpg==0.31.0",
+    "aiosqlite>=0.22.1",
+    "alembic>=1.18.3",
+    "redis[hiredis]>=7.1.0",
+    "python-dotenv>=1.2.1",
+    "requests>=2.32.5",
+    "ijson>=3.4.0",
+    "httpx>=0.28.1",
+    "aiolimiter>=1.2.1",
+    "APScheduler>=3.11.2",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=9.0.2",
+    "pytest-asyncio>=1.3.0",
+    "pytest-cov>=7.0.0",
+    "pytest-mock>=3.15.1",
+    "polyfactory>=3.2.0",
+    "faker>=38.2.0",
+    "freezegun>=1.5.5",
+    "mypy>=1.19.1",
+    "ruff>=0.14.14",
+    "pip-tools>=7.5.2",
+]
 
 [tool.ruff]
 # Same as line-length in Black
 line-length = 120
-target-version = "py311"
+target-version = "py314"
 
 # Exclude test files and migrations from some checks
 exclude = [
@@ -43,7 +74,7 @@ ignore = [
 "alembic/*" = ["E501", "I001"]  # Allow long lines and unordered imports in migrations
 
 [tool.mypy]
-python_version = "3.11"
+python_version = "3.14"
 warn_return_any = false  # SQLAlchemy uses Any extensively
 warn_unused_ignores = true
 disallow_untyped_defs = false
