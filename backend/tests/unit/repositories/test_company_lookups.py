@@ -52,7 +52,7 @@ async def test_get_similar_companies_integration_flow(repo, mock_db):
     ]
 
     mock_db.execute.side_effect = [
-        result_source,   # NACE guard
+        result_source,  # NACE guard
         result_similar,  # UNION ALL
         mock_final_res,  # Final select
     ]

@@ -317,11 +317,13 @@ class TestFetchChunkDetails:
     @pytest.mark.asyncio
     async def test_fetch_chunk_details_marks_deletion(self, update_service):
         """_fetch_chunk_details should mark Sletting as success=True with company_data=None."""
-        entities = [{
-            "organisasjonsnummer": "123456789",
-            "oppdateringsid": 1,
-            "endringstype": "Sletting",
-        }]
+        entities = [
+            {
+                "organisasjonsnummer": "123456789",
+                "oppdateringsid": 1,
+                "endringstype": "Sletting",
+            }
+        ]
 
         update_service.brreg_api.fetch_company = AsyncMock()
 

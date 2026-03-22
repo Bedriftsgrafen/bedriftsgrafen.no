@@ -254,8 +254,10 @@ class BulkImportService:
                 logger.warning(f"Post-import ANALYZE failed: {e}")
 
         duration = 0.0
-        if batch.completed_at and batch.started_at:
-            duration = (batch.completed_at - batch.started_at).total_seconds()
+        completed_at = batch.completed_at
+        started_at = batch.started_at
+        if completed_at is not None and started_at is not None:
+            duration = (completed_at - started_at).total_seconds()
         companies_per_hour = int(((batch.completed_count or 0) / duration) * 3600) if duration > 0 else 0
 
         return {

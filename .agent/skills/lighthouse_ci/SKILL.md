@@ -1,5 +1,5 @@
 ---
-name: Lighthouse CI Audit
+name: lighthouse_ci
 description: Run comprehensive Lighthouse performance, accessibility, SEO, and best practices audits using the project's Lighthouse CI configuration.
 ---
 

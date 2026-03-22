@@ -1,5 +1,5 @@
 ---
-name: Feature Implementation Scaffold
+name: feature_implementation
 description: A comprehensive full-stack checklist for implementing new features consistently and safely.
 ---
 

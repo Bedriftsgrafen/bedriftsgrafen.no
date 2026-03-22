@@ -1,5 +1,5 @@
 ---
-name: Code Review and Standards (Bedriftsgrafen Lead Architect)
+name: code_review_process
 description: Performs a code review using the strict standards of the Bedriftsgrafen Lead Architect persona.
 ---
 
