@@ -1,63 +1,46 @@
 import asyncio
+import argparse
 import logging
 import os
 import sys
-import argparse
-from datetime import datetime, timezone
-from sqlalchemy import text, delete
-from sqlalchemy.ext.asyncio import create_async_engine, async_sessionmaker, AsyncSession
+
 from dotenv import load_dotenv
+from sqlalchemy import delete, text
+from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 
-# Add backend to path
-sys.path.append(os.path.join(os.getcwd(), "backend"))
+# Setup logging first (before any logger usage)
+logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
+logger = logging.getLogger(__name__)
 
-import models
+# Add backend to path — works both from project root and inside Docker (/app)
+backend_paths = [
+    os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "backend"),  # project root
+    "/app",  # inside Docker container
+    os.path.join(os.getcwd(), "backend"),  # fallback
+]
+for p in backend_paths:
+    resolved = os.path.realpath(p)
+    if os.path.isdir(resolved) and resolved not in sys.path:
+        sys.path.insert(0, resolved)
+
+import models  # noqa: E402 — must come after sys.path setup
 
 load_dotenv()
 
-
-
-# Get connection parameters from environment
-
 db_user = os.environ.get("DATABASE_USER")
-
 db_pass = os.environ.get("DATABASE_PASSWORD")
-
 db_host = os.environ.get("DATABASE_HOST")
-
 db_port = os.environ.get("DATABASE_PORT", "5432")
-
 db_name = os.environ.get("DATABASE_NAME")
 
-
-
 if not all([db_user, db_pass, db_host, db_name]):
-
     logger.error("Missing required database environment variables (USER, PASSWORD, HOST, NAME)")
-
     sys.exit(1)
-
-
-
-# Override for host-based execution
-# Removed: if db_host == "bedriftsgrafen-db": db_host = "localhost"
-
-
-
-# Reconstruct async URL
 
 SQLALCHEMY_DATABASE_URL = f"postgresql+asyncpg://{db_user}:{db_pass}@{db_host}:{db_port}/{db_name}"
 
-
-
-from sqlalchemy.ext.asyncio import create_async_engine, async_sessionmaker
-
 engine = create_async_engine(SQLALCHEMY_DATABASE_URL)
-
 AsyncSessionLocal = async_sessionmaker(engine, class_=AsyncSession, expire_on_commit=False)
-
-logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
-logger = logging.getLogger(__name__)
 
 async def purge_deleted_companies(dry_run: bool = True, batch_size: int = 1000):
     """
@@ -85,9 +68,9 @@ async def purge_deleted_companies(dry_run: bool = True, batch_size: int = 1000):
         logger.info(f"Found {total_to_purge} total deleted companies.")
         
         if dry_run:
-            # Test query logic even in dry run to ensure no syntax errors
+            # Verify query logic even in dry run
             test_batch = await db.execute(text("SELECT orgnr FROM bedrifter WHERE (data->>'slettedato') IS NOT NULL LIMIT 1"))
-            test_res = test_batch.fetchall()
+            test_batch.fetchall()  # consume result to validate query
             logger.info(f"Verified query logic. Ready to purge {total_to_purge} companies.")
             return
 

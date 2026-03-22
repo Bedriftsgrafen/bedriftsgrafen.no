@@ -314,6 +314,25 @@ class TestFetchChunkDetails:
         assert result[0].success is False
         assert "API timeout" in result[0].error
 
+    @pytest.mark.asyncio
+    async def test_fetch_chunk_details_marks_deletion(self, update_service):
+        """_fetch_chunk_details should mark Sletting as success=True with company_data=None."""
+        entities = [{
+            "organisasjonsnummer": "123456789",
+            "oppdateringsid": 1,
+            "endringstype": "Sletting",
+        }]
+
+        update_service.brreg_api.fetch_company = AsyncMock()
+
+        result = await update_service._fetch_chunk_details(entities)
+
+        assert len(result) == 1
+        assert result[0].success is True
+        assert result[0].company_data is None
+        # Should NOT call the API for deletions
+        update_service.brreg_api.fetch_company.assert_not_called()
+
 
 class TestPersistChunk:
     """Tests for sequential database persistence."""
@@ -351,6 +370,20 @@ class TestPersistChunk:
 
         update_service.company_repo.create_or_update.assert_not_called()
         assert result.api_errors == 1
+
+    @pytest.mark.asyncio
+    async def test_persist_chunk_deletes_company_on_none_data(self, update_service):
+        """_persist_chunk should delete company when success=True but company_data=None (Sletting)."""
+        update_service.company_repo.delete_by_orgnr = AsyncMock(return_value=1)
+
+        fetch_results = [FetchResult(orgnr="123456789", success=True, company_data=None)]
+        result = UpdateBatchResult(since_date=date.today(), since_iso="2026-01-26T00:00:00.000Z")
+
+        await update_service._persist_chunk(fetch_results, result)
+
+        update_service.company_repo.delete_by_orgnr.assert_called_once_with("123456789")
+        assert result.companies_deleted == 1
+        assert result.companies_processed == 1
 
 
 class TestRefreshMaterializedView:

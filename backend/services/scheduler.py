@@ -174,6 +174,17 @@ class SchedulerService:
             misfire_grace_time=3600,
         )
 
+        # Purge deleted companies daily at 02:30
+        # Removes companies with slettedato from Brønnøysund (GDPR compliance)
+        self.scheduler.add_job(
+            self.purge_deleted_companies,
+            trigger=CronTrigger(hour=2, minute=30),
+            id="purge_deleted",
+            replace_existing=True,
+            max_instances=1,
+            misfire_grace_time=3600,
+        )
+
     async def start(self) -> None:
         self.scheduler.start()
         logger.info("Scheduler started", extra={"jobs": [job.id for job in self.scheduler.get_jobs()]})
@@ -439,8 +450,8 @@ class SchedulerService:
             # VACUUM must run outside a transaction - use raw connection with autocommit
             async with engine.connect() as conn:
                 # Set isolation level to autocommit for VACUUM
-                # execution_options returns a NEW connection object
-                conn = conn.execution_options(isolation_level="AUTOCOMMIT")  # type: ignore[assignment]
+                # execution_options is async on AsyncConnection (returns coroutine)
+                conn = await conn.execution_options(isolation_level="AUTOCOMMIT")  # type: ignore[assignment]
                 for table in MAINTENANCE_TABLES:
                     await conn.execute(text(f"VACUUM ANALYZE {table}"))
                 logger.info(
@@ -610,3 +621,54 @@ class SchedulerService:
                 logger.info("Sitemap cache warmed successfully")
         except Exception as e:
             logger.error(f"Error warming sitemap cache: {e}")
+
+    async def purge_deleted_companies(self) -> None:
+        """Daily: Purge companies marked as deleted by Brønnøysund (slettedato set).
+
+        GDPR compliance: Companies with a deletion date from the source registry
+        should not remain in our database. Cascades to roles, subunits, and accounting.
+        """
+        from sqlalchemy import delete
+
+        import models
+
+        BATCH_SIZE = 1000
+        logger.info("Starting purge of deleted companies...")
+        try:
+            async with AsyncSessionLocal() as db:
+                # Count first
+                count_result = await db.execute(
+                    text("SELECT COUNT(*) FROM bedrifter WHERE (data->>'slettedato') IS NOT NULL")
+                )
+                total = count_result.scalar() or 0
+
+                if total == 0:
+                    logger.info("No deleted companies to purge.")
+                    return
+
+                logger.info(f"Found {total} deleted companies to purge.")
+                purged = 0
+
+                while purged < total:
+                    batch_result = await db.execute(
+                        text("SELECT orgnr FROM bedrifter WHERE (data->>'slettedato') IS NOT NULL LIMIT :limit"),
+                        {"limit": BATCH_SIZE},
+                    )
+                    batch_orgnrs = [row[0] for row in batch_result.fetchall()]
+
+                    if not batch_orgnrs:
+                        break
+
+                    # Cascade delete: roles -> subunits -> accounting -> company
+                    await db.execute(delete(models.Role).where(models.Role.orgnr.in_(batch_orgnrs)))
+                    await db.execute(delete(models.SubUnit).where(models.SubUnit.parent_orgnr.in_(batch_orgnrs)))
+                    await db.execute(delete(models.Accounting).where(models.Accounting.orgnr.in_(batch_orgnrs)))
+                    await db.execute(delete(models.Company).where(models.Company.orgnr.in_(batch_orgnrs)))
+                    await db.commit()
+
+                    purged += len(batch_orgnrs)
+                    logger.info(f"Purged batch: {purged}/{total}")
+
+                logger.info(f"Purge complete: {purged} deleted companies removed.")
+        except Exception as e:
+            logger.exception("Failed to purge deleted companies", extra={"error": str(e)})

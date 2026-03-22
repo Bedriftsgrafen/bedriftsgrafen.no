@@ -238,12 +238,12 @@ class UpdateService:
                     error=f"Invalid orgnr format: {orgnr}",
                 )
 
-            # Skip deletions — handled separately in _persist_chunk
+            # Mark deletions for processing in _persist_chunk
             if endringstype == "Sletting":
                 return FetchResult(
                     orgnr=orgnr,
-                    success=False,
-                    error="Skipped (deletion)",
+                    success=True,
+                    company_data=None,  # None signals deletion to _persist_chunk
                 )
 
             async with semaphore:

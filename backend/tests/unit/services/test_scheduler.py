@@ -187,10 +187,9 @@ async def test_run_db_maintenance():
     # Patch the engine object in the scheduler module
     with patch("services.scheduler.engine") as mock_engine:
         conn_mock = AsyncMock()
-        # execution_options returns a new connection mock
+        # execution_options is async on AsyncConnection (returns coroutine)
         conn_options_mock = AsyncMock()
-        # execution_options is SYNC in SQLAlchemy, so use MagicMock
-        conn_mock.execution_options = MagicMock(return_value=conn_options_mock)
+        conn_mock.execution_options = AsyncMock(return_value=conn_options_mock)
 
         # Mock engine.connect() context manager
         mock_engine.connect.return_value.__aenter__.return_value = conn_mock
