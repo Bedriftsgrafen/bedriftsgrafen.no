@@ -155,7 +155,7 @@ export function HomePage() {
                                                         to="/person/$name/$birthdate"
                                                         params={{
                                                             name: person.name,
-                                                            birthdate: person.birthdate || 'unknown'
+                                                            birthdate: person.birthdate ? person.birthdate.slice(0, 4) : 'unknown'
                                                         }}
                                                         className="flex items-center justify-between p-4 hover:bg-blue-50 transition-colors border-b border-gray-50 last:border-0 group"
                                                     >
@@ -166,7 +166,7 @@ export function HomePage() {
                                                             <div>
                                                                 <div className="font-bold">{person.name}</div>
                                                                 {person.birthdate && (
-                                                                    <div className="text-xs text-gray-500">Født: {person.birthdate}</div>
+                                                                    <div className="text-xs text-gray-500">Fødselsår: {person.birthdate.slice(0, 4)}</div>
                                                                 )}
                                                             </div>
                                                         </div>

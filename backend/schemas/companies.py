@@ -34,13 +34,15 @@ class CompanyBase(BaseModel):
     @model_validator(mode="wrap")
     @classmethod
     def _pick_enriched_naeringskode(cls, values: Any, handler: Any) -> Any:
-        """Use enriched NACE code from service layer if available."""
+        """Use enriched NACE codes from service layer if available."""
         # When constructing from an ORM object, check for enriched values
         if not isinstance(values, dict) and hasattr(values, "__dict__"):
             enriched = values.__dict__.get("_enriched_naeringskode")
             if enriched is not None:
-                # Temporarily set the enriched value so Pydantic picks it up
                 values.__dict__["naeringskode"] = enriched
+            enriched_list = values.__dict__.get("_enriched_naeringskoder")
+            if enriched_list is not None:
+                values.__dict__["naeringskoder"] = enriched_list
         return handler(values)
 
     # Contact info (from raw_data)

@@ -22,6 +22,8 @@ interface SEOHeadProps {
   companyData?: CompanyDataProps
   /** Custom OG image URL */
   ogImage?: string
+  /** If true, render noindex/nofollow meta (e.g. GDPR-sensitive pages) */
+  noindex?: boolean
 }
 
 /**
@@ -99,7 +101,8 @@ export function SEOHead({
   title: customTitle,
   description: customDescription,
   companyData,
-  ogImage: customOgImage
+  ogImage: customOgImage,
+  noindex
 }: SEOHeadProps) {
   const location = useLocation()
   
@@ -144,6 +147,9 @@ export function SEOHead({
     <>
       <title>{title}</title>
       <meta name="description" content={description} />
+
+      {/* Robots directive — noindex for GDPR-sensitive pages */}
+      {noindex && <meta name="robots" content="noindex, nofollow" />}
 
       {/* Open Graph */}
       <meta property="og:type" content="website" />

@@ -627,6 +627,11 @@ class SchedulerService:
 
         GDPR compliance: Companies with a deletion date from the source registry
         should not remain in our database. Cascades to roles, subunits, and accounting.
+
+        Cascade coverage audit (2026-03-23):
+        - This method deletes roles explicitly before companies ✓
+        - crud.py:purge_company() also deletes roles before company ✓
+        - No other code path deletes from bedrifter without cleaning up roles.
         """
         from sqlalchemy import delete
 

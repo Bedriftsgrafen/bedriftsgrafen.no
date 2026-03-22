@@ -200,7 +200,7 @@ async def get_paginated_sitemap(
         )
 
         for name, birthdate, last_update in people:
-            birthdate_str = birthdate.isoformat() if birthdate else "none"
+            birthdate_str = str(birthdate.year) if birthdate else "none"
             safe_name = urllib.parse.quote(name)
             xml_content += "  <url>\n"
             xml_content += f"    <loc>{BASE_URL}/person/{safe_name}/{birthdate_str}</loc>\n"

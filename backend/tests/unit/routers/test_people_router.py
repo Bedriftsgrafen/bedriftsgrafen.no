@@ -115,6 +115,7 @@ class TestGetPersonRolesEndpoint:
         mock_role.enhet_navn = "Test AS"
         mock_role.fratraadt = False
         mock_role.rekkefoelge = 1
+        mock_role.foedselsdato = date(1980, 5, 15)
 
         with patch("routers.v1.people.RoleRepository") as MockRepo:
             mock_repo = MockRepo.return_value
@@ -170,6 +171,7 @@ class TestGetPersonRolesEndpoint:
         mock_role.enhet_navn = None
         mock_role.fratraadt = None
         mock_role.rekkefoelge = None
+        mock_role.foedselsdato = None
         mock_role.company = None
 
         with patch("routers.v1.people.RoleRepository") as MockRepo:
@@ -242,3 +244,132 @@ class TestResponseModels:
         )
 
         assert result.rekkefoelge is None
+
+
+# ============================================================================
+# Category 4: Birthdate Param Parsing (Hotfix 0 — GDPR)
+# ============================================================================
+class TestBirthdateParamParsing:
+    """Tests for year-only and full-date birthdate parsing in /roles endpoint."""
+
+    @pytest.mark.asyncio
+    async def test_year_only_passes_birthyear(self, client):
+        """Year-only birthdate (e.g. '1996') is parsed as birthyear int."""
+        with patch("routers.v1.people.RoleRepository") as MockRepo:
+            mock_repo = MockRepo.return_value
+            mock_repo.get_person_commercial_roles = AsyncMock(return_value=[])
+
+            response = client.get("/v1/people/roles?name=Ola&birthdate=1996")
+
+            assert response.status_code == 200
+            mock_repo.get_person_commercial_roles.assert_called_once_with(
+                "Ola", birthdate=None, birthyear=1996, include_all=False
+            )
+
+    @pytest.mark.asyncio
+    async def test_full_date_passes_birthdate(self, client):
+        """Full ISO date (e.g. '1996-03-12') is parsed as date object."""
+        with patch("routers.v1.people.RoleRepository") as MockRepo:
+            mock_repo = MockRepo.return_value
+            mock_repo.get_person_commercial_roles = AsyncMock(return_value=[])
+
+            response = client.get("/v1/people/roles?name=Ola&birthdate=1996-03-12")
+
+            assert response.status_code == 200
+            mock_repo.get_person_commercial_roles.assert_called_once_with(
+                "Ola", birthdate=date(1996, 3, 12), birthyear=None, include_all=False
+            )
+
+    @pytest.mark.asyncio
+    async def test_none_passes_no_filter(self, client):
+        """No birthdate param passes None for both."""
+        with patch("routers.v1.people.RoleRepository") as MockRepo:
+            mock_repo = MockRepo.return_value
+            mock_repo.get_person_commercial_roles = AsyncMock(return_value=[])
+
+            response = client.get("/v1/people/roles?name=Ola")
+
+            assert response.status_code == 200
+            mock_repo.get_person_commercial_roles.assert_called_once_with(
+                "Ola", birthdate=None, birthyear=None, include_all=False
+            )
+
+    @pytest.mark.asyncio
+    async def test_unknown_passes_no_filter(self, client):
+        """'unknown' birthdate is treated as None (no filter)."""
+        with patch("routers.v1.people.RoleRepository") as MockRepo:
+            mock_repo = MockRepo.return_value
+            mock_repo.get_person_commercial_roles = AsyncMock(return_value=[])
+
+            response = client.get("/v1/people/roles?name=Ola&birthdate=unknown")
+
+            assert response.status_code == 200
+            mock_repo.get_person_commercial_roles.assert_called_once_with(
+                "Ola", birthdate=None, birthyear=None, include_all=False
+            )
+
+
+# ============================================================================
+# Category 5: Response includes foedselsdato (Fix 3 — GDPR disambiguation)
+# ============================================================================
+class TestFoedselsdatoInResponse:
+    """Tests for foedselsdato field in PersonRoleResponse."""
+
+    @pytest.mark.asyncio
+    async def test_response_includes_foedselsdato(self, client):
+        """PersonRoleResponse includes foedselsdato for disambiguation."""
+        mock_role = MagicMock()
+        mock_role.orgnr = "123456789"
+        mock_role.type_kode = "DAGL"
+        mock_role.type_beskrivelse = "Daglig leder"
+        mock_role.enhet_navn = "Test AS"
+        mock_role.fratraadt = False
+        mock_role.rekkefoelge = 1
+        mock_role.foedselsdato = date(1996, 3, 12)
+
+        with patch("routers.v1.people.RoleRepository") as MockRepo:
+            mock_repo = MockRepo.return_value
+            mock_repo.get_person_commercial_roles = AsyncMock(return_value=[mock_role])
+
+            response = client.get("/v1/people/roles?name=Ola&birthdate=1996")
+
+            assert response.status_code == 200
+            data = response.json()
+            assert data[0]["foedselsdato"] == "1996-03-12"
+
+    @pytest.mark.asyncio
+    async def test_response_allows_null_foedselsdato(self, client):
+        """PersonRoleResponse handles null foedselsdato."""
+        mock_role = MagicMock()
+        mock_role.orgnr = "123456789"
+        mock_role.type_kode = "DAGL"
+        mock_role.type_beskrivelse = "Daglig leder"
+        mock_role.enhet_navn = "Test AS"
+        mock_role.fratraadt = False
+        mock_role.rekkefoelge = 1
+        mock_role.foedselsdato = None
+
+        with patch("routers.v1.people.RoleRepository") as MockRepo:
+            mock_repo = MockRepo.return_value
+            mock_repo.get_person_commercial_roles = AsyncMock(return_value=[mock_role])
+
+            response = client.get("/v1/people/roles?name=Ola")
+
+            assert response.status_code == 200
+            data = response.json()
+            assert data[0]["foedselsdato"] is None
+
+    def test_schema_includes_foedselsdato(self):
+        """PersonRoleResponse schema accepts foedselsdato."""
+        from schemas.people import PersonRoleResponse
+
+        result = PersonRoleResponse(
+            orgnr="123",
+            type_kode="DAGL",
+            type_beskrivelse="Daglig leder",
+            enhet_navn="Test",
+            fratraadt=False,
+            rekkefoelge=1,
+            foedselsdato=date(1996, 3, 12),
+        )
+        assert result.foedselsdato == date(1996, 3, 12)

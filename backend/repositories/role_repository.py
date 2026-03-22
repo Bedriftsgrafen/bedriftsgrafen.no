@@ -2,13 +2,15 @@
 
 import logging
 from datetime import date, datetime, timedelta
+from typing import Any
 
-from sqlalchemy import delete, select, text, tuple_
+from sqlalchemy import Select, delete, select, text, tuple_
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import contains_eager
 from sqlalchemy.sql import func
 
 import models
+from constants.org_forms import COMMERCIAL_ORG_FORMS, NON_COMMERCIAL_ORG_FORMS
 
 logger = logging.getLogger(__name__)
 
@@ -21,6 +23,24 @@ class RoleRepository:
 
     def __init__(self, db: AsyncSession):
         self.db = db
+
+    @staticmethod
+    def _commercial_filter(stmt: "Select[Any]") -> "Select[Any]":
+        """Apply Enhetsregisterloven § 22 commercial entity filter.
+
+        Rule 1: Registered in Foretaksregisteret → ALWAYS commercial.
+        Rule 2: Fallback to org-form whitelist (excluding blacklist + STI).
+
+        Requires a prior JOIN on models.Company.
+        """
+        return stmt.where(
+            (models.Company.registrert_i_foretaksregisteret == True)  # noqa: E712
+            | (
+                models.Company.organisasjonsform.in_(list(COMMERCIAL_ORG_FORMS))
+                & ~models.Company.organisasjonsform.in_(list(NON_COMMERCIAL_ORG_FORMS))
+                & (models.Company.organisasjonsform != "STI")
+            )
+        )
 
     async def get_by_orgnr(self, orgnr: str) -> list[models.Role]:
         """Fetch all roles for a company, sorted by sequence and type."""
@@ -194,8 +214,6 @@ class RoleRepository:
         if len(query) < 3:
             return []
 
-        from constants.org_forms import COMMERCIAL_ORG_FORMS, NON_COMMERCIAL_ORG_FORMS
-
         try:
             # We want unique combinations of name and birthdate
             stmt = (
@@ -209,16 +227,8 @@ class RoleRepository:
                 .where(models.Role.person_navn.is_not(None))
             )
 
-            # Apply commercial filtering unless admin
             if not include_all:
-                stmt = stmt.where(
-                    (models.Company.registrert_i_foretaksregisteret == True)  # noqa: E712
-                    | (
-                        models.Company.organisasjonsform.in_(list(COMMERCIAL_ORG_FORMS))
-                        & ~models.Company.organisasjonsform.in_(list(NON_COMMERCIAL_ORG_FORMS))
-                        & (models.Company.organisasjonsform != "STI")
-                    )
-                )
+                stmt = self._commercial_filter(stmt)
 
             stmt = stmt.group_by(models.Role.person_navn, models.Role.foedselsdato).order_by(
                 func.count(models.Role.id).desc()
@@ -239,14 +249,23 @@ class RoleRepository:
             return []
 
     async def get_person_commercial_roles(
-        self, name: str, birthdate: date | None = None, include_all: bool = False
+        self,
+        name: str,
+        birthdate: date | None = None,
+        birthyear: int | None = None,
+        include_all: bool = False,
     ) -> list[models.Role]:
         """
         Fetch roles for a person. By default, only returns "commercial" (næringsvirksomhet) roles
         per Enhetsregisterloven § 22. If include_all is True, returns everything (admin view).
-        """
-        from constants.org_forms import COMMERCIAL_ORG_FORMS, NON_COMMERCIAL_ORG_FORMS
 
+        Args:
+            name: Person's full name (exact match).
+            birthdate: Exact birth date for disambiguation.
+            birthyear: Birth year for year-only lookup (GDPR data minimization).
+                       Mutually exclusive with birthdate; birthdate takes precedence.
+            include_all: If True, skip commercial filter (admin view).
+        """
         try:
             # Build base query with join
             stmt = (
@@ -256,24 +275,16 @@ class RoleRepository:
                 .where(models.Role.person_navn == name)
             )
 
-            # Handle birthdate filtering - match exactly or allow flexible matching
+            # Handle birthdate filtering
             if birthdate is not None:
                 if isinstance(birthdate, str):
                     birthdate = date.fromisoformat(birthdate)
                 stmt = stmt.where(models.Role.foedselsdato == birthdate)
+            elif birthyear is not None:
+                stmt = stmt.where(func.extract("year", models.Role.foedselsdato) == birthyear)
 
-            # Apply legal commercial filtering per Enhetsregisterloven § 22 unless admin
             if not include_all:
-                # Rule 1: Registered in Foretaksregisteret = ALWAYS commercial
-                # Rule 2: Fallback to org form whitelist (excluding explicit blacklist)
-                stmt = stmt.where(
-                    (models.Company.registrert_i_foretaksregisteret == True)  # noqa: E712
-                    | (
-                        models.Company.organisasjonsform.in_(list(COMMERCIAL_ORG_FORMS))
-                        & ~models.Company.organisasjonsform.in_(list(NON_COMMERCIAL_ORG_FORMS))
-                        & (models.Company.organisasjonsform != "STI")
-                    )
-                )
+                stmt = self._commercial_filter(stmt)
 
             stmt = stmt.order_by(
                 models.Role.fratraadt.asc(),  # Active roles first
@@ -336,25 +347,15 @@ class RoleRepository:
         Count total unique people with commercial roles.
         Used for sitemap generation.
         """
-        from constants.org_forms import COMMERCIAL_ORG_FORMS, NON_COMMERCIAL_ORG_FORMS
-
         try:
-            # Subquery for commercial filtering
             commercial_stmt = (
                 select(models.Role.person_navn, models.Role.foedselsdato)
                 .join(models.Company, models.Role.orgnr == models.Company.orgnr)
                 .where(models.Role.person_navn.is_not(None))
                 .where(models.Role.foedselsdato.is_not(None))
-                .where(
-                    (models.Company.registrert_i_foretaksregisteret == True)  # noqa: E712
-                    | (
-                        models.Company.organisasjonsform.in_(list(COMMERCIAL_ORG_FORMS))
-                        & ~models.Company.organisasjonsform.in_(list(NON_COMMERCIAL_ORG_FORMS))
-                        & (models.Company.organisasjonsform != "STI")
-                    )
-                )
-                .group_by(models.Role.person_navn, models.Role.foedselsdato)
             )
+            commercial_stmt = self._commercial_filter(commercial_stmt)
+            commercial_stmt = commercial_stmt.group_by(models.Role.person_navn, models.Role.foedselsdato)
 
             stmt = select(func.count()).select_from(commercial_stmt.subquery())
             result = await self.db.execute(stmt)
@@ -375,8 +376,6 @@ class RoleRepository:
         Used for sitemap generation.
         Supports both OFFSET (slow) and Keyset (fast) pagination.
         """
-        from constants.org_forms import COMMERCIAL_ORG_FORMS, NON_COMMERCIAL_ORG_FORMS
-
         try:
             stmt = (
                 select(
@@ -387,16 +386,10 @@ class RoleRepository:
                 .join(models.Company, models.Role.orgnr == models.Company.orgnr)
                 .where(models.Role.person_navn.is_not(None))
                 .where(models.Role.foedselsdato.is_not(None))
-                .where(
-                    (models.Company.registrert_i_foretaksregisteret == True)  # noqa: E712
-                    | (
-                        models.Company.organisasjonsform.in_(list(COMMERCIAL_ORG_FORMS))
-                        & ~models.Company.organisasjonsform.in_(list(NON_COMMERCIAL_ORG_FORMS))
-                        & (models.Company.organisasjonsform != "STI")
-                    )
-                )
-                .group_by(models.Role.person_navn, models.Role.foedselsdato)
-                .order_by(models.Role.person_navn, models.Role.foedselsdato)
+            )
+            stmt = self._commercial_filter(stmt)
+            stmt = stmt.group_by(models.Role.person_navn, models.Role.foedselsdato).order_by(
+                models.Role.person_navn, models.Role.foedselsdato
             )
 
             if after_name is not None:
@@ -435,23 +428,16 @@ class RoleRepository:
             if offset < 0:
                 continue
 
-            from constants.org_forms import COMMERCIAL_ORG_FORMS, NON_COMMERCIAL_ORG_FORMS
-
             # Fetch just the (name, birthdate) at this offset
             anchor_stmt = (
                 select(models.Role.person_navn, models.Role.foedselsdato)
                 .join(models.Company, models.Role.orgnr == models.Company.orgnr)
                 .where(models.Role.person_navn.is_not(None))
                 .where(models.Role.foedselsdato.is_not(None))
-                .where(
-                    (models.Company.registrert_i_foretaksregisteret == True)  # noqa: E712
-                    | (
-                        models.Company.organisasjonsform.in_(list(COMMERCIAL_ORG_FORMS))
-                        & ~models.Company.organisasjonsform.in_(list(NON_COMMERCIAL_ORG_FORMS))
-                        & (models.Company.organisasjonsform != "STI")
-                    )
-                )
-                .group_by(models.Role.person_navn, models.Role.foedselsdato)
+            )
+            anchor_stmt = self._commercial_filter(anchor_stmt)
+            anchor_stmt = (
+                anchor_stmt.group_by(models.Role.person_navn, models.Role.foedselsdato)
                 .order_by(models.Role.person_navn, models.Role.foedselsdato)
                 .offset(offset)
                 .limit(1)
@@ -478,6 +464,8 @@ class RoleRepository:
         """
         from sqlalchemy import text
 
+        # NOTE: The raw SQL WHERE clause below mirrors _commercial_filter().
+        # If _commercial_filter() changes, update this query to match.
         query = text("""
             WITH commercial_people AS (
                 SELECT DISTINCT ON (r.person_navn, r.foedselsdato)

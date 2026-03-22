@@ -5,6 +5,7 @@ Only commercial roles (næringsvirksomhet) are returned.
 """
 
 import logging
+import re
 from datetime import date
 
 from fastapi import APIRouter, Depends, Header, Query, Request
@@ -43,7 +44,7 @@ async def search_people(
 async def get_person_roles(
     request: Request,
     name: str = Query(..., description="Person's full name"),
-    birthdate: date | None = Query(None, description="Birth date for disambiguation"),
+    birthdate: str | None = Query(None, description="Birth date or year for disambiguation"),
     x_admin_key: str | None = Header(None, alias="X-Admin-Key"),
     db: AsyncSession = Depends(get_db),
 ) -> list[PersonRoleResponse]:
@@ -53,9 +54,28 @@ async def get_person_roles(
     Only includes commercial entities (næringsvirksomhet) as per Enhetsregisterloven § 22.
     Roles in voluntary organizations, housing cooperatives, and other non-commercial
     entities are excluded to comply with Norwegian privacy regulations.
+
+    The birthdate param accepts:
+      - "1996"         → year-only lookup (EXTRACT)
+      - "1996-03-12"   → exact date match
+      - None / omitted → no birthdate filter
     """
     role_repo = RoleRepository(db)
-    roles = await role_repo.get_person_commercial_roles(name, birthdate, include_all=is_admin(x_admin_key))
+    admin = is_admin(x_admin_key)
+
+    # Parse birthdate param: year-only, full ISO date, or None
+    parsed_date: date | None = None
+    parsed_year: int | None = None
+
+    if birthdate and birthdate not in ("unknown", "none"):
+        if re.fullmatch(r"\d{4}", birthdate):
+            parsed_year = int(birthdate)
+        elif re.fullmatch(r"\d{4}-\d{2}-\d{2}", birthdate):
+            parsed_date = date.fromisoformat(birthdate)
+
+    roles = await role_repo.get_person_commercial_roles(
+        name, birthdate=parsed_date, birthyear=parsed_year, include_all=admin
+    )
 
     return [
         PersonRoleResponse(
@@ -65,6 +85,7 @@ async def get_person_roles(
             enhet_navn=r.enhet_navn or (r.company.navn if r.company else None) or "Ukjent virksomhet",
             fratraadt=r.fratraadt if r.fratraadt is not None else False,
             rekkefoelge=r.rekkefoelge,
+            foedselsdato=r.foedselsdato,
         )
         for r in roles
     ]
