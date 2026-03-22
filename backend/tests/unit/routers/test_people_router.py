@@ -252,6 +252,12 @@ class TestResponseModels:
 class TestBirthdateParamParsing:
     """Tests for year-only and full-date birthdate parsing in /roles endpoint."""
 
+    @pytest.fixture(autouse=True)
+    def _mock_is_admin(self):
+        """Ensure is_admin returns False regardless of ADMIN_API_KEY env."""
+        with patch("routers.v1.people.is_admin", return_value=False):
+            yield
+
     @pytest.mark.asyncio
     async def test_year_only_passes_birthyear(self, client):
         """Year-only birthdate (e.g. '1996') is parsed as birthyear int."""

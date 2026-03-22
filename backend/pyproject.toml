@@ -102,4 +102,6 @@ python_functions = ["test_*"]
 addopts = "-v --tb=short --cov=. --cov-report=term-missing"
 filterwarnings = [
     "ignore::DeprecationWarning",
+    "ignore:This AsyncLimiter instance:RuntimeWarning",
+    "ignore:coroutine.*was never awaited:RuntimeWarning",
 ]
