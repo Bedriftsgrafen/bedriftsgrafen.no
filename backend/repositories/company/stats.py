@@ -210,8 +210,8 @@ class StatsMixin:
             result = await self.db.execute(text("SELECT total_employees FROM dashboard_stats WHERE id = 1"))
             count = result.scalar()
             return int(count) if count else 0
-        except Exception:
-            # Fallback (slow)
+        except Exception as e:
+            logger.warning(f"Dashboard stats fallback for total_employees: {e}")
             result = await self.db.execute(select(func.sum(models.Company.antall_ansatte)))
             count = result.scalar()
             return int(count) if count else 0
@@ -222,7 +222,8 @@ class StatsMixin:
             result = await self.db.execute(text("SELECT new_companies_ytd FROM dashboard_stats WHERE id = 1"))
             count = result.scalar()
             return int(count) if count else 0
-        except Exception:
+        except Exception as e:
+            logger.warning(f"Dashboard stats fallback for new_companies_ytd: {e}")
             current_year = datetime.now(UTC).year
             start_date = date(current_year, 1, 1)
             result = await self.db.execute(
@@ -240,7 +241,8 @@ class StatsMixin:
             result = await self.db.execute(text("SELECT bankruptcies FROM dashboard_stats WHERE id = 1"))
             count = result.scalar()
             return int(count) if count else 0
-        except Exception:
+        except Exception as e:
+            logger.warning(f"Dashboard stats fallback for bankruptcies: {e}")
             result = await self.db.execute(select(func.count(models.Company.orgnr)).filter(models.Company.konkurs))
             count = result.scalar()
             return int(count) if count else 0

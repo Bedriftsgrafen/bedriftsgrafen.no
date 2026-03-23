@@ -104,8 +104,7 @@ class CompanyService:
         try:
             return await self.company_repo.get_by_orgnr(orgnr)
         except Exception:
-            # Fallback for metadata/internal lookups. Returns None instead of raising.
-            # This prevents 404 crashes in routes that expect a company but get a subunit.
+            logger.warning(f"get_by_orgnr failed for {orgnr}, falling back to subunit lookup", exc_info=True)
             return await self.get_company_detail(orgnr)
 
     async def get_company_detail(self, orgnr: str) -> models.Company | Any | None:
@@ -114,7 +113,7 @@ class CompanyService:
         try:
             company = await self.company_repo.get_by_orgnr(orgnr)
         except Exception:
-            # Fallback to subunit lookup if not found in main company table
+            logger.warning(f"get_by_orgnr failed for {orgnr}, trying subunit fallback", exc_info=True)
             subunit = await self.subunit_repo.get_by_orgnr(orgnr)
             if not subunit:
                 return None
