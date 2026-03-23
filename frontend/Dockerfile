@@ -56,6 +56,9 @@ LABEL org.opencontainers.image.source="https://github.com/Bedriftsgrafen/bedrift
 LABEL org.opencontainers.image.vendor="Bedriftsgrafen"
 LABEL maintainer="bedriftsgrafen@example.com"
 
+# Patch fixable OS-level CVEs in the base image
+RUN apk upgrade --no-cache
+
 # Setup permissions for non-root execution
 RUN mkdir -p /var/cache/nginx/client_temp \
     /var/cache/nginx/proxy_temp \

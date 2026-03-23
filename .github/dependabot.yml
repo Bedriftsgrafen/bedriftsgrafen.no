@@ -3,9 +3,9 @@
 
 version: 2
 updates:
-  # Frontend npm dependencies (workspace-aware)
+  # npm dependencies (root workspace covers frontend too)
   - package-ecosystem: "npm"
-    directory: "/frontend"
+    directory: "/"
     schedule:
       interval: "weekly"
       day: "monday"
@@ -14,7 +14,6 @@ updates:
     open-pull-requests-limit: 10
     labels:
       - "dependencies"
-      - "frontend"
       - "npm"
     commit-message:
       prefix: "chore(deps)"
@@ -51,24 +50,6 @@ updates:
           - "@vitest/*"
           - "@testing-library/*"
           - "jsdom"
-
-  # Root npm dependencies (tooling like husky, lint-staged)
-  - package-ecosystem: "npm"
-    directory: "/"
-    schedule:
-      interval: "weekly"
-      day: "monday"
-      time: "09:00"
-      timezone: "Europe/Oslo"
-    open-pull-requests-limit: 5
-    labels:
-      - "dependencies"
-      - "tooling"
-      - "npm"
-    commit-message:
-      prefix: "chore(deps)"
-      include: "scope"
-    groups:
       # Group git hooks and linting tools
       tooling:
         patterns:

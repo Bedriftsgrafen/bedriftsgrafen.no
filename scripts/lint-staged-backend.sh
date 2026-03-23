@@ -11,8 +11,8 @@ PROJECT_ROOT=$(pwd)
 RUFF_LOCAL="backend/.venv/bin/ruff"
 if [ -f "$RUFF_LOCAL" ]; then
     echo "✅ Running local ruff on staged files..."
-    # Local ruff handles host paths directly
     $RUFF_LOCAL check --fix "$@"
+    $RUFF_LOCAL format "$@"
     exit 0
 fi
 
@@ -46,6 +46,7 @@ if [ -n "$CONTAINER_FILES" ]; then
     # Execute ruff in docker
     echo "Running ruff in docker on: $CONTAINER_FILES"
     docker exec bedriftsgrafen-backend-dev ruff check --fix $CONTAINER_FILES
+    docker exec bedriftsgrafen-backend-dev ruff format $CONTAINER_FILES
 else
     echo "No files to lint in backend."
 fi
