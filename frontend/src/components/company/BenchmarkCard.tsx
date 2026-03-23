@@ -101,8 +101,8 @@ export const BenchmarkCard = memo(function BenchmarkCard({
                             tickLine={false}
                         />
                         <Tooltip
-                            formatter={(value: number | undefined) => [
-                                value != null ? formatter(value) : '',
+                            formatter={(value) => [
+                                typeof value === 'number' ? formatter(value) : '',
                                 title
                             ]}
                             cursor={{ fill: 'transparent' }}

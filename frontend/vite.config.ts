@@ -65,7 +65,7 @@ export default defineConfig({
   },
   build: {
     sourcemap: false, // Remove if issues arise
-    rollupOptions: {
+    rolldownOptions: {
       output: {
         manualChunks(id) {
           // Rollup CJS interop helper (getDefaultExportFromCjs) — tiny (~100B) but

@@ -7,6 +7,14 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { useToastStore, toast, getErrorMessage } from '../toastStore'
 
+// Mock axios.isAxiosError for getErrorMessage tests
+vi.mock('axios', () => ({
+    default: {
+        isAxiosError: (e: unknown) => (e as { isAxiosError?: boolean })?.isAxiosError === true,
+    },
+    isAxiosError: (e: unknown) => (e as { isAxiosError?: boolean })?.isAxiosError === true,
+}))
+
 // Mock setTimeout/clearTimeout for testing auto-remove
 vi.useFakeTimers()
 
@@ -102,14 +110,6 @@ describe('Toast Helper Functions', () => {
 })
 
 describe('getErrorMessage', () => {
-    // Mock axios.isAxiosError for all tests in this describe block
-    vi.mock('axios', () => ({
-        default: {
-            isAxiosError: (e: unknown) => (e as { isAxiosError?: boolean })?.isAxiosError === true,
-        },
-        isAxiosError: (e: unknown) => (e as { isAxiosError?: boolean })?.isAxiosError === true,
-    }))
-
     it('returns generic message for non-axios errors', () => {
         const result = getErrorMessage(new Error('Random error'))
         expect(result).toContain('gikk galt')
