@@ -1,0 +1,14 @@
+# Trivy vulnerability ignore list
+# Review quarterly — remove entries when upstream fixes are available
+
+# gosu binary in postgres:18-alpine — Go stdlib CVEs
+# gosu is compiled with Go 1.24.6 by the official postgres image.
+# It only runs at container startup for UID switching (setuid), then exits.
+# These Go stdlib CVEs are not exploitable in that context.
+# Upstream fix: https://github.com/tianon/gosu/releases (needs Go >= 1.25.8)
+CVE-2025-68121  # crypto/tls session resumption — gosu doesn't use TLS
+CVE-2025-58183  # archive/tar unbounded allocation — gosu doesn't parse tarballs
+CVE-2025-61726  # net/url memory exhaustion — gosu doesn't parse URLs
+CVE-2025-61728  # archive/zip CPU exhaustion — gosu doesn't parse zip files
+CVE-2025-61729  # crypto/x509 resource consumption — gosu doesn't validate certs
+CVE-2026-25679  # net/url IPv6 parsing — gosu doesn't parse URLs

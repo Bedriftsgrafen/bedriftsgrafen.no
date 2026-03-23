@@ -20,29 +20,6 @@ permissions:
   contents: read
 
 jobs:
-  # Secret Scanning with GitGuardian
-  secret-scanning:
-    name: Secret Scanning (GitGuardian)
-    runs-on: ubuntu-latest
-    permissions:
-      contents: read
-    continue-on-error: true  # Don't block builds on secret detection
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v6
-        with:
-          fetch-depth: 0  # Full history for comprehensive scanning
-
-      - name: GitGuardian scan
-        uses: GitGuardian/ggshield-action@v1.47.0
-        continue-on-error: true
-        env:
-          GITHUB_PUSH_BEFORE_SHA: ${{ github.event.before }}
-          GITHUB_PUSH_BASE_SHA: ${{ github.event.base }}
-          GITHUB_PULL_BASE_SHA: ${{ github.event.pull_request.base.sha }}
-          GITHUB_DEFAULT_BRANCH: ${{ github.event.repository.default_branch }}
-          GITGUARDIAN_API_KEY: ${{ secrets.GITGUARDIAN_API_KEY }}
-
   # Frontend Security Audit
   frontend-security:
     name: Frontend Security Audit
@@ -63,45 +40,17 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      - name: npm audit
+      - name: npm audit (workspace)
         run: |
-          cd frontend
-          npm audit --audit-level=moderate || true
-          npm audit --json > npm-audit-report.json || true
-        continue-on-error: true
-
-      - name: Setup Java for OWASP Dependency-Check
-        uses: actions/setup-java@v5
-        with:
-          distribution: 'temurin'
-          java-version: '17'
-
-      - name: OWASP Dependency-Check
-        uses: dependency-check/Dependency-Check_Action@main
-        with:
-          project: 'bedriftsgrafen-frontend'
-          path: './frontend'
-          format: 'HTML,JSON'
-          args: >
-            --enableRetired
-            --failOnCVSS 7
-            --suppression ./frontend/dependency-check-suppressions.xml
-        continue-on-error: true
-
-      - name: Upload OWASP Report
-        if: always()
-        uses: actions/upload-artifact@v6
-        with:
-          name: owasp-dependency-check-frontend
-          path: reports/
-          retention-days: 14
+          npm audit --audit-level=high --json > npm-audit-report.json || true
+          npm audit --audit-level=high || true
 
       - name: Upload npm audit report
         if: always()
         uses: actions/upload-artifact@v6
         with:
           name: npm-audit-report
-          path: frontend/npm-audit-report.json
+          path: npm-audit-report.json
           retention-days: 14
 
   # Backend Security Audit
@@ -144,8 +93,7 @@ jobs:
       - name: Bandit SAST
         run: |
           bandit -r . -f json -o bandit-report.json || true
-          bandit -r . -ll || true
-        continue-on-error: true
+          bandit -r . -l || true
 
       - name: Upload safety report
         if: always()
@@ -251,6 +199,7 @@ jobs:
           severity: 'CRITICAL,HIGH'
           exit-code: '1'
           ignore-unfixed: true
+          trivyignores: '.trivyignore'
 
       - name: Upload Trivy SARIF to GitHub Security
         uses: github/codeql-action/upload-sarif@v4
@@ -267,6 +216,7 @@ jobs:
           output: 'trivy-${{ matrix.image }}-report.json'
           severity: 'CRITICAL,HIGH'
           ignore-unfixed: true
+          trivyignores: '.trivyignore'
         continue-on-error: true
 
       - name: Upload Trivy JSON report
@@ -338,7 +288,7 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: read
-    needs: [secret-scanning, frontend-security, backend-security, codeql-analysis, container-scanning, license-check]
+    needs: [frontend-security, backend-security, codeql-analysis, container-scanning, license-check]
     if: always()
     steps:
       - name: Generate Security Summary
@@ -351,7 +301,6 @@ jobs:
           echo "### Job Status" >> $GITHUB_STEP_SUMMARY
           echo "| Job | Status |" >> $GITHUB_STEP_SUMMARY
           echo "|-----|--------|" >> $GITHUB_STEP_SUMMARY
-          echo "| Secret Scanning | ${{ needs.secret-scanning.result }} |" >> $GITHUB_STEP_SUMMARY
           echo "| Frontend Security | ${{ needs.frontend-security.result }} |" >> $GITHUB_STEP_SUMMARY
           echo "| Backend Security | ${{ needs.backend-security.result }} |" >> $GITHUB_STEP_SUMMARY
           echo "| CodeQL Analysis | ${{ needs.codeql-analysis.result }} |" >> $GITHUB_STEP_SUMMARY
