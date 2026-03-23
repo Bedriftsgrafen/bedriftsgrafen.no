@@ -3,40 +3,61 @@ name: database_migration
 description: How to safely create, apply, and verify database migrations using Alembic.
 ---
 
-# Database Migration Skill
+# Database Migration
 
-## Purpose
-Use this skill when modifying the database schema (Models) in `backend/models/*.py`. It ensures migrations are generated, inspected, and applied safely.
+Use when modifying SQLAlchemy models in `backend/models/*.py`.
 
-## Workflow
-
-### 1. Create Migration (Local)
-
-1.  **Modify the Model**: Ensure your changes in `backend/models/*.py` are saved.
-2.  **Generate Migration**:
-    Run the following command:
-    ```bash
-    cd backend && .venv/bin/alembic revision --autogenerate -m "<describe_your_change>"
-    ```
-3.  **Review the file**: 
-    -   Locate the new file in `backend/alembic/versions/`.
-    -   **CRITICAL**: Read the file to ensure it ONLY contains the intended changes. If it drops tables or columns unexpectedly, ABORT and investigate.
-
-### 2. Apply Migration (Local)
-
-1.  **Upgrade Database**:
-    ```bash
-    cd backend && .venv/bin/alembic upgrade head
-    ```
-2.  **Verify**: 
-    -   Check if the changes are reflected in the database (e.g., table created, column added).
-    -   You can use `psql` or run a test script if needed.
-
-### 3. Commit Strategy
-
-Migrations should be their own atomic commit or grouped with the model change.
+## Generate
 
 ```bash
-git add backend/alembic/versions/
+cd backend && .venv/bin/alembic revision --autogenerate -m "describe_your_change"
+```
+
+## Review (CRITICAL)
+
+Open the new file in `backend/alembic/versions/` and verify:
+- It contains ONLY your intended changes
+- No unexpected `drop_table`, `drop_column`, or `drop_index`
+- Column types and nullability are correct
+- Default values are set where needed
+
+If autogenerate picked up unwanted changes, delete the file and investigate.
+
+## Apply
+
+```bash
+cd backend && .venv/bin/alembic upgrade head
+```
+
+Verify in psql:
+```bash
+docker exec -it bedriftsgrafen-db psql -U admin -d selskaper -c "\d+ <table_name>"
+```
+
+## Rollback
+
+To undo the last migration:
+```bash
+cd backend && .venv/bin/alembic downgrade -1
+```
+
+To see current state:
+```bash
+cd backend && .venv/bin/alembic current
+cd backend && .venv/bin/alembic history --verbose
+```
+
+## Data Migrations
+
+For migrations that modify **data** (not just schema):
+- Write explicit `op.execute()` SQL in the migration file
+- Test with a small dataset first
+- Include a rollback path in `downgrade()`
+- Consider running during low-traffic hours (see `OPERATIONS.md`)
+
+## Commit
+
+```bash
+git add backend/models/ backend/alembic/versions/
 git commit -m "chore(db): add migration for <feature>"
 ```

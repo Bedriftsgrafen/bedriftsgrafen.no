@@ -1,22 +1,16 @@
-# Antigravity Skills
+# Agent Skills
 
-This directory contains specialized skills for the Antigravity agent. Each subdirectory represents a distinct skill.
-
-## Structure
-
-Each skill folder must contain a `SKILL.md` file with the following:
-- **YAML Frontmatter**: Metadata about the skill (name, description, etc.).
-- **Markdown Body**: Detailed instructions, checklists, and procedures for the agent to follow.
-
-## Usage
-
-When the agent determines a task requires a specific skill, it will read the corresponding `SKILL.md` file to obtain expert knowledge and strict workflows.
+Specialized skills for AI agents working on Bedriftsgrafen.no. Each subdirectory contains a `SKILL.md` file with YAML frontmatter and markdown instructions.
 
 ## Available Skills
 
-- **git_commit_convention**: Enforces the project's strict git commit message format and policies.
-- **code_review_process**: Applies the "Bedriftsgrafen Lead Architect" standards for code reviews.
-- **database_migration**: Standard procedures for safely creating and applying Alembic migrations.
-- **feature_implementation**: Comprehensive checklist for implementing new features across the stack.
-- **dependency_management**: Standardized workflow for adding backend (pip) and frontend (npm) packages.
-- **safe_push**: Validation steps to ensure code is clean before pushing to avoiding CI failures.
+| Skill | Purpose |
+|-------|---------|
+| `code_review_process` | Lead Architect quality standards for code reviews |
+| `safe_push` | Local validation before pushing (format, lint, type-check, test) |
+| `git_commit_convention` | Commit message format with project-specific scopes |
+| `feature_implementation` | Full-stack feature checklist (Backend → Frontend → Push) |
+| `database_migration` | Alembic migration workflow (generate, review, apply, rollback) |
+| `dependency_management` | Adding/updating pip and npm packages |
+| `testing_patterns` | Test structure, conventions, and examples for pytest and vitest |
+| `lighthouse_ci` | Performance, accessibility, and SEO auditing |

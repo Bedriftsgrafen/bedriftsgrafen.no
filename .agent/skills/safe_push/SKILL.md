@@ -3,51 +3,60 @@ name: safe_push
 description: Validates code locally before pushing to prevent CI failures.
 ---
 
-# Safe Push Skill
+# Safe Push
 
-## Purpose
-To ensure that code is validated locally before being pushed, preventing "hook fatigue" and server overload.
+## Local Validation (MANDATORY before every push)
 
-## 1. Local Validation (MANDATORY)
+### Backend changes (`backend/`)
 
-Before committing/pushing, you **MUST** validate your changes locally.
+Run in order — stop on any failure:
 
-### If modifying Backend (`backend/`):
 ```bash
-# 1. Format code
-backend/.venv/bin/ruff format backend
-
-# 2. Check types and lint
-backend/.venv/bin/ruff check backend --fix
-backend/.venv/bin/mypy backend
-
-# 3. Run relevant tests (do not rely on pre-push hook for this!)
-backend/.venv/bin/pytest backend/tests/unit/<path_to_relevant_test>.py
+# Format + lint + type-check + test (one-liner)
+backend/.venv/bin/ruff check backend --fix \
+  && backend/.venv/bin/ruff format backend \
+  && backend/.venv/bin/mypy backend \
+  && backend/.venv/bin/pytest backend
 ```
 
-### If modifying Frontend (`frontend/`):
+If only a small area changed, run targeted tests first for fast feedback:
+```bash
+backend/.venv/bin/pytest backend/tests/unit/routers/test_companies.py -x
+```
+
+Then run the full suite before push.
+
+### Frontend changes (`frontend/`)
+
 ```bash
 cd frontend
 
-# 1. Full validation (Types + Lint)
+# TypeScript type-check + ESLint (one command)
 npm run validate
 
-# 2. Run relevant tests
-npm test <path_to_relevant_test>
+# Run tests
+npm test
 ```
 
-## 2. Incremental Push Strategy
+### Both changed
 
-**CRITICAL**: The pre-push hook runs the entire test suite. Pushing many commits at once creates multiple heavy jobs.
+Run backend validation first, then frontend.
 
-1.  **Check commits to be pushed**:
-    ```bash
-    git log --oneline origin/main..HEAD
-    ```
+## Push Strategy
 
-2.  **Push ONE by ONE**:
-    ```bash
-    git push origin <oldest_commit_hash>:main
-    ```
-    *Wait for the hook to pass successfully.*
-    *Repeat until all commits are pushed.*
+The pre-push hook runs the **full test suite** per push. Pushing N commits = N full runs.
+
+1. Check pending commits: `git log --oneline origin/main..HEAD`
+2. Push incrementally (oldest first):
+   ```bash
+   git push origin <commit_hash>:main
+   ```
+3. Wait for hook to pass before pushing the next commit.
+
+## On Failure
+
+- **ruff check** errors → fix the lint issue (often auto-fixable with `--fix`). Structural changes like removed imports may affect formatting.
+- **ruff format** changed files → stage the formatting changes, amend or add a commit.
+- **mypy** errors → fix type annotations. Never use `# type: ignore` without a comment explaining why.
+- **pytest** failures → fix the test or the code. Never skip tests to push.
+- **npm run validate** errors → fix TypeScript or ESLint issues before proceeding.

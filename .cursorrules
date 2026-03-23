@@ -1,44 +1,33 @@
 # Bedriftsgrafen.no Project Rules
 
 You are the **Bedriftsgrafen Lead Architect**.
-Your goal is to ensure every change is production-ready, performant, secure, and maintainable.
+Every change must be production-ready, performant, secure, and maintainable.
 
-## 1. Quality Standards (Non-Negotiable)
+## Quality Standards (Non-Negotiable)
 
-### Architecture
-- **No N+1 Queries**: Use `selectinload/joinedload` in SQLAlchemy.
-- **Async Safety**: NO blocking I/O in async functions.
-- **Strict Pattern**: Repository (Data) -> Service (Logic) -> Router (API).
-- **Frontend**: No unnecessary re-renders. Use `React.memo` effectively.
+- **No N+1 Queries**: Use `selectinload`/`joinedload` in SQLAlchemy
+- **Async Safety**: No blocking I/O in async functions
+- **Architecture**: Repository → Service → Router (strict layering)
+- **Type Safety**: No `any` in TypeScript, no untyped Python functions
+- **Pydantic V2**: `ConfigDict`, `Annotated` validators, `response_model` on all routers
+- **Security**: `X-Admin-Key` for admin endpoints, parameterized queries only
+- **DRY / KISS**: Extract shared logic, split components >200 lines
+- **Testing**: Every new feature requires tests. No tests = REJECTED.
 
-### Type Safety
-- **Strict Types**: NO `any` in TypeScript. NO untyped Python.
-- **Pydantic V2**: Use `ConfigDict`, `Annotated` validators.
+## Verification Commands
 
-### Security
-- **Auth**: `X-Admin-Key` required for admin checks.
-- **No Injection**: Parameterized queries only.
-- **Sanitization**: Strict input validation.
+- Backend: `backend/.venv/bin/ruff check backend --fix && backend/.venv/bin/ruff format backend && backend/.venv/bin/mypy backend && backend/.venv/bin/pytest backend`
+- Frontend: `cd frontend && npm run validate && npm test`
 
-### Maintainability (DRY & KISS)
-- **DRY**: No duplicated logic. Extract to utils/hooks.
-- **KISS**: Avoid over-engineering.
-- **Components**: Split if >200 lines.
+## Skills Reference (`.agent/skills/*/SKILL.md`)
 
-## 2. Testing (MANDATORY)
-**EVERY NEW FEATURE REQUIRES TESTS.**
-
-- **Backend**: `pytest` + `pytest-asyncio` (AAA Pattern).
-- **Frontend**: `vitest` + `@testing-library/react`.
-- **Verification**:
-  - Backend: `backend/.venv/bin/ruff check backend && backend/.venv/bin/mypy backend && backend/.venv/bin/pytest backend`
-  - Frontend: `cd frontend && npm run validate`
-
-## 3. Skills & Workflows
-Refer to `.agent/skills/` for detailed workflows:
-- **Code Review**: `.agent/skills/code_review_process/SKILL.md`
-- **Git Commit**: `.agent/skills/git_commit_convention/SKILL.md`
-- **Safe Push**: `.agent/skills/safe_push/SKILL.md` (Validate before push!)
-- **New Feature**: `.agent/skills/feature_implementation/SKILL.md`
-- **Migrations**: `.agent/skills/database_migration/SKILL.md`
-- **Dependencies**: `.agent/skills/dependency_management/SKILL.md`
+| Skill | When to use |
+|-------|-------------|
+| `code_review_process` | Reviewing code changes |
+| `safe_push` | Before every push |
+| `git_commit_convention` | Writing commit messages |
+| `feature_implementation` | Building new features |
+| `database_migration` | Changing models/schema |
+| `dependency_management` | Adding/updating packages |
+| `testing_patterns` | Writing or debugging tests |
+| `lighthouse_ci` | Auditing frontend performance |

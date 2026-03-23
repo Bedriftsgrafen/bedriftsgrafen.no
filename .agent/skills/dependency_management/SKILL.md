@@ -3,55 +3,69 @@ name: dependency_management
 description: Standard instructions for adding or updating backend (pip) and frontend (npm) dependencies.
 ---
 
-# Dependency Management Skill
+# Dependency Management
 
-## Backend (Pip/pyproject.toml)
+## Backend (pip + pip-compile)
 
-Dependencies are declared in `pyproject.toml` and pinned in `requirements.txt` (the generated lock file — do NOT edit by hand).
+Dependencies declared in `backend/pyproject.toml`, pinned in `backend/requirements.txt` (lock file — never edit by hand).
 
-### 1. Add to `pyproject.toml`
-Add runtime deps under `[project.dependencies]`, dev-only deps under `[project.optional-dependencies.dev]`:
-```toml
-[project.dependencies]
-"package-name>=1.2.3"
-```
+### Add a package
 
-### 2. Regenerate lock file
+1. Edit `backend/pyproject.toml`:
+   - Runtime: `[project.dependencies]`
+   - Dev-only: `[project.optional-dependencies.dev]`
+
+2. Regenerate lock file:
+   ```bash
+   cd backend && .venv/bin/pip-compile --output-file=requirements.txt pyproject.toml
+   ```
+
+3. Install locally:
+   ```bash
+   cd backend && .venv/bin/pip install -r requirements.txt
+   ```
+
+4. Commit both files:
+   ```bash
+   git add backend/pyproject.toml backend/requirements.txt
+   git commit -m "chore(deps): add <package-name>"
+   ```
+
+### Security audit
+
 ```bash
-cd backend
-.venv/bin/pip-compile --output-file=requirements.txt pyproject.toml
+cd backend && .venv/bin/pip-audit
 ```
 
-### 3. Sync local venv
-```bash
-./.venv/bin/pip install -r requirements.txt
-```
+## Frontend (npm)
 
-### 4. Commit
-```bash
-git add backend/pyproject.toml backend/requirements.txt
-git commit -m "chore(backend): add package-name"
-```
+### Add a package
 
----
-
-## Frontend (NPM)
-
-The frontend uses `npm`.
-
-### 1. Install Package
 ```bash
 cd frontend
-npm install <package-name>
-# OR for dev dependencies
-npm install -D <package-name>
+npm install <package-name>       # runtime
+npm install -D <package-name>    # dev-only
 ```
 
-### 2. Verify
-Ensure `package.json` and `package-lock.json` are updated.
-
-### 3. Commit
+Commit both files:
 ```bash
 git add frontend/package.json frontend/package-lock.json
-git commit -m "chore(frontend): add <package-name>"
+git commit -m "chore(deps): add <package-name>"
+```
+
+### Security audit
+
+```bash
+cd frontend && npm audit
+```
+
+## Docker Rebuild
+
+After adding dependencies, rebuild the relevant container:
+```bash
+# Backend
+docker compose build backend && docker compose up -d
+
+# Frontend
+docker compose build frontend && docker compose up -d
 ```
