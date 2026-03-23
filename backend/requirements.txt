@@ -8,7 +8,7 @@ aiolimiter==1.2.1
     # via -r requirements.in
 aiosqlite==0.22.1
     # via -r requirements.in
-alembic==1.18.3
+alembic==1.18.4
     # via -r requirements.in
 annotated-doc==0.0.4
     # via fastapi
