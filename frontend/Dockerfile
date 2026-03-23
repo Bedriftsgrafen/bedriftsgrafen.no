@@ -73,6 +73,7 @@ COPY --from=build --chown=nginx:nginx /app/frontend/dist /usr/share/nginx/html
 # Copy nginx configurations
 COPY --from=build --chown=nginx:nginx /app/frontend/nginx.master.conf /etc/nginx/nginx.conf
 COPY --from=build --chown=nginx:nginx /app/frontend/nginx.conf /etc/nginx/conf.d/default.conf
+COPY --from=build --chown=nginx:nginx /app/frontend/security-headers.conf /etc/nginx/security-headers.conf
 
 # Switch to non-root nginx user
 USER nginx
