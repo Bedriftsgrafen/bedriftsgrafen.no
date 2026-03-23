@@ -26,6 +26,11 @@ export function OverviewTab({ company, onOpenIndustry }: OverviewTabProps) {
     return new Date(company.stiftelsesdato) > cutoffDate
   }, [company.stiftelsesdato])
 
+  const mapAddr = company.forretningsadresse || company.postadresse
+  const mapAddress = mapAddr
+    ? [...mapAddr.adresse, `${mapAddr.postnummer} ${mapAddr.poststed}`, mapAddr.land].join(', ')
+    : undefined
+
   return (
     <div className="space-y-6">
 
@@ -356,20 +361,13 @@ export function OverviewTab({ company, onOpenIndustry }: OverviewTabProps) {
             </div>
 
             {/* Map */}
-            {(company.forretningsadresse || company.postadresse) && (
+            {mapAddr && (
               <div className="mt-4">
                 <Suspense fallback={<div className="h-48 bg-gray-100 rounded-lg animate-pulse" />}>
                 <LocationMap
                   companyName={company.navn ?? ''}
-                  address={(() => {
-                    const addr = company.forretningsadresse || company.postadresse!
-                    return [
-                      ...addr.adresse,
-                      `${addr.postnummer} ${addr.poststed}`,
-                      addr.land
-                    ].join(', ')
-                  })()}
-                  postalCode={(company.forretningsadresse || company.postadresse)?.postnummer}
+                  address={mapAddress!}
+                  postalCode={mapAddr.postnummer}
                   latitude={company.latitude}
                   longitude={company.longitude}
                   geocodedAt={company.geocoded_at}

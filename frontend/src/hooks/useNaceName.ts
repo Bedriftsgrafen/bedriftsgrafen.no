@@ -10,7 +10,7 @@ interface SsbNaceCode {
 }
 
 /** Global cache for SSB NACE hierarchy */
-let ssbNaceCache: Record<string, string> = {}
+const ssbNaceCache: Record<string, string> = {}
 let cachePromise: Promise<void> | null = null
 
 /**

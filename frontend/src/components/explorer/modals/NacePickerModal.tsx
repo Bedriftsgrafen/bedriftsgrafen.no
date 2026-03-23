@@ -22,7 +22,7 @@ interface NaceSubclass {
 }
 
 /** Cache for SSB NACE hierarchy */
-let ssbHierarchyCache: Record<string, SsbNaceCode> = {}
+const ssbHierarchyCache: Record<string, SsbNaceCode> = {}
 let ssbHierarchyLoaded = false
 
 /** Search input component */
@@ -205,7 +205,7 @@ const NacePickerModalContent = memo(function NacePickerModalContent({
         }
 
         return codes
-        // eslint-disable-next-line react-hooks/exhaustive-deps
+        // eslint-disable-next-line @eslint-react/exhaustive-deps
     }, [hierarchyLoaded])
 
     // Filter based on search - search all levels
