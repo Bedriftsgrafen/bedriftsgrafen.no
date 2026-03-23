@@ -41,7 +41,7 @@ uvicorn main:app --reload
 - `alembic/`: Database migrations
 - `routers/`: API route handlers
 - `services/`: Business logic
-- `models.py`: SQLAlchemy database models
+- `models/`: SQLAlchemy database models
 - `schemas/`: Pydantic models for request/response validation
 - `scripts/`: Operational scripts (imports, indexing, etc.)
 

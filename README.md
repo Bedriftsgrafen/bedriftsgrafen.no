@@ -105,8 +105,6 @@ See [CONTRIBUTING.md](CONTRIBUTING.md) for details.
    docker compose -f docker-compose.prod.yml up -d
    ```
    
-   See [DOCKER_WORKFLOW.md](docs/DOCKER_WORKFLOW.md) for detailed command reference and workflows.
-
 4. **Access the application**
    - Frontend: http://localhost:5173
    - Backend API: http://localhost:8000
