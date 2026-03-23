@@ -94,7 +94,7 @@ function SubUnitCard({
           <div className="flex items-center gap-2">
             <Calendar className="h-4 w-4 text-gray-400 flex-none" />
             <span>
-              Opprettet: {new Date(unit.stiftelsesdato).toLocaleDateString('no-NO')}
+              Opprettet: {unit.stiftelsesdato.split('T')[0].split('-').reverse().join('.')}
             </span>
           </div>
         )}

@@ -58,8 +58,8 @@ export const CompanyListModal = ({
             default: return { field: 'revenue', order: 'desc' };
         }
     };
-    const [sortField, setSortField] = useState<SortField>(getDefaultSort().field);
-    const [sortOrder, setSortOrder] = useState<SortOrder>(getDefaultSort().order);
+    const [sortField, setSortField] = useState<SortField>(() => getDefaultSort().field);
+    const [sortOrder, setSortOrder] = useState<SortOrder>(() => getDefaultSort().order);
 
     const handleCompanyClick = useCallback((orgnr: string) => {
         const clean = cleanOrgnr(orgnr) || orgnr;

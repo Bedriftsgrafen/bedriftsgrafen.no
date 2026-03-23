@@ -1,6 +1,8 @@
 import { Database, Mail } from 'lucide-react'
 import { CONTACT_EMAIL } from '../constants/contact'
 
+const CURRENT_YEAR = new Date().getFullYear()
+
 export function Footer() {
   return (
     <footer className="bg-gray-900 text-gray-300 mt-16">
@@ -117,7 +119,7 @@ export function Footer() {
 
         {/* Copyright */}
         <div className="border-t border-gray-800 mt-8 pt-6 text-center text-sm text-gray-400">
-          © {new Date().getFullYear()} Bedriftsgrafen.no. Alle rettigheter reservert.
+          © {CURRENT_YEAR} Bedriftsgrafen.no. Alle rettigheter reservert.
         </div>
       </div>
     </footer>

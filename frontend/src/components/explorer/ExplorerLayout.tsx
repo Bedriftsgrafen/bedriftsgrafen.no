@@ -154,9 +154,11 @@ export const ExplorerLayout = memo(function ExplorerLayout({ onSelectCompany }: 
 
 
     // Log errors for debugging (in production, send to monitoring service)
-    if (companiesError && companiesErrorData) {
-        console.error('Companies query error:', companiesErrorData)
-    }
+    useEffect(() => {
+        if (companiesError && companiesErrorData) {
+            console.error('Companies query error:', companiesErrorData)
+        }
+    }, [companiesError, companiesErrorData])
 
     return (
         <div className="flex flex-col lg:flex-row gap-6 relative z-0">

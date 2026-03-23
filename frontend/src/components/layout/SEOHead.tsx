@@ -178,9 +178,11 @@ export function SEOHead({
       {/* Canonical URL */}
       <link rel="canonical" href={currentUrl} />
 
-      {/* JSON-LD Structured Data */}
+      {/* JSON-LD Structured Data — safe: content is generated internally, not user input */}
+      {/* eslint-disable-next-line @eslint-react/dom/no-dangerously-set-innerhtml */}
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: webPageJsonLd }} />
       {organizationJsonLd && (
+        // eslint-disable-next-line @eslint-react/dom/no-dangerously-set-innerhtml
         <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: organizationJsonLd }} />
       )}
     </>

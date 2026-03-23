@@ -198,12 +198,14 @@ function useMapBounds() {
     useEffect(() => {
         const updateBounds = () => {
             const b = map.getBounds();
+            // eslint-disable-next-line @eslint-react/set-state-in-effect
             setBounds({
                 west: b.getWest(),
                 south: b.getSouth(),
                 east: b.getEast(),
                 north: b.getNorth(),
             });
+            // eslint-disable-next-line @eslint-react/set-state-in-effect
             setZoom(map.getZoom());
         };
 

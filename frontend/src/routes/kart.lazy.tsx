@@ -25,9 +25,10 @@ export function KartPage() {
     const navigate = useNavigate({ from: '/kart' })
     const search = useSearch({ from: '/kart' })
 
-    const [selectedCompanyOrgnr, _setSelectedCompanyOrgnr] = useState<string | null>(null)
+    // eslint-disable-next-line @eslint-react/use-state -- intentional: wrapper adds cleanOrgnr transform
+    const [selectedCompanyOrgnr, setRawSelectedCompanyOrgnr] = useState<string | null>(null)
     const setSelectedCompanyOrgnr = useCallback((orgnr: string | null) => {
-        _setSelectedCompanyOrgnr(cleanOrgnr(orgnr))
+        setRawSelectedCompanyOrgnr(cleanOrgnr(orgnr))
     }, [])
 
     // Read filter state from store

@@ -39,10 +39,6 @@ export default defineConfig(
             ],
             '@typescript-eslint/no-explicit-any': 'error',
             '@eslint-react/no-array-index-key': 'off',
-            '@eslint-react/use-state': 'off',
-            '@eslint-react/purity': 'off',
-            '@eslint-react/set-state-in-effect': 'off',
-            '@eslint-react/dom/no-dangerously-set-innerhtml': 'off',
         },
     },
     {

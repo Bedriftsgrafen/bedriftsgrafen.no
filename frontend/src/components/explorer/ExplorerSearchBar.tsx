@@ -41,6 +41,7 @@ export function ExplorerSearchBar({
 
     // Sync from props (e.g. when clicking recent searches or clearing filters)
     useEffect(() => {
+        // eslint-disable-next-line @eslint-react/set-state-in-effect
         setLocalValue(initialValue);
     }, [initialValue]);
 

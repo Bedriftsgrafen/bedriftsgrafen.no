@@ -45,9 +45,10 @@ function KonkurserPage() {
     const navigate = Route.useNavigate()
     useDocumentTitle('Konkurser | Bedriftsgrafen.no')
     const [activeTab, setActiveTab] = useState<'list' | 'stats' | 'map'>('list')
-    const [selectedCompanyOrgnr, _setSelectedCompanyOrgnr] = useState<string | null>(null)
+    // eslint-disable-next-line @eslint-react/use-state -- intentional: wrapper adds cleanOrgnr transform
+    const [selectedCompanyOrgnr, setRawSelectedCompanyOrgnr] = useState<string | null>(null)
     const setSelectedCompanyOrgnr = useCallback((orgnr: string | null) => {
-        _setSelectedCompanyOrgnr(cleanOrgnr(orgnr))
+        setRawSelectedCompanyOrgnr(cleanOrgnr(orgnr))
     }, [])
     const [selectedIndustry, setSelectedIndustry] = useState<{ code: string; name: string } | null>(null)
 

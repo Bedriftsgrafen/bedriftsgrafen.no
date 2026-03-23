@@ -158,7 +158,7 @@ export function LocationMap({
                             <p className="text-gray-600 text-xs mb-1">{address}</p>
                             {geocodedAt && (
                                 <p className="text-gray-400 text-[10px] mb-2 italic">
-                                    Kartdata: {new Date(geocodedAt).toLocaleDateString('nb-NO')}
+                                    Kartdata: {geocodedAt.split('T')[0].split('-').reverse().join('.')}
                                 </p>
                             )}
                             <a

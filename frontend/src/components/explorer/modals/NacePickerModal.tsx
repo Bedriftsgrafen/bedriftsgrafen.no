@@ -160,7 +160,7 @@ const NacePickerModalContent = memo(function NacePickerModalContent({
     onSelect,
 }: Omit<NacePickerModalProps, 'isOpen'>) {
     const [search, setSearch] = useState('')
-    const [expandedNodes, setExpandedNodes] = useState<Set<string>>(new Set())
+    const [expandedNodes, setExpandedNodes] = useState<Set<string>>(() => new Set())
     const [subclassCache, setSubclassCache] = useState<Record<string, NaceSubclass[]>>({})
     const [loadingPrefix, setLoadingPrefix] = useState<string | null>(null)
     const [tempSelection, setTempSelection] = useState<string>(selectedCode || '')

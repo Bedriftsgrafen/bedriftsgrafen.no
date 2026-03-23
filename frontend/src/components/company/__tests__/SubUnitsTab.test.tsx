@@ -211,9 +211,9 @@ describe('SubUnitsTab - Data Display', () => {
     it('renders the stiftelsesdato (foundation date)', () => {
         render(<SubUnitsTab orgnr="123456789" />, { wrapper: createTestWrapper() })
 
-        // Check for formatted date string
-        expect(screen.getByText(`Opprettet: ${new Date('2020-01-01').toLocaleDateString('no-NO')}`)).toBeInTheDocument()
-        expect(screen.getByText(`Opprettet: ${new Date('2021-06-15').toLocaleDateString('no-NO')}`)).toBeInTheDocument()
+        // Check for formatted date string (dd.mm.yyyy)
+        expect(screen.getByText('Opprettet: 01.01.2020')).toBeInTheDocument()
+        expect(screen.getByText('Opprettet: 15.06.2021')).toBeInTheDocument()
     })
 })
 
