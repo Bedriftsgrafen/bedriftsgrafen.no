@@ -8,6 +8,7 @@ from apscheduler.triggers.interval import IntervalTrigger
 from sqlalchemy import text
 
 from database import AsyncSessionLocal, engine
+from constants.concurrency import SUBUNIT_UPDATE_PAGE_SIZE
 from services.seo_service import SEOService
 
 logger = logging.getLogger(__name__)
@@ -388,7 +389,9 @@ class SchedulerService:
                 # Default lookback of 30 days if no state exists
                 since_date = (date.today() - timedelta(days=30)) if not start_id else None
 
-                result = await service.fetch_subunit_updates(since_date=since_date, start_id=start_id)
+                result = await service.fetch_subunit_updates(
+                    since_date=since_date, start_id=start_id, page_size=SUBUNIT_UPDATE_PAGE_SIZE
+                )
 
                 # Update state
                 if result.get("latest_oppdateringsid"):

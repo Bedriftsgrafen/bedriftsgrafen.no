@@ -400,7 +400,7 @@ class UpdateService:
     async def fetch_subunit_updates(
         self,
         since_date: date | None = None,
-        page_size: int = 1000,
+        page_size: int = 100,
         start_id: int | None = None,
     ) -> dict[str, Any]:
         """Process incremental updates for subunits (underenheter)."""
