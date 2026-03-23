@@ -1,8 +1,10 @@
+from unittest.mock import AsyncMock, MagicMock
+
 import pytest
-from unittest.mock import MagicMock, AsyncMock
+from sqlalchemy import Select
+
 from repositories.company.lookups import LookupsMixin
 from repositories.company_filter_builder import FilterParams
-from sqlalchemy import Select
 
 
 class MockRepository(LookupsMixin):

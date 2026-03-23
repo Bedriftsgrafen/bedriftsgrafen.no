@@ -48,7 +48,7 @@ from schemas.stats import (
     IndustryStatsDTO,
 )
 
-__all__ = [
+__all__ = [  # noqa: RUF022  -- grouped by category for readability
     # Brreg API schemas
     "BrregAdresse",
     "BrregCompany",

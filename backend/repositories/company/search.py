@@ -13,10 +13,10 @@ from sqlalchemy.ext.asyncio import AsyncSession
 import models
 from exceptions import DatabaseException
 from repositories.company.base import (
+    LATEST_FINANCIAL_COLUMNS,
     LIST_VIEW_OPTIONS,
     SEARCH_SEMAPHORE,
     SEARCH_SEMAPHORE_TIMEOUT,
-    LATEST_FINANCIAL_COLUMNS,
     CompanyWithFinancials,
 )
 

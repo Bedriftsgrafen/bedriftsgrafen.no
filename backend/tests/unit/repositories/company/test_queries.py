@@ -1,8 +1,10 @@
-import pytest
 from unittest.mock import AsyncMock, MagicMock
+
+import pytest
+
+import models
 from repositories.company.queries import QueryMixin
 from repositories.company_filter_builder import FilterParams
-import models
 
 
 # Helper class that uses the mixin

@@ -5,10 +5,11 @@ Tests SVG generation for companies and municipalities.
 Follows AAA pattern (Arrange - Act - Assert).
 """
 
+from unittest.mock import AsyncMock, MagicMock, patch
+
 import pytest
-from unittest.mock import AsyncMock, patch, MagicMock
-from fastapi.testclient import TestClient
 from fastapi import FastAPI
+from fastapi.testclient import TestClient
 
 from routers.v1.og_image import router
 

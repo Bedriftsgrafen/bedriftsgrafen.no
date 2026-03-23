@@ -9,10 +9,12 @@ Tests the data integrity repair phases:
 Follows AAA pattern (Arrange - Act - Assert).
 """
 
-import pytest
 from unittest.mock import AsyncMock, MagicMock, patch
-from services.repair_service import RepairService
+
+import pytest
+
 from models import Company
+from services.repair_service import RepairService
 
 
 @pytest.fixture

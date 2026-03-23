@@ -1,8 +1,11 @@
-import pytest
+from datetime import UTC
 from unittest.mock import AsyncMock
-from services.role_service import RoleService
+
+import pytest
 from sqlalchemy.ext.asyncio import AsyncSession
+
 from models import Role
+from services.role_service import RoleService
 
 
 @pytest.fixture
@@ -96,10 +99,10 @@ async def test_get_roles_empty_api_response(role_service):
 @pytest.mark.asyncio
 async def test_get_roles_force_refresh(role_service):
     """Should skip cache check when force_refresh=True."""
-    from datetime import datetime, timedelta, timezone
+    from datetime import datetime, timedelta
 
     # Simulate last update was more than 60s ago
-    old_time = datetime.now(timezone.utc) - timedelta(seconds=120)
+    old_time = datetime.now(UTC) - timedelta(seconds=120)
     role_service.role_repo.get_cache_timestamp = AsyncMock(return_value=old_time)
     role_service.role_repo.delete_by_orgnr = AsyncMock()
     role_service.role_repo.create_batch = AsyncMock()
@@ -116,10 +119,10 @@ async def test_get_roles_force_refresh(role_service):
 @pytest.mark.asyncio
 async def test_get_roles_force_refresh_throttled(role_service):
     """Should skip force refresh if last update was within 60s."""
-    from datetime import datetime, timedelta, timezone
+    from datetime import datetime, timedelta
 
     # Simulate last update was 30s ago (within throttle window)
-    recent_time = datetime.now(timezone.utc) - timedelta(seconds=30)
+    recent_time = datetime.now(UTC) - timedelta(seconds=30)
     role_service.role_repo.get_cache_timestamp = AsyncMock(return_value=recent_time)
     role_service.role_repo.get_by_orgnr = AsyncMock(return_value=[Role(orgnr="123", type_kode="CACHED")])
     role_service.brreg_api.fetch_roles = AsyncMock()

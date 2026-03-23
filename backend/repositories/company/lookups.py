@@ -249,26 +249,26 @@ class LookupsMixin:
 
             where_sql = " AND ".join(where_clauses)
 
-            # Query 1: Fast COUNT using naeringskode index
-            count_query = text(f"""
+            # Query 1: Fast COUNT using naeringskode index (where_sql is built from hardcoded clauses)
+            count_query = text(f"""  noqa: S608
                 SELECT COUNT(*)
                 FROM bedrifter
                 WHERE {where_sql}
-            """)
+            """)  # noqa: S608
             count_result = await self.db.execute(count_query, {"nace_pattern": f"{nace_code}%"})
             total_count = count_result.scalar() or 0
 
             if total_count == 0:
                 return [], 0
 
-            # Query 2: Get orgnrs with pagination
+            # Query 2: Get orgnrs with pagination (where_sql is built from hardcoded clauses)
             orgnr_query = text(f"""
                 SELECT orgnr
                 FROM bedrifter
                 WHERE {where_sql}
                 ORDER BY antall_ansatte DESC NULLS LAST
                 LIMIT :limit OFFSET :offset
-            """)
+            """)  # noqa: S608
             result = await self.db.execute(orgnr_query, params)
             rows = result.fetchall()
 

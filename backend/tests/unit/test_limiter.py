@@ -18,6 +18,7 @@ class TestLimiterConfiguration:
         with patch.dict(os.environ, env_vars, clear=False):
             # Force reimport to pick up new env vars
             import importlib
+
             import limiter as limiter_module
 
             importlib.reload(limiter_module)
@@ -35,6 +36,7 @@ class TestLimiterConfiguration:
 
         with patch.dict(os.environ, env_vars, clear=False):
             import importlib
+
             import limiter as limiter_module
 
             importlib.reload(limiter_module)
@@ -51,6 +53,7 @@ class TestLimiterConfiguration:
 
         with patch.dict(os.environ, env_vars, clear=False):
             import importlib
+
             import limiter as limiter_module
 
             importlib.reload(limiter_module)

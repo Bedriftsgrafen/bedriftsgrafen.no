@@ -1,7 +1,7 @@
 """Repository for Role database operations"""
 
 import logging
-from datetime import date, datetime, timedelta
+from datetime import UTC, date, datetime, timedelta
 from typing import Any
 
 from sqlalchemy import Select, delete, select, text, tuple_
@@ -25,7 +25,7 @@ class RoleRepository:
         self.db = db
 
     @staticmethod
-    def _commercial_filter(stmt: "Select[Any]") -> "Select[Any]":
+    def _commercial_filter(stmt: Select[Any]) -> Select[Any]:
         """Apply Enhetsregisterloven § 22 commercial entity filter.
 
         Rule 1: Registered in Foretaksregisteret → ALWAYS commercial.
@@ -92,9 +92,8 @@ class RoleRepository:
             return False
 
         # Handle timezone-aware datetimes (assume UTC as per project standard)
-        from datetime import timezone
 
-        now = datetime.now(timezone.utc)
+        now = datetime.now(UTC)
         cache_expiry = last_updated + timedelta(days=ROLE_CACHE_DAYS)
         return now < cache_expiry
 
@@ -486,7 +485,7 @@ class RoleRepository:
                 ORDER BY r.person_navn, r.foedselsdato
             ),
             numbered AS (
-                SELECT 
+                SELECT
                     person_navn,
                     foedselsdato,
                     ROW_NUMBER() OVER (ORDER BY person_navn, foedselsdato) as rn

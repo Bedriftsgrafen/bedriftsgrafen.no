@@ -4,9 +4,11 @@ Verifies that the backend correctly handles 5-digit NACE codes on summary-level 
 """
 
 from unittest.mock import AsyncMock, patch
+
 from fastapi.testclient import TestClient
-from main import app
+
 from database import get_db
+from main import app
 
 client = TestClient(app)
 

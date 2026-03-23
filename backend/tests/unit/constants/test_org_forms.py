@@ -8,10 +8,11 @@ Test Categories:
 """
 
 import pytest
+
 from constants.org_forms import (
     COMMERCIAL_ORG_FORMS,
-    NON_COMMERCIAL_ORG_FORMS,
     FOUNDATION_ORG_FORM,
+    NON_COMMERCIAL_ORG_FORMS,
     is_commercial_role,
 )
 

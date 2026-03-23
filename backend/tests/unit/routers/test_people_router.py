@@ -8,9 +8,10 @@ Test Categories:
 4. Response models - Pydantic serialization
 """
 
-import pytest
 from datetime import date
 from unittest.mock import AsyncMock, MagicMock, patch
+
+import pytest
 from fastapi.testclient import TestClient
 
 

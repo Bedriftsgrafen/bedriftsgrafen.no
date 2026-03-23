@@ -1,6 +1,7 @@
+import argparse
 import asyncio
 import logging
-import argparse
+
 from database import AsyncSessionLocal
 from services.repair_service import RepairService
 

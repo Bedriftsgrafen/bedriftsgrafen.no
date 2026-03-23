@@ -1,11 +1,12 @@
 """Unit tests for the Municipality router."""
 
-import pytest
-from httpx import AsyncClient, ASGITransport
 from unittest.mock import AsyncMock, patch
 
-from main import app
+import pytest
+from httpx import ASGITransport, AsyncClient
+
 from database import get_db
+from main import app
 
 
 # Mock DB dependency

@@ -31,8 +31,8 @@ from sqlalchemy import select, text
 from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from database import AsyncSessionLocal
 import models
+from database import AsyncSessionLocal
 
 logging.basicConfig(
     level=logging.INFO,

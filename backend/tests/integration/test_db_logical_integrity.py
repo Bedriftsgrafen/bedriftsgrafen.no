@@ -11,11 +11,12 @@ Scenario Coverage:
 
 import pytest
 import pytest_asyncio
-from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession, async_sessionmaker
+from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
+
 import models
+from repositories.company_filter_builder import FilterParams
 from repositories.role_repository import RoleRepository
 from repositories.stats_repository import StatsRepository
-from repositories.company_filter_builder import FilterParams
 
 # Use a separate base or reuse models.Base if it's available and clean
 Base = models.Base

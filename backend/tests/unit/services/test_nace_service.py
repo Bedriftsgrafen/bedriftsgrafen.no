@@ -1,7 +1,9 @@
+from unittest.mock import AsyncMock, MagicMock, patch
+
 import pytest
-from unittest.mock import AsyncMock, patch, MagicMock
-from services.nace_service import NaceService
 from sqlalchemy.ext.asyncio import AsyncSession
+
+from services.nace_service import NaceService
 
 
 @pytest.fixture

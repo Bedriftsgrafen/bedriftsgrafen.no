@@ -1,9 +1,11 @@
-import pytest
 from unittest.mock import AsyncMock, patch
+
+import pytest
 from fastapi.testclient import TestClient
+
+from limiter import limiter
 from main import app
 from routers.admin_import import verify_admin_key
-from limiter import limiter
 
 # Disable rate limiting for tests
 limiter.enabled = False

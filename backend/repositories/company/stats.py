@@ -3,7 +3,7 @@
 Contains count_companies, get_aggregate_stats, and dashboard stat methods.
 """
 
-from datetime import date, datetime
+from datetime import UTC, date, datetime
 from typing import Any
 
 from sqlalchemy import bindparam, func, select, text
@@ -223,9 +223,7 @@ class StatsMixin:
             count = result.scalar()
             return int(count) if count else 0
         except Exception:
-            from datetime import timezone
-
-            current_year = datetime.now(timezone.utc).year
+            current_year = datetime.now(UTC).year
             start_date = date(current_year, 1, 1)
             result = await self.db.execute(
                 select(func.count(models.Company.orgnr)).filter(
@@ -265,9 +263,9 @@ class StatsMixin:
     async def get_new_companies_30d(self) -> int:
         """Get number of new companies in the last 30 days."""
         try:
-            from datetime import timedelta, timezone
+            from datetime import timedelta
 
-            start_date = datetime.now(timezone.utc).date() - timedelta(days=30)
+            start_date = datetime.now(UTC).date() - timedelta(days=30)
             result = await self.db.execute(
                 select(func.count(models.Company.orgnr)).filter(
                     models.Company.stiftelsesdato >= start_date, models.Company.organisasjonsform != "KBO"

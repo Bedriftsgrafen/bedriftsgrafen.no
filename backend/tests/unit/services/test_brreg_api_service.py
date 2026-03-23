@@ -5,10 +5,11 @@ Tests API fetching, error handling, and response parsing.
 Follows AAA pattern (Arrange - Act - Assert).
 """
 
-import pytest
 from unittest.mock import AsyncMock, MagicMock
 
-from services.brreg_api_service import BrregApiService, BrregApiException
+import pytest
+
+from services.brreg_api_service import BrregApiException, BrregApiService
 
 
 class TestBrregApiServiceInit:

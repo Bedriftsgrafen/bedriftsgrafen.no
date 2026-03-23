@@ -7,11 +7,11 @@ that can be inherited by specific API services (Brreg, SSB, etc.).
 
 import asyncio
 import logging
-from abc import ABC
 from typing import Any
 
 import httpx
-from constants.concurrency import DEFAULT_EXTERNAL_TIMEOUT, CONNECT_TIMEOUT
+
+from constants.concurrency import CONNECT_TIMEOUT, DEFAULT_EXTERNAL_TIMEOUT
 
 logger = logging.getLogger(__name__)
 
@@ -35,9 +35,9 @@ class RateLimitException(ExternalApiException):
         )
 
 
-class BaseExternalService(ABC):
+class BaseExternalService:
     """
-    Abstract base class for external API services.
+    Base class for external API services.
 
     Provides:
     - Configurable HTTP client with timeouts
@@ -220,7 +220,7 @@ class BaseExternalService(ABC):
                     )
 
             except Exception as e:
-                logger.error(f"{self.SERVICE_NAME}: Error fetching {context}: {str(e)}")
+                logger.error(f"{self.SERVICE_NAME}: Error fetching {context}: {e!s}")
                 if attempt == self.RETRY_ATTEMPTS - 1:
                     raise ExternalApiException(
                         message=f"Failed to fetch {context}", service=self.SERVICE_NAME, details=str(e)

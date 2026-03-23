@@ -1,7 +1,9 @@
-import pytest
 from unittest.mock import AsyncMock, MagicMock, patch
-from services.company_service import CompanyService
+
+import pytest
+
 import models
+from services.company_service import CompanyService
 
 
 @pytest.mark.asyncio

@@ -1,10 +1,12 @@
 from __future__ import annotations
+
 from datetime import datetime
+
 from sqlalchemy import (
     DateTime,
+    Index,
     Integer,
     String,
-    Index,
 )
 from sqlalchemy.orm import Mapped, mapped_column
 from sqlalchemy.sql import func

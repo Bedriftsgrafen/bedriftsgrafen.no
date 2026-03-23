@@ -4,10 +4,12 @@ Tests API contracts and Router <-> Service interaction.
 """
 
 from unittest.mock import AsyncMock, MagicMock, patch
+
 from fastapi.testclient import TestClient
+
+from database import get_db
 from main import app
 from models import Company
-from database import get_db
 
 # We need to override get_db to avoid real DB connection attempts
 

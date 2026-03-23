@@ -5,12 +5,13 @@ Tests incremental update fetching and processing phases.
 Follows AAA pattern (Arrange - Act - Assert).
 """
 
-import pytest
 from datetime import date, timedelta
 from unittest.mock import AsyncMock, MagicMock, patch
 
-from services.update_service import UpdateService
+import pytest
+
 from schemas.brreg import FetchResult, UpdateBatchResult
+from services.update_service import UpdateService
 
 
 @pytest.fixture

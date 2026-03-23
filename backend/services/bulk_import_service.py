@@ -1,14 +1,14 @@
 import asyncio
 import logging
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from typing import Any
 
 from sqlalchemy import func, select, text, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from constants.concurrency import BULK_IMPORT_BATCH_SIZE
 from models_import import BulkImportQueue, ImportBatch, ImportStatus
 from services.company_service import CompanyService
-from constants.concurrency import BULK_IMPORT_BATCH_SIZE
 
 logger = logging.getLogger(__name__)
 
@@ -154,7 +154,7 @@ class BulkImportService:
 
             # Mark as in progress
             queue_item.status = ImportStatus.IN_PROGRESS
-            queue_item.started_at = datetime.now(timezone.utc)
+            queue_item.started_at = datetime.now(UTC)
             queue_item.attempt_count = (queue_item.attempt_count or 0) + 1
             await self.db.commit()
 
@@ -173,7 +173,7 @@ class BulkImportService:
                         queue_item.company_fetched = 1 if process_result["company_fetched"] else 0
                         queue_item.financials_count = process_result["financials_count"]
 
-                    queue_item.completed_at = datetime.now(timezone.utc)
+                    queue_item.completed_at = datetime.now(UTC)
                     await self.db.commit()
 
                     logger.info(
@@ -186,7 +186,7 @@ class BulkImportService:
                     logger.error(f"Worker {worker_id}: Unexpected error for {queue_item.orgnr}: {e}")
                     queue_item.status = ImportStatus.FAILED
                     queue_item.last_error = str(e)
-                    queue_item.completed_at = datetime.now(timezone.utc)
+                    queue_item.completed_at = datetime.now(UTC)
                     await self.db.commit()
 
                 # Delay for rate limiting (additional to semaphore)
@@ -205,7 +205,7 @@ class BulkImportService:
             Batch information and statistics
         """
         # Create batch record
-        batch = ImportBatch(batch_name=batch_name, started_at=datetime.now(timezone.utc))
+        batch = ImportBatch(batch_name=batch_name, started_at=datetime.now(UTC))
 
         # Count pending items
         result = await self.db.execute(
@@ -228,7 +228,7 @@ class BulkImportService:
         await asyncio.gather(*workers)
 
         # Update batch statistics
-        batch.completed_at = datetime.now(timezone.utc)
+        batch.completed_at = datetime.now(UTC)
 
         # Count results
         completed = await self.db.execute(

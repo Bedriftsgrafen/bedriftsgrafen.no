@@ -4,7 +4,7 @@ Tests company OG data fetching, SVG generation, and sitemap caching.
 """
 
 import asyncio
-from datetime import datetime, timedelta
+from datetime import UTC, datetime, timedelta
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
@@ -108,9 +108,8 @@ class TestSEOServiceCache:
 
     def test_is_cache_valid_when_expired(self):
         """Cache should be invalid when expired."""
-        from datetime import timezone
 
-        SEOService._sitemap_cache["expiry"] = datetime.now(timezone.utc) - timedelta(hours=1)
+        SEOService._sitemap_cache["expiry"] = datetime.now(UTC) - timedelta(hours=1)
         assert SEOService.is_cache_valid() is False
 
     def test_is_cache_valid_when_not_set(self):
@@ -120,9 +119,8 @@ class TestSEOServiceCache:
 
     def test_is_cache_valid_when_fresh(self):
         """Cache should be valid when expiry is in the future."""
-        from datetime import timezone
 
-        SEOService._sitemap_cache["expiry"] = datetime.now(timezone.utc) + timedelta(hours=1)
+        SEOService._sitemap_cache["expiry"] = datetime.now(UTC) + timedelta(hours=1)
         assert SEOService.is_cache_valid() is True
 
     @pytest.mark.asyncio
@@ -133,7 +131,6 @@ class TestSEOServiceCache:
         service = SEOService(mock_db)
 
         # Pre-populate cache
-        from datetime import timezone
 
         SEOService._sitemap_cache = {
             "total_companies": 1000,
@@ -141,7 +138,7 @@ class TestSEOServiceCache:
             "municipalities": [("0301", "2024-01-01")],
             "company_anchors": ["123456789"],
             "person_anchors": [("Test Person", "1990-01-01")],
-            "expiry": datetime.now(timezone.utc) + timedelta(hours=1),
+            "expiry": datetime.now(UTC) + timedelta(hours=1),
             "populated": True,
             "is_warming": False,
         }
@@ -187,7 +184,6 @@ class TestSEOServiceCache:
         service = SEOService(mock_db)
 
         # Pre-populate stale cache
-        from datetime import timezone
 
         SEOService._sitemap_cache = {
             "total_companies": 1000,
@@ -195,7 +191,7 @@ class TestSEOServiceCache:
             "municipalities": [],
             "company_anchors": [],
             "person_anchors": [],
-            "expiry": datetime.now(timezone.utc) - timedelta(hours=1),  # Expired
+            "expiry": datetime.now(UTC) - timedelta(hours=1),  # Expired
             "populated": True,
             "is_warming": False,
         }
@@ -222,7 +218,6 @@ class TestSEOServiceCache:
         service = SEOService(mock_db)
 
         # Pre-populate cache
-        from datetime import timezone
 
         SEOService._sitemap_cache = {
             "total_companies": 1000,
@@ -230,7 +225,7 @@ class TestSEOServiceCache:
             "municipalities": [],
             "company_anchors": [],
             "person_anchors": [],
-            "expiry": datetime.now(timezone.utc) - timedelta(hours=1),  # Expired
+            "expiry": datetime.now(UTC) - timedelta(hours=1),  # Expired
             "populated": True,
             "is_warming": False,
         }

@@ -7,12 +7,12 @@ respecting Kartverket API limits with throttling.
 
 import asyncio
 import logging
+from collections.abc import Sequence
+from datetime import UTC, datetime
+from typing import Any
+
 import httpx
-from datetime import datetime
-
-from typing import Any, Sequence
-
-from sqlalchemy import Row, and_, func, select, update, or_, text
+from sqlalchemy import Row, and_, func, or_, select, text, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from constants.concurrency import API_CONCURRENCY_LIMIT, GEOCODING_BATCH_SIZE
@@ -149,9 +149,8 @@ class GeocodingBatchService:
 
         Returns statistics about the batch run.
         """
-        from datetime import timezone
 
-        start_time = datetime.now(timezone.utc)
+        start_time = datetime.now(UTC)
 
         # Get companies to geocode (already optimized to fetch only needed columns)
         companies = await self.get_companies_needing_geocoding(batch_size)
@@ -243,7 +242,7 @@ class GeocodingBatchService:
                         "success": success_count,
                         "failed": len(companies) - success_count,
                         "remaining": await self.count_companies_needing_geocoding(),
-                        "duration_seconds": round((datetime.now(timezone.utc) - start_time).total_seconds(), 1),
+                        "duration_seconds": round((datetime.now(UTC) - start_time).total_seconds(), 1),
                         "error": "Transaction aborted",
                     }
                 fail_count += 1
@@ -260,7 +259,7 @@ class GeocodingBatchService:
         remaining = await self.count_companies_needing_geocoding()
         total_geocoded = await self.count_geocoded_companies()
 
-        duration = (datetime.now(timezone.utc) - start_time).total_seconds()
+        duration = (datetime.now(UTC) - start_time).total_seconds()
 
         stats = {
             "processed": len(companies),
@@ -309,9 +308,8 @@ class GeocodingBatchService:
             return {"error": "File not found", "checked_paths": possible_paths}
 
         logger.info(f"Starting postal code backfill from {file_path}")
-        from datetime import timezone
 
-        start_time = datetime.now(timezone.utc)
+        start_time = datetime.now(UTC)
 
         try:
             # Load postal codes into a dictionary for fast lookup
@@ -410,9 +408,7 @@ class GeocodingBatchService:
 
             await self.db.commit()
 
-            from datetime import timezone
-
-            duration = (datetime.now(timezone.utc) - start_time).total_seconds()
+            duration = (datetime.now(UTC) - start_time).total_seconds()
 
             logger.info(f"Backfill complete. Updated {updated_count} companies in {duration:.1f}s")
 

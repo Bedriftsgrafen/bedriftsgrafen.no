@@ -1,8 +1,10 @@
-import pytest
 from unittest.mock import AsyncMock, MagicMock, patch
-from services.stats_service import StatsService
-from repositories.company_filter_builder import FilterParams
+
+import pytest
 from sqlalchemy.ext.asyncio import AsyncSession
+
+from repositories.company_filter_builder import FilterParams
+from services.stats_service import StatsService
 
 
 @pytest.fixture

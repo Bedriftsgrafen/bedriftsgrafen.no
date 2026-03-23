@@ -1,5 +1,6 @@
-import sys
 import asyncio
+import sys
+
 from sqlalchemy import select
 
 # Add backend directory to path

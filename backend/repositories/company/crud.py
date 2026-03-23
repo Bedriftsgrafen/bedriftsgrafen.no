@@ -5,7 +5,7 @@ Contains create_or_update and related data manipulation methods.
 
 import asyncio
 import logging
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from typing import Any
 
 from sqlalchemy import delete, text, update
@@ -170,9 +170,7 @@ class CrudMixin:
                 insert_stmt = insert(models.Company).values(**fields)
 
                 # On conflict (PK orgnr), update all fields except PK and creation metadata
-                update_dict = {
-                    k: getattr(insert_stmt.excluded, k) for k in fields.keys() if k not in ["orgnr", "created_at"]
-                }
+                update_dict = {k: getattr(insert_stmt.excluded, k) for k in fields if k not in ["orgnr", "created_at"]}
 
                 upsert_stmt = insert_stmt.on_conflict_do_update(
                     index_elements=["orgnr"],
@@ -217,7 +215,7 @@ class CrudMixin:
             stmt = (
                 update(models.Company)
                 .where(models.Company.orgnr == orgnr)
-                .values(latitude=lat, longitude=lon, geocoded_at=datetime.now(timezone.utc).replace(tzinfo=None))
+                .values(latitude=lat, longitude=lon, geocoded_at=datetime.now(UTC).replace(tzinfo=None))
             )
             await self.db.execute(stmt)
             await self.db.commit()
@@ -232,7 +230,7 @@ class CrudMixin:
         stmt = (
             update(models.Company)
             .where(models.Company.orgnr == orgnr)
-            .values(last_polled_regnskap=datetime.now(timezone.utc).date())
+            .values(last_polled_regnskap=datetime.now(UTC).date())
         )
         await self.db.execute(stmt)
 
@@ -242,7 +240,7 @@ class CrudMixin:
         stmt = (
             update(models.Company)
             .where(models.Company.orgnr == orgnr)
-            .values(last_polled_roles=datetime.now(timezone.utc).date())
+            .values(last_polled_roles=datetime.now(UTC).date())
         )
         await self.db.execute(stmt)
 

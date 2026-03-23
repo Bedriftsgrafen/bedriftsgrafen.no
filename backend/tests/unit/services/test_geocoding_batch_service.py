@@ -1,7 +1,10 @@
+from datetime import UTC
+from unittest.mock import AsyncMock, MagicMock, mock_open, patch
+
 import pytest
-from unittest.mock import AsyncMock, MagicMock, patch, mock_open
-from services.geocoding_batch_service import GeocodingBatchService
+
 from models import Company
+from services.geocoding_batch_service import GeocodingBatchService
 
 
 @pytest.fixture
@@ -106,14 +109,14 @@ async def test_run_batch_processing(service, mock_db_session):
     # run_batch manually uses self.geocoder.geocode_address
     service.geocoder.geocode_address = AsyncMock(return_value=(10, 10))
 
-    from datetime import timezone, datetime
+    from datetime import datetime
 
     with (
         patch("httpx.AsyncClient"),
         patch("services.geocoding_service.GeocodingService.build_address_string", return_value="Test Addr"),
         patch("datetime.datetime") as mock_datetime,
     ):
-        mock_datetime.now.return_value = datetime(2024, 1, 1, tzinfo=timezone.utc)
+        mock_datetime.now.return_value = datetime(2024, 1, 1, tzinfo=UTC)
         stats = await service.run_batch()
 
     assert stats["processed"] == 1

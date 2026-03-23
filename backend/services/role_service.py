@@ -1,7 +1,7 @@
 """Service for managing company roles with on-demand caching"""
 
 import logging
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -46,7 +46,7 @@ class RoleService:
         if force_refresh:
             last_update = await self.role_repo.get_cache_timestamp(orgnr)
             if last_update:
-                elapsed = datetime.now(timezone.utc) - last_update
+                elapsed = datetime.now(UTC) - last_update
                 if elapsed < timedelta(seconds=60):
                     logger.info(f"Skipping force refresh for {orgnr} (last update {elapsed.seconds}s ago)")
                     return await self.role_repo.get_by_orgnr(orgnr)

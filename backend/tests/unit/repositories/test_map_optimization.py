@@ -1,8 +1,10 @@
-import pytest
 from unittest.mock import AsyncMock, MagicMock
+
+import pytest
+from sqlalchemy.ext.asyncio import AsyncSession
+
 from repositories.company.repository import CompanyRepository
 from repositories.company_filter_builder import FilterParams
-from sqlalchemy.ext.asyncio import AsyncSession
 
 
 @pytest.fixture

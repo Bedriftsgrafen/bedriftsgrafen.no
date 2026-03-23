@@ -1,8 +1,9 @@
 import logging
+from collections.abc import Sequence
 from datetime import datetime
-from typing import Literal, Sequence, Any
+from typing import Any, Literal
 
-from sqlalchemy import func, select, and_, case, literal_column
+from sqlalchemy import and_, case, func, literal_column, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 import models
@@ -184,7 +185,6 @@ class StatsRepository:
         Returns an IndustryStats-like object with avg_revenue, avg_profit, etc.
         """
         # Determine filter type: section (1-char), division (2-digit), or subclass (5-digit)
-        from typing import Any
 
         nace_filter: Any
         if len(nace_code) == 1 and nace_code in NACE_SECTION_MAPPING:
@@ -858,6 +858,7 @@ class StatsRepository:
             filters: Optional FilterParams for NACE, county, etc.
         """
         from datetime import date, timedelta
+
         from repositories.company_filter_builder import CompanyFilterBuilder
 
         # Defense-in-depth: ensure months is integer even though FastAPI validates upstream

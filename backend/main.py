@@ -1,3 +1,4 @@
+import contextlib
 import logging
 import os
 from contextlib import asynccontextmanager
@@ -10,9 +11,9 @@ from slowapi.errors import RateLimitExceeded
 from slowapi.middleware import SlowAPIMiddleware
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from limiter import limiter
-from database import get_db, AsyncSessionLocal
+from database import AsyncSessionLocal, get_db
 from exceptions import BedriftsgrafenException
+from limiter import limiter
 from middleware import RequestIdMiddleware, SecurityHeadersMiddleware
 from utils.logging_config import setup_logging
 from utils.metrics import init_metrics
@@ -25,16 +26,18 @@ init_metrics()
 
 logger = logging.getLogger(__name__)
 
-from routers import health  # noqa: E402
-from routers import admin_import  # noqa: E402
-from routers import sitemap  # noqa: E402
+from routers import (  # noqa: E402
+    admin_import,
+    health,
+    sitemap,
+)
 from routers.v1 import companies as v1_companies  # noqa: E402
+from routers.v1 import county as v1_county  # noqa: E402
+from routers.v1 import municipality as v1_municipality  # noqa: E402
+from routers.v1 import og_image as v1_og_image  # noqa: E402
+from routers.v1 import people as v1_people  # noqa: E402
 from routers.v1 import stats as v1_stats  # noqa: E402
 from routers.v1 import trends as v1_trends  # noqa: E402
-from routers.v1 import people as v1_people  # noqa: E402
-from routers.v1 import municipality as v1_municipality  # noqa: E402
-from routers.v1 import county as v1_county  # noqa: E402
-from routers.v1 import og_image as v1_og_image  # noqa: E402
 from services.company_service import CompanyService  # noqa: E402
 from services.scheduler import SchedulerService  # noqa: E402
 from services.seo_service import SEOService  # noqa: E402
@@ -95,10 +98,8 @@ async def lifespan(app):
     # Shutdown
     if cache_task and not cache_task.done():
         cache_task.cancel()
-        try:
+        with contextlib.suppress(asyncio.CancelledError):
             await cache_task
-        except asyncio.CancelledError:
-            pass
 
     if scheduler_service:
         logger.info("Shutting down scheduler service...")
@@ -228,8 +229,8 @@ ADMIN_KEY = os.getenv("ADMIN_KEY", "")
 @app.get("/metrics", include_in_schema=False)
 async def metrics_endpoint(request: Request):
     """Prometheus metrics endpoint, secured with ADMIN_KEY query param."""
+    from prometheus_client import CONTENT_TYPE_LATEST, generate_latest
     from starlette.responses import Response
-    from prometheus_client import generate_latest, CONTENT_TYPE_LATEST
 
     key = request.query_params.get("key", "")
     if not ADMIN_KEY or key != ADMIN_KEY:

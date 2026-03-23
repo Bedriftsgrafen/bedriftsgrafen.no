@@ -1,8 +1,9 @@
 """County-related Pydantic schemas for Premium Dashboards."""
 
 from pydantic import BaseModel, ConfigDict, Field
+
 from .companies import CompanyBase
-from .municipality import TrendPoint, SectorStat, RankingInfo
+from .municipality import RankingInfo, SectorStat, TrendPoint
 
 
 class MunicipalitySummary(BaseModel):

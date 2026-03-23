@@ -1,10 +1,12 @@
-import pytest
 import urllib.parse
 from datetime import date, datetime
-from unittest.mock import MagicMock, AsyncMock, patch
+from unittest.mock import AsyncMock, MagicMock, patch
+
+import pytest
 from fastapi.testclient import TestClient
-from main import app, limiter
+
 from database import get_db
+from main import app, limiter
 from services.seo_service import SEOService
 
 client = TestClient(app)

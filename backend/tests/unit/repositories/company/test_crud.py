@@ -1,10 +1,11 @@
-import pytest
 from unittest.mock import AsyncMock, MagicMock
 
-from sqlalchemy.sql.elements import TextClause
-from repositories.company.crud import CrudMixin
-import models
+import pytest
 from sqlalchemy.exc import DBAPIError
+from sqlalchemy.sql.elements import TextClause
+
+import models
+from repositories.company.crud import CrudMixin
 
 
 class MockRepository(CrudMixin):

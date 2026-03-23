@@ -3,10 +3,12 @@ MECE SQL Statement Verification for StatsRepository.
 Verifies that the repository generates correct live-aggregation SQL for complex filters.
 """
 
+from unittest.mock import AsyncMock, MagicMock
+
 import pytest
-from repositories.stats_repository import StatsRepository
+
 from repositories.company_filter_builder import FilterParams
-from unittest.mock import MagicMock, AsyncMock
+from repositories.stats_repository import StatsRepository
 
 
 @pytest.fixture

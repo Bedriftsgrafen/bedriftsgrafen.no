@@ -1,4 +1,8 @@
 from __future__ import annotations
+
+from datetime import date, datetime
+from typing import TYPE_CHECKING
+
 from sqlalchemy import (
     Computed,
     Date,
@@ -14,8 +18,6 @@ from sqlalchemy import text as sa_text
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from sqlalchemy.sql import func
-from typing import TYPE_CHECKING
-from datetime import date, datetime
 
 from database import Base
 
@@ -119,7 +121,7 @@ class Accounting(Base):
         nullable=True,
     )
 
-    company: Mapped["Company"] = relationship("Company", back_populates="regnskap")
+    company: Mapped[Company] = relationship("Company", back_populates="regnskap")
 
 
 class LatestFinancials(Base):

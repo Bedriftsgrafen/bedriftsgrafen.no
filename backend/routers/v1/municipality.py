@@ -4,7 +4,7 @@ from fastapi import APIRouter, Depends, HTTPException, Path
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from database import get_db
-from schemas.municipality import MunicipalityPremiumResponse, MunicipalityListResponse
+from schemas.municipality import MunicipalityListResponse, MunicipalityPremiumResponse
 from services.stats_service import StatsService
 
 router = APIRouter(prefix="/v1/municipality", tags=["municipality"])
@@ -48,9 +48,7 @@ async def get_municipality_dashboard(
     service = StatsService(db)
     dashboard = await service.get_municipality_premium_dashboard(code)
 
-    if not dashboard or not dashboard.get("population"):
-        # Check if municipality exists (has population or companies)
-        if not dashboard.get("company_count"):
-            raise HTTPException(status_code=404, detail=f"Municipality {code} not found")
+    if (not dashboard or not dashboard.get("population")) and not dashboard.get("company_count"):
+        raise HTTPException(status_code=404, detail=f"Municipality {code} not found")
 
     return MunicipalityPremiumResponse.model_validate(dashboard)

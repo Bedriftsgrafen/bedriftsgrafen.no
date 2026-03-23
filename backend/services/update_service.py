@@ -1,6 +1,6 @@
 import asyncio
 import logging
-from datetime import date, datetime, timedelta, timezone
+from datetime import UTC, date, datetime, timedelta
 from typing import Any
 
 import httpx
@@ -79,7 +79,7 @@ class UpdateService:
 
             if existing:
                 existing.error_message = error_message
-                existing.last_retry_at = datetime.now(timezone.utc)
+                existing.last_retry_at = datetime.now(UTC)
                 existing.attempt_count += 1
                 existing.status = SyncErrorStatus.RETRYING
             else:
@@ -435,11 +435,13 @@ class UpdateService:
                         # Phase 1: Concurrent fetch subunit details
                         semaphore = asyncio.Semaphore(API_CONCURRENCY_LIMIT)
 
-                        async def fetch_one(entity: dict[str, Any]) -> dict[str, Any] | None:
+                        async def fetch_one(
+                            entity: dict[str, Any], _semaphore: asyncio.Semaphore = semaphore
+                        ) -> dict[str, Any] | None:
                             orgnr = entity.get("organisasjonsnummer")
                             if not orgnr:
                                 return None
-                            async with semaphore:
+                            async with _semaphore:
                                 try:
                                     return await self.brreg_api.fetch_subunit(orgnr)
                                 except Exception as ex:
@@ -659,8 +661,10 @@ class UpdateService:
 
                             semaphore = asyncio.Semaphore(API_CONCURRENCY_LIMIT)
 
-                            async def fetch_missing_main_unit(org_no: str) -> dict[str, Any] | None:
-                                async with semaphore:
+                            async def fetch_missing_main_unit(
+                                org_no: str, _semaphore: asyncio.Semaphore = semaphore
+                            ) -> dict[str, Any] | None:
+                                async with _semaphore:
                                     try:
                                         # Use main unit endpoint. Subunits return 404 here.
                                         return await self.brreg_api.fetch_company(org_no)
@@ -765,8 +769,7 @@ class UpdateService:
                         # If we got a full batch, continue to next batch
                         if len(events) >= params["size"]:
                             params["afterId"] = last_seen_id
-                            if "afterTime" in params:
-                                del params["afterTime"]
+                            params.pop("afterTime", None)
                         else:
                             break
 

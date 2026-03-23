@@ -1,8 +1,10 @@
-import pytest
 from unittest.mock import AsyncMock, MagicMock
-from repositories.company.repository import CompanyRepository
+
+import pytest
 from sqlalchemy.ext.asyncio import AsyncSession
+
 import models
+from repositories.company.repository import CompanyRepository
 
 
 @pytest.fixture

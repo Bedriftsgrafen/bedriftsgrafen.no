@@ -4,18 +4,18 @@ import asyncio
 import html
 import logging
 import textwrap
-from datetime import date, datetime, timedelta
+from datetime import UTC, date, datetime, timedelta
 from typing import Any
 
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 import models
+from constants.concurrency import SITEMAP_CACHE_TIMEOUT, SITEMAP_URLS_PER_FILE
 from constants.nace import get_nace_name
 from repositories.company.repository import CompanyRepository
 from repositories.role_repository import RoleRepository
 from repositories.stats_repository import StatsRepository
-from constants.concurrency import SITEMAP_URLS_PER_FILE, SITEMAP_CACHE_TIMEOUT
 
 logger = logging.getLogger(__name__)
 
@@ -74,9 +74,8 @@ class SEOService:
         cache = cls._sitemap_cache
         if cache["expiry"] is None:
             return False
-        from datetime import timezone
 
-        return datetime.now(timezone.utc) < cache["expiry"]
+        return datetime.now(UTC) < cache["expiry"]
 
     @classmethod
     def is_cache_warming(cls) -> bool:
@@ -112,21 +111,17 @@ class SEOService:
             try:
                 cache["is_warming"] = True
                 await self._refresh_cache_with_timeout()
-            except asyncio.TimeoutError:
+            except TimeoutError:
                 logger.error(f"Cache refresh timed out after {CACHE_REFRESH_TIMEOUT}s")
                 # If we have successfully populated data before, extend expiry
                 if cache["populated"]:
-                    from datetime import timezone
-
-                    cache["expiry"] = datetime.now(timezone.utc) + timedelta(minutes=30)
+                    cache["expiry"] = datetime.now(UTC) + timedelta(minutes=30)
                     logger.warning("Using stale cache data due to timeout")
             except Exception as e:
                 logger.error(f"Cache refresh failed: {e}")
                 # Circuit breaker: extend expiry on failure to avoid retry storm
                 if cache["populated"]:
-                    from datetime import timezone
-
-                    cache["expiry"] = datetime.now(timezone.utc) + timedelta(minutes=5)
+                    cache["expiry"] = datetime.now(UTC) + timedelta(minutes=5)
             finally:
                 cache["is_warming"] = False
 
@@ -146,9 +141,8 @@ class SEOService:
         """
         cache = SEOService._sitemap_cache
         logger.info("Refreshing sitemap anchors and counts...")
-        from datetime import timezone
 
-        start_time = datetime.now(timezone.utc)
+        start_time = datetime.now(UTC)
 
         # Build all results in temp vars before touching the shared cache
         company_stmt = select(func.count(models.Company.orgnr))
@@ -173,8 +167,8 @@ class SEOService:
         cache["company_anchors"] = company_anchors
         cache["person_anchors"] = person_anchors
         cache["populated"] = True
-        cache["expiry"] = datetime.now(timezone.utc) + SEOService.CACHE_TTL
-        elapsed = (datetime.now(timezone.utc) - start_time).total_seconds()
+        cache["expiry"] = datetime.now(UTC) + SEOService.CACHE_TTL
+        elapsed = (datetime.now(UTC) - start_time).total_seconds()
         logger.info(f"Sitemap cache refreshed in {elapsed:.2f}s. Next expiry: {cache['expiry']}")
 
     # ------------------------------------------------------------------
@@ -265,25 +259,25 @@ class SEOService:
                 </linearGradient>
             </defs>
             <rect width="1200" height="630" fill="url(#grad)" />
-            
+
             <!-- Pattern -->
             <circle cx="1100" cy="100" r="250" fill="white" opacity="0.03" />
             <rect x="50" y="50" width="1100" height="530" rx="30" fill="none" stroke="white" stroke-opacity="0.1" stroke-width="2" />
 
             <!-- Brand -->
             <text x="80" y="100" font-family="sans-serif" font-size="28" font-weight="bold" fill="#60a5fa">BEDRIFTSGRAFEN.NO</text>
-            
+
             <!-- Company Info -->
             <text x="80" y="240" font-family="sans-serif" font-size="64" font-weight="900" fill="white">{name[:60]}{"..." if len(name) > 60 else ""}</text>
             <text x="80" y="300" font-family="sans-serif" font-size="28" font-weight="bold" fill="#94a3b8">{industry[:70]}{"..." if len(industry) > 70 else ""}</text>
             <text x="80" y="345" font-family="sans-serif" font-size="24" fill="#64748b">Org.nr: {orgnr}</text>
-            
+
             <!-- Stats Row -->
             <g transform="translate(80, 480)">
                 <text x="0" y="0" font-family="sans-serif" font-size="20" font-weight="bold" fill="#94a3b8" letter-spacing="2">OMSETNING</text>
                 <text x="0" y="55" font-family="sans-serif" font-size="64" font-weight="bold" fill="white">{rev}</text>
             </g>
-            
+
             <g transform="translate(450, 480)">
                 <text x="0" y="0" font-family="sans-serif" font-size="20" font-weight="bold" fill="#94a3b8" letter-spacing="2">ÅRSRESULTAT</text>
                 <text x="0" y="55" font-family="sans-serif" font-size="64" font-weight="bold" fill="white">{prof}</text>
@@ -293,7 +287,7 @@ class SEOService:
                 <text x="0" y="0" font-family="sans-serif" font-size="20" font-weight="bold" fill="#94a3b8" letter-spacing="2">ANSATTE</text>
                 <text x="0" y="55" font-family="sans-serif" font-size="64" font-weight="bold" fill="white">{emp}</text>
             </g>
-            
+
             <!-- Status Pill -->
             <rect x="80" y="130" width="120" height="32" rx="16" fill="#3b82f6" opacity="0.2" />
             <text x="140" y="152" font-family="sans-serif" font-size="14" font-weight="bold" fill="#93c5fd" text-anchor="middle">OFFISIELL DATA</text>

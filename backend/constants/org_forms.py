@@ -47,8 +47,5 @@ def is_commercial_role(company_org_form: str, is_registered_in_foretaksreg: bool
     if company_org_form in NON_COMMERCIAL_ORG_FORMS:
         return False
 
-    if company_org_form in COMMERCIAL_ORG_FORMS:
-        return True
-
-    # 3. Default to False for safety (e.g., STI without Foretaksreg or unknown forms)
-    return False
+    # Default to True for known commercial forms, False for safety (e.g., STI without Foretaksreg or unknown forms)
+    return company_org_form in COMMERCIAL_ORG_FORMS

@@ -4,8 +4,8 @@ DTOs provide type-safe input validation and encapsulation for complex service me
 """
 
 from datetime import date
-
 from typing import Annotated, Any
+
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 

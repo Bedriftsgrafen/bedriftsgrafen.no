@@ -1,8 +1,10 @@
-import pytest
 import time
 from unittest.mock import AsyncMock, MagicMock
-from services.company_service import CompanyService
+
+import pytest
+
 import models
+from services.company_service import CompanyService
 
 
 @pytest.fixture

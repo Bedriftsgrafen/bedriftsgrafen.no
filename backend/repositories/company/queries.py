@@ -5,18 +5,18 @@ Contains get_all, stream_all, and related query methods with optimization logic.
 
 import logging
 from typing import cast
-from sqlalchemy import select, Select, func
+
+from sqlalchemy import Select, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 import models
 from repositories.company.base import (
+    LATEST_FINANCIAL_COLUMNS,
     LIST_VIEW_OPTIONS,
     SORT_COLUMN_MAP,
     CompanyWithFinancials,
-    LATEST_FINANCIAL_COLUMNS,
 )
 from repositories.company_filter_builder import CompanyFilterBuilder, FilterParams
-
 
 logger = logging.getLogger(__name__)
 
@@ -221,11 +221,7 @@ class QueryMixin:
             models.Company.raw_data["oppdatert"].astext.label("updated_at"),
         ).order_by(models.Company.orgnr)
 
-        if after_orgnr:
-            stmt = stmt.where(models.Company.orgnr > after_orgnr)
-        else:
-            stmt = stmt.offset(offset)
-
+        stmt = stmt.where(models.Company.orgnr > after_orgnr) if after_orgnr else stmt.offset(offset)
         stmt = stmt.limit(limit)
         result = await self.db.execute(stmt)
         return [(row.orgnr, row.updated_at) for row in result]
@@ -287,16 +283,16 @@ class QueryMixin:
 
         query = text("""
             WITH numbered AS (
-                SELECT 
+                SELECT
                     orgnr,
                     ROW_NUMBER() OVER (ORDER BY orgnr) as rn
                 FROM bedrifter
             ),
             page_boundaries AS (
-                SELECT 
+                SELECT
                     orgnr,
                     rn,
-                    CASE 
+                    CASE
                         WHEN rn <= :first_page_size THEN 1
                         ELSE 1 + CEIL(CAST(rn - :first_page_size AS numeric) / CAST(:page_size AS numeric))
                     END as page_num
@@ -304,7 +300,7 @@ class QueryMixin:
             )
             SELECT orgnr
             FROM page_boundaries
-            WHERE rn = :first_page_size 
+            WHERE rn = :first_page_size
                OR (rn > :first_page_size AND MOD(rn - :first_page_size, :page_size) = 0)
             ORDER BY rn
         """)

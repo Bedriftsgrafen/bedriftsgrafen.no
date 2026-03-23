@@ -1,13 +1,14 @@
 """API endpoints for Dynamic OpenGraph (OG) images."""
 
-from fastapi import APIRouter, Depends, Response, Request
-from sqlalchemy.ext.asyncio import AsyncSession
 import textwrap
+
+from fastapi import APIRouter, Depends, Request, Response
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from database import get_db
 from limiter import limiter
-from services.stats_service import StatsService
 from services.seo_service import SEOService
+from services.stats_service import StatsService
 
 router = APIRouter(prefix="/v1/og", tags=["seo"])
 
@@ -51,31 +52,31 @@ async def get_municipality_og_svg(request: Request, code: str, db: AsyncSession 
             </linearGradient>
         </defs>
         <rect width="1200" height="630" fill="url(#grad)" />
-        
+
         <!-- Background Pattern -->
         <circle cx="1100" cy="100" r="200" fill="white" opacity="0.03" />
         <circle cx="100" cy="530" r="150" fill="white" opacity="0.03" />
 
         <!-- Logo/Brand -->
         <text x="60" y="80" font-family="sans-serif" font-size="32" font-weight="bold" fill="#3b82f6">Bedriftsgrafen.no</text>
-        
+
         <!-- Content -->
         <text x="60" y="240" font-family="sans-serif" font-size="84" font-weight="bold" fill="white">{name}</text>
         <text x="60" y="310" font-family="sans-serif" font-size="32" fill="#94a3b8">Næringsrapport &amp; Demografi</text>
-        
+
         <!-- Stats Grid -->
         <g transform="translate(60, 420)">
             <text x="0" y="0" font-family="sans-serif" font-size="24" fill="#94a3b8">FOLKETALL</text>
             <text x="0" y="50" font-family="sans-serif" font-size="64" font-weight="bold" fill="white">{pop}</text>
             <text x="0" y="90" font-family="sans-serif" font-size="24" fill="#10b981">{growth} vekst</text>
         </g>
-        
+
         <g transform="translate(450, 420)">
             <text x="0" y="0" font-family="sans-serif" font-size="24" fill="#94a3b8">VIRKSOMHETER</text>
             <text x="0" y="50" font-family="sans-serif" font-size="64" font-weight="bold" fill="white">{count}</text>
             <text x="0" y="90" font-family="sans-serif" font-size="24" fill="#3b82f6">Lokal innsikt</text>
         </g>
-        
+
         <!-- Footer -->
         <rect x="0" y="620" width="1200" height="10" fill="#3b82f6" />
     </svg>

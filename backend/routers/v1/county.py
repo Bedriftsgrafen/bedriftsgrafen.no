@@ -5,7 +5,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from constants.county_coords import COUNTY_COORDS
 from database import get_db
-from schemas.county import CountyPremiumResponse, CountyListResponse
+from schemas.county import CountyListResponse, CountyPremiumResponse
 from services.stats_service import StatsService
 
 router = APIRouter(prefix="/v1/county", tags=["county"])
@@ -48,9 +48,7 @@ async def get_county_dashboard(
     service = StatsService(db)
     dashboard = await service.get_county_premium_dashboard(code)
 
-    if not dashboard or not dashboard.get("population"):
-        # Check if county exists (has population or companies)
-        if not dashboard.get("company_count"):
-            raise HTTPException(status_code=404, detail=f"County {code} not found")
+    if (not dashboard or not dashboard.get("population")) and not dashboard.get("company_count"):
+        raise HTTPException(status_code=404, detail=f"County {code} not found")
 
     return CountyPremiumResponse.model_validate(dashboard)

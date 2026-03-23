@@ -5,12 +5,13 @@ Tests company list, count, detail, search, and export endpoints.
 Mocks service layer to isolate router logic.
 """
 
-import pytest
-from httpx import AsyncClient, ASGITransport
 from unittest.mock import AsyncMock, MagicMock, patch
 
-from main import app
+import pytest
+from httpx import ASGITransport, AsyncClient
+
 from database import get_db
+from main import app
 
 
 # Mock DB dependency

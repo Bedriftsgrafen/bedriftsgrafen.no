@@ -5,9 +5,10 @@ Uses a single ConnectionPool for efficiency. The pool handles connection health
 automatically, so we don't ping on every request (only in health checks).
 """
 
-import os
 import logging
-from redis.asyncio import Redis, ConnectionPool
+import os
+
+from redis.asyncio import ConnectionPool, Redis
 
 logger = logging.getLogger(__name__)
 

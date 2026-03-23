@@ -1,8 +1,9 @@
-from fastapi.testclient import TestClient
-from unittest.mock import patch, AsyncMock
+from unittest.mock import AsyncMock, patch
 
-from main import app
+from fastapi.testclient import TestClient
+
 from limiter import limiter
+from main import app
 
 client = TestClient(app)
 

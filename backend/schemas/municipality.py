@@ -1,6 +1,7 @@
 """Municipality-related Pydantic schemas for Premium Dashboards."""
 
 from pydantic import BaseModel, ConfigDict, Field
+
 from .companies import CompanyBase
 
 

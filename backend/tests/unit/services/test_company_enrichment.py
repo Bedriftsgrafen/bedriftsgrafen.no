@@ -1,7 +1,9 @@
-import pytest
 from unittest.mock import AsyncMock, patch
-from services.company_service import CompanyService
+
+import pytest
+
 from schemas.companies import Naeringskode
+from services.company_service import CompanyService
 
 
 @pytest.fixture

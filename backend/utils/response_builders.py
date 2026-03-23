@@ -1,6 +1,6 @@
 """Utilities for building API responses with metadata"""
 
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 from schemas.responses import ResponseMetadata
 
@@ -16,4 +16,4 @@ def build_response_metadata(last_updated: datetime | None = None, source: str = 
     Returns:
         ResponseMetadata with fetched_at timestamp
     """
-    return ResponseMetadata(last_updated=last_updated, source=source, fetched_at=datetime.now(timezone.utc))
+    return ResponseMetadata(last_updated=last_updated, source=source, fetched_at=datetime.now(UTC))

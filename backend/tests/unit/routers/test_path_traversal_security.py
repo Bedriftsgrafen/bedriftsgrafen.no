@@ -8,14 +8,15 @@ Tests cover:
 """
 
 import os
-import pytest
 from pathlib import Path
 from unittest.mock import AsyncMock, patch
+
+import pytest
 from fastapi.testclient import TestClient
 
-from main import app
-from routers.admin_import import verify_admin_key, ALLOWED_IMPORT_DIR
 from limiter import limiter
+from main import app
+from routers.admin_import import ALLOWED_IMPORT_DIR, verify_admin_key
 
 # Disable rate limiting for tests
 limiter.enabled = False
@@ -230,13 +231,14 @@ class TestAllowedImportDir:
         """ALLOWED_IMPORT_DIR should be an absolute resolved path."""
         assert ALLOWED_IMPORT_DIR.is_absolute()
         # Resolve should not change an already-resolved path
-        assert ALLOWED_IMPORT_DIR == ALLOWED_IMPORT_DIR.resolve()
+        assert ALLOWED_IMPORT_DIR.resolve() == ALLOWED_IMPORT_DIR
 
     def test_uses_environment_variable(self):
         """Should use IMPORT_DATA_DIR environment variable if set."""
         with patch.dict(os.environ, {"IMPORT_DATA_DIR": "/custom/import/path"}):
             # Re-import to pick up new env
             import importlib
+
             import routers.admin_import as admin_import_module
 
             importlib.reload(admin_import_module)
@@ -250,6 +252,7 @@ class TestAllowedImportDir:
 
         with patch.dict(os.environ, env_copy, clear=True):
             import importlib
+
             import routers.admin_import as admin_import_module
 
             importlib.reload(admin_import_module)

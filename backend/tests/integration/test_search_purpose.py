@@ -5,7 +5,8 @@ Verifies that FTS correctly matches keywords in vedtektsfestet_formaal and respe
 
 import pytest
 import pytest_asyncio
-from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession, async_sessionmaker
+from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
+
 import models
 from repositories.company.repository import CompanyRepository
 

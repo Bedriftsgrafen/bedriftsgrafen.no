@@ -1,5 +1,5 @@
 import logging
-from datetime import datetime
+from datetime import UTC, datetime
 
 from fastapi import APIRouter, Depends, HTTPException, Path, Query, Request, Response
 from fastapi.responses import StreamingResponse
@@ -20,15 +20,15 @@ from schemas.companies import (
     MarkersResponse,
     NaceSubclass,
 )
-from services.company_service import CompanyService
-from services.export_service import ExportService
-from services.nace_service import NaceService
 from schemas.responses import (
     CompanyRoleResponse,
     RolesWithMetadata,
     SubUnitResponse,
     SubUnitsWithMetadata,
 )
+from services.company_service import CompanyService
+from services.export_service import ExportService
+from services.nace_service import NaceService
 from services.role_service import RoleService
 from utils.caching import set_http_cache_headers
 from utils.response_builders import build_response_metadata
@@ -119,9 +119,8 @@ async def export_companies(
         export_service = ExportService(db)
 
         # Generate filename with timestamp
-        from datetime import timezone
 
-        filename = f"virksomheter_{datetime.now(timezone.utc).strftime('%Y%m%d_%H%M%S')}.csv"
+        filename = f"virksomheter_{datetime.now(UTC).strftime('%Y%m%d_%H%M%S')}.csv"
 
         return StreamingResponse(
             export_service.stream_companies_csv(filters),

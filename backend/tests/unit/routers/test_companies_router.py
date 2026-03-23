@@ -1,12 +1,14 @@
-import pytest
 from unittest.mock import AsyncMock, MagicMock
+
+import pytest
 from fastapi.testclient import TestClient
+
 from main import app
-from services.company_service import CompanyService
 from schemas.companies import (
     CompanyBase,
     FetchCompanyResponse,
 )
+from services.company_service import CompanyService
 
 # Mock params
 MOCK_ORGNR = "123456789"

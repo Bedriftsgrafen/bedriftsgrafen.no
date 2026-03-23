@@ -7,8 +7,8 @@ from unittest.mock import AsyncMock, MagicMock
 import pytest
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from services.stats_service import StatsService
 from models import IndustryStats, IndustrySubclassStats
+from services.stats_service import StatsService
 
 
 @pytest.mark.asyncio

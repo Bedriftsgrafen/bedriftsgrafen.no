@@ -1,14 +1,14 @@
 import logging
 import shutil
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from apscheduler.triggers.cron import CronTrigger
 from apscheduler.triggers.interval import IntervalTrigger
 from sqlalchemy import text
 
-from database import AsyncSessionLocal, engine
 from constants.concurrency import SUBUNIT_UPDATE_PAGE_SIZE
+from database import AsyncSessionLocal, engine
 from services.seo_service import SEOService
 
 logger = logging.getLogger(__name__)
@@ -38,7 +38,7 @@ class SchedulerService:
         self._setup_jobs()
 
     def _setup_jobs(self) -> None:
-        now = datetime.now(timezone.utc)
+        now = datetime.now(UTC)
 
         # Refresh materialized views every 5 minutes
         self.scheduler.add_job(
@@ -318,7 +318,7 @@ class SchedulerService:
 
     async def sync_accounting_batch(self) -> None:
         """Sync accounting data for companies needing updates."""
-        from datetime import datetime, timedelta, timezone
+        from datetime import datetime, timedelta
 
         from sqlalchemy import select
 
@@ -331,7 +331,7 @@ class SchedulerService:
                 # 1. Selection logic: New companies first, then oldest polled ones
                 # Priority: never polled -> oldest polled
                 limit = 50
-                cutoff_date = datetime.now(timezone.utc).date() - timedelta(days=30)
+                cutoff_date = datetime.now(UTC).date() - timedelta(days=30)
 
                 # Fetch companies that need polling
                 stmt = (
@@ -468,7 +468,7 @@ class SchedulerService:
         """Checks disk usage on the root partition and logs warnings if high."""
         logger.info("Checking disk usage...")
         try:
-            total, used, free = shutil.disk_usage("/")
+            total, used, _free = shutil.disk_usage("/")
             usage_percent = (used / total) * 100
             if usage_percent > 80:
                 logger.warning(f"HIGH DISK USAGE: {usage_percent:.1f}% used on root partition")
@@ -511,7 +511,7 @@ class SchedulerService:
                 for error in errors:
                     # Track attempt before trying
                     error.attempt_count += 1
-                    error.last_retry_at = datetime.now(timezone.utc)
+                    error.last_retry_at = datetime.now(UTC)
                     success = False
 
                     try:
@@ -535,7 +535,7 @@ class SchedulerService:
                         # Update status based on result
                         if success:
                             error.status = SyncErrorStatus.RESOLVED
-                            error.resolved_at = datetime.now(timezone.utc)
+                            error.resolved_at = datetime.now(UTC)
                             resolved_count += 1
                             logger.info(f"Resolved sync error for {error.orgnr}")
                         else:
@@ -592,13 +592,15 @@ class SchedulerService:
         to prevent table bloat and maintain query performance.
         """
         from datetime import datetime, timedelta
+
         from sqlalchemy import delete
+
         from models_import import BulkImportQueue, ImportStatus
 
         logger.info("Starting bulk import queue cleanup...")
         try:
             async with AsyncSessionLocal() as db:
-                cutoff_date = datetime.now(timezone.utc) - timedelta(days=7)
+                cutoff_date = datetime.now(UTC) - timedelta(days=7)
 
                 # Delete old terminal-state entries
                 stmt = delete(BulkImportQueue).where(

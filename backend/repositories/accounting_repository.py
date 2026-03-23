@@ -1,6 +1,7 @@
 import logging
+from collections.abc import Sequence
 from datetime import date, datetime
-from typing import Any, Sequence
+from typing import Any
 
 from sqlalchemy import select, text
 from sqlalchemy.dialects.postgresql import insert

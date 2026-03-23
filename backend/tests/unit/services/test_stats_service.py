@@ -5,10 +5,11 @@ Tests statistics calculations, caching, and aggregation methods.
 Follows AAA pattern (Arrange - Act - Assert).
 """
 
-import pytest
 from unittest.mock import AsyncMock, MagicMock
 
-from services.stats_service import StatsService, PERCENTILE_THRESHOLDS
+import pytest
+
+from services.stats_service import PERCENTILE_THRESHOLDS, StatsService
 
 
 class TestStatsServiceInit:

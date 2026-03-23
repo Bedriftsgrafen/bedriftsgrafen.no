@@ -1,8 +1,10 @@
+from unittest.mock import AsyncMock, MagicMock
+
 import pytest
-from unittest.mock import MagicMock, AsyncMock
-from repositories.stats_repository import StatsRepository
-from repositories.company_filter_builder import FilterParams
+
 import models
+from repositories.company_filter_builder import FilterParams
+from repositories.stats_repository import StatsRepository
 
 
 @pytest.fixture

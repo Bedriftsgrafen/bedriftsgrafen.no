@@ -1,8 +1,10 @@
-import pytest
 from unittest.mock import AsyncMock, MagicMock
-from repositories.accounting_repository import AccountingRepository
+
+import pytest
 from sqlalchemy.ext.asyncio import AsyncSession
+
 from exceptions import ValidationException
+from repositories.accounting_repository import AccountingRepository
 
 
 @pytest.fixture

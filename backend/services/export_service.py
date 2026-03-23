@@ -1,5 +1,5 @@
 import logging
-from typing import AsyncGenerator
+from collections.abc import AsyncGenerator
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -19,7 +19,7 @@ class ExportService:
         self.db = db
         self.company_service = CompanyService(db)
 
-    async def stream_companies_csv(self, filters: CompanyFilterDTO) -> AsyncGenerator[bytes, None]:
+    async def stream_companies_csv(self, filters: CompanyFilterDTO) -> AsyncGenerator[bytes]:
         """
         Stream companies as CSV rows.
         Generates UTF-8 encoded bytes with BOM.

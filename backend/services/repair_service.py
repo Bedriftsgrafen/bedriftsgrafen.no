@@ -1,16 +1,18 @@
 import asyncio
 import logging
-from sqlalchemy import select, func, text, delete
+
+from sqlalchemy import delete, func, select, text
 from sqlalchemy.ext.asyncio import AsyncSession
+
 import models
 from constants.concurrency import API_CONCURRENCY_LIMIT
+from repositories.company.repository import CompanyRepository
+from repositories.role_repository import RoleRepository
+from repositories.subunit_repository import SubUnitRepository
 from services.brreg_api_service import BrregApiService
 from services.brreg_mappers import map_role_from_api, map_subunit_from_api
-from services.update_service import UpdateService
 from services.rate_limits import BRREG_RATE_LIMITER
-from repositories.company.repository import CompanyRepository
-from repositories.subunit_repository import SubUnitRepository
-from repositories.role_repository import RoleRepository
+from services.update_service import UpdateService
 
 logger = logging.getLogger(__name__)
 
@@ -117,20 +119,19 @@ class RepairService:
         local_counts = {row[0]: row[1] for row in count_res.all()}
 
         for company in companies:
-            async with repair_semaphore:
-                async with BRREG_RATE_LIMITER:
-                    try:
-                        api_subunits = await self.brreg_api.fetch_subunits(company.orgnr)
-                        local_count = local_counts.get(company.orgnr, 0)
+            async with repair_semaphore, BRREG_RATE_LIMITER:
+                try:
+                    api_subunits = await self.brreg_api.fetch_subunits(company.orgnr)
+                    local_count = local_counts.get(company.orgnr, 0)
 
-                        if local_count < len(api_subunits):
-                            logger.info(f"Fixing subunits for {company.orgnr}: {local_count} -> {len(api_subunits)}")
+                    if local_count < len(api_subunits):
+                        logger.info(f"Fixing subunits for {company.orgnr}: {local_count} -> {len(api_subunits)}")
 
-                            if self.repair:
-                                subunit_models = [map_subunit_from_api(s, company.orgnr) for s in api_subunits]
-                                await self.subunit_repo.create_batch(subunit_models)
-                    except Exception as e:
-                        logger.error(f"Subunit audit failed for {company.orgnr}: {e}")
+                        if self.repair:
+                            subunit_models = [map_subunit_from_api(s, company.orgnr) for s in api_subunits]
+                            await self.subunit_repo.create_batch(subunit_models)
+                except Exception as e:
+                    logger.error(f"Subunit audit failed for {company.orgnr}: {e}")
 
         if self.repair:
             await self.db.commit()
@@ -149,21 +150,20 @@ class RepairService:
         companies = result.scalars().all()
 
         for company in companies:
-            async with repair_semaphore:
-                async with BRREG_RATE_LIMITER:
-                    try:
-                        roles_data = await self.brreg_api.fetch_roles(company.orgnr)
+            async with repair_semaphore, BRREG_RATE_LIMITER:
+                try:
+                    roles_data = await self.brreg_api.fetch_roles(company.orgnr)
 
-                        role_models = [map_role_from_api(r, company.orgnr) for r in roles_data]
+                    role_models = [map_role_from_api(r, company.orgnr) for r in roles_data]
 
-                        if self.repair:
-                            await self.db.execute(delete(models.Role).where(models.Role.orgnr == company.orgnr))
-                            if role_models:
-                                await self.role_repo.create_batch(role_models, commit=False)
-                            await self.company_repo.update_last_polled_roles(company.orgnr)
-                    except Exception as e:
-                        logger.error(f"Role backfill failed for {company.orgnr}: {e}")
-                        await self.update_service.report_sync_error(company.orgnr, "role", str(e))
+                    if self.repair:
+                        await self.db.execute(delete(models.Role).where(models.Role.orgnr == company.orgnr))
+                        if role_models:
+                            await self.role_repo.create_batch(role_models, commit=False)
+                        await self.company_repo.update_last_polled_roles(company.orgnr)
+                except Exception as e:
+                    logger.error(f"Role backfill failed for {company.orgnr}: {e}")
+                    await self.update_service.report_sync_error(company.orgnr, "role", str(e))
 
         if self.repair:
             await self.db.commit()
@@ -213,14 +213,13 @@ class RepairService:
         }
 
     async def _repair_company(self, orgnr: str) -> bool:
-        async with repair_semaphore:
-            async with BRREG_RATE_LIMITER:
-                try:
-                    data = await self.brreg_api.fetch_company(orgnr)
-                    if data:
-                        await self.company_repo.create_or_update(data)
-                        return True
-                    return False
-                except Exception as e:
-                    logger.error(f"Failed to repair company {orgnr}: {e}")
-                    return False
+        async with repair_semaphore, BRREG_RATE_LIMITER:
+            try:
+                data = await self.brreg_api.fetch_company(orgnr)
+                if data:
+                    await self.company_repo.create_or_update(data)
+                    return True
+                return False
+            except Exception as e:
+                logger.error(f"Failed to repair company {orgnr}: {e}")
+                return False

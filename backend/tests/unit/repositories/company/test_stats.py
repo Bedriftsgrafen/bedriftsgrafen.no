@@ -1,5 +1,7 @@
+from unittest.mock import AsyncMock, MagicMock
+
 import pytest
-from unittest.mock import MagicMock, AsyncMock
+
 from repositories.company.stats import StatsMixin
 from repositories.company_filter_builder import FilterParams
 

@@ -8,26 +8,26 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 import models
+from constants.concurrency import (
+    PARENT_NAME_CACHE_SIZE,
+    PARENT_NAME_CACHE_TTL,
+    SEARCH_CACHE_SIZE,
+    SEARCH_CACHE_TTL,
+)
 from repositories.accounting_repository import AccountingRepository
 from repositories.company import CompanyRepository, CompanyWithFinancials
 from repositories.company_filter_builder import FilterParams
 from repositories.role_repository import RoleRepository
 from repositories.subunit_repository import SubUnitRepository
+from schemas.companies import AccountingWithKpis, MapMarker, Naeringskode
 from services.brreg_api_service import BrregApiService
 from services.brreg_mappers import map_subunit_from_api
 from services.dtos import CompanyFilterDTO
 from services.geocoding_service import GeocodingService
 from services.kpi_service import KpiService
 from services.nace_service import NaceService
-from schemas.companies import AccountingWithKpis, MapMarker, Naeringskode
 from utils.cache import AsyncLRUCache
 from utils.redis_cache import RedisCache
-from constants.concurrency import (
-    SEARCH_CACHE_SIZE,
-    SEARCH_CACHE_TTL,
-    PARENT_NAME_CACHE_SIZE,
-    PARENT_NAME_CACHE_TTL,
-)
 
 logger = logging.getLogger(__name__)
 
@@ -88,7 +88,7 @@ class CompanyService:
         params = filters.to_count_params()
         if filters.sort_by:
             params["sort_by"] = filters.sort_by
-        cache_key = hashlib.md5(str(sorted(params.items())).encode()).hexdigest()
+        cache_key = hashlib.sha256(str(sorted(params.items())).encode()).hexdigest()
 
         cached = await count_cache.get(cache_key)
         if cached is not None:
@@ -153,7 +153,7 @@ class CompanyService:
                 if isinstance(company, dict):
                     company["parent_navn"] = parent_name
                 else:
-                    setattr(company, "parent_navn", parent_name)
+                    setattr(company, "parent_navn", parent_name)  # noqa: B010  -- dynamic attr on ORM model
             else:
                 try:
                     # Optimized column-only lookup
@@ -162,12 +162,12 @@ class CompanyService:
                         if isinstance(company, dict):
                             company["parent_navn"] = parent_name
                         else:
-                            setattr(company, "parent_navn", parent_name)
+                            setattr(company, "parent_navn", parent_name)  # noqa: B010  -- dynamic attr on ORM model
                         await parent_name_cache.set(parent_orgnr, parent_name)
                     else:
-                        asyncio.create_task(self._background_parent_sync(parent_orgnr))
+                        _task = asyncio.create_task(self._background_parent_sync(parent_orgnr))  # noqa: RUF006
                 except Exception:
-                    pass
+                    logger.debug(f"Parent name lookup failed for {parent_orgnr}", exc_info=True)
 
         # Auto-geocode if needed (for Companies)
         if not isinstance(company, dict) and company.latitude is None:
@@ -209,7 +209,7 @@ class CompanyService:
         if filters.sort_by:
             params["sort_by"] = filters.sort_by
 
-        cache_key = hashlib.md5(str(sorted(params.items())).encode()).hexdigest()
+        cache_key = hashlib.sha256(str(sorted(params.items())).encode()).hexdigest()
         cached = await stats_cache.get(cache_key)
         if cached:
             return cached

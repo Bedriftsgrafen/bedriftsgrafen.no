@@ -3,9 +3,11 @@ MECE SQL Statement Verification for RoleRepository.
 Verifies that the repository generates correct SQL clauses for legal compliance.
 """
 
+from unittest.mock import AsyncMock, MagicMock
+
 import pytest
+
 from repositories.role_repository import RoleRepository
-from unittest.mock import MagicMock, AsyncMock
 
 
 @pytest.fixture

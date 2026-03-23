@@ -148,7 +148,7 @@ class BrregApiService(BaseExternalService):
             parsed["langsiktig_gjeld"] = self._extract_value(gjeld.get("langsiktigGjeld", {}), "sumLangsiktigGjeld")
 
         except Exception as e:
-            logger.error(f"Error parsing financial data: {str(e)}")
+            logger.error(f"Error parsing financial data: {e!s}")
 
         return parsed
 
@@ -196,7 +196,7 @@ class BrregApiService(BaseExternalService):
                 url = data["_links"]["next"]["href"] if "_links" in data and "next" in data["_links"] else ""
 
             except Exception as e:
-                logger.error(f"Error fetching subunits for {parent_orgnr}: {str(e)}")
+                logger.error(f"Error fetching subunits for {parent_orgnr}: {e!s}")
                 raise
 
         if page_count >= max_pages:
@@ -266,5 +266,5 @@ class BrregApiService(BaseExternalService):
         except ExternalApiException:
             raise
         except Exception as e:
-            logger.error(f"Error fetching roles for {orgnr}: {str(e)}")
+            logger.error(f"Error fetching roles for {orgnr}: {e!s}")
             return []

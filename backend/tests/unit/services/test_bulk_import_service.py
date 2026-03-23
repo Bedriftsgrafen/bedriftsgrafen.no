@@ -1,5 +1,7 @@
-import pytest
 from unittest.mock import AsyncMock, MagicMock
+
+import pytest
+
 from services.bulk_import_service import BulkImportService
 
 
@@ -224,6 +226,7 @@ class TestWorker:
     async def test_worker_processes_and_marks_completed(self, service, mock_db_session, mock_company_service):
         """Worker should process company and mark as completed on success."""
         import asyncio
+
         from models_import import ImportStatus
 
         # Arrange - mock queue item
@@ -255,6 +258,7 @@ class TestWorker:
     async def test_worker_marks_failed_on_error(self, service, mock_db_session, mock_company_service):
         """Worker should mark item as failed when processing raises exception."""
         import asyncio
+
         from models_import import ImportStatus
 
         # Arrange

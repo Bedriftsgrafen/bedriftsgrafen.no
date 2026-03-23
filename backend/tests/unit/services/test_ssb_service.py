@@ -5,10 +5,11 @@ Tests SSB API fetching, JSON-STAT2 parsing, and database upserting.
 Follows AAA pattern (Arrange - Act - Assert).
 """
 
-import pytest
 from unittest.mock import AsyncMock, MagicMock, patch
 
-from services.ssb_service import SsbService, MUNICIPALITY_CODE_PATTERN
+import pytest
+
+from services.ssb_service import MUNICIPALITY_CODE_PATTERN, SsbService
 
 
 class TestSsbServiceInit:

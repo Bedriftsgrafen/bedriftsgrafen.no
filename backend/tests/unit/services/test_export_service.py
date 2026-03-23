@@ -3,10 +3,12 @@ Unit tests for ExportService.
 """
 
 from unittest.mock import AsyncMock, MagicMock
+
 import pytest
 from sqlalchemy.ext.asyncio import AsyncSession
-from services.export_service import ExportService
+
 from services.dtos import CompanyFilterDTO
+from services.export_service import ExportService
 
 
 @pytest.fixture

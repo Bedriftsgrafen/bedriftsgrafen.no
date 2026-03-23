@@ -5,6 +5,7 @@ ROBUST VERSION: Prioritizes Vegadresse > Gateadresse. Avoids Eiendom (ocean cent
 
 import logging
 import re
+
 import httpx
 
 from services.base_external_service import BaseExternalService, ExternalApiException

@@ -7,10 +7,10 @@ For 1.1M+ companies, uses Sitemap Index pattern:
 - /sitemaps/{page}.xml - Individual sitemaps (max 50,000 URLs per file)
 """
 
-import math
 import logging
+import math
 import urllib.parse
-from datetime import datetime
+from datetime import UTC, datetime
 from typing import Any
 
 from fastapi import APIRouter, Depends, Path, Request
@@ -20,7 +20,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from constants.urls import BASE_URL
 from database import get_db
 from limiter import limiter
-from services.seo_service import SEOService, STATIC_ROUTES, URLS_PER_SITEMAP
+from services.seo_service import STATIC_ROUTES, URLS_PER_SITEMAP, SEOService
 
 router: APIRouter = APIRouter(tags=["SEO"])
 logger = logging.getLogger(__name__)
@@ -36,16 +36,15 @@ def get_seo_service(db: AsyncSession = Depends(get_db)) -> SEOService:
 
 def format_date(dt: Any) -> str:
     """Format datetime or string date to sitemap-compliant ISO string (YYYY-MM-DD)"""
-    from datetime import timezone
 
     if dt is None:
-        return datetime.now(timezone.utc).strftime("%Y-%m-%d")
+        return datetime.now(UTC).strftime("%Y-%m-%d")
     if isinstance(dt, datetime):
         return dt.strftime("%Y-%m-%d")
     if isinstance(dt, str):
         # Brreg format often contains T
         return dt.split("T")[0]
-    return datetime.now(timezone.utc).strftime("%Y-%m-%d")
+    return datetime.now(UTC).strftime("%Y-%m-%d")
 
 
 def calculate_sitemap_pages(total_count: int, offset: int = 0) -> int:

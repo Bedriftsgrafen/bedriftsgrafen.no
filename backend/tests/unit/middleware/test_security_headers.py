@@ -10,10 +10,11 @@ Tests cover:
 """
 
 import os
+from unittest.mock import MagicMock, patch
+
 import pytest
-from unittest.mock import patch, MagicMock
-from starlette.responses import Response
 from starlette.requests import Request
+from starlette.responses import Response
 
 from middleware import SecurityHeadersMiddleware
 
@@ -104,6 +105,7 @@ class TestSecurityHeadersMiddleware:
         with patch.dict(os.environ, {"ENVIRONMENT": "production"}):
             # Re-import to pick up new env
             import importlib
+
             import middleware as middleware_module
 
             importlib.reload(middleware_module)
@@ -125,6 +127,7 @@ class TestSecurityHeadersMiddleware:
         """Should NOT set HSTS header in development environment."""
         with patch.dict(os.environ, {"ENVIRONMENT": "development"}):
             import importlib
+
             import middleware as middleware_module
 
             importlib.reload(middleware_module)

@@ -1,7 +1,8 @@
 """Unit tests for RedisCache class."""
 
-import pytest
 from unittest.mock import AsyncMock, patch
+
+import pytest
 
 from utils.redis_cache import RedisCache
 

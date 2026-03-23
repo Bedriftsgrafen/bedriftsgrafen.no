@@ -5,12 +5,13 @@ Tests full-text search, ILIKE fallback, and error handling.
 Follows AAA pattern (Arrange - Act - Assert).
 """
 
-import pytest
-from unittest.mock import AsyncMock, MagicMock, patch
 import asyncio
+from unittest.mock import AsyncMock, MagicMock, patch
 
-from repositories.company.search import SearchMixin
+import pytest
+
 from exceptions import DatabaseException
+from repositories.company.search import SearchMixin
 
 
 class MockSearchRepo(SearchMixin):

@@ -1,7 +1,9 @@
+from unittest.mock import AsyncMock, MagicMock
+
 import pytest
-from unittest.mock import MagicMock, AsyncMock
-from repositories.subunit_repository import SubUnitRepository
+
 import models
+from repositories.subunit_repository import SubUnitRepository
 
 
 @pytest.fixture

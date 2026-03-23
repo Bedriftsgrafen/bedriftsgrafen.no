@@ -1,4 +1,4 @@
-from utils.nace_codes import is_nace_section_letter, get_nace_division_prefixes, get_nace_section_name
+from utils.nace_codes import get_nace_division_prefixes, get_nace_section_name, is_nace_section_letter
 
 
 def test_is_nace_section_letter():

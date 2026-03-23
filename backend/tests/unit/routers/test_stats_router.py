@@ -1,6 +1,8 @@
-import pytest
 from unittest.mock import AsyncMock, MagicMock
+
+import pytest
 from fastapi.testclient import TestClient
+
 from main import app
 from schemas.stats import GeoStatResponse
 from services.stats_service import StatsService

@@ -8,8 +8,9 @@ Tests cover:
 """
 
 import os
-import pytest
 from unittest.mock import MagicMock, patch
+
+import pytest
 from fastapi import HTTPException
 
 
@@ -22,6 +23,7 @@ class TestVerifyAdminKey:
         with patch.dict(os.environ, {"ADMIN_API_KEY": "test-secret-key", "ENVIRONMENT": "development"}):
             # Re-import to pick up new env
             import importlib
+
             import utils.auth as auth_module
 
             importlib.reload(auth_module)
@@ -44,6 +46,7 @@ class TestVerifyAdminKey:
         """Invalid API key should return 403 and log warning."""
         with patch.dict(os.environ, {"ADMIN_API_KEY": "correct-key", "ENVIRONMENT": "development"}):
             import importlib
+
             import utils.auth as auth_module
 
             importlib.reload(auth_module)
@@ -72,6 +75,7 @@ class TestVerifyAdminKey:
         """Missing API key should return 401 and log warning."""
         with patch.dict(os.environ, {"ADMIN_API_KEY": "some-key", "ENVIRONMENT": "development"}):
             import importlib
+
             import utils.auth as auth_module
 
             importlib.reload(auth_module)
@@ -102,6 +106,7 @@ class TestVerifyAdminKey:
 
             with patch.dict(os.environ, env_copy, clear=True):
                 import importlib
+
                 import utils.auth as auth_module
 
                 importlib.reload(auth_module)
@@ -124,6 +129,7 @@ class TestVerifyAdminKey:
         """Should use X-Forwarded-For header for client IP when behind proxy."""
         with patch.dict(os.environ, {"ADMIN_API_KEY": "test-key", "ENVIRONMENT": "development"}):
             import importlib
+
             import utils.auth as auth_module
 
             importlib.reload(auth_module)
@@ -148,6 +154,7 @@ class TestIsAdmin:
         """Should return True for valid admin key."""
         with patch.dict(os.environ, {"ADMIN_API_KEY": "valid-key", "ENVIRONMENT": "development"}):
             import importlib
+
             import utils.auth as auth_module
 
             importlib.reload(auth_module)
@@ -158,6 +165,7 @@ class TestIsAdmin:
         """Should return False for invalid admin key."""
         with patch.dict(os.environ, {"ADMIN_API_KEY": "valid-key", "ENVIRONMENT": "development"}):
             import importlib
+
             import utils.auth as auth_module
 
             importlib.reload(auth_module)
@@ -168,6 +176,7 @@ class TestIsAdmin:
         """Should return False when key is None."""
         with patch.dict(os.environ, {"ADMIN_API_KEY": "valid-key", "ENVIRONMENT": "development"}):
             import importlib
+
             import utils.auth as auth_module
 
             importlib.reload(auth_module)
@@ -182,6 +191,7 @@ class TestIsAdmin:
 
         with patch.dict(os.environ, env_copy, clear=True):
             import importlib
+
             import utils.auth as auth_module
 
             importlib.reload(auth_module)
@@ -197,6 +207,7 @@ class TestTimingAttackPrevention:
         """Verify that secrets.compare_digest is used for key comparison."""
         with patch.dict(os.environ, {"ADMIN_API_KEY": "test-key", "ENVIRONMENT": "development"}):
             import importlib
+
             import utils.auth as auth_module
 
             importlib.reload(auth_module)
@@ -220,6 +231,7 @@ class TestProductionEnforcement:
 
         with patch.dict(os.environ, env_copy, clear=True):
             import importlib
+
             import utils.auth as auth_module
 
             with pytest.raises(RuntimeError) as exc_info:
@@ -232,6 +244,7 @@ class TestProductionEnforcement:
         """In production with ADMIN_API_KEY set, module should load normally."""
         with patch.dict(os.environ, {"ENVIRONMENT": "production", "ADMIN_API_KEY": "prod-secret-key"}, clear=False):
             import importlib
+
             import utils.auth as auth_module
 
             # Should not raise

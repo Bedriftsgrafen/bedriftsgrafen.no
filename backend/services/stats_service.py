@@ -1,17 +1,18 @@
 import asyncio
 import logging
-from typing import Any, Literal, Sequence
+from collections.abc import Sequence
+from typing import Any, Literal
 
+from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 import models
 from constants.counties import COUNTY_NAMES, get_county_name
 from constants.municipality_coords import MUNICIPALITY_COORDS
-from repositories.company_filter_builder import FilterParams
 from repositories.company import CompanyRepository
+from repositories.company_filter_builder import FilterParams
 from repositories.stats_repository import StatsRepository
-from schemas.stats import GeoAveragesResponse, GeoMetric, GeoLevel, GeoStatResponse, IndustryStatResponse
-from sqlalchemy import func, select
+from schemas.stats import GeoAveragesResponse, GeoLevel, GeoMetric, GeoStatResponse, IndustryStatResponse
 
 logger = logging.getLogger(__name__)
 

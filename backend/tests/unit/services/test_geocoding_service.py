@@ -2,8 +2,10 @@
 Unit tests for GeocodingService.
 """
 
-from unittest.mock import AsyncMock, patch, MagicMock
+from unittest.mock import AsyncMock, MagicMock, patch
+
 import pytest
+
 from services.geocoding_service import GeocodingService
 
 

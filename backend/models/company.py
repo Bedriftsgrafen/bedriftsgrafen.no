@@ -1,5 +1,8 @@
 from __future__ import annotations
+
 from datetime import date, datetime
+from typing import TYPE_CHECKING, Any
+
 from sqlalchemy import (
     Boolean,
     Column,
@@ -14,11 +17,10 @@ from sqlalchemy import (
 )
 from sqlalchemy import text as sa_text
 from sqlalchemy.dialects.postgresql import JSONB, TSVECTOR
-from sqlalchemy.orm import Mapped, relationship, mapped_column
+from sqlalchemy.orm import Mapped, mapped_column, relationship
 from sqlalchemy.sql import func
 
 from database import Base
-from typing import TYPE_CHECKING, Any
 
 if TYPE_CHECKING:
     from models.accounting import Accounting
@@ -242,13 +244,13 @@ class Company(Base):
 
     # Relationships - Use noload to prevent N+1 queries
     # Queries that need these relationships MUST explicitly eager load with selectinload/joinedload
-    regnskap: Mapped[list["Accounting"]] = relationship(
+    regnskap: Mapped[list[Accounting]] = relationship(
         "Accounting", back_populates="company", cascade="all, delete-orphan", lazy="noload"
     )
-    underenheter: Mapped[list["SubUnit"]] = relationship(
+    underenheter: Mapped[list[SubUnit]] = relationship(
         "SubUnit", back_populates="parent_company", cascade="all, delete-orphan", lazy="noload"
     )
-    roller: Mapped[list["Role"]] = relationship(
+    roller: Mapped[list[Role]] = relationship(
         "Role", back_populates="company", cascade="all, delete-orphan", lazy="noload"
     )
 
@@ -390,7 +392,7 @@ class SubUnit(Base):
         DateTime(timezone=True), server_default=func.now(), onupdate=func.now()
     )
 
-    parent_company: Mapped["Company"] = relationship("Company", back_populates="underenheter")
+    parent_company: Mapped[Company] = relationship("Company", back_populates="underenheter")
 
 
 class Role(Base):
@@ -437,4 +439,4 @@ class Role(Base):
         DateTime(timezone=True), server_default=func.now(), onupdate=func.now()
     )
 
-    company: Mapped["Company"] = relationship("Company", back_populates="roller")
+    company: Mapped[Company] = relationship("Company", back_populates="roller")

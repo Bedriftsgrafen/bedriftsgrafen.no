@@ -5,15 +5,14 @@ from typing import Literal
 from fastapi import APIRouter, Depends, HTTPException, Path, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 
-
 from constants.nace import get_nace_name
 from database import get_db
 from dependencies.company_filters import CompanyQueryParams
+from repositories.company_filter_builder import FilterParams
 from schemas.benchmark import IndustryBenchmarkResponse
 from schemas.municipality import TrendPoint
 from schemas.stats import GeoAveragesResponse, GeoLevel, GeoMetric, GeoStatResponse, IndustryStatResponse
 from services.stats_service import StatsService
-from repositories.company_filter_builder import FilterParams
 
 router: APIRouter = APIRouter(prefix="/v1/stats", tags=["statistics"])
 

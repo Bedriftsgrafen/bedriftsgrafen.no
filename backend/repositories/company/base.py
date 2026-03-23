@@ -5,13 +5,14 @@ This module contains shared code used across all company repository modules.
 
 import asyncio
 import logging
-from typing import Union
 
 from sqlalchemy.orm import defer, noload, selectinload
 
 import models
 from constants.concurrency import (
     COMPANY_SEARCH_SEMAPHORE_SIZE,
+)
+from constants.concurrency import (
     SEARCH_SEMAPHORE_TIMEOUT as _SEARCH_TIMEOUT,
 )
 
@@ -81,7 +82,7 @@ class CompanyWithFinancials:
     """Simple wrapper to hold company + financial data together."""
 
     # Type hint for enriched or raw NACE codes
-    naeringskoder: list[Union[str, dict[str, str]]]
+    naeringskoder: list[str | dict[str, str]]
 
     def __init__(
         self,

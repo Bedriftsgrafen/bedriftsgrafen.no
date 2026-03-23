@@ -90,7 +90,7 @@ def cached_query(
 
             try:
                 key_data = {"func": func.__name__, "args": str(cache_args), "kwargs": sorted(kwargs.items())}
-                key = hashlib.md5(json.dumps(key_data, sort_keys=True, default=str).encode()).hexdigest()
+                key = hashlib.sha256(json.dumps(key_data, sort_keys=True, default=str).encode()).hexdigest()
             except Exception as e:
                 logger.warning(f"Failed to create cache key for {func.__name__}: {e}")
                 # Fallback: skip cache if key creation fails

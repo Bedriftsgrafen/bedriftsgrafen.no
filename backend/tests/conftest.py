@@ -2,8 +2,8 @@
 Pytest configuration and shared fixtures for backend tests.
 """
 
-import sys
 import os
+import sys
 from pathlib import Path
 from unittest.mock import AsyncMock, MagicMock
 
@@ -21,8 +21,8 @@ os.environ["REDIS_HOST"] = ""
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
 # SQLite Compatibility: Map JSONB and TSVECTOR to JSON/Text for in-memory testing
-from sqlalchemy.dialects import postgresql as pg  # noqa: E402
 from sqlalchemy import JSON, Text  # noqa: E402
+from sqlalchemy.dialects import postgresql as pg  # noqa: E402
 
 # SQLite Compatibility: Map JSONB and TSVECTOR for in-memory testing
 

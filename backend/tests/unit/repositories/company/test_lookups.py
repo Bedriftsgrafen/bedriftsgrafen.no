@@ -5,11 +5,12 @@ Tests get_by_orgnr, get_similar_companies, get_by_industry_code, get_existing_or
 Follows AAA pattern (Arrange - Act - Assert).
 """
 
-import pytest
 from unittest.mock import AsyncMock, MagicMock
 
-from repositories.company.lookups import LookupsMixin
+import pytest
+
 from exceptions import CompanyNotFoundException, DatabaseException
+from repositories.company.lookups import LookupsMixin
 
 
 class MockLookupsRepo(LookupsMixin):

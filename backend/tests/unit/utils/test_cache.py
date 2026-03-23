@@ -1,5 +1,7 @@
-import pytest
 import asyncio
+
+import pytest
+
 from utils.cache import AsyncLRUCache, cached_query
 
 

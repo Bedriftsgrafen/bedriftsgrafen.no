@@ -29,19 +29,21 @@ def include_object(object, name, type_, reflected, compare_to):
     """
     Exclude materialized views from autogeneration to prevent DropTable/CreateTable cycles.
     """
-    if type_ == "table" and name in [
-        "industry_stats",
-        "industry_subclass_stats",
-        "county_stats",
-        "municipality_stats",
-        "latest_financials",
-        "latest_accountings",
-        "orgform_counts",
-        "dashboard_stats",
-        "system_state",
-    ]:
-        return False
-    return True
+    return not (
+        type_ == "table"
+        and name
+        in [
+            "industry_stats",
+            "industry_subclass_stats",
+            "county_stats",
+            "municipality_stats",
+            "latest_financials",
+            "latest_accountings",
+            "orgform_counts",
+            "dashboard_stats",
+            "system_state",
+        ]
+    )
 
 
 # Load database URL from environment variable
@@ -133,7 +135,7 @@ def run_migrations_online() -> None:
                 else:
                     context.run_migrations()
 
-            await connection.run_sync(lambda conn: run_migrations())
+            await connection.run_sync(lambda _conn: run_migrations())
 
         await connectable.dispose()
 
