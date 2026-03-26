@@ -45,9 +45,9 @@ vi.mock('../../hooks/useCompanyModal', () => ({
 }))
 
 // Mock sub-components
-vi.mock('../../components/company', () => ({
-    CompanyModal: ({ company, companyLoading }: any) => (
-        <div data-testid="company-modal">
+vi.mock('../../components/company/CompanyDetailContent', () => ({
+    CompanyDetailContent: ({ company, companyLoading }: any) => (
+        <div data-testid="company-detail-content">
             {companyLoading ? 'Loading...' : company?.navn}
         </div>
     )
@@ -96,10 +96,10 @@ describe('VirksomhetPage', () => {
 
         renderPage()
 
-        expect(screen.getByTestId('company-modal')).toHaveTextContent('Loading...')
+        expect(screen.getByTestId('company-detail-content')).toHaveTextContent('Loading...')
 
         await waitFor(() => {
-            expect(screen.getByTestId('company-modal')).toHaveTextContent('FACTORY COMPANY AS')
+            expect(screen.getByTestId('company-detail-content')).toHaveTextContent('FACTORY COMPANY AS')
         })
     })
 
@@ -115,7 +115,7 @@ describe('VirksomhetPage', () => {
         await waitFor(() => {
             // Since we mocked CompanyModal to just show data-testid, we check if it receives error
             // In a real test we'd verify the error UI
-            expect(screen.getByTestId('company-modal')).toBeInTheDocument()
+            expect(screen.getByTestId('company-detail-content')).toBeInTheDocument()
         })
     })
 })

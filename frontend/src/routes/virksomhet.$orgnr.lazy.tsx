@@ -1,7 +1,7 @@
 /* eslint-disable react-refresh/only-export-components */
 import { createLazyFileRoute } from '@tanstack/react-router'
 import { useState, useEffect, useCallback } from 'react'
-import { CompanyModal } from '../components/company'
+import { CompanyDetailContent } from '../components/company/CompanyDetailContent'
 import { IndustryModal } from '../components/company/IndustryModal'
 import { SEOHead, Breadcrumbs } from '../components/layout'
 import { useCompanyDetailQuery } from '../hooks/queries/useCompanyDetailQuery'
@@ -83,16 +83,6 @@ export function CompanyPage() {
         }
     }, [company, companyLoading, companyError, addRecentCompany])
 
-    // Handlers - wrapped in useCallback for stable references
-    const handleClose = useCallback(() => {
-        // Navigate back in history to preserve context
-        if (window.history.length > 1) {
-            window.history.back()
-        } else {
-            navigate({ to: '/' })
-        }
-    }, [navigate])
-
     const handleSelectYear = useCallback((year: number | null) => {
         setSelectedYear(year)
     }, [setSelectedYear])
@@ -146,35 +136,39 @@ export function CompanyPage() {
                 } : undefined}
             />
 
-            <Breadcrumbs
-                items={[
-                    { label: 'Hjem', to: '/' },
-                    { label: company?.navn || orgnr },
-                ]}
-            />
+            <div className="max-w-7xl mx-auto px-4 lg:px-6 pb-8">
+                <Breadcrumbs
+                    items={[
+                        { label: 'Hjem', to: '/' },
+                        { label: company?.navn || orgnr },
+                    ]}
+                />
 
-            <CompanyModal
-                company={company}
-                companyLoading={companyLoading}
-                companyError={companyError}
-                activeTab={activeTab}
-                onTabChange={handleTabChange}
-                selectedYear={selectedYear}
-                onSelectYear={handleSelectYear}
-                kpiData={kpiData ?? undefined}
-                kpiLoading={kpiLoading}
-                kpiError={kpiError}
-                copiedOrgnr={copiedOrgnr}
-                onCopyOrgnr={handleCopyOrgnr}
-                onShare={handleShare}
-                onClose={handleClose}
-                onRetryCompany={refetchCompany}
-                onRetryKpi={refetchKpi}
-                onImport={(o) => fetchMutation.mutate({ orgnr: o })}
-                isImporting={fetchMutation.isPending}
-                onOpenIndustry={handleOpenIndustry}
-                onSelectCompany={handleSelectCompany}
-            />
+                <div className="bg-white rounded-xl shadow-sm border border-gray-200 mt-2">
+                    <CompanyDetailContent
+                        company={company}
+                        companyLoading={companyLoading}
+                        companyError={companyError}
+                        activeTab={activeTab}
+                        onTabChange={handleTabChange}
+                        selectedYear={selectedYear}
+                        onSelectYear={handleSelectYear}
+                        kpiData={kpiData ?? undefined}
+                        kpiLoading={kpiLoading}
+                        kpiError={kpiError}
+                        copiedOrgnr={copiedOrgnr}
+                        onCopyOrgnr={handleCopyOrgnr}
+                        onShare={handleShare}
+                        onRetryCompany={refetchCompany}
+                        onRetryKpi={refetchKpi}
+                        onImport={(o) => fetchMutation.mutate({ orgnr: o })}
+                        isImporting={fetchMutation.isPending}
+                        onOpenIndustry={handleOpenIndustry}
+                        onSelectCompany={handleSelectCompany}
+                        constrainHeight={false}
+                    />
+                </div>
+            </div>
 
             <IndustryModal
                 isOpen={industryModal.isOpen}
