@@ -250,7 +250,7 @@ class LookupsMixin:
             where_sql = " AND ".join(where_clauses)
 
             # Query 1: Fast COUNT using naeringskode index (where_sql is built from hardcoded clauses)
-            count_query = text(f"""  noqa: S608
+            count_query = text(f"""
                 SELECT COUNT(*)
                 FROM bedrifter
                 WHERE {where_sql}

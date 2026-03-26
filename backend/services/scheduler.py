@@ -199,32 +199,48 @@ class SchedulerService:
 
         Uses CONCURRENTLY to prevent table locks so reads can continue.
         Views must have unique indexes to support concurrent refresh.
-        Runs ANALYZE after refresh so the query planner has up-to-date statistics.
+        Each view is refreshed in its own transaction so one slow view
+        (e.g. industry_stats at 71 MB) doesn't abort the entire batch
+        when it hits the statement timeout under I/O contention.
         """
         logger.info("Starting materialized view refresh (CONCURRENTLY)...")
-        try:
-            async with engine.begin() as conn:
-                # Core statistics views (refreshed every 5 minutes)
-                await conn.execute(text("REFRESH MATERIALIZED VIEW CONCURRENTLY company_totals;"))
-                await conn.execute(text("ANALYZE company_totals;"))  # Added ANALYZE here
-                await conn.execute(text("REFRESH MATERIALIZED VIEW CONCURRENTLY industry_stats;"))
-                await conn.execute(text("REFRESH MATERIALIZED VIEW CONCURRENTLY industry_subclass_stats;"))
-                await conn.execute(text("REFRESH MATERIALIZED VIEW CONCURRENTLY county_stats;"))
-                await conn.execute(text("REFRESH MATERIALIZED VIEW CONCURRENTLY municipality_stats;"))
-                await conn.execute(text("REFRESH MATERIALIZED VIEW CONCURRENTLY orgform_counts;"))
 
-                # Financial caching views (latest year per company)
-                await conn.execute(text("REFRESH MATERIALIZED VIEW CONCURRENTLY latest_financials;"))
-                await conn.execute(text("REFRESH MATERIALIZED VIEW CONCURRENTLY latest_accountings;"))
+        # Views to refresh, with optional ANALYZE for planner statistics
+        views_to_refresh = [
+            ("company_totals", True),
+            ("industry_stats", False),
+            ("industry_subclass_stats", False),
+            ("county_stats", False),
+            ("municipality_stats", False),
+            ("orgform_counts", False),
+            ("latest_financials", True),
+            ("latest_accountings", True),
+        ]
 
-                # Update planner statistics so queries use optimal plans
-                await conn.execute(text("ANALYZE latest_financials;"))
-                await conn.execute(text("ANALYZE latest_accountings;"))
-                await conn.execute(text("ANALYZE company_totals;"))
+        refreshed = 0
+        failed_views: list[str] = []
 
-            logger.info("Materialized view refresh completed successfully", extra={"views_refreshed": 8})
-        except Exception as e:
-            logger.exception("Failed to refresh materialized views", extra={"error": str(e)})
+        for view_name, run_analyze in views_to_refresh:
+            try:
+                async with engine.begin() as conn:
+                    await conn.execute(text(f"REFRESH MATERIALIZED VIEW CONCURRENTLY {view_name}"))
+                    if run_analyze:
+                        await conn.execute(text(f"ANALYZE {view_name}"))  # view_name from allowlist
+                refreshed += 1
+            except Exception:
+                failed_views.append(view_name)
+                logger.warning("Failed to refresh materialized view: %s", view_name, exc_info=True)
+
+        if failed_views:
+            logger.error(
+                "Materialized view refresh partially failed",
+                extra={"refreshed": refreshed, "failed": failed_views},
+            )
+        else:
+            logger.info(
+                "Materialized view refresh completed successfully",
+                extra={"views_refreshed": refreshed},
+            )
 
     async def sync_ssb_population(self) -> None:
         """Sync municipality population data from SSB."""
