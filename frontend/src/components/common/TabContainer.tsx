@@ -15,7 +15,7 @@ interface TabContainerProps {
  */
 export function TabContainer({ children, className = '' }: TabContainerProps) {
     return (
-        <div className={`flex gap-2 mb-6 border-b border-gray-200 overflow-x-auto whitespace-nowrap no-scrollbar -mx-4 px-4 sm:mx-0 sm:px-0 ${className}`}>
+        <div role="tablist" className={`flex gap-2 mb-6 border-b border-gray-200 overflow-x-auto whitespace-nowrap no-scrollbar -mx-4 px-4 sm:mx-0 sm:px-0 ${className}`}>
             {children}
         </div>
     )

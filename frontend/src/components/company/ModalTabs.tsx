@@ -18,6 +18,8 @@ interface TabButtonProps {
 function TabButton({ tab, label, isActive, onChange }: TabButtonProps) {
   return (
     <button
+      role="tab"
+      aria-selected={isActive}
       onClick={() => onChange(tab)}
       className={`px-6 py-3 font-medium text-sm transition-colors relative whitespace-nowrap ${isActive
         ? 'text-blue-600'
