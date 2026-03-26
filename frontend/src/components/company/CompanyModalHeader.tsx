@@ -11,6 +11,8 @@ interface CompanyModalHeaderProps {
   copiedOrgnr: boolean
   onCopyOrgnr: (orgnr: string) => void
   onShare: () => void
+  /** When true, adds right padding to avoid overlapping with a close button. Default: true */
+  showCloseOverlap?: boolean
 }
 
 export function CompanyModalHeader({
@@ -18,7 +20,8 @@ export function CompanyModalHeader({
   isLoading,
   copiedOrgnr,
   onCopyOrgnr,
-  onShare
+  onShare,
+  showCloseOverlap = true
 }: CompanyModalHeaderProps) {
   // Favorites
   const isFavorite = useFavoritesStore((s) => company ? s.isFavorite(company.orgnr) : false)
@@ -65,6 +68,7 @@ export function CompanyModalHeader({
             : 'text-gray-400 hover:bg-gray-100 hover:text-yellow-500'
             }`}
           title={isFavorite ? 'Fjern fra favoritter' : 'Legg til favoritter'}
+          aria-label={isFavorite ? 'Fjern fra favoritter' : 'Legg til favoritter'}
         >
           <Star className="h-5 w-5" fill={isFavorite ? 'currentColor' : 'none'} />
         </button>
@@ -82,6 +86,7 @@ export function CompanyModalHeader({
               : 'text-gray-300 cursor-not-allowed'
             }`}
           title={isSelected ? 'Fjern fra sammenligning' : canAddMore ? 'Legg til sammenligning' : 'Maks 3 virksomheter'}
+          aria-label={isSelected ? 'Fjern fra sammenligning' : canAddMore ? 'Legg til sammenligning' : 'Maks 3 virksomheter'}
         >
           <GitCompareArrows className="h-5 w-5" />
         </button>
@@ -91,6 +96,7 @@ export function CompanyModalHeader({
         onClick={onShare}
         className="p-2.5 md:p-2 hover:bg-gray-100 rounded-lg transition-colors text-gray-400 hover:text-gray-600"
         title="Del virksomhetsprofil"
+        aria-label="Del virksomhetsprofil"
       >
         <Share2 className="h-5 w-5" />
       </button>
@@ -140,7 +146,7 @@ export function CompanyModalHeader({
 
   return (
     <div className="p-4 md:p-6 border-b border-gray-200 min-h-[128px] relative">
-      <div className="flex flex-col gap-4 md:flex-row md:justify-between md:items-start md:gap-0 pr-12 md:pr-10">
+      <div className={`flex flex-col gap-4 md:flex-row md:justify-between md:items-start md:gap-0 ${showCloseOverlap ? 'pr-12 md:pr-10' : ''}`}>
         <div className="flex-1 min-w-0">
           {isLoading ? (
             <div className="space-y-2">
@@ -160,6 +166,7 @@ export function CompanyModalHeader({
                     onClick={() => onCopyOrgnr(company.orgnr)}
                     className="p-1 hover:bg-gray-100 rounded transition-colors"
                     title="Kopier organisasjonsnummer"
+                    aria-label="Kopier organisasjonsnummer"
                   >
                     {copiedOrgnr ? (
                       <Check className="h-4 w-4 text-green-600" />

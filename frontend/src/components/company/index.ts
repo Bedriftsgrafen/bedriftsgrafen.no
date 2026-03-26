@@ -1,4 +1,5 @@
 export { CompanyModal } from './CompanyModal'
+export { CompanyDetailContent } from './CompanyDetailContent'
 export { CompanyModalHeader } from './CompanyModalHeader'
 export { OverviewTab } from './OverviewTab'
 export { FinancialsTab } from './FinancialsTab'
