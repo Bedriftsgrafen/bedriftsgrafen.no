@@ -122,7 +122,7 @@ async def get_paginated_sitemap(
 
         sitemap_type = parts[0]
         page = int(parts[1])
-    except (ValueError, IndexError):
+    except ValueError, IndexError:
         return Response(status_code=404)
 
     today = datetime.now().strftime("%Y-%m-%d")

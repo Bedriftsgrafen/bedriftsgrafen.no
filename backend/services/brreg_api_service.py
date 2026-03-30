@@ -161,7 +161,7 @@ class BrregApiService(BaseExternalService):
             return None
         try:
             return float(value)
-        except (ValueError, TypeError):
+        except ValueError, TypeError:
             return None
 
     async def fetch_subunits(self, parent_orgnr: str) -> list[dict[str, Any]]:

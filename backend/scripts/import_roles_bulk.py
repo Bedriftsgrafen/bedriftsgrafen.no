@@ -51,7 +51,7 @@ def parse_date(date_str: str | None) -> date | None:
         return None
     try:
         return datetime.fromisoformat(date_str[:10]).date()
-    except (ValueError, TypeError):
+    except ValueError, TypeError:
         return None
 
 

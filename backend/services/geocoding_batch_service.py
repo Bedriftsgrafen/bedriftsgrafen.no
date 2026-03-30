@@ -325,7 +325,7 @@ class GeocodingBatchService:
                                 lat = float(row[9])
                                 lon = float(row[10])
                                 postal_map[postnr] = (lat, lon)
-                            except (ValueError, IndexError):
+                            except ValueError, IndexError:
                                 continue
                 return postal_map
 

@@ -24,7 +24,7 @@ class AccountingRepository:
             return None
         try:
             return datetime.strptime(date_str[:10], "%Y-%m-%d").date()
-        except (ValueError, TypeError):
+        except ValueError, TypeError:
             return None
 
     @staticmethod
@@ -38,7 +38,7 @@ class AccountingRepository:
             if num != num or num in (float("inf"), float("-inf")):
                 return None
             return num
-        except (ValueError, TypeError, OverflowError):
+        except ValueError, TypeError, OverflowError:
             return None
 
     @staticmethod
@@ -54,7 +54,7 @@ class AccountingRepository:
             if ratio != ratio or ratio in (float("inf"), float("-inf")):
                 return None
             return ratio
-        except (ZeroDivisionError, OverflowError):
+        except ZeroDivisionError, OverflowError:
             return None
 
     async def get_by_orgnr(self, orgnr: str) -> Sequence[models.Accounting]:

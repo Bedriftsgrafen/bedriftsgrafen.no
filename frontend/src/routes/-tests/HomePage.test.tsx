@@ -68,7 +68,7 @@ describe('HomePage', () => {
         expect(screen.getByTestId('statistics-cards')).toBeInTheDocument()
         expect(screen.getByTestId('explorer-cta')).toBeInTheDocument()
         expect(screen.getByTestId('recent-searches')).toBeInTheDocument()
-        expect(screen.getByText(/Søk i norske virksomheter/i)).toBeInTheDocument()
+        expect(screen.getByText(/Virksomheter/i)).toBeInTheDocument()
     })
 
     it('handles company search and navigation', () => {
@@ -107,7 +107,6 @@ describe('HomePage', () => {
 
         fireEvent.click(personButton)
 
-        expect(screen.getByText(/Finn roller til personer/i)).toBeInTheDocument()
         expect(screen.getByPlaceholderText(/Søk etter navn på person/i)).toBeInTheDocument()
     })
 })

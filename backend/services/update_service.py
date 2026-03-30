@@ -638,7 +638,7 @@ class UpdateService:
                                 current_id = int(event.get("id"))
                                 if last_seen_id is None or current_id > last_seen_id:
                                     last_seen_id = current_id
-                            except (ValueError, TypeError):
+                            except ValueError, TypeError:
                                 pass
 
                         await self.db.commit()

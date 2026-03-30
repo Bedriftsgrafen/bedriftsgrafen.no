@@ -33,7 +33,7 @@ def parse_brreg_date(date_str: Any) -> date | None:
     try:
         # Handle YYYY-MM-DD or ISO with time (extract first 10 chars)
         return datetime.strptime(date_str[:10], "%Y-%m-%d").date()
-    except (ValueError, TypeError, IndexError):
+    except ValueError, TypeError, IndexError:
         logger.debug(f"Failed to parse date string: {date_str}")
         return None
 

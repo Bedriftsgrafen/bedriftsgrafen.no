@@ -249,7 +249,7 @@ async def get_company_markers(
         try:
             west, south, east, north = map(float, bbox.split(","))
             parsed_bbox = (west, south, east, north)
-        except (ValueError, TypeError):
+        except ValueError, TypeError:
             raise HTTPException(400, "Invalid bbox format. Use: west,south,east,north")
 
     service = CompanyService(db)

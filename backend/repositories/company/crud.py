@@ -53,7 +53,7 @@ class CrudMixin:
         if konkursdato_str:
             try:
                 konkursdato = datetime.fromisoformat(konkursdato_str).date()
-            except (ValueError, TypeError):
+            except ValueError, TypeError:
                 konkursdato = None
 
         # Parse register flags
@@ -91,7 +91,7 @@ class CrudMixin:
         if reg_enhet_str:
             try:
                 reg_enhet = datetime.fromisoformat(reg_enhet_str).date()
-            except (ValueError, TypeError):
+            except ValueError, TypeError:
                 reg_enhet = None
 
         reg_foretak_str = company_data.get("registreringsdatoForetaksregisteret")
@@ -99,7 +99,7 @@ class CrudMixin:
         if reg_foretak_str:
             try:
                 reg_foretak = datetime.fromisoformat(reg_foretak_str).date()
-            except (ValueError, TypeError):
+            except ValueError, TypeError:
                 reg_foretak = None
 
         return {
