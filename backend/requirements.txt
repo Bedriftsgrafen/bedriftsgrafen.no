@@ -73,7 +73,7 @@ pydantic==2.12.5
     # via
     #   bedriftsgrafen-backend (pyproject.toml)
     #   fastapi
-pydantic-core==2.41.5
+pydantic-core==2.44.0
     # via pydantic
 python-dotenv==1.2.2
     # via
