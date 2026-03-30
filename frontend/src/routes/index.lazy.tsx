@@ -77,51 +77,38 @@ export function HomePage() {
 
             {/* Search section - navigates to /utforsk */}
             <section className="mb-4">
-                <div className="search-gradient rounded-2xl shadow-xl p-8 text-white relative">
-                    {/* Mode Toggle */}
-                    <div className="flex items-center justify-center gap-2 mb-8 relative z-10">
-                        <button
-                            id="search-mode-company"
-                            onClick={() => handleModeChange('company')}
-                            className={`flex items-center gap-2 px-5 py-2 rounded-full font-bold transition-all ${searchMode === 'company'
-                                ? 'bg-white text-blue-900 shadow-lg scale-105'
-                                : 'bg-white/10 text-white hover:bg-white/20'
+                <div className="search-gradient rounded-2xl shadow-xl p-6 text-white relative">
+                    {/* Mode Toggle - sliding switch */}
+                    <div className="flex items-center justify-center mb-4 relative z-10">
+                        <div className="relative flex bg-white/15 rounded-full p-1">
+                            {/* Sliding indicator */}
+                            <div
+                                className={`absolute top-1 bottom-1 w-[calc(50%-4px)] bg-white rounded-full shadow-lg transition-transform duration-300 ease-in-out ${
+                                    searchMode === 'person' ? 'translate-x-[calc(100%+8px)]' : 'translate-x-0'
                                 }`}
-                        >
-                            <Building2 className="h-4 w-4" />
-                            Virksomheter
-                        </button>
-                        <button
-                            id="search-mode-person"
-                            onClick={() => handleModeChange('person')}
-                            className={`flex items-center gap-2 px-5 py-2 rounded-full font-bold transition-all ${searchMode === 'person'
-                                ? 'bg-white text-blue-900 shadow-lg scale-105'
-                                : 'bg-white/10 text-white hover:bg-white/20'
+                            />
+                            <button
+                                id="search-mode-company"
+                                onClick={() => handleModeChange('company')}
+                                className={`relative z-10 flex items-center gap-2 px-5 py-2 rounded-full font-bold text-sm transition-colors duration-300 ${
+                                    searchMode === 'company' ? 'text-blue-900' : 'text-white/80 hover:text-white'
                                 }`}
-                        >
-                            <User className="h-4 w-4" />
-                            Personer
-                        </button>
+                            >
+                                <Building2 className="h-4 w-4" />
+                                Virksomheter
+                            </button>
+                            <button
+                                id="search-mode-person"
+                                onClick={() => handleModeChange('person')}
+                                className={`relative z-10 flex items-center gap-2 px-5 py-2 rounded-full font-bold text-sm transition-colors duration-300 ${
+                                    searchMode === 'person' ? 'text-blue-900' : 'text-white/80 hover:text-white'
+                                }`}
+                            >
+                                <User className="h-4 w-4" />
+                                Personer
+                            </button>
+                        </div>
                     </div>
-
-                    <h1 className="text-2xl font-bold mb-2 flex items-center gap-2 justify-center relative z-10">
-                        {searchMode === 'company' ? (
-                            <>
-                                <Search className="h-6 w-6" />
-                                Søk i norske virksomheter
-                            </>
-                        ) : (
-                            <>
-                                <Search className="h-6 w-6" />
-                                Finn roller til personer
-                            </>
-                        )}
-                    </h1>
-                    <p className="text-white/90 text-center mb-6 relative z-10">
-                        {searchMode === 'company'
-                            ? 'Søk på virksomhetsnavn, organisasjonsnummer, bransje, sted eller formål'
-                            : 'Søk etter navn på personer i styre og ledelse'}
-                    </p>
 
                     <div className="max-w-2xl mx-auto relative z-20">
                         <div className="flex gap-3">
