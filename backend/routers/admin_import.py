@@ -81,7 +81,7 @@ async def populate_import_queue(
         # 1. Only accept basename (no path components allowed)
         safe_basename = Path(queue_request.from_file).name
         if safe_basename != queue_request.from_file:
-            logger.warning(f"SECURITY: Path traversal attempt blocked - input: {queue_request.from_file}")
+            logger.warning("SECURITY: Path traversal attempt blocked - input: %s", queue_request.from_file)
             raise HTTPException(status_code=400, detail="Invalid file path - use filename only")
 
         # 2. Construct full path within allowed directory
@@ -89,12 +89,12 @@ async def populate_import_queue(
 
         # 3. Verify final path is still within allowed directory (defense in depth)
         if not str(requested_path).startswith(str(ALLOWED_IMPORT_DIR)):
-            logger.warning(f"SECURITY: Path escape attempt blocked - resolved: {requested_path}")
+            logger.warning("SECURITY: Path escape attempt blocked - resolved: %s", requested_path)
             raise HTTPException(status_code=400, detail="Invalid file path")
 
         # 4. Reject symlinks (could point outside allowed directory)
         if requested_path.is_symlink():
-            logger.warning(f"SECURITY: Symlink rejected - path: {requested_path}")
+            logger.warning("SECURITY: Symlink rejected - path: %s", requested_path)
             raise HTTPException(status_code=400, detail="Symlinks not allowed")
 
         # 5. Verify file exists

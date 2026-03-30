@@ -402,8 +402,8 @@ async def get_company_roles(
         return RolesWithMetadata(data=role_responses, total=len(role_responses), metadata=build_response_metadata())
 
     except BrregApiException as e:
-        logging.warning(f"External API error fetching roles for {orgnr}: {e}")
+        logging.warning("External API error fetching roles for %s: %s", orgnr, e)
         raise HTTPException(status_code=502, detail="Failed to fetch roles from Brønnøysund")
     except Exception as e:
-        logging.exception(f"Unexpected error fetching roles for {orgnr}: {e}")
+        logging.exception("Unexpected error fetching roles for %s: %s", orgnr, e)
         raise HTTPException(status_code=500, detail="Internal server error")

@@ -92,7 +92,7 @@ export const CompanyListModal = ({
 
     const countParams: UseCompanyStatsQueryParams = {
         naeringskode: naceCode,
-    }
+    };
 
     if (filterType === 'new') {
         const oneYearAgo = getOneYearAgo();

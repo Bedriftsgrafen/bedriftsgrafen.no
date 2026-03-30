@@ -294,7 +294,7 @@ class RoleRepository:
         except Exception as e:
             logger.error(
                 "Error fetching commercial roles",
-                extra={"person_name": name, "birthdate": str(birthdate), "error": str(e)},
+                extra={"person_name": name, "birthdate": "REDACTED", "error": str(e)},
             )
             return []
 

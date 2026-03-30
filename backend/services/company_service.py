@@ -120,7 +120,7 @@ class CompanyService:
 
             # Map SubUnit to a Company-compatible dictionary for Pydantic
             # This allows the frontend to open sub-units in the same Modal
-            logger.info(f"Using SubUnit fallback for {orgnr}")
+            logger.info("Using SubUnit fallback for %s", orgnr)
             # Map to dict for Pydantic (will be validated by CompanyWithAccounting)
             comp_dict: dict[str, Any] = {
                 "orgnr": subunit.orgnr,

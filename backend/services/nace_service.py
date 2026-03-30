@@ -103,7 +103,7 @@ class NaceService:
 
             return results
         except Exception as e:
-            logger.error(f"Error fetching NACE subclasses for {prefix}: {e}")
+            logger.error("Error fetching NACE subclasses for %s: %s", prefix, e)
             return []
 
     @classmethod

@@ -96,7 +96,7 @@ class BulkImportService:
                 if orgnr:
                     orgnr_list.append(orgnr)
 
-        logger.info(f"Loaded {len(orgnr_list)} companies from {file_path}")
+        logger.info("Loaded %d companies from %s", len(orgnr_list), file_path)
         return await self.populate_queue(orgnr_list)
 
     async def process_single_company(self, orgnr: str) -> dict[str, Any]:

@@ -39,7 +39,7 @@ class RoleService:
         if not force_refresh:
             cache_valid = await self.role_repo.is_cache_valid(orgnr)
             if cache_valid:
-                logger.debug(f"Using cached roles for {orgnr}")
+                logger.debug("Using cached roles for %s", orgnr)
                 return await self.role_repo.get_by_orgnr(orgnr)
 
         # Safety Check: Prevent force_refresh spam (max once per 60s)
@@ -48,12 +48,12 @@ class RoleService:
             if last_update:
                 elapsed = datetime.now(UTC) - last_update
                 if elapsed < timedelta(seconds=60):
-                    logger.info(f"Skipping force refresh for {orgnr} (last update {elapsed.seconds}s ago)")
+                    logger.info("Skipping force refresh for %s (last update %ds ago)", orgnr, elapsed.seconds)
                     return await self.role_repo.get_by_orgnr(orgnr)
 
         # Fetch from API
         try:
-            logger.info(f"Fetching roles from API for {orgnr}")
+            logger.info("Fetching roles from API for %s", orgnr)
             api_roles = await self.brreg_api.fetch_roles(orgnr)
 
             if not api_roles:
@@ -80,10 +80,10 @@ class RoleService:
             return new_roles
 
         except Exception as e:
-            logger.error(f"Error fetching roles for {orgnr}: {e}")
+            logger.error("Error fetching roles for %s: %s", orgnr, e)
             # Return cached data if available, even if stale
             cached = await self.role_repo.get_by_orgnr(orgnr)
             if cached:
-                logger.info(f"Returning stale cached roles for {orgnr}")
+                logger.info("Returning stale cached roles for %s", orgnr)
                 return cached
             raise
