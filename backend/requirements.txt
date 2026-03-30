@@ -8,7 +8,7 @@ aiolimiter==1.2.1
     # via -r requirements.in
 aiosqlite==0.22.1
     # via -r requirements.in
-alembic==1.18.3
+alembic==1.18.4
     # via -r requirements.in
 annotated-doc==0.0.4
     # via fastapi
@@ -143,7 +143,7 @@ six==1.17.0
     # via python-dateutil
 slowapi==0.1.9
     # via -r requirements.in
-sqlalchemy[asyncio,mypy]==2.0.46
+sqlalchemy[asyncio,mypy]==2.0.48
     # via
     #   -r requirements.in
     #   alembic
