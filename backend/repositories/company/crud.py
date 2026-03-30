@@ -83,7 +83,8 @@ class CrudMixin:
         foretaksreg_raw = company_data.get("registrertIForetaksregisteret")
         if isinstance(foretaksreg_raw, str):
             registrert_i_foretaksregisteret = foretaksreg_raw.lower() in ("ja", "true")
-        registrert_i_foretaksregisteret = bool(foretaksreg_raw)
+        else:
+            registrert_i_foretaksregisteret = bool(foretaksreg_raw)
 
         # Parse registration dates
         reg_enhet_str = company_data.get("registreringsdatoEnhetsregisteret")

@@ -203,7 +203,7 @@ class BaseExternalService:
                         details=f"Status code: {response.status_code}",
                     )
 
-            except RateLimitException, ExternalApiException:
+            except (RateLimitException, ExternalApiException):  # fmt: skip
                 raise
 
             except httpx.TimeoutException:

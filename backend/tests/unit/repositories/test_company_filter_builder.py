@@ -179,8 +179,6 @@ class TestCompanyFilterBuilder:
 
     def test_apply_all(self):
         filters = FilterParams(name="Test", min_revenue=1000000)
-        # syntax error in test above (1M), python needs 1000000. Correcting in implementation.
-        filters = FilterParams(name="Test", min_revenue=1000000)
 
         builder = CompanyFilterBuilder(filters)
         builder.apply_all(include_financial=True)

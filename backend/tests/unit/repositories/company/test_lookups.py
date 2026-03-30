@@ -276,35 +276,3 @@ class TestGetByIndustryCode:
         # Act & Assert
         with pytest.raises(DatabaseException):
             await lookups_repo.get_by_industry_code("62", limit=20, offset=0)
-
-
-class TestCount:
-    """Tests for count method."""
-
-    @pytest.mark.asyncio
-    async def test_returns_total_count(self, lookups_repo, mock_db):
-        """Should return total company count."""
-        # Arrange
-        mock_result = MagicMock()
-        mock_result.scalar.return_value = 1000000
-        mock_db.execute.return_value = mock_result
-
-        # Act
-        result = await lookups_repo.count()
-
-        # Assert
-        assert result == 1000000
-
-    @pytest.mark.asyncio
-    async def test_returns_zero_when_empty(self, lookups_repo, mock_db):
-        """Should return 0 when no companies."""
-        # Arrange
-        mock_result = MagicMock()
-        mock_result.scalar.return_value = None
-        mock_db.execute.return_value = mock_result
-
-        # Act
-        result = await lookups_repo.count()
-
-        # Assert
-        assert result == 0

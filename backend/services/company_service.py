@@ -104,7 +104,7 @@ class CompanyService:
         try:
             return await self.company_repo.get_by_orgnr(orgnr)
         except Exception:
-            logger.warning(f"get_by_orgnr failed for {orgnr}, falling back to subunit lookup", exc_info=True)
+            logger.warning("get_by_orgnr failed for %s, falling back to subunit lookup", orgnr, exc_info=True)
             return await self.get_company_detail(orgnr)
 
     async def get_company_detail(self, orgnr: str) -> models.Company | Any | None:
@@ -113,7 +113,7 @@ class CompanyService:
         try:
             company = await self.company_repo.get_by_orgnr(orgnr)
         except Exception:
-            logger.warning(f"get_by_orgnr failed for {orgnr}, trying subunit fallback", exc_info=True)
+            logger.warning("get_by_orgnr failed for %s, trying subunit fallback", orgnr, exc_info=True)
             subunit = await self.subunit_repo.get_by_orgnr(orgnr)
             if not subunit:
                 return None

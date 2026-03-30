@@ -60,8 +60,6 @@ class UpdateService:
         if status_code == 404 and entity_type in ("accounting", "role"):
             return
 
-        from models import SyncError, SyncErrorStatus
-
         try:
             # Check if an unresolved error already exists for this orgnr/type
             # Use no_autoflush to prevent premature flushes if the session has dirty objects
@@ -69,10 +67,10 @@ class UpdateService:
             with self.db.no_autoflush:
                 from sqlalchemy import select
 
-                stmt = select(SyncError).where(
-                    SyncError.orgnr == orgnr,
-                    SyncError.entity_type == entity_type,
-                    SyncError.status != SyncErrorStatus.RESOLVED,
+                stmt = select(models.SyncError).where(
+                    models.SyncError.orgnr == orgnr,
+                    models.SyncError.entity_type == entity_type,
+                    models.SyncError.status != models.SyncErrorStatus.RESOLVED,
                 )
                 result = await self.db.execute(stmt)
                 existing = result.scalar_one_or_none()
@@ -81,13 +79,13 @@ class UpdateService:
                 existing.error_message = error_message
                 existing.last_retry_at = datetime.now(UTC)
                 existing.attempt_count += 1
-                existing.status = SyncErrorStatus.RETRYING
+                existing.status = models.SyncErrorStatus.RETRYING
             else:
-                new_error = SyncError(
+                new_error = models.SyncError(
                     orgnr=orgnr,
                     entity_type=entity_type,
                     error_message=error_message,
-                    status=SyncErrorStatus.PENDING,
+                    status=models.SyncErrorStatus.PENDING,
                 )
                 self.db.add(new_error)
 
@@ -132,8 +130,11 @@ class UpdateService:
         )
 
         logger.info(
-            f"Starting update sync. Start ID: {start_id}, Date: {since_iso}. "
-            f"Batch size: {page_size}, Concurrency: {API_CONCURRENCY_LIMIT}"
+            "Starting update sync. Start ID: %s, Date: %s. Batch size: %s, Concurrency: %s",
+            start_id,
+            since_iso,
+            page_size,
+            API_CONCURRENCY_LIMIT,
         )
 
         # Initial URL determination
@@ -638,7 +639,7 @@ class UpdateService:
                                 current_id = int(event.get("id"))
                                 if last_seen_id is None or current_id > last_seen_id:
                                     last_seen_id = current_id
-                            except ValueError, TypeError:
+                            except ValueError, TypeError:  # Non-integer event ID — skip tracking
                                 pass
 
                         await self.db.commit()

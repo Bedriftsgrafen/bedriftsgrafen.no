@@ -656,7 +656,7 @@ class SchedulerService:
         """
         from sqlalchemy import delete
 
-        import models
+        from models import Accounting, Company, Role, SubUnit
 
         BATCH_SIZE = 1000
         logger.info("Starting purge of deleted companies...")
@@ -686,10 +686,10 @@ class SchedulerService:
                         break
 
                     # Cascade delete: roles -> subunits -> accounting -> company
-                    await db.execute(delete(models.Role).where(models.Role.orgnr.in_(batch_orgnrs)))
-                    await db.execute(delete(models.SubUnit).where(models.SubUnit.parent_orgnr.in_(batch_orgnrs)))
-                    await db.execute(delete(models.Accounting).where(models.Accounting.orgnr.in_(batch_orgnrs)))
-                    await db.execute(delete(models.Company).where(models.Company.orgnr.in_(batch_orgnrs)))
+                    await db.execute(delete(Role).where(Role.orgnr.in_(batch_orgnrs)))
+                    await db.execute(delete(SubUnit).where(SubUnit.parent_orgnr.in_(batch_orgnrs)))
+                    await db.execute(delete(Accounting).where(Accounting.orgnr.in_(batch_orgnrs)))
+                    await db.execute(delete(Company).where(Company.orgnr.in_(batch_orgnrs)))
                     await db.commit()
 
                     purged += len(batch_orgnrs)

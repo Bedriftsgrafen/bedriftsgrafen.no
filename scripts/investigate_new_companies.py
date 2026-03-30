@@ -1,14 +1,14 @@
 import asyncio
 import os
 import sys
-from datetime import date, datetime, timedelta
+from datetime import date
 
 # Add backend to path
 sys.path.append(os.path.join(os.getcwd(), "backend"))
 
 from database import AsyncSessionLocal
 from repositories.system_repository import SystemRepository
-from sqlalchemy import select, text
+from sqlalchemy import select
 from models import Company, SyncError
 
 async def investigate():

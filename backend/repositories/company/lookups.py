@@ -6,7 +6,7 @@ Contains get_by_orgnr, get_similar_companies, get_by_industry_code.
 import logging
 from typing import Any
 
-from sqlalchemy import and_, func, select, text
+from sqlalchemy import and_, select, text
 from sqlalchemy.engine import Row
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -310,12 +310,6 @@ class LookupsMixin:
         except Exception as e:
             logger.error(f"Database error fetching industry {nace_code}: {e}")
             raise DatabaseException(f"Failed to fetch companies for industry {nace_code}", original_error=e)
-
-    async def count(self) -> int:
-        """Get total company count."""
-        result = await self.db.execute(select(func.count(models.Company.orgnr)))
-        count = result.scalar()
-        return count or 0
 
     async def get_company_with_latest_financials(self, orgnr: str) -> tuple[models.LatestFinancials | None, int | None]:
         """

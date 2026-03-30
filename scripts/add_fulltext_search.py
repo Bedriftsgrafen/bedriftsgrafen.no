@@ -84,7 +84,7 @@ if __name__ == "__main__":
         from dotenv import load_dotenv
 
         load_dotenv()
-    except ImportError:
+    except ImportError:  # dotenv is optional — env vars may be set externally
         pass
 
     # Build connection string

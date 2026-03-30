@@ -1,4 +1,5 @@
 import logging
+import math
 from collections.abc import Sequence
 from datetime import date, datetime
 from typing import Any
@@ -35,7 +36,7 @@ class AccountingRepository:
         try:
             num = float(val)
             # Reject NaN and Infinity
-            if num != num or num in (float("inf"), float("-inf")):
+            if not math.isfinite(num):
                 return None
             return num
         except ValueError, TypeError, OverflowError:
@@ -51,7 +52,7 @@ class AccountingRepository:
         total_gjeld = (kortsiktig or 0) + (langsiktig or 0)
         try:
             ratio = total_gjeld / egenkapital
-            if ratio != ratio or ratio in (float("inf"), float("-inf")):
+            if not math.isfinite(ratio):
                 return None
             return ratio
         except ZeroDivisionError, OverflowError:
