@@ -6,7 +6,7 @@ Contains search_by_name and related search methods.
 import asyncio
 import logging
 
-from sqlalchemy import case, func, or_, select
+from sqlalchemy import case, func, select
 from sqlalchemy.exc import DBAPIError
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -54,7 +54,7 @@ class SearchMixin:
                     )
                     .outerjoin(models.LatestFinancials, models.Company.orgnr == models.LatestFinancials.orgnr)
                     .options(*LIST_VIEW_OPTIONS)
-                    .filter(or_(models.Company.navn.ilike(f"{name}%"), models.Company.orgnr.like(f"{name}%")))
+                    .filter(models.Company.navn.ilike(f"{name}%"))
                     .limit(limit)
                 )
                 result = await self.db.execute(query)

@@ -126,6 +126,7 @@ class Company(Base):
             "idx_bedrifter_naeringskode_pattern", "naeringskode", postgresql_ops={"naeringskode": "text_pattern_ops"}
         ),
         Index("idx_bedrifter_navn_pattern", "navn", postgresql_ops={"navn": "text_pattern_ops"}),
+        Index("ix_bedrifter_navn_trigram", "navn", postgresql_using="gin", postgresql_ops={"navn": "gin_trgm_ops"}),
         Index("idx_bedrifter_orgform_ansatte", "organisasjonsform", sa_text("antall_ansatte DESC NULLS LAST")),
         Index("idx_bedrifter_orgform_nace", "organisasjonsform", "naeringskode"),
         Index("idx_bedrifter_orgform_navn_asc", "organisasjonsform", "navn"),
