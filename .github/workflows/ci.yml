@@ -58,7 +58,7 @@ jobs:
           cache-dependency-path: backend/requirements.txt
       
       - name: Install dependencies
-        run: pip install -r requirements.txt
+        run: pip install -r requirements.txt -e ".[dev]"
       
       - name: Run Ruff (Lint & Format)
         run: |
@@ -85,7 +85,7 @@ jobs:
           cache-dependency-path: backend/requirements.txt
       
       - name: Install dependencies
-        run: pip install -r requirements.txt
+        run: pip install -r requirements.txt -e ".[dev]"
       
       - name: Run unit tests
         run: python -m pytest tests/unit -v --tb=short
