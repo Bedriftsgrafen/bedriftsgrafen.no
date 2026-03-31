@@ -722,3 +722,128 @@ class StatsService:
     ) -> list[dict[str, Any]]:
         """Get monthly trend data for bankruptcies or new companies."""
         return await self.stats_repo.get_timeline_trends(metric=metric, months=months, filters=filters)
+
+    # ------------------------------------------------------------------
+    # Industry premium dashboard
+    # ------------------------------------------------------------------
+
+    async def get_industry_premium_dashboard(self, nace_division: str) -> dict[str, Any] | None:
+        """
+        Consolidated premium dashboard data for a NACE industry division.
+
+        Returns None if the division does not exist in industry_stats.
+        """
+        from constants.counties import get_county_name
+        from constants.nace import NACE_SECTION_MAPPING, NACE_SECTIONS, get_nace_name
+
+        # 1. Base stats from matview
+        stat = await self.stats_repo.get_industry_stat_by_division(nace_division)
+        if not stat:
+            return None
+
+        nace_name = get_nace_name(nace_division)
+
+        # Resolve parent section
+        nace_section = None
+        nace_section_name = None
+        for section, divisions in NACE_SECTION_MAPPING.items():
+            if nace_division in divisions:
+                nace_section = section
+                nace_section_name = NACE_SECTIONS.get(section)
+                break
+
+        # 2. Subclass breakdown
+        subclasses_raw = await self.stats_repo.get_industry_subclasses(nace_division)
+        subclasses = []
+        for sc in subclasses_raw:
+            subclasses.append(
+                {
+                    "nace_code": sc.nace_code,
+                    "nace_name": get_nace_name(sc.nace_code),
+                    "company_count": sc.company_count or 0,
+                    "total_employees": sc.total_employees,
+                    "avg_revenue": sc.avg_revenue,
+                    "avg_operating_margin": sc.avg_operating_margin,
+                }
+            )
+
+        # 3. County distribution
+        county_dist = await self.stats_repo.get_industry_county_distribution(nace_division)
+        total_companies = stat.company_count or 1
+        top_counties = [
+            {
+                "nace_division": cd["code"],
+                "nace_name": get_county_name(cd["code"]),
+                "company_count": cd["company_count"],
+                "total_employees": cd["total_employees"],
+                "percentage_of_total": round(cd["company_count"] / total_companies * 100, 1)
+                if total_companies
+                else None,
+            }
+            for cd in county_dist
+        ]
+
+        # 4. Trends (using NACE filter)
+        nace_filter = FilterParams(naeringskode=nace_division)
+        establishment_trend = await self.stats_repo.get_timeline_trends(
+            metric="new_companies", months=12, filters=nace_filter
+        )
+        bankrupt_trend = await self.stats_repo.get_timeline_trends(
+            metric="bankruptcies", months=12, filters=nace_filter
+        )
+
+        # 5. Company lists
+        nace_filter_active = FilterParams(naeringskode=nace_division, exclude_org_form=["KBO"])
+        top_companies_res = await self.company_repo.get_all(
+            FilterParams(naeringskode=nace_division),
+            limit=5,
+            sort_by="revenue",
+            sort_order="desc",
+        )
+        new_companies_res = await self.company_repo.get_all(
+            nace_filter_active,
+            limit=10,
+            sort_by="stiftelsesdato",
+            sort_order="desc",
+        )
+        bankrupt_res = await self.company_repo.get_all(
+            FilterParams(naeringskode=nace_division, is_bankrupt=True),
+            limit=5,
+            sort_by="konkursdato",
+            sort_order="desc",
+        )
+
+        filtered_newest = [c for c in new_companies_res if "KONKURSBO" not in (c.navn or "").upper()][:5]
+
+        # 6. Rankings (single consolidated query)
+        rankings = await self.stats_repo.get_industry_all_rankings(nace_division)
+
+        return {
+            "nace_division": nace_division,
+            "nace_name": nace_name,
+            "nace_section": nace_section,
+            "nace_section_name": nace_section_name,
+            "company_count": stat.company_count or 0,
+            "total_employees": stat.total_employees,
+            "avg_employees": stat.avg_employees,
+            "total_revenue": stat.total_revenue,
+            "avg_revenue": stat.avg_revenue,
+            "median_revenue": stat.median_revenue,
+            "total_profit": stat.total_profit,
+            "avg_profit": stat.avg_profit,
+            "profitable_count": stat.profitable_count,
+            "avg_operating_margin": stat.avg_operating_margin,
+            "new_last_year": stat.new_last_year or 0,
+            "bankruptcies_last_year": stat.bankruptcies_last_year or 0,
+            "bankrupt_count": stat.bankrupt_count or 0,
+            "establishment_trend": establishment_trend,
+            "bankrupt_trend": bankrupt_trend,
+            "subclasses": subclasses,
+            "top_counties": top_counties,
+            "top_companies": top_companies_res,
+            "newest_companies": filtered_newest,
+            "latest_bankruptcies": bankrupt_res,
+            "ranking_by_revenue": rankings["total_revenue"],
+            "ranking_by_companies": rankings["company_count"],
+            "ranking_by_employees": rankings["total_employees"],
+        }

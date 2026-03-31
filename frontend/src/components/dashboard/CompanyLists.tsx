@@ -69,8 +69,8 @@ export function TopCompanyList({
 interface NewestCompaniesListProps {
   companies: Company[]
   regionName: string
-  regionCode: string
-  regionType: 'county' | 'municipality'
+  regionCode?: string
+  regionType?: 'county' | 'municipality' | 'industry'
   title?: string
   subtitle?: string
 }
@@ -89,7 +89,11 @@ export function NewestCompaniesList({
 }: NewestCompaniesListProps) {
   const searchParam = regionType === 'county' 
     ? { county: regionCode } 
-    : { municipality_code: regionCode }
+    : regionType === 'industry'
+    ? { nace: regionCode }
+    : regionType === 'municipality'
+    ? { municipality_code: regionCode }
+    : {}
     
   return (
     <section aria-labelledby="newest-companies-title">

@@ -5,8 +5,8 @@ import { Company } from '../../types'
 interface BankruptciesSectionProps {
   companies: Company[]
   regionName: string
-  regionCode: string
-  regionType: 'county' | 'municipality'
+  regionCode?: string
+  regionType?: 'county' | 'municipality' | 'industry'
 }
 
 /**
@@ -21,7 +21,11 @@ export function BankruptciesSection({
 }: BankruptciesSectionProps) {
   const searchParam = regionType === 'county' 
     ? { county: regionCode } 
-    : { municipality_code: regionCode }
+    : regionType === 'industry'
+    ? { nace: regionCode }
+    : regionType === 'municipality'
+    ? { municipality_code: regionCode }
+    : {}
 
   return (
     <div className="mt-16">

@@ -23,6 +23,7 @@ import { Route as IndexRouteImport } from './routes/index'
 import { Route as VirksomhetOrgnrRouteImport } from './routes/virksomhet.$orgnr'
 import { Route as KommuneCodeRouteImport } from './routes/kommune.$code'
 import { Route as FylkeCodeRouteImport } from './routes/fylke.$code'
+import { Route as BransjeCodeRouteImport } from './routes/bransje.$code'
 import { Route as BedriftOrgnrRouteImport } from './routes/bedrift.$orgnr'
 import { Route as PersonNameBirthdateRouteImport } from './routes/person.$name.$birthdate'
 
@@ -100,6 +101,11 @@ const FylkeCodeRoute = FylkeCodeRouteImport.update({
   path: '/fylke/$code',
   getParentRoute: () => rootRouteImport,
 } as any).lazy(() => import('./routes/fylke.$code.lazy').then((d) => d.Route))
+const BransjeCodeRoute = BransjeCodeRouteImport.update({
+  id: '/bransje/$code',
+  path: '/bransje/$code',
+  getParentRoute: () => rootRouteImport,
+} as any).lazy(() => import('./routes/bransje.$code.lazy').then((d) => d.Route))
 const BedriftOrgnrRoute = BedriftOrgnrRouteImport.update({
   id: '/bedrift/$orgnr',
   path: '/bedrift/$orgnr',
@@ -126,6 +132,7 @@ export interface FileRoutesByFullPath {
   '/sammenlign': typeof SammenlignRoute
   '/utforsk': typeof UtforskRoute
   '/bedrift/$orgnr': typeof BedriftOrgnrRoute
+  '/bransje/$code': typeof BransjeCodeRoute
   '/fylke/$code': typeof FylkeCodeRoute
   '/kommune/$code': typeof KommuneCodeRoute
   '/virksomhet/$orgnr': typeof VirksomhetOrgnrRoute
@@ -144,6 +151,7 @@ export interface FileRoutesByTo {
   '/sammenlign': typeof SammenlignRoute
   '/utforsk': typeof UtforskRoute
   '/bedrift/$orgnr': typeof BedriftOrgnrRoute
+  '/bransje/$code': typeof BransjeCodeRoute
   '/fylke/$code': typeof FylkeCodeRoute
   '/kommune/$code': typeof KommuneCodeRoute
   '/virksomhet/$orgnr': typeof VirksomhetOrgnrRoute
@@ -163,6 +171,7 @@ export interface FileRoutesById {
   '/sammenlign': typeof SammenlignRoute
   '/utforsk': typeof UtforskRoute
   '/bedrift/$orgnr': typeof BedriftOrgnrRoute
+  '/bransje/$code': typeof BransjeCodeRoute
   '/fylke/$code': typeof FylkeCodeRoute
   '/kommune/$code': typeof KommuneCodeRoute
   '/virksomhet/$orgnr': typeof VirksomhetOrgnrRoute
@@ -183,6 +192,7 @@ export interface FileRouteTypes {
     | '/sammenlign'
     | '/utforsk'
     | '/bedrift/$orgnr'
+    | '/bransje/$code'
     | '/fylke/$code'
     | '/kommune/$code'
     | '/virksomhet/$orgnr'
@@ -201,6 +211,7 @@ export interface FileRouteTypes {
     | '/sammenlign'
     | '/utforsk'
     | '/bedrift/$orgnr'
+    | '/bransje/$code'
     | '/fylke/$code'
     | '/kommune/$code'
     | '/virksomhet/$orgnr'
@@ -219,6 +230,7 @@ export interface FileRouteTypes {
     | '/sammenlign'
     | '/utforsk'
     | '/bedrift/$orgnr'
+    | '/bransje/$code'
     | '/fylke/$code'
     | '/kommune/$code'
     | '/virksomhet/$orgnr'
@@ -238,6 +250,7 @@ export interface RootRouteChildren {
   SammenlignRoute: typeof SammenlignRoute
   UtforskRoute: typeof UtforskRoute
   BedriftOrgnrRoute: typeof BedriftOrgnrRoute
+  BransjeCodeRoute: typeof BransjeCodeRoute
   FylkeCodeRoute: typeof FylkeCodeRoute
   KommuneCodeRoute: typeof KommuneCodeRoute
   VirksomhetOrgnrRoute: typeof VirksomhetOrgnrRoute
@@ -344,6 +357,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof FylkeCodeRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/bransje/$code': {
+      id: '/bransje/$code'
+      path: '/bransje/$code'
+      fullPath: '/bransje/$code'
+      preLoaderRoute: typeof BransjeCodeRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/bedrift/$orgnr': {
       id: '/bedrift/$orgnr'
       path: '/bedrift/$orgnr'
@@ -374,6 +394,7 @@ const rootRouteChildren: RootRouteChildren = {
   SammenlignRoute: SammenlignRoute,
   UtforskRoute: UtforskRoute,
   BedriftOrgnrRoute: BedriftOrgnrRoute,
+  BransjeCodeRoute: BransjeCodeRoute,
   FylkeCodeRoute: FylkeCodeRoute,
   KommuneCodeRoute: KommuneCodeRoute,
   VirksomhetOrgnrRoute: VirksomhetOrgnrRoute,

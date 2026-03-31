@@ -24,6 +24,14 @@ from schemas.companies import (
     NaceSubclass,
     Naeringskode,
 )
+from schemas.county import (
+    CountyListResponse,
+    CountyPremiumResponse,
+)
+from schemas.industry import (
+    IndustryPremiumResponse,
+    SubclassStat,
+)
 from schemas.municipality import (
     MunicipalityListResponse,
     MunicipalityPremiumResponse,
@@ -71,6 +79,12 @@ __all__ = [  # noqa: RUF022  -- grouped by category for readability
     "MarkersResponse",
     "NaceSubclass",
     "Naeringskode",
+    # County schemas
+    "CountyListResponse",
+    "CountyPremiumResponse",
+    # Industry schemas
+    "IndustryPremiumResponse",
+    "SubclassStat",
     # Municipality schemas
     "MunicipalityListResponse",
     "MunicipalityPremiumResponse",

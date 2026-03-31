@@ -890,3 +890,91 @@ class StatsRepository:
         rows = result.all()
 
         return [{"label": r.month.strftime("%b %y") if r.month else "Ukjent", "value": r.value} for r in rows]
+
+    # ------------------------------------------------------------------
+    # Industry premium dashboard helpers
+    # ------------------------------------------------------------------
+
+    async def get_industry_subclasses(self, nace_division: str) -> Sequence[models.IndustrySubclassStats]:
+        """Get all subclass stats for a 2-digit NACE division, sorted by company count."""
+        prefix = nace_division + "."
+        result = await self.db.execute(
+            select(models.IndustrySubclassStats)
+            .where(models.IndustrySubclassStats.nace_code.like(prefix + "%"))
+            .order_by(models.IndustrySubclassStats.company_count.desc().nullslast())
+        )
+        return result.scalars().all()
+
+    async def get_industry_county_distribution(self, nace_division: str, limit: int = 10) -> list[dict[str, Any]]:
+        """Get top counties by company count for a specific NACE division."""
+        result = await self.db.execute(
+            select(
+                models.CountyStats.county_code,
+                models.CountyStats.company_count,
+                models.CountyStats.total_employees,
+            )
+            .where(
+                and_(
+                    models.CountyStats.nace_division == nace_division,
+                    models.CountyStats.company_count > 0,
+                )
+            )
+            .order_by(models.CountyStats.company_count.desc().nullslast())
+            .limit(limit)
+        )
+        return [
+            {
+                "code": r.county_code,
+                "company_count": r.company_count or 0,
+                "total_employees": r.total_employees,
+            }
+            for r in result.all()
+        ]
+
+    async def get_industry_all_rankings(
+        self,
+        nace_division: str,
+    ) -> dict[str, dict[str, int]]:
+        """Get rank of an industry among all industries for revenue, companies, and employees.
+
+        Returns dict with keys 'total_revenue', 'company_count', 'total_employees',
+        each containing {'rank': N, 'out_of': M}.
+        Uses a single query with window functions for efficiency.
+        """
+        metrics = {
+            "total_revenue": models.IndustryStats.total_revenue,
+            "company_count": models.IndustryStats.company_count,
+            "total_employees": models.IndustryStats.total_employees,
+        }
+
+        # Single query: get total count and target row values
+        total_res = await self.db.execute(select(func.count()).select_from(models.IndustryStats))
+        total = total_res.scalar() or 0
+
+        target_res = await self.db.execute(
+            select(
+                models.IndustryStats.total_revenue,
+                models.IndustryStats.company_count,
+                models.IndustryStats.total_employees,
+            ).where(models.IndustryStats.nace_division == nace_division)
+        )
+        target_row = target_res.one_or_none()
+        if target_row is None:
+            fallback = {"rank": total, "out_of": total}
+            return dict.fromkeys(metrics, fallback)
+
+        # One query to count higher values for all three metrics
+        higher_res = await self.db.execute(
+            select(
+                func.count().filter(models.IndustryStats.total_revenue > target_row.total_revenue).label("rev"),
+                func.count().filter(models.IndustryStats.company_count > target_row.company_count).label("comp"),
+                func.count().filter(models.IndustryStats.total_employees > target_row.total_employees).label("emp"),
+            ).select_from(models.IndustryStats)
+        )
+        higher = higher_res.one()
+
+        return {
+            "total_revenue": {"rank": (higher.rev or 0) + 1, "out_of": total},
+            "company_count": {"rank": (higher.comp or 0) + 1, "out_of": total},
+            "total_employees": {"rank": (higher.emp or 0) + 1, "out_of": total},
+        }

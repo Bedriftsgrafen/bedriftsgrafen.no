@@ -10,6 +10,7 @@ from database import get_db
 from dependencies.company_filters import CompanyQueryParams
 from repositories.company_filter_builder import FilterParams
 from schemas.benchmark import IndustryBenchmarkResponse
+from schemas.industry import IndustryPremiumResponse
 from schemas.municipality import TrendPoint
 from schemas.stats import GeoAveragesResponse, GeoLevel, GeoMetric, GeoStatResponse, IndustryStatResponse
 from services.stats_service import StatsService
@@ -68,6 +69,31 @@ async def get_industry_stat(
         raise HTTPException(status_code=404, detail=f"Industry with NACE division '{nace_division}' not found")
 
     return result
+
+
+@router.get("/industries/{nace_division}/dashboard", response_model=IndustryPremiumResponse)
+async def get_industry_dashboard(
+    nace_division: str = Path(
+        ...,
+        min_length=2,
+        max_length=2,
+        pattern=r"^\d{2}$",
+        description="2-digit NACE division code (e.g. 62)",
+    ),
+    db: AsyncSession = Depends(get_db),
+) -> IndustryPremiumResponse:
+    """Get premium dashboard data for a specific industry (NACE division).
+
+    Returns consolidated stats, trends, top companies, subclass breakdown,
+    geographic distribution, and industry rankings.
+    """
+    service = StatsService(db)
+    result = await service.get_industry_premium_dashboard(nace_division)
+
+    if not result:
+        raise HTTPException(status_code=404, detail=f"Industry with NACE division '{nace_division}' not found")
+
+    return IndustryPremiumResponse(**result)
 
 
 @router.get("/industries/{nace_code}/benchmark/{orgnr}", response_model=IndustryBenchmarkResponse)

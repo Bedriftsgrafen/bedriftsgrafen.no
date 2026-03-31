@@ -1,8 +1,10 @@
 import { useQuery } from '@tanstack/react-query';
-import { Building2, TrendingUp, Users, Search, Settings, RotateCcw, Landmark } from 'lucide-react';
+import { Building2, TrendingUp, Users, Search, Settings, RotateCcw, Landmark, ExternalLink } from 'lucide-react';
 import React, { useState, useMemo, memo, useCallback, useRef, useEffect } from 'react';
+import { Link } from '@tanstack/react-router';
 import { API_BASE } from '../../utils/apiClient';
 import { formatNumber, formatCurrency, formatPercentValue } from '../../utils/formatters';
+import { createRouteCode } from '../../utils/slugify';
 import { CompanyListModal } from './CompanyListModal';
 import { SummaryCard, SortableHeader, LoadingState, ErrorState } from '../common';
 import { AffiliateBanner } from '../ads/AffiliateBanner';
@@ -141,6 +143,17 @@ const IndustryRow = memo(({ industry: ind, onRowClick, onNewClick, onBankruptCli
             ) : (
                 <span className="text-xs text-gray-400">—</span>
             )}
+        </td>
+        <td className="px-4 py-3">
+            <Link
+                to="/bransje/$code"
+                params={{ code: createRouteCode(ind.nace_division, ind.nace_name) }}
+                onClick={(e) => e.stopPropagation()}
+                className="text-slate-400 hover:text-blue-600 transition-colors"
+                title={`Se bransjeside for ${ind.nace_name}`}
+            >
+                <ExternalLink className="h-4 w-4" />
+            </Link>
         </td>
     </tr>
 ));
@@ -428,12 +441,15 @@ export const IndustryDashboard = ({ initialNace, onSelectCompany }: IndustryDash
                                     )}
                                     <SortableHeader field="new_last_year" label="Nye i år" currentSort={sortBy} sortOrder={sortOrder} onSort={handleSort} />
                                     <SortableHeader field="bankruptcies_last_year" label="Konkurser" currentSort={sortBy} sortOrder={sortOrder} onSort={handleSort} />
+                                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-10">
+                                        <span className="sr-only">Bransjeside</span>
+                                    </th>
                                 </tr>
                             </thead>
                             <tbody className="divide-y divide-gray-100">
                                 {filteredIndustries.length === 0 && searchQuery ? (
                                     <tr>
-                                        <td colSpan={7 + visibleOptionalColumns.length} className="px-4 py-8 text-center text-gray-500">
+                                        <td colSpan={8 + visibleOptionalColumns.length} className="px-4 py-8 text-center text-gray-500">
                                             Ingen bransjer funnet for «{searchQuery}»
                                         </td>
                                     </tr>
