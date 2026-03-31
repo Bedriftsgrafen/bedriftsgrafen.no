@@ -128,8 +128,8 @@ This document consolidates feature ideas and strategic plans for the future deve
 - **Export to Excel/PDF**: Move beyond CSV to professional PDF reports for due diligence.
 - **Alerts/Notifications**: "Varsle meg når [Selskap] leverer nytt regnskap".
 - **Rate Limiting & API for Third Parties**: Commercialize the data via a public API.
-- **Search Speed Boost**: Add trigram index for name search to improve short-query matching.
-- **Precomputed Trend Caches**: Nightly materialized views for top lists and municipality summaries.
+- ~~**Search Speed Boost**~~: ✅ Trigram GIN index on bedrifter.navn — 50x faster short queries (466ms→9ms). Implemented 2026-03-30.
+- ~~**Precomputed Trend Caches**~~: ✅ 8 materialized views (company_totals, industry_stats, county_stats, municipality_stats, etc.) already in production.
 - **Share Link Tracking**: Attribute shares to pages and measure viral loops.
 
 ---
@@ -154,3 +154,7 @@ This document consolidates feature ideas and strategic plans for the future deve
 - **[x] Mobile Map Optimization**: Fixed sidebar scrolling and improved map/filter distribution on small screens.
 - **[x] Battle Mode (Gamified Comparison)**: Head-to-head comparison with winners per metric.
 - **[x] Local Heroes (Municipality Dashboards)**: Dedicated `/kommune/[id]` pages with local statistics and SEO content.
+- **[x] County (Fylker) Dashboards**: Dedicated `/fylke/[code]` pages with premium dashboards and drill-down navigation.
+- **[x] Smart Badges for Search Results**: Dynamic badges (💎 Solid, 🆕 Ny, 🏛️ Etablert) on company cards.
+- **[x] Search Speed Boost**: Trigram GIN index for 50x faster short-query name search.
+- **[x] Precomputed Trend Caches**: 8 materialized views for fast aggregated stats.
