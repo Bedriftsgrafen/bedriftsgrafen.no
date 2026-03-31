@@ -67,13 +67,13 @@ export function IndustryDashboardPage() {
 
       <main>
         {/* Hero Section */}
-        <div className="relative bg-slate-900 text-white pt-12 pb-24 px-4 shadow-2xl mb-12 overflow-hidden min-h-[500px] flex flex-col justify-center border-b border-white/5">
+        <div className="relative bg-slate-900 text-white pt-8 pb-16 md:pt-12 md:pb-24 px-4 shadow-2xl mb-8 md:mb-12 overflow-hidden min-h-[300px] md:min-h-[500px] flex flex-col justify-center border-b border-white/5">
           <div className="absolute top-0 right-0 p-16 opacity-[0.03]" aria-hidden="true">
             <Factory className="h-96 w-96 rotate-12" />
           </div>
 
-          <div className="max-w-7xl mx-auto w-full relative z-10 px-4">
-            <div className="mb-12">
+          <div className="max-w-7xl mx-auto w-full relative z-10 px-2 sm:px-4">
+            <div className="mb-6 md:mb-12">
               <Breadcrumbs
                 items={[
                   { label: 'Hjem', to: '/', className: 'text-white/50 hover:text-white' },
@@ -84,10 +84,10 @@ export function IndustryDashboardPage() {
               />
             </div>
 
-            <div className="flex flex-col lg:flex-row lg:items-end justify-between gap-16">
+            <div className="flex flex-col lg:flex-row lg:items-end justify-between gap-8 lg:gap-16">
               <div className="flex-1">
-                <div className="flex items-center gap-3 mb-8">
-                  <span className="px-4 py-1.5 bg-blue-500/20 border border-blue-400/30 backdrop-blur-xl rounded-full text-xs font-black tracking-widest uppercase text-blue-200">
+                <div className="flex items-center gap-3 mb-4 md:mb-8">
+                  <span className="px-3 py-1 md:px-4 md:py-1.5 bg-blue-500/20 border border-blue-400/30 backdrop-blur-xl rounded-full text-xs font-black tracking-widest uppercase text-blue-200">
                     NACE {dashboard.nace_division}
                   </span>
                   {dashboard.nace_section && (
@@ -99,28 +99,28 @@ export function IndustryDashboardPage() {
                     </>
                   )}
                 </div>
-                <h1 className="text-5xl md:text-8xl font-black tracking-tighter mb-10 drop-shadow-2xl leading-none">
+                <h1 className="text-3xl sm:text-5xl md:text-8xl font-black tracking-tighter mb-6 md:mb-10 drop-shadow-2xl leading-none">
                   {dashboard.nace_name ?? `Bransje ${dashboard.nace_division}`}
                 </h1>
                 {dashboard.nace_section_name && (
-                  <p className="text-blue-100/80 text-xl md:text-2xl font-medium max-w-2xl leading-relaxed drop-shadow-md">
+                  <p className="text-blue-100/80 text-lg md:text-xl lg:text-2xl font-medium max-w-2xl leading-relaxed drop-shadow-md">
                     Del av «{dashboard.nace_section_name}». Statistikk og innsikt for hele bransjen.
                   </p>
                 )}
               </div>
 
-              <div className="flex flex-col sm:flex-row gap-6">
-                <div className="bg-white/5 backdrop-blur-3xl rounded-4xl p-10 border border-white/10 shadow-2xl min-w-[220px]">
-                  <p className="text-blue-100/70 text-xs font-black uppercase tracking-widest mb-6">
+              <div className="flex flex-row gap-3 sm:gap-6">
+                <div className="bg-white/5 backdrop-blur-3xl rounded-3xl sm:rounded-4xl p-5 sm:p-10 border border-white/10 shadow-2xl flex-1 sm:flex-initial sm:min-w-[220px]">
+                  <p className="text-blue-100/70 text-[10px] sm:text-xs font-black uppercase tracking-widest mb-3 sm:mb-6">
                     VIRKSOMHETER
                   </p>
-                  <span className="text-5xl font-black tracking-tighter">
+                  <span className="text-3xl sm:text-5xl font-black tracking-tighter">
                     {formatNumber(dashboard.company_count)}
                   </span>
                 </div>
-                <div className="bg-white/5 backdrop-blur-3xl rounded-4xl p-10 border border-white/10 shadow-2xl min-w-[220px]">
-                  <p className="text-blue-100/70 text-xs font-black uppercase tracking-widest mb-6">ANSATTE</p>
-                  <span className="text-5xl font-black tracking-tighter">
+                <div className="bg-white/5 backdrop-blur-3xl rounded-3xl sm:rounded-4xl p-5 sm:p-10 border border-white/10 shadow-2xl flex-1 sm:flex-initial sm:min-w-[220px]">
+                  <p className="text-blue-100/70 text-[10px] sm:text-xs font-black uppercase tracking-widest mb-3 sm:mb-6">ANSATTE</p>
+                  <span className="text-3xl sm:text-5xl font-black tracking-tighter">
                     {formatNumber(dashboard.total_employees ?? 0)}
                   </span>
                 </div>
@@ -131,7 +131,7 @@ export function IndustryDashboardPage() {
 
         <div className="max-w-7xl mx-auto px-4 pb-32">
           {/* Key metrics cards */}
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-6 mb-10">
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-3 sm:gap-6 mb-10">
             <MetricCard label="Nye siste år" value={formatNumber(dashboard.new_last_year)} />
             <MetricCard label="Konkurser siste år" value={formatNumber(dashboard.bankruptcies_last_year)} />
             <MetricCard label="Gj.sn. omsetning" value={dashboard.avg_revenue ? formatCurrency(dashboard.avg_revenue) : '—'} />
@@ -155,12 +155,12 @@ export function IndustryDashboardPage() {
           {/* Core Metrics Grid */}
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-10 mb-16">
             {/* Financial Overview */}
-            <section className="bg-slate-900 text-white rounded-[2.5rem] p-12 shadow-2xl flex flex-col justify-between relative overflow-hidden group">
-              <div className="absolute top-0 right-0 p-12 opacity-5 group-hover:opacity-10 transition-opacity">
+            <section className="bg-slate-900 text-white rounded-2xl md:rounded-[2.5rem] p-6 md:p-12 shadow-2xl flex flex-col justify-between relative overflow-hidden group">
+              <div className="absolute top-0 right-0 p-6 md:p-12 opacity-5 group-hover:opacity-10 transition-opacity">
                 <BarChart3 className="h-48 w-48 rotate-12" />
               </div>
               <div className="relative z-10">
-                <h2 className="text-3xl font-black mb-6 tracking-tight">Bransjeøkonomi</h2>
+                <h2 className="text-2xl md:text-3xl font-black mb-6 tracking-tight">Bransjeøkonomi</h2>
                 <div className="space-y-6 text-blue-100/70 text-lg font-medium leading-relaxed">
                   <p>
                     Total omsetning:{' '}
@@ -192,8 +192,8 @@ export function IndustryDashboardPage() {
 
             {/* Geographic Distribution */}
             {dashboard.top_counties.length > 0 && (
-              <section className="bg-white rounded-[2.5rem] p-12 border border-slate-100 shadow-sm">
-                <h2 className="text-3xl font-black text-slate-900 mb-10 tracking-tight">
+              <section className="bg-white rounded-2xl md:rounded-[2.5rem] p-6 md:p-12 border border-slate-100 shadow-sm">
+                <h2 className="text-2xl md:text-3xl font-black text-slate-900 mb-6 md:mb-10 tracking-tight">
                   Fylkesfordeling
                 </h2>
                 <div className="space-y-3">
@@ -222,9 +222,9 @@ export function IndustryDashboardPage() {
             )}
 
             {/* Industry Ranking Card */}
-            <section className="bg-white rounded-[2.5rem] p-12 border border-slate-100 shadow-sm flex flex-col justify-between relative overflow-hidden group">
+            <section className="bg-white rounded-2xl md:rounded-[2.5rem] p-6 md:p-12 border border-slate-100 shadow-sm flex flex-col justify-between relative overflow-hidden group">
               <div>
-                <h2 className="text-3xl font-black text-slate-900 mb-10 tracking-tight text-center">
+                <h2 className="text-2xl md:text-3xl font-black text-slate-900 mb-6 md:mb-10 tracking-tight text-center">
                   Bransjeranking
                 </h2>
                 <div className="flex flex-col gap-6">
@@ -251,7 +251,7 @@ export function IndustryDashboardPage() {
                   />
                 </div>
               </div>
-              <div className="mt-10 text-xs text-slate-500 font-bold p-6 bg-slate-50 rounded-3xl border border-slate-100 leading-relaxed text-center italic">
+              <div className="mt-6 md:mt-10 text-xs text-slate-500 font-bold p-4 md:p-6 bg-slate-50 rounded-2xl md:rounded-3xl border border-slate-100 leading-relaxed text-center italic">
                 Rangert blant {dashboard.ranking_by_revenue?.out_of ?? '—'} bransjer i Norge.
               </div>
             </section>
@@ -259,8 +259,8 @@ export function IndustryDashboardPage() {
 
           {/* Subclass Breakdown */}
           {dashboard.subclasses.length > 0 && (
-            <section className="bg-white rounded-[2.5rem] p-12 border border-slate-100 shadow-sm mb-16">
-              <h2 className="text-3xl font-black text-slate-900 mb-12 flex items-center gap-4 tracking-tight">
+            <section className="bg-white rounded-2xl md:rounded-[2.5rem] p-6 md:p-12 border border-slate-100 shadow-sm mb-16">
+              <h2 className="text-2xl md:text-3xl font-black text-slate-900 mb-8 md:mb-12 flex items-center gap-4 tracking-tight">
                 <div className="h-10 w-2 bg-blue-600 rounded-full" />
                 Underbransjer
               </h2>
@@ -314,9 +314,9 @@ export function IndustryDashboardPage() {
 
 function MetricCard({ label, value }: { label: string; value: string }) {
   return (
-    <div className="bg-white rounded-2xl p-6 border border-slate-100 shadow-sm">
-      <p className="text-xs text-slate-500 font-black uppercase tracking-widest mb-2">{label}</p>
-      <p className="text-2xl font-black text-slate-900 tracking-tight">{value}</p>
+    <div className="bg-white rounded-2xl p-4 sm:p-6 border border-slate-100 shadow-sm">
+      <p className="text-[10px] sm:text-xs text-slate-500 font-black uppercase tracking-widest mb-2">{label}</p>
+      <p className="text-lg sm:text-2xl font-black text-slate-900 tracking-tight">{value}</p>
     </div>
   )
 }
@@ -336,13 +336,13 @@ function RankingRow({
 }) {
   return (
     <div
-      className={`rounded-3xl p-8 border border-slate-100 flex items-center justify-between transition-colors bg-slate-50 ${hoverBg}`}
+      className={`rounded-2xl md:rounded-3xl p-5 md:p-8 border border-slate-100 flex items-center justify-between transition-colors bg-slate-50 ${hoverBg}`}
     >
       <div>
-        <p className="text-slate-500 text-xs font-black uppercase tracking-widest mb-1">{label}</p>
-        <p className="text-slate-600 text-xs font-bold">{sublabel}</p>
+        <p className="text-slate-500 text-[10px] md:text-xs font-black uppercase tracking-widest mb-1">{label}</p>
+        <p className="text-slate-600 text-[10px] md:text-xs font-bold">{sublabel}</p>
       </div>
-      <div className="text-5xl font-black text-slate-900 tracking-tighter">
+      <div className="text-3xl md:text-5xl font-black text-slate-900 tracking-tighter">
         <span className={`text-2xl tracking-normal mr-1 ${accentColor}`} aria-hidden="true">
           #
         </span>

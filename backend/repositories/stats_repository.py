@@ -877,11 +877,9 @@ class StatsRepository:
             )
         )
 
-        # Apply filters if provided
+        # Apply filters if provided (NACE, location, status, etc.)
         if filters:
-            builder = CompanyFilterBuilder(filters)
-            # Apply all filters, but skip the date filter as we handle it here
-            # and exclude financial join unless strictly needed to keep it fast
+            builder = CompanyFilterBuilder(filters).apply_all()
             query = builder.apply_to_query(query)
 
         query = query.group_by("month").order_by("month")
