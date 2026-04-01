@@ -13,7 +13,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from database import get_db
 from repositories.role_repository import RoleRepository
-from schemas.people import PersonRoleResponse, PersonSearchResult
+from schemas.people import PaginatedPersonSearch, PersonRoleResponse, PersonSearchResult, PersonSearchResultDetailed
 from utils.auth import is_admin
 
 logger = logging.getLogger(__name__)
@@ -38,6 +38,34 @@ async def search_people(
     role_repo = RoleRepository(db)
     results = await role_repo.search_people(q, limit=limit, include_all=is_admin(x_admin_key))
     return [PersonSearchResult(**r) for r in results]
+
+
+@router.get("/search/results", response_model=PaginatedPersonSearch)
+async def search_people_results(
+    request: Request,
+    q: str = Query(..., min_length=3, description="Search query (min 3 characters)"),
+    offset: int = Query(0, ge=0, description="Pagination offset"),
+    limit: int = Query(20, ge=1, le=100, description="Results per page"),
+    x_admin_key: str | None = Header(None, alias="X-Admin-Key"),
+    db: AsyncSession = Depends(get_db),
+) -> PaginatedPersonSearch:
+    """
+    Paginated, enriched person search for the results page.
+
+    Returns detailed person results including active/total role counts,
+    top role types, and notable company names.
+    """
+    role_repo = RoleRepository(db)
+    admin = is_admin(x_admin_key)
+
+    results = await role_repo.search_people_detailed(q, offset=offset, limit=limit, include_all=admin)
+    total_count = await role_repo.count_people_search(q, include_all=admin)
+
+    return PaginatedPersonSearch(
+        results=[PersonSearchResultDetailed(**r) for r in results],
+        total_count=total_count,
+        query=q,
+    )
 
 
 @router.get("/roles", response_model=list[PersonRoleResponse])

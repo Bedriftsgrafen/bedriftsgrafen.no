@@ -11,6 +11,7 @@
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as UtforskRouteImport } from './routes/utforsk'
 import { Route as SammenlignRouteImport } from './routes/sammenlign'
+import { Route as PersonerRouteImport } from './routes/personer'
 import { Route as OmRouteImport } from './routes/om'
 import { Route as NyetableringerRouteImport } from './routes/nyetableringer'
 import { Route as KonkurserRouteImport } from './routes/konkurser'
@@ -37,6 +38,11 @@ const SammenlignRoute = SammenlignRouteImport.update({
   path: '/sammenlign',
   getParentRoute: () => rootRouteImport,
 } as any).lazy(() => import('./routes/sammenlign.lazy').then((d) => d.Route))
+const PersonerRoute = PersonerRouteImport.update({
+  id: '/personer',
+  path: '/personer',
+  getParentRoute: () => rootRouteImport,
+} as any).lazy(() => import('./routes/personer.lazy').then((d) => d.Route))
 const OmRoute = OmRouteImport.update({
   id: '/om',
   path: '/om',
@@ -129,6 +135,7 @@ export interface FileRoutesByFullPath {
   '/konkurser': typeof KonkurserRoute
   '/nyetableringer': typeof NyetableringerRoute
   '/om': typeof OmRoute
+  '/personer': typeof PersonerRoute
   '/sammenlign': typeof SammenlignRoute
   '/utforsk': typeof UtforskRoute
   '/bedrift/$orgnr': typeof BedriftOrgnrRoute
@@ -148,6 +155,7 @@ export interface FileRoutesByTo {
   '/konkurser': typeof KonkurserRoute
   '/nyetableringer': typeof NyetableringerRoute
   '/om': typeof OmRoute
+  '/personer': typeof PersonerRoute
   '/sammenlign': typeof SammenlignRoute
   '/utforsk': typeof UtforskRoute
   '/bedrift/$orgnr': typeof BedriftOrgnrRoute
@@ -168,6 +176,7 @@ export interface FileRoutesById {
   '/konkurser': typeof KonkurserRoute
   '/nyetableringer': typeof NyetableringerRoute
   '/om': typeof OmRoute
+  '/personer': typeof PersonerRoute
   '/sammenlign': typeof SammenlignRoute
   '/utforsk': typeof UtforskRoute
   '/bedrift/$orgnr': typeof BedriftOrgnrRoute
@@ -189,6 +198,7 @@ export interface FileRouteTypes {
     | '/konkurser'
     | '/nyetableringer'
     | '/om'
+    | '/personer'
     | '/sammenlign'
     | '/utforsk'
     | '/bedrift/$orgnr'
@@ -208,6 +218,7 @@ export interface FileRouteTypes {
     | '/konkurser'
     | '/nyetableringer'
     | '/om'
+    | '/personer'
     | '/sammenlign'
     | '/utforsk'
     | '/bedrift/$orgnr'
@@ -227,6 +238,7 @@ export interface FileRouteTypes {
     | '/konkurser'
     | '/nyetableringer'
     | '/om'
+    | '/personer'
     | '/sammenlign'
     | '/utforsk'
     | '/bedrift/$orgnr'
@@ -247,6 +259,7 @@ export interface RootRouteChildren {
   KonkurserRoute: typeof KonkurserRoute
   NyetableringerRoute: typeof NyetableringerRoute
   OmRoute: typeof OmRoute
+  PersonerRoute: typeof PersonerRoute
   SammenlignRoute: typeof SammenlignRoute
   UtforskRoute: typeof UtforskRoute
   BedriftOrgnrRoute: typeof BedriftOrgnrRoute
@@ -271,6 +284,13 @@ declare module '@tanstack/react-router' {
       path: '/sammenlign'
       fullPath: '/sammenlign'
       preLoaderRoute: typeof SammenlignRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/personer': {
+      id: '/personer'
+      path: '/personer'
+      fullPath: '/personer'
+      preLoaderRoute: typeof PersonerRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/om': {
@@ -391,6 +411,7 @@ const rootRouteChildren: RootRouteChildren = {
   KonkurserRoute: KonkurserRoute,
   NyetableringerRoute: NyetableringerRoute,
   OmRoute: OmRoute,
+  PersonerRoute: PersonerRoute,
   SammenlignRoute: SammenlignRoute,
   UtforskRoute: UtforskRoute,
   BedriftOrgnrRoute: BedriftOrgnrRoute,

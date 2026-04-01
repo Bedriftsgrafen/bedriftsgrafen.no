@@ -18,6 +18,27 @@ class PersonSearchResult(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
 
+class PersonSearchResultDetailed(BaseModel):
+    """Enriched person result for the search results page."""
+
+    name: str = Field(..., description="Full name of the person")
+    birthdate: date | None = Field(None, description="Birth date if available")
+    role_count: int = Field(..., description="Total number of commercial roles held")
+    active_role_count: int = Field(..., description="Number of non-resigned roles")
+    top_roles: list[str] = Field(default_factory=list, description='Top role types, e.g. ["Daglig leder (3)"]')
+    notable_companies: list[str] = Field(default_factory=list, description="1-2 notable company names")
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+class PaginatedPersonSearch(BaseModel):
+    """Paginated person search result set."""
+
+    results: list[PersonSearchResultDetailed] = Field(..., description="List of person results")
+    total_count: int = Field(..., description="Total number of matching people")
+    query: str = Field(..., description="The search query that was executed")
+
+
 class PersonRoleResponse(BaseModel):
     """A commercial role held by a person.
 

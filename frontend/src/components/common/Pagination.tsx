@@ -10,6 +10,7 @@ interface PaginationProps {
   onPreviousPage: () => void
   onNextPage: () => void
   onPageChange?: (page: number) => void
+  itemLabel?: string
 }
 
 /**
@@ -73,7 +74,8 @@ export function Pagination({
   currentItemsCount,
   onPreviousPage,
   onNextPage,
-  onPageChange
+  onPageChange,
+  itemLabel = 'virksomheter'
 }: PaginationProps) {
   // Memoize pagination calculations
   const { start, end, isFirstPage, isLastPage, totalPages, pageNumbers } = useMemo(() => {
@@ -115,11 +117,11 @@ export function Pagination({
       {/* Info text */}
       <p className="text-sm text-gray-600 text-center">
         {totalCount !== undefined ? (
-          <>Viser {start}-{end} av {formatNumber(totalCount)} virksomheter</>
+          <>Viser {start}-{end} av {formatNumber(totalCount)} {itemLabel}</>
         ) : (
           <span className="flex items-center justify-center gap-2">
             <span className="inline-block w-3 h-3 border-2 border-gray-400 border-t-transparent rounded-full animate-spin"></span>
-            Teller virksomheter...
+            Teller {itemLabel}...
           </span>
         )}
       </p>

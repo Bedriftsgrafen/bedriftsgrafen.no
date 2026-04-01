@@ -1,6 +1,6 @@
 /* eslint-disable react-refresh/only-export-components */
 import { createLazyFileRoute, useNavigate, Link } from '@tanstack/react-router'
-import { useState, useCallback, type KeyboardEvent } from 'react'
+import { useState, useCallback, useEffect, type KeyboardEvent } from 'react'
 import { StatisticsCards } from '../components/StatisticsCards'
 import { ExplorerCTA } from '../components/ExplorerCTA'
 import { FavoritesSection } from '../components/FavoritesSection'
@@ -9,7 +9,7 @@ import { RecentSearches } from '../components/RecentSearches'
 import { SEOHead } from '../components/layout'
 import { useUiStore } from '../store/uiStore'
 import { useFilterStore } from '../store/filterStore'
-import { Search, User, Building2 } from 'lucide-react'
+import { Search, User, Building2, ArrowRight } from 'lucide-react'
 import { usePersonSearchQuery } from '../hooks/queries/usePersonSearchQuery'
 
 export const Route = createLazyFileRoute('/')(
@@ -20,7 +20,7 @@ export const Route = createLazyFileRoute('/')(
 export function HomePage() {
     const navigate = useNavigate()
     const [searchQuery, setSearchQuery] = useState('')
-    const [committedPersonQuery, setCommittedPersonQuery] = useState('')
+    const [debouncedPersonQuery, setDebouncedPersonQuery] = useState('')
     const addRecentSearch = useUiStore(s => s.addRecentSearch)
     const clearFilters = useFilterStore(s => s.clearFilters)
 
@@ -28,7 +28,18 @@ export function HomePage() {
     const {
         data: personResults,
         isFetching: personSearchLoading
-    } = usePersonSearchQuery(committedPersonQuery)
+    } = usePersonSearchQuery(debouncedPersonQuery, 5)
+
+    // Debounce person search for dropdown preview
+    useEffect(() => {
+        if (searchMode !== 'person' || searchQuery.length < 3) {
+            // eslint-disable-next-line @eslint-react/set-state-in-effect
+            setDebouncedPersonQuery('')
+            return
+        }
+        const timer = setTimeout(() => setDebouncedPersonQuery(searchQuery), 300)
+        return () => clearTimeout(timer)
+    }, [searchQuery, searchMode])
 
     // Handle search - navigate to /utforsk with query param
     const handleSearch = useCallback((query: string) => {
@@ -36,8 +47,8 @@ export function HomePage() {
         if (!trimmed) return
 
         if (searchMode === 'person') {
-            // Trigger the query for the dropdown
-            setCommittedPersonQuery(trimmed)
+            // Navigate to person search results page
+            navigate({ to: '/personer', search: { q: trimmed } })
             return
         }
 
@@ -62,10 +73,10 @@ export function HomePage() {
         }
     }
 
-    // Reset committed query when switching modes or clearing input
+    // Reset query when switching modes or clearing input
     const handleModeChange = (mode: 'company' | 'person') => {
         setSearchMode(mode)
-        setCommittedPersonQuery('')
+        setDebouncedPersonQuery('')
         setSearchQuery('')
     }
 
@@ -119,8 +130,6 @@ export function HomePage() {
                                     value={searchQuery}
                                     onChange={(e) => {
                                         setSearchQuery(e.target.value)
-                                        // Clear committed query if user edits (hides old results)
-                                        if (searchMode === 'person') setCommittedPersonQuery('')
                                     }}
                                     onKeyDown={handleKeyDown}
                                     placeholder={searchMode === 'company'
@@ -128,12 +137,10 @@ export function HomePage() {
                                         : "Søk etter navn på person..."}
                                     className="w-full px-4 py-3 bg-white border-0 rounded-lg focus:ring-2 focus:ring-blue-300 focus:outline-none text-blue-900 placeholder-blue-900/50 shadow-lg font-medium"
                                 />
-                                {searchMode === 'person' && committedPersonQuery && (
+                                {searchMode === 'person' && debouncedPersonQuery && (personSearchLoading || (personResults && personResults.length > 0)) && (
                                     <div className="absolute left-0 right-0 top-full mt-2 bg-white rounded-xl shadow-2xl border border-blue-100 overflow-hidden text-gray-900 z-50">
                                         {personSearchLoading ? (
                                             <div className="p-4 text-center text-gray-500 animate-pulse">Søker...</div>
-                                        ) : !personResults || personResults.length === 0 ? (
-                                            <div className="p-4 text-center text-gray-500 italic">Ingen personer funnet</div>
                                         ) : (
                                             <div className="max-h-64 overflow-y-auto">
                                                 {personResults?.map((person, idx) => (
@@ -162,6 +169,14 @@ export function HomePage() {
                                                         </div>
                                                     </Link>
                                                 ))}
+                                                <Link
+                                                    to="/personer"
+                                                    search={{ q: searchQuery.trim() }}
+                                                    className="flex items-center justify-center gap-2 p-3 border-t border-gray-100 text-sm font-bold text-blue-600 hover:bg-blue-50 transition-colors"
+                                                >
+                                                    Se alle resultater
+                                                    <ArrowRight className="h-4 w-4" />
+                                                </Link>
                                             </div>
                                         )}
                                     </div>

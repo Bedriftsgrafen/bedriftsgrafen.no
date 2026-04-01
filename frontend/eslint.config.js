@@ -7,7 +7,7 @@ import tseslint from 'typescript-eslint';
 
 export default defineConfig(
     {
-        ignores: ['dist', 'create-og-image.js'],
+        ignores: ['dist', 'create-og-image.js', 'coverage'],
     },
     {
         files: ['**/*.ts', '**/*.tsx'],

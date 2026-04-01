@@ -380,3 +380,118 @@ class TestFoedselsdatoInResponse:
             foedselsdato=date(1996, 3, 12),
         )
         assert result.foedselsdato == date(1996, 3, 12)
+
+
+# ============================================================================
+# Category 5: GET /v1/people/search/results (NEW)
+# ============================================================================
+class TestSearchPeopleResultsEndpoint:
+    """Tests for the paginated person search results endpoint."""
+
+    @pytest.mark.asyncio
+    async def test_returns_paginated_results(self, client):
+        """Returns enriched person results with pagination metadata."""
+        with patch("routers.v1.people.RoleRepository") as MockRepo:
+            mock_repo = MockRepo.return_value
+            mock_repo.search_people_detailed = AsyncMock(
+                return_value=[
+                    {
+                        "name": "Ola Nordmann",
+                        "birthdate": date(1980, 5, 15),
+                        "role_count": 5,
+                        "active_role_count": 3,
+                        "top_roles": ["Daglig leder (2)"],
+                        "notable_companies": ["Equinor ASA"],
+                    }
+                ]
+            )
+            mock_repo.count_people_search = AsyncMock(return_value=1)
+
+            response = client.get("/v1/people/search/results?q=Ola")
+
+            assert response.status_code == 200
+            data = response.json()
+            assert data["total_count"] == 1
+            assert data["query"] == "Ola"
+            assert len(data["results"]) == 1
+            assert data["results"][0]["name"] == "Ola Nordmann"
+            assert data["results"][0]["active_role_count"] == 3
+
+    @pytest.mark.asyncio
+    async def test_requires_min_3_chars(self, client):
+        """Query must be at least 3 characters."""
+        response = client.get("/v1/people/search/results?q=Ol")
+        assert response.status_code == 422
+
+    @pytest.mark.asyncio
+    async def test_respects_pagination_params(self, client):
+        """Offset and limit are forwarded to repository."""
+        with patch("routers.v1.people.RoleRepository") as MockRepo:
+            mock_repo = MockRepo.return_value
+            mock_repo.search_people_detailed = AsyncMock(return_value=[])
+            mock_repo.count_people_search = AsyncMock(return_value=0)
+
+            response = client.get("/v1/people/search/results?q=Test&offset=20&limit=10")
+
+            assert response.status_code == 200
+            mock_repo.search_people_detailed.assert_called_once()
+            call_args = mock_repo.search_people_detailed.call_args
+            assert call_args.kwargs.get("offset") == 20
+            assert call_args.kwargs.get("limit") == 10
+
+    @pytest.mark.asyncio
+    async def test_returns_empty_results(self, client):
+        """Returns empty results with zero count when no matches."""
+        with patch("routers.v1.people.RoleRepository") as MockRepo:
+            mock_repo = MockRepo.return_value
+            mock_repo.search_people_detailed = AsyncMock(return_value=[])
+            mock_repo.count_people_search = AsyncMock(return_value=0)
+
+            response = client.get("/v1/people/search/results?q=Nonexistent")
+
+            assert response.status_code == 200
+            data = response.json()
+            assert data["total_count"] == 0
+            assert data["results"] == []
+
+    @pytest.mark.asyncio
+    async def test_limit_max_100(self, client):
+        """Limit cannot exceed 100."""
+        response = client.get("/v1/people/search/results?q=Test&limit=200")
+        assert response.status_code == 422
+
+    def test_detailed_result_schema(self):
+        """PersonSearchResultDetailed model serializes correctly."""
+        from schemas.people import PersonSearchResultDetailed
+
+        result = PersonSearchResultDetailed(
+            name="Test Person",
+            birthdate=date(1990, 1, 1),
+            role_count=5,
+            active_role_count=3,
+            top_roles=["Daglig leder (2)", "Styremedlem (1)"],
+            notable_companies=["Test AS"],
+        )
+        assert result.active_role_count == 3
+        assert len(result.top_roles) == 2
+
+    def test_paginated_search_schema(self):
+        """PaginatedPersonSearch model serializes correctly."""
+        from schemas.people import PaginatedPersonSearch, PersonSearchResultDetailed
+
+        result = PaginatedPersonSearch(
+            results=[
+                PersonSearchResultDetailed(
+                    name="Test",
+                    birthdate=None,
+                    role_count=1,
+                    active_role_count=1,
+                    top_roles=[],
+                    notable_companies=[],
+                )
+            ],
+            total_count=1,
+            query="Test",
+        )
+        assert result.total_count == 1
+        assert result.query == "Test"

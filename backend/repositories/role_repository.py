@@ -247,6 +247,149 @@ class RoleRepository:
             logger.error("Error searching people", extra={"query": query, "error": str(e)})
             return []
 
+    async def search_people_detailed(
+        self, query: str, offset: int = 0, limit: int = 20, include_all: bool = False
+    ) -> list[dict]:
+        """
+        Enriched person search for the results page.
+        Returns role counts (total + active), top role types, and notable companies.
+        """
+        if len(query) < 3:
+            return []
+
+        try:
+            # Step 1: Get paginated people with counts
+            stmt = (
+                select(
+                    models.Role.person_navn,
+                    models.Role.foedselsdato,
+                    func.count(models.Role.id).label("role_count"),
+                    func.count(models.Role.id).filter(models.Role.fratraadt.is_(False)).label("active_role_count"),
+                )
+                .join(models.Company, models.Role.orgnr == models.Company.orgnr)
+                .where(models.Role.person_navn.ilike(f"%{query}%"))
+                .where(models.Role.person_navn.is_not(None))
+            )
+
+            if not include_all:
+                stmt = self._commercial_filter(stmt)
+
+            stmt = (
+                stmt.group_by(models.Role.person_navn, models.Role.foedselsdato)
+                .order_by(func.count(models.Role.id).desc())
+                .offset(offset)
+                .limit(limit)
+            )
+
+            result = await self.db.execute(stmt)
+            people = [
+                {
+                    "name": row.person_navn,
+                    "birthdate": row.foedselsdato,
+                    "role_count": row.role_count,
+                    "active_role_count": row.active_role_count,
+                }
+                for row in result
+            ]
+
+            if not people:
+                return []
+
+            # Step 2: Batch-enrich all people with top roles (single query)
+            person_keys = [(p["name"], p["birthdate"]) for p in people]
+            name_list = [k[0] for k in person_keys]
+
+            # Top role types per person (batched)
+            role_stmt = (
+                select(
+                    models.Role.person_navn,
+                    models.Role.foedselsdato,
+                    models.Role.type_beskrivelse,
+                    func.count(models.Role.id).label("cnt"),
+                )
+                .join(models.Company, models.Role.orgnr == models.Company.orgnr)
+                .where(models.Role.person_navn.in_(name_list))
+                .where(models.Role.fratraadt.is_(False))
+                .where(models.Role.type_beskrivelse.is_not(None))
+            )
+            if not include_all:
+                role_stmt = self._commercial_filter(role_stmt)
+            role_stmt = role_stmt.group_by(
+                models.Role.person_navn, models.Role.foedselsdato, models.Role.type_beskrivelse
+            ).order_by(func.count(models.Role.id).desc())
+
+            role_result = await self.db.execute(role_stmt)
+            # Build a map: (name, birthdate) -> top 3 role descriptions
+            roles_map: dict[tuple[str, object], list[str]] = {}
+            for row in role_result:
+                key = (row.person_navn, row.foedselsdato)
+                if key not in roles_map:
+                    roles_map[key] = []
+                if len(roles_map[key]) < 3:
+                    roles_map[key].append(f"{row.type_beskrivelse} ({row.cnt})")
+
+            # Step 3: Batch-enrich notable companies (single query)
+            comp_stmt = (
+                select(
+                    models.Role.person_navn,
+                    models.Role.foedselsdato,
+                    models.Company.navn,
+                )
+                .join(models.Company, models.Role.orgnr == models.Company.orgnr)
+                .where(models.Role.person_navn.in_(name_list))
+                .where(models.Role.fratraadt.is_(False))
+                .where(models.Company.navn.is_not(None))
+            )
+            if not include_all:
+                comp_stmt = self._commercial_filter(comp_stmt)
+            comp_stmt = comp_stmt.order_by(models.Role.updated_at.desc())
+
+            comp_result = await self.db.execute(comp_stmt)
+            # Build a map: (name, birthdate) -> top 2 company names
+            companies_map: dict[tuple[str, object], list[str]] = {}
+            for comp_row in comp_result:
+                key = (comp_row.person_navn, comp_row.foedselsdato)
+                if key not in companies_map:
+                    companies_map[key] = []
+                if len(companies_map[key]) < 2 and comp_row.navn not in companies_map[key]:
+                    companies_map[key].append(comp_row.navn)
+
+            # Step 4: Attach enrichment data to each person
+            for person in people:
+                key = (person["name"], person["birthdate"])
+                person["top_roles"] = roles_map.get(key, [])
+                person["notable_companies"] = companies_map.get(key, [])
+
+            return people
+        except Exception as e:
+            logger.error("Error in detailed people search", extra={"query": query, "error": str(e)})
+            return []
+
+    async def count_people_search(self, query: str, include_all: bool = False) -> int:
+        """Count total unique people matching a search query. For pagination."""
+        if len(query) < 3:
+            return 0
+
+        try:
+            sub = (
+                select(models.Role.person_navn, models.Role.foedselsdato)
+                .join(models.Company, models.Role.orgnr == models.Company.orgnr)
+                .where(models.Role.person_navn.ilike(f"%{query}%"))
+                .where(models.Role.person_navn.is_not(None))
+            )
+
+            if not include_all:
+                sub = self._commercial_filter(sub)
+
+            sub = sub.group_by(models.Role.person_navn, models.Role.foedselsdato)
+
+            stmt = select(func.count()).select_from(sub.subquery())
+            result = await self.db.execute(stmt)
+            return result.scalar() or 0
+        except Exception as e:
+            logger.error("Error counting people search", extra={"query": query, "error": str(e)})
+            return 0
+
     async def get_person_commercial_roles(
         self,
         name: str,

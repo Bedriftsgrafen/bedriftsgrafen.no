@@ -316,6 +316,138 @@ class TestSearchPeople:
 
 
 # ============================================================================
+# Category 5b: search_people_detailed (NEW)
+# ============================================================================
+class TestSearchPeopleDetailed:
+    """Tests for enriched person search (results page)."""
+
+    @pytest.mark.asyncio
+    async def test_returns_empty_for_short_query(self, repo, mock_db_session):
+        """Returns empty list for queries shorter than 3 characters."""
+        result = await repo.search_people_detailed("Jo")
+        assert result == []
+        mock_db_session.execute.assert_not_called()
+
+    @pytest.mark.asyncio
+    async def test_returns_enriched_results(self, repo, mock_db_session):
+        """Returns people with role counts, top roles, and notable companies."""
+        # First execute: paginated people
+        mock_person_row = MagicMock()
+        mock_person_row.person_navn = "Ola Nordmann"
+        mock_person_row.foedselsdato = date(1980, 5, 15)
+        mock_person_row.role_count = 5
+        mock_person_row.active_role_count = 3
+
+        # Second execute: batched roles
+        mock_role_row = MagicMock()
+        mock_role_row.person_navn = "Ola Nordmann"
+        mock_role_row.foedselsdato = date(1980, 5, 15)
+        mock_role_row.type_beskrivelse = "Daglig leder"
+        mock_role_row.cnt = 2
+
+        # Third execute: batched companies
+        mock_comp_row = MagicMock()
+        mock_comp_row.person_navn = "Ola Nordmann"
+        mock_comp_row.foedselsdato = date(1980, 5, 15)
+        mock_comp_row.navn = "Equinor ASA"
+        mock_comp_row.updated_at = datetime.now(UTC)
+
+        mock_db_session.execute.side_effect = [
+            [mock_person_row],
+            [mock_role_row],
+            [mock_comp_row],
+        ]
+
+        result = await repo.search_people_detailed("Ola")
+
+        assert len(result) == 1
+        assert result[0]["name"] == "Ola Nordmann"
+        assert result[0]["active_role_count"] == 3
+        assert result[0]["top_roles"] == ["Daglig leder (2)"]
+        assert result[0]["notable_companies"] == ["Equinor ASA"]
+
+    @pytest.mark.asyncio
+    async def test_returns_empty_when_no_matches(self, repo, mock_db_session):
+        """Returns empty list when main query returns no people."""
+        mock_db_session.execute.return_value = []
+
+        result = await repo.search_people_detailed("Nonexistent")
+
+        assert result == []
+
+    @pytest.mark.asyncio
+    async def test_handles_database_error(self, repo, mock_db_session):
+        """Returns empty list on database error."""
+        mock_db_session.execute.side_effect = Exception("DB Error")
+
+        result = await repo.search_people_detailed("Test")
+
+        assert result == []
+
+    @pytest.mark.asyncio
+    async def test_handles_empty_enrichment(self, repo, mock_db_session):
+        """Handles people with no active roles or companies gracefully."""
+        mock_person_row = MagicMock()
+        mock_person_row.person_navn = "Kari Nordmann"
+        mock_person_row.foedselsdato = None
+        mock_person_row.role_count = 1
+        mock_person_row.active_role_count = 0
+
+        mock_db_session.execute.side_effect = [
+            [mock_person_row],
+            [],  # no roles
+            [],  # no companies
+        ]
+
+        result = await repo.search_people_detailed("Kari")
+
+        assert len(result) == 1
+        assert result[0]["top_roles"] == []
+        assert result[0]["notable_companies"] == []
+
+
+# ============================================================================
+# Category 5c: count_people_search (NEW)
+# ============================================================================
+class TestCountPeopleSearch:
+    """Tests for pagination count query."""
+
+    @pytest.mark.asyncio
+    async def test_returns_zero_for_short_query(self, repo, mock_db_session):
+        """Returns 0 for queries shorter than 3 characters."""
+        result = await repo.count_people_search("Jo")
+        assert result == 0
+        mock_db_session.execute.assert_not_called()
+
+    @pytest.mark.asyncio
+    async def test_returns_count(self, repo, mock_db_session):
+        """Returns total count of unique people matching."""
+        mock_db_session.execute.return_value.scalar.return_value = 42
+
+        result = await repo.count_people_search("Nordmann")
+
+        assert result == 42
+
+    @pytest.mark.asyncio
+    async def test_returns_zero_on_null(self, repo, mock_db_session):
+        """Returns 0 when scalar returns None."""
+        mock_db_session.execute.return_value.scalar.return_value = None
+
+        result = await repo.count_people_search("Unknown")
+
+        assert result == 0
+
+    @pytest.mark.asyncio
+    async def test_handles_database_error(self, repo, mock_db_session):
+        """Returns 0 on database error."""
+        mock_db_session.execute.side_effect = Exception("DB Error")
+
+        result = await repo.count_people_search("Test")
+
+        assert result == 0
+
+
+# ============================================================================
 # Category 6: get_person_commercial_roles (NEW)
 # ============================================================================
 class TestGetPersonCommercialRoles:
