@@ -460,6 +460,62 @@ class TestSearchPeopleResultsEndpoint:
         response = client.get("/v1/people/search/results?q=Test&limit=200")
         assert response.status_code == 422
 
+    @pytest.mark.asyncio
+    async def test_sort_by_name(self, client):
+        """Sort by name is forwarded to repository."""
+        with patch("routers.v1.people.RoleRepository") as MockRepo:
+            mock_repo = MockRepo.return_value
+            mock_repo.search_people_detailed = AsyncMock(return_value=[])
+            mock_repo.count_people_search = AsyncMock(return_value=0)
+
+            response = client.get("/v1/people/search/results?q=Test&sort_by=name&sort_order=asc")
+
+            assert response.status_code == 200
+            call_args = mock_repo.search_people_detailed.call_args
+            assert call_args.kwargs.get("sort_by") == "name"
+            assert call_args.kwargs.get("sort_order") == "asc"
+
+    @pytest.mark.asyncio
+    async def test_sort_by_active_roles(self, client):
+        """Sort by active_roles is forwarded to repository."""
+        with patch("routers.v1.people.RoleRepository") as MockRepo:
+            mock_repo = MockRepo.return_value
+            mock_repo.search_people_detailed = AsyncMock(return_value=[])
+            mock_repo.count_people_search = AsyncMock(return_value=0)
+
+            response = client.get("/v1/people/search/results?q=Test&sort_by=active_roles&sort_order=desc")
+
+            assert response.status_code == 200
+            call_args = mock_repo.search_people_detailed.call_args
+            assert call_args.kwargs.get("sort_by") == "active_roles"
+
+    @pytest.mark.asyncio
+    async def test_invalid_sort_field_rejected(self, client):
+        """Invalid sort_by value is rejected by validation."""
+        response = client.get("/v1/people/search/results?q=Test&sort_by=invalid")
+        assert response.status_code == 422
+
+    @pytest.mark.asyncio
+    async def test_invalid_sort_order_rejected(self, client):
+        """Invalid sort_order value is rejected by validation."""
+        response = client.get("/v1/people/search/results?q=Test&sort_order=random")
+        assert response.status_code == 422
+
+    @pytest.mark.asyncio
+    async def test_default_sort_params(self, client):
+        """Default sort is role_count desc when not specified."""
+        with patch("routers.v1.people.RoleRepository") as MockRepo:
+            mock_repo = MockRepo.return_value
+            mock_repo.search_people_detailed = AsyncMock(return_value=[])
+            mock_repo.count_people_search = AsyncMock(return_value=0)
+
+            response = client.get("/v1/people/search/results?q=Test")
+
+            assert response.status_code == 200
+            call_args = mock_repo.search_people_detailed.call_args
+            assert call_args.kwargs.get("sort_by") == "role_count"
+            assert call_args.kwargs.get("sort_order") == "desc"
+
     def test_detailed_result_schema(self):
         """PersonSearchResultDetailed model serializes correctly."""
         from schemas.people import PersonSearchResultDetailed

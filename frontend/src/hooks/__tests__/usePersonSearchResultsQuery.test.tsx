@@ -44,14 +44,20 @@ beforeEach(() => {
 // Category 1: Query Keys
 // ============================================================================
 describe('personQueryKeys.searchResults', () => {
-    it('creates key with query, offset, and limit', () => {
-        const key = personQueryKeys.searchResults('Ola', 0, 20)
-        expect(key).toEqual(['people', 'searchResults', 'Ola', 0, 20])
+    it('creates key with query, offset, limit, and sort params', () => {
+        const key = personQueryKeys.searchResults('Ola', 0, 20, 'role_count', 'desc')
+        expect(key).toEqual(['people', 'searchResults', 'Ola', 0, 20, 'role_count', 'desc'])
     })
 
     it('different offset produces different key', () => {
-        const key1 = personQueryKeys.searchResults('Ola', 0, 20)
-        const key2 = personQueryKeys.searchResults('Ola', 20, 20)
+        const key1 = personQueryKeys.searchResults('Ola', 0, 20, 'role_count', 'desc')
+        const key2 = personQueryKeys.searchResults('Ola', 20, 20, 'role_count', 'desc')
+        expect(key1).not.toEqual(key2)
+    })
+
+    it('different sort field produces different key', () => {
+        const key1 = personQueryKeys.searchResults('Ola', 0, 20, 'role_count', 'desc')
+        const key2 = personQueryKeys.searchResults('Ola', 0, 20, 'name', 'asc')
         expect(key1).not.toEqual(key2)
     })
 })
@@ -83,7 +89,7 @@ describe('usePersonSearchResultsQuery - Enable/Disable', () => {
         await waitFor(() => {
             expect(mockApiClient.get).toHaveBeenCalledWith(
                 '/v1/people/search/results',
-                { params: { q: 'Ola', offset: 0, limit: 20 } }
+                { params: { q: 'Ola', offset: 0, limit: 20, sort_by: 'role_count', sort_order: 'desc' } }
             )
             expect(result.current.data).toBeDefined()
         })

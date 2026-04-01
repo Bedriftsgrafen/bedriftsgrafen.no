@@ -11,8 +11,8 @@ export interface PersonSearchResult {
 export const personQueryKeys = {
     all: ['people'] as const,
     search: (query: string) => [...personQueryKeys.all, 'search', query] as const,
-    searchResults: (query: string, offset: number, limit: number) =>
-        [...personQueryKeys.all, 'searchResults', query, offset, limit] as const,
+    searchResults: (query: string, offset: number, limit: number, sortBy?: string, sortOrder?: string) =>
+        [...personQueryKeys.all, 'searchResults', query, offset, limit, sortBy, sortOrder] as const,
     searchResultsCount: (query: string) =>
         [...personQueryKeys.all, 'searchResultsCount', query] as const,
     roles: (name: string, birthdate: string | null) =>

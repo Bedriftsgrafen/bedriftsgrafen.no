@@ -8,10 +8,10 @@ import { useCompaniesQuery } from '../../hooks/queries/useCompaniesQuery'
 import { useCompanyStatsQuery } from '../../hooks/queries/useCompanyStatsQuery'
 
 // Mock components
-vi.mock('../../components/layout', () => ({ SEOHead: () => <div /> }))
+vi.mock('../../components/layout', () => ({ SEOHead: () => <div />, Breadcrumbs: () => <div /> }))
 vi.mock('../../components/FilterPanel', () => ({ FilterPanel: () => <div data-testid="filter-panel" /> }))
 vi.mock('../../components/CompanyList', () => ({ CompanyList: () => <div data-testid="company-list" /> }))
-vi.mock('../../components/common', () => ({ Pagination: () => <div data-testid="pagination" /> }))
+vi.mock('../../components/common', () => ({ Pagination: () => <div data-testid="pagination" />, SearchTypeNav: () => <div /> }))
 vi.mock('../../components/explorer', () => ({
     ExportButton: () => <button>Export</button>,
     ViewModeToggle: () => <div />

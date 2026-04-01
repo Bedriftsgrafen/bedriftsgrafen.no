@@ -1,7 +1,7 @@
 /* eslint-disable react-refresh/only-export-components */
 import { createLazyFileRoute } from '@tanstack/react-router'
 import { useCallback, useEffect } from 'react'
-import { SEOHead } from '../components/layout'
+import { SEOHead, Breadcrumbs } from '../components/layout'
 import { FilterPanel } from '../components/FilterPanel'
 import { CONTACT_EMAIL } from '../constants/contact'
 import { CompanyList } from '../components/CompanyList'
@@ -17,6 +17,7 @@ import { useFilterStore } from '../store/filterStore'
 import { useSlowLoadingToast } from '../hooks/useSlowLoadingToast'
 import { ExplorerSearchBar } from '../components/explorer/ExplorerSearchBar'
 import { ViewModeToggle } from '../components/explorer'
+import { SearchTypeNav } from '../components/common'
 
 export const Route = createLazyFileRoute('/utforsk')({
     component: UtforskPage,
@@ -114,6 +115,15 @@ export function UtforskPage() {
                 title="Utforsk virksomheter | Bedriftsgrafen.no"
                 description="Søk og filtrer blant alle norske virksomheter. Finn informasjon om omsetning, ansatte, bransje og mer."
             />
+
+            <Breadcrumbs
+                items={[
+                    { label: 'Hjem', to: '/' },
+                    { label: 'Utforsk virksomheter' },
+                ]}
+            />
+
+            <SearchTypeNav active="virksomheter" query={q} />
 
             {/* Page header */}
             <div className="mb-6">

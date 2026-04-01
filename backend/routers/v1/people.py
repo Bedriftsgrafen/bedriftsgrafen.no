@@ -46,6 +46,8 @@ async def search_people_results(
     q: str = Query(..., min_length=3, description="Search query (min 3 characters)"),
     offset: int = Query(0, ge=0, description="Pagination offset"),
     limit: int = Query(20, ge=1, le=100, description="Results per page"),
+    sort_by: str = Query("role_count", description="Sort field", pattern="^(role_count|active_roles|name)$"),
+    sort_order: str = Query("desc", description="Sort order", pattern="^(asc|desc)$"),
     x_admin_key: str | None = Header(None, alias="X-Admin-Key"),
     db: AsyncSession = Depends(get_db),
 ) -> PaginatedPersonSearch:
@@ -58,7 +60,9 @@ async def search_people_results(
     role_repo = RoleRepository(db)
     admin = is_admin(x_admin_key)
 
-    results = await role_repo.search_people_detailed(q, offset=offset, limit=limit, include_all=admin)
+    results = await role_repo.search_people_detailed(
+        q, offset=offset, limit=limit, include_all=admin, sort_by=sort_by, sort_order=sort_order
+    )
     total_count = await role_repo.count_people_search(q, include_all=admin)
 
     return PaginatedPersonSearch(

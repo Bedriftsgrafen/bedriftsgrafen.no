@@ -8,6 +8,7 @@ export * from './TabButton';
 export * from './TabContainer';
 export * from './SummaryCard';
 export * from './SortableHeader';
+export * from './SearchTypeNav';
 export * from './LoadingState';
 export * from './ErrorState';
 export * from './Button';

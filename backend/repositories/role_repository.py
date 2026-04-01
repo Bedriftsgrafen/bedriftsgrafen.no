@@ -248,7 +248,13 @@ class RoleRepository:
             return []
 
     async def search_people_detailed(
-        self, query: str, offset: int = 0, limit: int = 20, include_all: bool = False
+        self,
+        query: str,
+        offset: int = 0,
+        limit: int = 20,
+        include_all: bool = False,
+        sort_by: str = "role_count",
+        sort_order: str = "desc",
     ) -> list[dict]:
         """
         Enriched person search for the results page.
@@ -259,12 +265,15 @@ class RoleRepository:
 
         try:
             # Step 1: Get paginated people with counts
+            role_count_expr = func.count(models.Role.id)
+            active_count_expr = func.count(models.Role.id).filter(models.Role.fratraadt.is_(False))
+
             stmt = (
                 select(
                     models.Role.person_navn,
                     models.Role.foedselsdato,
-                    func.count(models.Role.id).label("role_count"),
-                    func.count(models.Role.id).filter(models.Role.fratraadt.is_(False)).label("active_role_count"),
+                    role_count_expr.label("role_count"),
+                    active_count_expr.label("active_role_count"),
                 )
                 .join(models.Company, models.Role.orgnr == models.Company.orgnr)
                 .where(models.Role.person_navn.ilike(f"%{query}%"))
@@ -274,9 +283,18 @@ class RoleRepository:
             if not include_all:
                 stmt = self._commercial_filter(stmt)
 
+            # Dynamic sort
+            sort_column_map = {
+                "role_count": role_count_expr,
+                "active_roles": active_count_expr,
+                "name": models.Role.person_navn,
+            }
+            sort_col = sort_column_map.get(sort_by, role_count_expr)
+            order_clause = sort_col.asc() if sort_order == "asc" else sort_col.desc()
+
             stmt = (
                 stmt.group_by(models.Role.person_navn, models.Role.foedselsdato)
-                .order_by(func.count(models.Role.id).desc())
+                .order_by(order_clause)
                 .offset(offset)
                 .limit(limit)
             )

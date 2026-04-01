@@ -1,9 +1,9 @@
 /* eslint-disable react-refresh/only-export-components */
 import { createLazyFileRoute, Link } from '@tanstack/react-router'
 import { useState, useCallback, useEffect } from 'react'
-import { User, Building2, AlertTriangle, Briefcase, ArrowRight } from 'lucide-react'
+import { User, Building2, AlertTriangle, Briefcase, ArrowRight, List, LayoutGrid, ArrowUpDown } from 'lucide-react'
 import { SEOHead, Breadcrumbs } from '../components/layout'
-import { Pagination } from '../components/common'
+import { Pagination, SearchTypeNav } from '../components/common'
 import { PersonSearchBar } from '../components/PersonSearchBar'
 import { usePersonSearchResultsQuery } from '../hooks/queries/usePersonSearchResultsQuery'
 import { useSlowLoadingToast } from '../hooks/useSlowLoadingToast'
@@ -15,6 +15,16 @@ export const Route = createLazyFileRoute('/personer')({
 })
 
 const ITEMS_PER_PAGE = 20
+
+type SortField = 'role_count' | 'active_roles' | 'name'
+type SortOrder = 'asc' | 'desc'
+type ViewMode = 'cards' | 'list'
+
+const SORT_OPTIONS: { value: SortField; label: string }[] = [
+    { value: 'role_count', label: 'Antall roller' },
+    { value: 'active_roles', label: 'Aktive roller' },
+    { value: 'name', label: 'Navn' },
+]
 
 function PersonResultCard({ person }: { person: PersonSearchResultDetailed }) {
     const birthYear = person.birthdate ? person.birthdate.slice(0, 4) : null
@@ -85,10 +95,50 @@ function PersonResultCard({ person }: { person: PersonSearchResultDetailed }) {
     )
 }
 
+function PersonResultRow({ person }: { person: PersonSearchResultDetailed }) {
+    const birthYear = person.birthdate ? person.birthdate.slice(0, 4) : null
+    const topRole = person.top_roles[0]?.replace(/\s*\(\d+\)$/, '') ?? '—'
+    const topCompany = person.notable_companies[0] ?? '—'
+
+    return (
+        <Link
+            to="/person/$name/$birthdate"
+            params={{
+                name: person.name,
+                birthdate: birthYear || 'unknown',
+            }}
+            className="group table-row hover:bg-blue-50/50 transition-colors"
+        >
+            <td className="px-4 py-3 text-sm font-medium text-gray-900 group-hover:text-blue-700">
+                {person.name}
+            </td>
+            <td className="px-4 py-3 text-sm text-gray-600 hidden sm:table-cell">
+                {birthYear ?? '—'}
+            </td>
+            <td className="px-4 py-3 text-sm text-gray-600 text-center">
+                {person.active_role_count}
+            </td>
+            <td className="px-4 py-3 text-sm text-gray-600 text-center hidden md:table-cell">
+                {person.role_count}
+            </td>
+            <td className="px-4 py-3 text-sm text-gray-600 hidden lg:table-cell">
+                {topRole}
+            </td>
+            <td className="px-4 py-3 text-sm text-gray-600 hidden lg:table-cell truncate max-w-48">
+                {topCompany}
+            </td>
+        </Link>
+    )
+}
+
 function PersonerPage() {
     const navigate = Route.useNavigate()
-    const { q } = Route.useSearch()
+    const { q, sort, order, view } = Route.useSearch()
     const [currentPage, setCurrentPage] = useState(1)
+
+    const sortBy: SortField = sort ?? 'role_count'
+    const sortOrder: SortOrder = order ?? 'desc'
+    const viewMode: ViewMode = view ?? 'cards'
 
     const offset = (currentPage - 1) * ITEMS_PER_PAGE
 
@@ -96,11 +146,11 @@ function PersonerPage() {
         data,
         isLoading,
         isError,
-    } = usePersonSearchResultsQuery(q || '', offset, ITEMS_PER_PAGE)
+    } = usePersonSearchResultsQuery(q || '', offset, ITEMS_PER_PAGE, sortBy, sortOrder)
 
     useSlowLoadingToast(isLoading, 'Søker etter personer...')
 
-    // Reset page when query changes (e.g. browser back/forward)
+    // Reset page when query changes
     useEffect(() => {
         // eslint-disable-next-line @eslint-react/set-state-in-effect
         setCurrentPage(1)
@@ -111,7 +161,7 @@ function PersonerPage() {
 
     const handleSearch = useCallback((query: string) => {
         setCurrentPage(1)
-        navigate({ to: '/personer', search: { q: query } })
+        navigate({ to: '/personer', search: (prev) => ({ ...prev, q: query }) })
     }, [navigate])
 
     const handlePreviousPage = useCallback(() => {
@@ -121,6 +171,18 @@ function PersonerPage() {
     const handleNextPage = useCallback(() => {
         setCurrentPage((p) => p + 1)
     }, [])
+
+    const handleSortChange = useCallback((field: SortField) => {
+        const newOrder: SortOrder = sortBy === field
+            ? (sortOrder === 'desc' ? 'asc' : 'desc')
+            : (field === 'name' ? 'asc' : 'desc')
+        setCurrentPage(1)
+        navigate({ to: '/personer', search: (prev) => ({ ...prev, sort: field, order: newOrder }) })
+    }, [navigate, sortBy, sortOrder])
+
+    const handleViewModeChange = useCallback((mode: ViewMode) => {
+        navigate({ to: '/personer', search: (prev) => ({ ...prev, view: mode }) })
+    }, [navigate])
 
     return (
         <>
@@ -135,6 +197,8 @@ function PersonerPage() {
                     { label: 'Personsøk' },
                 ]}
             />
+
+            <SearchTypeNav active="personer" query={q} />
 
             {/* Page header */}
             <div className="mb-6">
@@ -156,22 +220,75 @@ function PersonerPage() {
             {/* Results */}
             {q && (
                 <div className="mb-8">
-                    {/* Results header */}
-                    <div className="px-1 py-3 flex items-center justify-between">
+                    {/* Toolbar: count, sort, view mode */}
+                    <div className="px-1 py-3 flex flex-wrap items-center justify-between gap-3">
                         <h2 className="font-semibold text-lg text-slate-900 flex items-center gap-2">
                             <User className="h-5 w-5 text-blue-600" />
                             Resultater
                         </h2>
-                        <span className="text-sm text-gray-600" aria-live="polite" aria-busy={isLoading}>
-                            {isLoading ? (
-                                <span className="flex items-center gap-2">
-                                    <span className="w-4 h-4 border-2 border-blue-600 border-t-transparent rounded-full animate-spin" aria-hidden="true" />
-                                    Søker...
-                                </span>
-                            ) : (
-                                `${formatNumber(totalCount)} ${totalCount === 1 ? 'person' : 'personer'} funnet`
-                            )}
-                        </span>
+                        <div className="flex items-center gap-3">
+                            <span className="text-sm text-gray-600" aria-live="polite" aria-busy={isLoading}>
+                                {isLoading ? (
+                                    <span className="flex items-center gap-2">
+                                        <span className="w-4 h-4 border-2 border-blue-600 border-t-transparent rounded-full animate-spin" aria-hidden="true" />
+                                        Søker...
+                                    </span>
+                                ) : (
+                                    `${formatNumber(totalCount)} ${totalCount === 1 ? 'person' : 'personer'} funnet`
+                                )}
+                            </span>
+
+                            {/* Sort dropdown */}
+                            <div className="flex items-center gap-1.5">
+                                <ArrowUpDown className="h-4 w-4 text-gray-400" aria-hidden="true" />
+                                <select
+                                    value={sortBy}
+                                    onChange={(e) => handleSortChange(e.target.value as SortField)}
+                                    className="text-sm border border-gray-300 rounded-lg px-2 py-1.5 bg-white text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                    aria-label="Sortering"
+                                >
+                                    {SORT_OPTIONS.map((opt) => (
+                                        <option key={opt.value} value={opt.value}>
+                                            {opt.label} {sortBy === opt.value ? (sortOrder === 'desc' ? '↓' : '↑') : ''}
+                                        </option>
+                                    ))}
+                                </select>
+                            </div>
+
+                            {/* View mode toggle */}
+                            <div className="flex items-center border border-gray-300 rounded-lg overflow-hidden">
+                                <button
+                                    type="button"
+                                    onClick={() => handleViewModeChange('list')}
+                                    className={`flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium transition-colors ${
+                                        viewMode === 'list'
+                                            ? 'bg-blue-600 text-white'
+                                            : 'bg-white text-gray-600 hover:bg-gray-50'
+                                    }`}
+                                    aria-pressed={viewMode === 'list'}
+                                    aria-label="Listevisning"
+                                    title="Listevisning"
+                                >
+                                    <List className="h-4 w-4" aria-hidden="true" />
+                                    <span className="hidden sm:inline">Liste</span>
+                                </button>
+                                <button
+                                    type="button"
+                                    onClick={() => handleViewModeChange('cards')}
+                                    className={`flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium transition-colors ${
+                                        viewMode === 'cards'
+                                            ? 'bg-blue-600 text-white'
+                                            : 'bg-white text-gray-600 hover:bg-gray-50'
+                                    }`}
+                                    aria-pressed={viewMode === 'cards'}
+                                    aria-label="Kortvisning"
+                                    title="Kortvisning"
+                                >
+                                    <LayoutGrid className="h-4 w-4" aria-hidden="true" />
+                                    <span className="hidden sm:inline">Kort</span>
+                                </button>
+                            </div>
+                        </div>
                     </div>
 
                     {/* Loading skeleton */}
@@ -203,8 +320,8 @@ function PersonerPage() {
                         </div>
                     )}
 
-                    {/* Results list */}
-                    {!isLoading && !isError && results.length > 0 && (
+                    {/* Card view */}
+                    {!isLoading && !isError && results.length > 0 && viewMode === 'cards' && (
                         <div className="grid gap-3">
                             {results.map((person, idx) => (
                                 <PersonResultCard
@@ -212,6 +329,32 @@ function PersonerPage() {
                                     person={person}
                                 />
                             ))}
+                        </div>
+                    )}
+
+                    {/* List view */}
+                    {!isLoading && !isError && results.length > 0 && viewMode === 'list' && (
+                        <div className="overflow-x-auto rounded-xl border border-gray-100 bg-white">
+                            <table className="w-full">
+                                <thead>
+                                    <tr className="border-b border-gray-100 bg-gray-50/50">
+                                        <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase">Navn</th>
+                                        <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase hidden sm:table-cell">Fødselsår</th>
+                                        <th className="px-4 py-3 text-center text-xs font-semibold text-gray-500 uppercase">Aktive</th>
+                                        <th className="px-4 py-3 text-center text-xs font-semibold text-gray-500 uppercase hidden md:table-cell">Totalt</th>
+                                        <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase hidden lg:table-cell">Topp rolle</th>
+                                        <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase hidden lg:table-cell">Virksomhet</th>
+                                    </tr>
+                                </thead>
+                                <tbody className="divide-y divide-gray-50">
+                                    {results.map((person, idx) => (
+                                        <PersonResultRow
+                                            key={`${person.name}-${person.birthdate}-${idx}`}
+                                            person={person}
+                                        />
+                                    ))}
+                                </tbody>
+                            </table>
                         </div>
                     )}
 
