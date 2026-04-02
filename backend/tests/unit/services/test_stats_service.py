@@ -419,6 +419,80 @@ class TestGetMunicipalityPremiumDashboard:
         assert "top_sectors" in result
         assert "top_companies" in result
 
+    @pytest.mark.asyncio
+    async def test_returns_none_for_nonexistent_municipality(self):
+        """Early bailout: returns None when both population and company_count are 0."""
+        # Arrange
+        mock_db = MagicMock()
+        service = StatsService(mock_db)
+        StatsService._municipality_names = {}
+
+        service.stats_repo.get_municipality_premium_summary = AsyncMock(
+            return_value={"population": 0, "company_count": 0, "national_density": 0}
+        )
+        service.stats_repo.get_municipality_sector_distribution = AsyncMock()
+
+        # Act
+        result = await service.get_municipality_premium_dashboard("9999")
+
+        # Assert — should bail out, not query sectors/trends
+        assert result is None
+        service.stats_repo.get_municipality_sector_distribution.assert_not_called()
+
+    @pytest.mark.asyncio
+    async def test_returns_dashboard_when_only_companies_exist(self):
+        """Municipality with companies but no population should NOT bail out."""
+        # Arrange
+        mock_db = MagicMock()
+        service = StatsService(mock_db)
+        StatsService._municipality_names = {"1234": "Testvik"}
+
+        service.stats_repo.get_municipality_premium_summary = AsyncMock(
+            return_value={
+                "population": 0,
+                "population_growth_1y": None,
+                "company_count": 42,
+                "national_density": 25.0,
+            }
+        )
+        service.stats_repo.get_municipality_sector_distribution = AsyncMock(return_value=[])
+        service.stats_repo.get_municipality_combined_rankings = AsyncMock(
+            return_value={"density": None, "revenue": None, "population": None}
+        )
+        service.stats_repo.get_establishment_trend = AsyncMock(return_value=[])
+        service.stats_repo.get_bankrupt_trend = AsyncMock(return_value=[])
+        service.company_repo.get_all = AsyncMock(return_value=[])
+
+        # Act
+        result = await service.get_municipality_premium_dashboard("1234")
+
+        # Assert — should continue because company_count > 0
+        assert result is not None
+        assert result["company_count"] == 42
+
+
+class TestGetCountyPremiumDashboard:
+    """Tests for get_county_premium_dashboard method."""
+
+    @pytest.mark.asyncio
+    async def test_returns_none_for_nonexistent_county(self):
+        """Early bailout: returns None when both population and company_count are 0."""
+        # Arrange
+        mock_db = MagicMock()
+        service = StatsService(mock_db)
+
+        service.stats_repo.get_county_premium_summary = AsyncMock(
+            return_value={"population": 0, "company_count": 0, "municipality_count": 0, "national_density": 0}
+        )
+        service.stats_repo.get_county_sector_distribution = AsyncMock()
+
+        # Act
+        result = await service.get_county_premium_dashboard("99")
+
+        # Assert
+        assert result is None
+        service.stats_repo.get_county_sector_distribution.assert_not_called()
+
 
 class TestEnsureMunicipalityNamesLoadedError:
     """Tests for error handling in municipality names loading."""

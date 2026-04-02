@@ -14,6 +14,7 @@ from constants.concurrency import (
     SEARCH_CACHE_SIZE,
     SEARCH_CACHE_TTL,
 )
+from database import AsyncSessionLocal
 from repositories.accounting_repository import AccountingRepository
 from repositories.company import CompanyRepository, CompanyWithFinancials
 from repositories.company_filter_builder import FilterParams
@@ -178,13 +179,19 @@ class CompanyService:
         return company
 
     async def _background_parent_sync(self, parent_orgnr: str) -> None:
-        """Deduplicated background sync for missing parent companies."""
+        """Deduplicated background sync for missing parent companies.
+
+        Uses its own DB session because this runs as a background task
+        after the original request's session may already be closed.
+        """
         if parent_orgnr in self._syncing_orgnrs:
             return
         try:
             self._syncing_orgnrs.add(parent_orgnr)
             logger.info(f"Background sync: {parent_orgnr}")
-            await self.fetch_and_store_company(parent_orgnr, fetch_financials=True)
+            async with AsyncSessionLocal() as bg_session:
+                bg_service = CompanyService(bg_session)
+                await bg_service.fetch_and_store_company(parent_orgnr, fetch_financials=True)
         except Exception as e:
             logger.error(f"Sync failed for {parent_orgnr}: {e}")
         finally:

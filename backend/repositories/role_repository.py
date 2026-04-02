@@ -14,6 +14,16 @@ from constants.org_forms import COMMERCIAL_ORG_FORMS, NON_COMMERCIAL_ORG_FORMS
 
 logger = logging.getLogger(__name__)
 
+
+def _escape_like(value: str) -> str:
+    """Escape LIKE/ILIKE metacharacters so user input is treated as literal text.
+
+    Relies on the default SQL backslash escape character used by asyncpg/PostgreSQL.
+    Order matters: backslashes must be escaped first to avoid double-escaping.
+    """
+    return value.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_")
+
+
 # Cache duration: roles are valid for 7 days before refresh
 ROLE_CACHE_DAYS = 7
 
@@ -222,7 +232,7 @@ class RoleRepository:
                     func.count(models.Role.id).label("role_count"),
                 )
                 .join(models.Company, models.Role.orgnr == models.Company.orgnr)
-                .where(models.Role.person_navn.ilike(f"%{query}%"))
+                .where(models.Role.person_navn.ilike(f"%{_escape_like(query)}%"))
                 .where(models.Role.person_navn.is_not(None))
             )
 
@@ -276,7 +286,7 @@ class RoleRepository:
                     active_count_expr.label("active_role_count"),
                 )
                 .join(models.Company, models.Role.orgnr == models.Company.orgnr)
-                .where(models.Role.person_navn.ilike(f"%{query}%"))
+                .where(models.Role.person_navn.ilike(f"%{_escape_like(query)}%"))
                 .where(models.Role.person_navn.is_not(None))
             )
 
@@ -392,7 +402,7 @@ class RoleRepository:
             sub = (
                 select(models.Role.person_navn, models.Role.foedselsdato)
                 .join(models.Company, models.Role.orgnr == models.Company.orgnr)
-                .where(models.Role.person_navn.ilike(f"%{query}%"))
+                .where(models.Role.person_navn.ilike(f"%{_escape_like(query)}%"))
                 .where(models.Role.person_navn.is_not(None))
             )
 

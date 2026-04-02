@@ -488,7 +488,7 @@ class StatsService:
             },
         }
 
-    async def get_municipality_premium_dashboard(self, municipality_code: str) -> dict[str, Any]:
+    async def get_municipality_premium_dashboard(self, municipality_code: str) -> dict[str, Any] | None:
         """
         Consolidated premium dashboard data for a municipality.
 
@@ -500,6 +500,12 @@ class StatsService:
 
         # 1. Fetch all components
         summary = await self.stats_repo.get_municipality_premium_summary(municipality_code)
+
+        # Early bailout: if no population AND no companies, municipality doesn't exist.
+        # A municipality with companies but 0 population is still valid (returns dashboard).
+        if not summary.get("population") and not summary.get("company_count"):
+            return None
+
         sectors = await self.stats_repo.get_municipality_sector_distribution(municipality_code)
 
         # Advanced rankings (Density, Revenue, and Population)
@@ -553,11 +559,11 @@ class StatsService:
             "county_name": get_county_name(municipality_code[:2]),
             "lat": coords[0] if coords else None,
             "lng": coords[1] if coords else None,
-            "population": summary["population"],
+            "population": summary["population"] or 0,
             "population_growth_1y": summary["population_growth_1y"],
-            "company_count": summary["company_count"],
-            "business_density": (summary["company_count"] / summary["population"] * 1000)
-            if summary["population"] > 0
+            "company_count": summary["company_count"] or 0,
+            "business_density": ((summary["company_count"] or 0) / summary["population"] * 1000)
+            if summary.get("population")
             else 0,
             "business_density_national_avg": summary["national_density"],
             "total_revenue": None,  # Future: sum from LatestAccountings join
@@ -572,7 +578,7 @@ class StatsService:
             "ranking_in_county_population": ranking_population,
         }
 
-    async def get_county_premium_dashboard(self, county_code: str) -> dict[str, Any]:
+    async def get_county_premium_dashboard(self, county_code: str) -> dict[str, Any] | None:
         """
         Consolidated premium dashboard data for a county.
 
@@ -584,6 +590,12 @@ class StatsService:
 
         # 1. Fetch all components
         summary = await self.stats_repo.get_county_premium_summary(county_code)
+
+        # Early bailout: if no population AND no companies, county doesn't exist.
+        # A county with companies but 0 population is still valid (returns dashboard).
+        if not summary.get("population") and not summary.get("company_count"):
+            return None
+
         sectors = await self.stats_repo.get_county_sector_distribution(county_code)
         municipalities = await self.stats_repo.get_county_municipalities(county_code)
 

@@ -138,10 +138,18 @@ class StatsRepository:
         return result.all()
 
     async def get_latest_population_year(self) -> int | None:
-        """Get the most recent year with population data."""
+        """Get the most recent year with valid (named) population data.
+
+        Excludes years where municipality names are missing (incomplete imports).
+        """
         from sqlalchemy import func as sa_func
 
-        query = select(sa_func.max(models.MunicipalityPopulation.year))
+        query = select(sa_func.max(models.MunicipalityPopulation.year)).where(
+            and_(
+                models.MunicipalityPopulation.name.isnot(None),
+                models.MunicipalityPopulation.name != "",
+            )
+        )
         result = await self.db.execute(query)
         return result.scalar()
 
@@ -307,9 +315,16 @@ class StatsRepository:
         - National density comparison (cached)
         """
         # 1. Fetch population (latest and previous year for growth)
+        # Filter out years with incomplete data (empty names = incomplete import)
         pop_query = (
             select(models.MunicipalityPopulation)
-            .where(models.MunicipalityPopulation.municipality_code == municipality_code)
+            .where(
+                and_(
+                    models.MunicipalityPopulation.municipality_code == municipality_code,
+                    models.MunicipalityPopulation.name.isnot(None),
+                    models.MunicipalityPopulation.name != "",
+                )
+            )
             .order_by(models.MunicipalityPopulation.year.desc())
             .limit(2)
         )
@@ -317,9 +332,9 @@ class StatsRepository:
         pop_res = await self.db.execute(pop_query)
         pop_rows = pop_res.scalars().all()
 
-        latest_pop = pop_rows[0].population if pop_rows else 0
+        latest_pop = pop_rows[0].population if pop_rows and pop_rows[0].population is not None else 0
         prev_pop = pop_rows[1].population if len(pop_rows) > 1 else None
-        pop_growth = ((latest_pop - prev_pop) / prev_pop * 100) if prev_pop else None
+        pop_growth = ((latest_pop - prev_pop) / prev_pop * 100) if prev_pop and latest_pop else None
 
         # 2. Fetch basic company stats (aggregated from MunicipalityStats)
         stats_query = select(
@@ -338,9 +353,9 @@ class StatsRepository:
         return {
             "population": latest_pop,
             "population_growth_1y": pop_growth,
-            "company_count": stats_row.company_count if stats_row else 0,
-            "total_employees": stats_row.total_employees if stats_row else 0,
-            "new_last_year": stats_row.new_last_year if stats_row else 0,
+            "company_count": (stats_row.company_count or 0) if stats_row else 0,
+            "total_employees": (stats_row.total_employees or 0) if stats_row else 0,
+            "new_last_year": (stats_row.new_last_year or 0) if stats_row else 0,
             "national_density": national_density,
             "year": pop_rows[0].year if pop_rows else None,
         }
@@ -363,14 +378,15 @@ class StatsRepository:
         result = await self.db.execute(query)
         rows = result.all()
 
-        total_count = sum(r.company_count for r in rows) or 1
+        total_count = sum((r.company_count or 0) for r in rows) or 1
 
         return [
             {
                 "nace_division": r.nace_division,
                 "nace_name": get_nace_name(r.nace_division),
-                "company_count": r.company_count,
-                "percentage_of_total": (r.company_count / total_count * 100) if total_count else 0,
+                "company_count": r.company_count or 0,
+                "total_employees": r.total_employees or 0,
+                "percentage_of_total": ((r.company_count or 0) / total_count * 100) if total_count else 0,
             }
             for r in rows
         ]
@@ -552,7 +568,7 @@ class StatsRepository:
         pop_res = await self.db.execute(pop_query)
         pop_row = pop_res.one_or_none()
 
-        population = pop_row.population if pop_row else 0
+        population = pop_row.population if pop_row and pop_row.population is not None else 0
         municipality_count = pop_row.municipality_count if pop_row else 0
 
         # 1b. Get previous year population for growth calculation
@@ -566,7 +582,7 @@ class StatsRepository:
         )
         prev_pop_res = await self.db.execute(prev_pop_query)
         prev_pop = prev_pop_res.scalar()
-        pop_growth = ((population - prev_pop) / prev_pop * 100) if prev_pop else None
+        pop_growth = ((population - prev_pop) / prev_pop * 100) if prev_pop and population else None
 
         # 2. Fetch aggregated company stats for the county (uses idx_municipality_stats_county)
         stats_query = select(
@@ -585,10 +601,10 @@ class StatsRepository:
         return {
             "population": population,
             "population_growth_1y": pop_growth,
-            "company_count": stats_row.company_count if stats_row else 0,
-            "total_employees": stats_row.total_employees if stats_row else 0,
-            "new_last_year": stats_row.new_last_year if stats_row else 0,
-            "total_revenue": stats_row.total_revenue if stats_row else 0,
+            "company_count": (stats_row.company_count or 0) if stats_row else 0,
+            "total_employees": (stats_row.total_employees or 0) if stats_row else 0,
+            "new_last_year": (stats_row.new_last_year or 0) if stats_row else 0,
+            "total_revenue": (stats_row.total_revenue or 0) if stats_row else 0,
             "municipality_count": municipality_count,
             "national_density": national_density,
             "year": latest_year,
@@ -613,15 +629,15 @@ class StatsRepository:
         result = await self.db.execute(query)
         rows = result.all()
 
-        total_count = sum(r.company_count for r in rows) or 1
+        total_count = sum((r.company_count or 0) for r in rows) or 1
 
         return [
             {
                 "nace_division": r.nace_division,
                 "nace_name": get_nace_name(r.nace_division),
-                "company_count": r.company_count,
-                "total_employees": r.total_employees,
-                "percentage_of_total": (r.company_count / total_count * 100) if total_count else 0,
+                "company_count": r.company_count or 0,
+                "total_employees": r.total_employees or 0,
+                "percentage_of_total": ((r.company_count or 0) / total_count * 100) if total_count else 0,
             }
             for r in rows
         ]

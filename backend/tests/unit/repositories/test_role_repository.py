@@ -16,7 +16,7 @@ from unittest.mock import AsyncMock, MagicMock
 import pytest
 
 import models
-from repositories.role_repository import RoleRepository
+from repositories.role_repository import RoleRepository, _escape_like
 
 
 @pytest.fixture
@@ -743,3 +743,38 @@ class TestSitemapExcludesOrphanedPeople:
         stmt = call_args[0][0]
         compiled = str(stmt.compile(compile_kwargs={"literal_binds": True}))
         assert "JOIN bedrifter" in compiled or "JOIN" in compiled
+
+
+# ============================================================================
+# Category 7: _escape_like helper
+# ============================================================================
+class TestEscapeLike:
+    """Tests for _escape_like ILIKE metacharacter escaping."""
+
+    def test_escapes_percent(self):
+        """% is escaped to prevent wildcard matching."""
+        assert _escape_like("100%") == "100\\%"
+
+    def test_escapes_underscore(self):
+        """_ is escaped to prevent single-char wildcard matching."""
+        assert _escape_like("test_name") == "test\\_name"
+
+    def test_escapes_backslash(self):
+        """Backslash is escaped first to avoid double-escaping."""
+        assert _escape_like("path\\file") == "path\\\\file"
+
+    def test_normal_text_unchanged(self):
+        """Plain text without metacharacters passes through unchanged."""
+        assert _escape_like("Ola Nordmann") == "Ola Nordmann"
+
+    def test_empty_string(self):
+        """Empty string returns empty string."""
+        assert _escape_like("") == ""
+
+    def test_all_metacharacters(self):
+        """All LIKE metacharacters escaped together."""
+        assert _escape_like("100%_\\test") == "100\\%\\_\\\\test"
+
+    def test_preserves_unicode(self):
+        """Norwegian characters preserved unchanged."""
+        assert _escape_like("Ærlig Økonomi AS") == "Ærlig Økonomi AS"

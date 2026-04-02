@@ -48,7 +48,7 @@ async def get_municipality_dashboard(
     service = StatsService(db)
     dashboard = await service.get_municipality_premium_dashboard(code)
 
-    if (not dashboard or not dashboard.get("population")) and not dashboard.get("company_count"):
+    if not dashboard or (not dashboard.get("population") and not dashboard.get("company_count")):
         raise HTTPException(status_code=404, detail=f"Municipality {code} not found")
 
     return MunicipalityPremiumResponse.model_validate(dashboard)

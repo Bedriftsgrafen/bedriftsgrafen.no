@@ -358,3 +358,62 @@ class TestEnrichNaceCodes:
             # Assert
             # Should enrich dict in place
             assert mock_item["naeringskode"].kode == "62.010"
+
+
+class TestBackgroundParentSync:
+    """Tests for _background_parent_sync session isolation."""
+
+    @pytest.mark.asyncio
+    async def test_uses_independent_session(self, service):
+        """Background sync must create its own session, not reuse the request session."""
+        # Arrange
+        mock_bg_session = AsyncMock()
+
+        with patch("services.company_service.AsyncSessionLocal") as mock_session_factory:
+            # AsyncSessionLocal() returns a context manager that yields bg_session
+            mock_session_factory.return_value.__aenter__ = AsyncMock(return_value=mock_bg_session)
+            mock_session_factory.return_value.__aexit__ = AsyncMock(return_value=False)
+
+            # Mock fetch_and_store_company on the bg_service that will be created
+            with patch.object(CompanyService, "fetch_and_store_company", new_callable=AsyncMock) as mock_fetch:
+                mock_fetch.return_value = {"orgnr": "987654321", "company_fetched": True}
+
+                # Act
+                await service._background_parent_sync("987654321")
+
+            # Assert — AsyncSessionLocal was called (new session created)
+            mock_session_factory.assert_called_once()
+
+    @pytest.mark.asyncio
+    async def test_deduplicates_concurrent_syncs(self, service):
+        """Concurrent syncs for the same orgnr should be skipped."""
+        # Arrange — pretend this orgnr is already syncing
+        CompanyService._syncing_orgnrs.add("111111111")
+
+        with patch("services.company_service.AsyncSessionLocal") as mock_session_factory:
+            # Act
+            await service._background_parent_sync("111111111")
+
+            # Assert — no session created because it was deduplicated
+            mock_session_factory.assert_not_called()
+
+        # Cleanup
+        CompanyService._syncing_orgnrs.discard("111111111")
+
+    @pytest.mark.asyncio
+    async def test_cleans_up_syncing_set_on_error(self, service):
+        """_syncing_orgnrs is cleaned up even when sync fails."""
+        # Arrange
+        with patch("services.company_service.AsyncSessionLocal") as mock_session_factory:
+            mock_bg_session = AsyncMock()
+            mock_session_factory.return_value.__aenter__ = AsyncMock(return_value=mock_bg_session)
+            mock_session_factory.return_value.__aexit__ = AsyncMock(return_value=False)
+
+            with patch.object(
+                CompanyService, "fetch_and_store_company", new_callable=AsyncMock, side_effect=RuntimeError("DB error")
+            ):
+                # Act
+                await service._background_parent_sync("222222222")
+
+        # Assert — orgnr removed from set despite error
+        assert "222222222" not in CompanyService._syncing_orgnrs
