@@ -27,7 +27,7 @@ export function ContactCard({ telefon, mobil, epostadresse, hjemmeside }: Contac
         <div className="bg-white rounded-lg border border-gray-200 p-6 shadow-sm">
             <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
                 <Phone className="h-5 w-5 text-green-600" />
-                Kontakt
+                Kontaktinformasjon
             </h3>
             <div className="space-y-3">
                 {telefon && (

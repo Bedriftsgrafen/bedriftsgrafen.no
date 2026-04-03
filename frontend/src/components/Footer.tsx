@@ -77,7 +77,8 @@ export function Footer() {
 
           {/* Contact */}
           <div>
-            <h2 className="text-white font-semibold mb-3">Kontakt</h2>
+            <h2 className="text-white font-semibold mb-3">Kontakt Bedriftsgrafen</h2>
+            <p className="text-xs text-gray-500 mb-2">Spørsmål om nettsiden?</p>
             <div className="space-y-2">
               <a
                 href={`mailto:${CONTACT_EMAIL}`}
