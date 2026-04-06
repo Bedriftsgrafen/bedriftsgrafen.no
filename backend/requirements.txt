@@ -83,7 +83,7 @@ pyyaml==6.0.3
     # via uvicorn
 redis[hiredis]==7.4.0
     # via bedriftsgrafen-backend (pyproject.toml)
-requests==2.33.0
+requests==2.33.1
     # via bedriftsgrafen-backend (pyproject.toml)
 slowapi==0.1.9
     # via bedriftsgrafen-backend (pyproject.toml)
