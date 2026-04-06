@@ -87,7 +87,7 @@ requests==2.33.0
     # via bedriftsgrafen-backend (pyproject.toml)
 slowapi==0.1.9
     # via bedriftsgrafen-backend (pyproject.toml)
-sqlalchemy[asyncio]==2.0.48
+sqlalchemy[asyncio]==2.0.49
     # via
     #   alembic
     #   bedriftsgrafen-backend (pyproject.toml)
