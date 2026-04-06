@@ -91,7 +91,7 @@ sqlalchemy[asyncio]==2.0.48
     # via
     #   alembic
     #   bedriftsgrafen-backend (pyproject.toml)
-starlette==0.52.1
+starlette==1.0.0
     # via
     #   fastapi
     #   prometheus-fastapi-instrumentator
