@@ -532,6 +532,7 @@ class RoleRepository:
             return result.scalar() or 0
         except Exception as e:
             logger.error(f"Error counting commercial people: {e}")
+            await self.db.rollback()
             return 0
 
     async def get_paginated_commercial_people(
@@ -576,6 +577,7 @@ class RoleRepository:
             return [(row.person_navn, row.foedselsdato, row.latest_update) for row in result]
         except Exception as e:
             logger.error(f"Error fetching paginated commercial people: {e}")
+            await self.db.rollback()
             return []
 
     async def get_person_sitemap_anchors(self, page_size: int = 50000) -> list[tuple[str, date | None]]:
@@ -673,5 +675,6 @@ class RoleRepository:
             return [(row[0], row[1]) for row in result]
         except Exception as e:
             logger.error(f"Error fetching person sitemap anchors (optimized): {e}")
+            await self.db.rollback()
             # Fallback to legacy method
             return await self.get_person_sitemap_anchors(page_size)

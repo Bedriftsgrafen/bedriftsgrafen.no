@@ -65,6 +65,16 @@ export function CompanyPage() {
 
     const fetchMutation = useFetchCompanyMutation()
 
+    // Auto-select the most recent accounting period when company data loads
+    useEffect(() => {
+        if (company?.regnskap?.length && !selectedAccountingId) {
+            const mostRecent = company.regnskap[0]
+            if (mostRecent?.id != null) {
+                setSelectedAccounting(mostRecent.aar, mostRecent.id)
+            }
+        }
+    }, [company, selectedAccountingId, setSelectedAccounting])
+
     // Slow loading feedback
     useSlowLoadingToast(companyLoading, 'Henter virksomhetsinformasjon...')
     useSlowLoadingToast(kpiLoading, 'Kalkulerer nøkkeltall...')

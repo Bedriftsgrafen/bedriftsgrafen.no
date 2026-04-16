@@ -71,6 +71,16 @@ export function CompanyModalOverlay({ orgnr: rawOrgnr, onClose, onSelectCompany 
 
     const fetchMutation = useFetchCompanyMutation()
 
+    // Auto-select the most recent accounting period when company data loads
+    useEffect(() => {
+        if (company?.regnskap?.length && !selectedAccountingId) {
+            const mostRecent = company.regnskap[0]
+            if (mostRecent?.id != null) {
+                setSelectedAccounting(mostRecent.aar, mostRecent.id)
+            }
+        }
+    }, [company, selectedAccountingId, setSelectedAccounting])
+
     const { copiedOrgnr, handleCopyOrgnr, handleShare } = useCompanyModal({
         company: company ? { orgnr: company.orgnr, navn: company.navn ?? 'Ukjent' } : undefined
     })
