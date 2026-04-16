@@ -66,11 +66,16 @@ export function CompanyPage() {
     const fetchMutation = useFetchCompanyMutation()
 
     // Auto-select the most recent accounting period when company data loads
+    // Must check if current selection belongs to THIS company (global store persists across navigations)
     useEffect(() => {
-        if (company?.regnskap?.length && !selectedAccountingId) {
-            const mostRecent = company.regnskap[0]
-            if (mostRecent?.id != null) {
-                setSelectedAccounting(mostRecent.aar, mostRecent.id)
+        if (company?.regnskap?.length) {
+            const selectionValid = selectedAccountingId != null &&
+                company.regnskap.some(r => r.id === selectedAccountingId)
+            if (!selectionValid) {
+                const mostRecent = company.regnskap[0]
+                if (mostRecent?.id != null) {
+                    setSelectedAccounting(mostRecent.aar, mostRecent.id)
+                }
             }
         }
     }, [company, selectedAccountingId, setSelectedAccounting])
