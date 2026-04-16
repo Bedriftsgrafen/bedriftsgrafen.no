@@ -27,6 +27,9 @@
     "husky": "^9.1.7",
     "lint-staged": "^16.4.0"
   },
+  "overrides": {
+    "tmp": "0.2.5"
+  },
   "lint-staged": {
     "frontend/src/**/*.{ts,tsx}": [
       "eslint --config frontend/eslint.config.js --fix",
