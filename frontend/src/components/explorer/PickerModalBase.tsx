@@ -2,6 +2,7 @@ import React, { useCallback, useEffect, useRef } from 'react'
 import { createPortal } from 'react-dom'
 import { X } from 'lucide-react'
 import { Button } from '../common/Button'
+import { useBodyScrollLock } from '../../hooks/useBodyScrollLock'
 
 /** Props for the base modal */
 interface PickerModalBaseProps {
@@ -84,15 +85,7 @@ export function PickerModalBase({
     }, [isOpen, onClose])
 
     // Prevent body scroll when modal is open
-    useEffect(() => {
-        if (isOpen) {
-            const originalOverflow = document.body.style.overflow
-            document.body.style.overflow = 'hidden'
-            return () => {
-                document.body.style.overflow = originalOverflow
-            }
-        }
-    }, [isOpen])
+    useBodyScrollLock(isOpen)
 
     // Focus first focusable element when modal opens
     useEffect(() => {
@@ -121,7 +114,7 @@ export function PickerModalBase({
     // Render via Portal to document.body
     return createPortal(
         <div
-            className="fixed inset-0 z-[9999] flex items-center justify-center p-4"
+            className="fixed inset-0 z-[9999] flex items-center justify-center p-4 overflow-hidden"
             role="dialog"
             aria-modal="true"
             aria-labelledby={titleId}
@@ -162,7 +155,7 @@ export function PickerModalBase({
                 )}
 
                 {/* Content - scrollable */}
-                <div className="flex-1 overflow-y-auto p-2 min-h-0">
+                <div className="flex-1 overflow-y-auto overflow-x-hidden p-2 min-h-0">
                     {children}
                 </div>
 

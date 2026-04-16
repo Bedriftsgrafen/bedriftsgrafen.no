@@ -8,6 +8,7 @@ import { useCompanyStatsQuery, UseCompanyStatsQueryParams } from '../../hooks/qu
 import { SortableHeader } from '../common/SortableHeader';
 import { LoadingState } from '../common/LoadingState';
 import { ErrorState } from '../common/ErrorState';
+import { useBodyScrollLock } from '../../hooks/useBodyScrollLock';
 
 // ============================================================================
 // Types
@@ -60,6 +61,8 @@ export const CompanyListModal = ({
     };
     const [sortField, setSortField] = useState<SortField>(() => getDefaultSort().field);
     const [sortOrder, setSortOrder] = useState<SortOrder>(() => getDefaultSort().order);
+
+    useBodyScrollLock()
 
     const handleCompanyClick = useCallback((orgnr: string) => {
         const clean = cleanOrgnr(orgnr) || orgnr;
@@ -279,7 +282,7 @@ export const CompanyListModal = ({
 
     return (
         <div
-            className="fixed inset-0 bg-black/50 z-50"
+            className="fixed inset-0 bg-black/50 z-50 overflow-hidden"
             onClick={onClose}
             onMouseDown={(e) => e.stopPropagation()}
         >
@@ -311,7 +314,7 @@ export const CompanyListModal = ({
                 </div>
 
                 {/* Content */}
-                <div className="p-3 sm:p-4 overflow-y-auto flex-1 min-h-0">
+                <div className="p-3 sm:p-4 overflow-y-auto overflow-x-hidden flex-1 min-h-0">
                     {isLoading ? (
                         <div className="py-12">
                             <LoadingState message="Laster virksomheter..." className="border-0 shadow-none" />

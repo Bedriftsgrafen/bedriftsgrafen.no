@@ -1,5 +1,6 @@
 import React, { useRef, useEffect } from 'react'
 import { X } from 'lucide-react'
+import { useBodyScrollLock } from '../../hooks/useBodyScrollLock'
 
 interface ModalProps {
     isOpen: boolean
@@ -22,6 +23,8 @@ export function Modal({
 }: ModalProps) {
     const modalRef = useRef<HTMLDivElement>(null)
 
+    useBodyScrollLock(isOpen)
+
     // Close on click outside
     useEffect(() => {
         function handleClickOutside(event: MouseEvent) {
@@ -32,27 +35,19 @@ export function Modal({
 
         if (isOpen) {
             document.addEventListener('mousedown', handleClickOutside)
-            const originalOverflow = document.body.style.overflow
-            document.body.style.overflow = 'hidden'
-
-            return () => {
-                document.removeEventListener('mousedown', handleClickOutside)
-                document.body.style.overflow = originalOverflow
-            }
+            return () => document.removeEventListener('mousedown', handleClickOutside)
         }
 
-        return () => {
-            document.removeEventListener('mousedown', handleClickOutside)
-        }
+        return () => document.removeEventListener('mousedown', handleClickOutside)
     }, [isOpen, onClose])
 
     if (!isOpen) return null
 
     return (
-        <div className="fixed inset-0 bg-black/50 z-2000 flex items-start justify-center p-2 sm:p-4 overflow-y-auto pt-4 sm:pt-10">
+        <div className="fixed inset-0 bg-black/50 z-2000 flex items-start justify-center p-2 sm:p-4 overflow-y-auto overflow-x-hidden pt-4 sm:pt-10">
             <div
                 ref={modalRef}
-                className={`relative bg-white rounded-lg sm:rounded-xl shadow-2xl ${width} ${maxWidth} flex flex-col my-auto`}
+                className={`relative bg-white rounded-lg sm:rounded-xl shadow-2xl ${width} ${maxWidth} flex flex-col my-auto overflow-hidden`}
                 role="dialog"
                 aria-modal="true"
             >

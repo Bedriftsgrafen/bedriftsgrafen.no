@@ -84,7 +84,7 @@ export function CompanyDetailContent({
     : 'flex flex-col min-h-[400px]'
 
   const scrollClassName = constrainHeight
-    ? 'flex-1 overflow-y-auto overscroll-contain p-4 md:p-6 pt-0 md:pt-0 animate-in fade-in duration-300 slide-in-from-bottom-2'
+    ? 'flex-1 overflow-y-auto overflow-x-hidden overscroll-contain p-4 md:p-6 pt-0 md:pt-0 animate-in fade-in duration-300 slide-in-from-bottom-2'
     : 'p-4 md:p-6 pt-0 md:pt-0 animate-in fade-in duration-300 slide-in-from-bottom-2'
 
   return (
