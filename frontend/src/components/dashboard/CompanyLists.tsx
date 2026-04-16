@@ -22,7 +22,7 @@ export function TopCompanyList({
     <section aria-labelledby="top-companies-title">
       <h3 
         id="top-companies-title"
-        className="text-2xl font-black text-slate-900 mb-10 flex items-center justify-between px-2"
+        className="text-2xl font-black text-slate-900 mb-6 md:mb-10 flex items-center justify-between px-2"
       >
         <span className="flex items-center gap-4">{title}</span>
         <span className="text-xs font-black text-slate-500 uppercase tracking-widest">{subtitle}</span>
@@ -35,8 +35,8 @@ export function TopCompanyList({
               params={{ orgnr: company.orgnr }}
               className="flex items-center justify-between p-6 bg-white hover:bg-slate-50 border border-slate-100 hover:border-blue-200 rounded-3xl transition-all group shadow-sm focus-visible:ring-2 focus-visible:ring-blue-600 outline-none hover:scale-[1.01]"
             >
-              <div className="flex items-center gap-8 min-w-0">
-                <span className="text-slate-200 font-black text-3xl tabular-nums w-12 group-hover:text-blue-100" aria-hidden="true">
+              <div className="flex items-center gap-4 md:gap-8 min-w-0">
+                <span className="text-slate-200 font-black text-xl md:text-3xl tabular-nums w-12 group-hover:text-blue-100" aria-hidden="true">
                   {(idx + 1).toString().padStart(2, '0')}
                 </span>
                 <div className="truncate">
@@ -99,7 +99,7 @@ export function NewestCompaniesList({
     <section aria-labelledby="newest-companies-title">
       <h3 
         id="newest-companies-title"
-        className="text-2xl font-black text-slate-900 mb-10 flex items-center justify-between px-2"
+        className="text-2xl font-black text-slate-900 mb-6 md:mb-10 flex items-center justify-between px-2"
       >
         <span className="flex items-center gap-4">{title}</span>
         <span className="text-xs font-black text-slate-500 uppercase tracking-widest">{subtitle}</span>
@@ -113,7 +113,7 @@ export function NewestCompaniesList({
               className="flex items-center justify-between p-6 bg-white hover:bg-slate-50 border border-slate-100 hover:border-blue-200 rounded-3xl transition-all group shadow-sm focus-visible:ring-2 focus-visible:ring-blue-600 outline-none hover:scale-[1.01]"
               aria-label={`${company.navn}, stiftet ${new Date(company.stiftelsesdato || '').toLocaleDateString('no-NO', { day: '2-digit', month: 'long', year: 'numeric' })}`}
             >
-              <div className="flex items-center gap-8 min-w-0">
+              <div className="flex items-center gap-4 md:gap-8 min-w-0">
                 <div className="h-12 w-12 rounded-2xl bg-slate-50 border border-slate-100 text-slate-400 flex items-center justify-center font-black text-xs group-hover:bg-blue-600 group-hover:text-white group-hover:border-blue-500 transition-all">
                   <MapPin className="h-5 w-5" aria-hidden="true" />
                 </div>

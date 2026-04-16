@@ -32,13 +32,17 @@ export function Modal({
 
         if (isOpen) {
             document.addEventListener('mousedown', handleClickOutside)
-            // Prevent body scroll
+            const originalOverflow = document.body.style.overflow
             document.body.style.overflow = 'hidden'
+
+            return () => {
+                document.removeEventListener('mousedown', handleClickOutside)
+                document.body.style.overflow = originalOverflow
+            }
         }
 
         return () => {
             document.removeEventListener('mousedown', handleClickOutside)
-            document.body.style.overflow = 'unset'
         }
     }, [isOpen, onClose])
 
