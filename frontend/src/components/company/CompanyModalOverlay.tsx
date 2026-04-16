@@ -11,7 +11,7 @@ import { CompanyModal } from './CompanyModal'
 import { IndustryModal } from './IndustryModal'
 import type { TabType } from './ModalTabs'
 import { useCompanyDetailQuery } from '../../hooks/queries/useCompanyDetailQuery'
-import { useAccountingKpisQuery } from '../../hooks/queries/useAccountingKpisQuery'
+import { useAccountingKpisByIdQuery } from '../../hooks/queries/useAccountingKpisQuery'
 import { useFetchCompanyMutation } from '../../hooks/mutations/useFetchCompanyMutation'
 import { useCompanyModal } from '../../hooks/useCompanyModal'
 import { useUiStore } from '../../store/uiStore'
@@ -34,7 +34,8 @@ export function CompanyModalOverlay({ orgnr: rawOrgnr, onClose, onSelectCompany 
     const orgnr = cleanOrgnr(rawOrgnr) || rawOrgnr
     const navigate = useNavigate()
     const selectedYear = useUiStore(s => s.selectedYear)
-    const setSelectedYear = useUiStore(s => s.setSelectedYear)
+    const selectedAccountingId = useUiStore(s => s.selectedAccountingId)
+    const setSelectedAccounting = useUiStore(s => s.setSelectedAccounting)
     const addRecentCompany = useUiStore(s => s.addRecentCompany)
 
     // Industry modal state
@@ -66,7 +67,7 @@ export function CompanyModalOverlay({ orgnr: rawOrgnr, onClose, onSelectCompany 
         isLoading: kpiLoading,
         isError: kpiError,
         refetch: refetchKpi
-    } = useAccountingKpisQuery(orgnr, selectedYear)
+    } = useAccountingKpisByIdQuery(orgnr, selectedAccountingId)
 
     const fetchMutation = useFetchCompanyMutation()
 
@@ -86,8 +87,8 @@ export function CompanyModalOverlay({ orgnr: rawOrgnr, onClose, onSelectCompany 
     }, [company, companyLoading, companyError, addRecentCompany])
 
     // Handlers
-    const handleSelectYear = (year: number | null) => {
-        setSelectedYear(year)
+    const handleSelectAccounting = (year: number, accountingId: number) => {
+        setSelectedAccounting(year, accountingId)
     }
 
     const handleOpenIndustry = (naceCode: string, description: string) => {
@@ -132,7 +133,8 @@ export function CompanyModalOverlay({ orgnr: rawOrgnr, onClose, onSelectCompany 
                 activeTab={activeTab}
                 onTabChange={setActiveTab}
                 selectedYear={selectedYear}
-                onSelectYear={handleSelectYear}
+                selectedAccountingId={selectedAccountingId}
+                onSelectAccounting={handleSelectAccounting}
                 kpiData={kpiData ?? undefined}
                 kpiLoading={kpiLoading}
                 kpiError={kpiError}

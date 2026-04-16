@@ -5,7 +5,7 @@ import { CompanyDetailContent } from '../components/company/CompanyDetailContent
 import { IndustryModal } from '../components/company/IndustryModal'
 import { SEOHead, Breadcrumbs } from '../components/layout'
 import { useCompanyDetailQuery } from '../hooks/queries/useCompanyDetailQuery'
-import { useAccountingKpisQuery } from '../hooks/queries/useAccountingKpisQuery'
+import { useAccountingKpisByIdQuery } from '../hooks/queries/useAccountingKpisQuery'
 import { useFetchCompanyMutation } from '../hooks/mutations/useFetchCompanyMutation'
 import { useCompanyModal } from '../hooks/useCompanyModal'
 import { useUiStore } from '../store/uiStore'
@@ -37,7 +37,8 @@ export function CompanyPage() {
     const activeTab = search.tab || 'oversikt'
 
     const selectedYear = useUiStore(s => s.selectedYear)
-    const setSelectedYear = useUiStore(s => s.setSelectedYear)
+    const selectedAccountingId = useUiStore(s => s.selectedAccountingId)
+    const setSelectedAccounting = useUiStore(s => s.setSelectedAccounting)
     const addRecentCompany = useUiStore(s => s.addRecentCompany)
 
     // Industry modal state
@@ -60,7 +61,7 @@ export function CompanyPage() {
         isLoading: kpiLoading,
         isError: kpiError,
         refetch: refetchKpi
-    } = useAccountingKpisQuery(orgnr, selectedYear)
+    } = useAccountingKpisByIdQuery(orgnr, selectedAccountingId)
 
     const fetchMutation = useFetchCompanyMutation()
 
@@ -83,9 +84,9 @@ export function CompanyPage() {
         }
     }, [company, companyLoading, companyError, addRecentCompany])
 
-    const handleSelectYear = useCallback((year: number | null) => {
-        setSelectedYear(year)
-    }, [setSelectedYear])
+    const handleSelectAccounting = useCallback((year: number, accountingId: number) => {
+        setSelectedAccounting(year, accountingId)
+    }, [setSelectedAccounting])
 
     const handleTabChange = useCallback((tab: TabType) => {
         navigate({
@@ -152,7 +153,8 @@ export function CompanyPage() {
                         activeTab={activeTab}
                         onTabChange={handleTabChange}
                         selectedYear={selectedYear}
-                        onSelectYear={handleSelectYear}
+                        selectedAccountingId={selectedAccountingId}
+                        onSelectAccounting={handleSelectAccounting}
                         kpiData={kpiData ?? undefined}
                         kpiLoading={kpiLoading}
                         kpiError={kpiError}

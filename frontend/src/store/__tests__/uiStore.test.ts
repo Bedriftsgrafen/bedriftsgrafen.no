@@ -11,6 +11,7 @@ import { useUiStore, type CompanyColumn, COLUMN_CONFIG } from '../uiStore'
 beforeEach(() => {
     useUiStore.setState({
         selectedYear: null,
+        selectedAccountingId: null,
         currentPage: 1,
         itemsPerPage: 20,
         viewMode: 'list',
@@ -25,6 +26,11 @@ describe('UiStore Initial State', () => {
         const state = useUiStore.getState()
         expect(state.currentPage).toBe(1)
         expect(state.itemsPerPage).toBe(20)
+    })
+
+    it('should have null selectedAccountingId initially', () => {
+        const state = useUiStore.getState()
+        expect(state.selectedAccountingId).toBeNull()
     })
 
     it('should have list as default view mode', () => {
@@ -218,10 +224,11 @@ describe('Recent Searches', () => {
 })
 
 describe('Reset Action', () => {
-    it('reset should clear page and year but keep preferences', () => {
+    it('reset should clear page, year, and accountingId but keep preferences', () => {
         useUiStore.setState({
             currentPage: 5,
             selectedYear: 2023,
+            selectedAccountingId: 123,
             viewMode: 'grid',
         })
 
@@ -230,7 +237,25 @@ describe('Reset Action', () => {
         const state = useUiStore.getState()
         expect(state.currentPage).toBe(1)
         expect(state.selectedYear).toBeNull()
+        expect(state.selectedAccountingId).toBeNull()
         expect(state.viewMode).toBe('grid') // Should be preserved
+    })
+
+    it('setSelectedAccounting should update both year and accountingId', () => {
+        useUiStore.getState().setSelectedAccounting(2023, 456)
+
+        const state = useUiStore.getState()
+        expect(state.selectedYear).toBe(2023)
+        expect(state.selectedAccountingId).toBe(456)
+    })
+
+    it('setSelectedYear should reset selectedAccountingId to null', () => {
+        useUiStore.getState().setSelectedAccounting(2023, 456)
+        useUiStore.getState().setSelectedYear(2022)
+
+        const state = useUiStore.getState()
+        expect(state.selectedYear).toBe(2022)
+        expect(state.selectedAccountingId).toBeNull()
     })
 })
 

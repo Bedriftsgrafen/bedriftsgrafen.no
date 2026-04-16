@@ -3,6 +3,10 @@
  * 
  * Pure functions for preparing accounting data for Recharts.
  * Keeps React components focused on rendering.
+ * 
+ * NOTE: Charts intentionally deduplicate to one record per year for cleaner
+ * year-over-year trend visualization. The period selector (YearSelector)
+ * shows all periods including split fiscal years for detailed analysis.
  */
 
 import { Accounting } from '../types/company'

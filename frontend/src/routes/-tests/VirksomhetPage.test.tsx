@@ -32,7 +32,7 @@ vi.mock('../../components/layout', () => ({
 }))
 
 vi.mock('../../hooks/queries/useAccountingKpisQuery', () => ({
-    useAccountingKpisQuery: vi.fn(() => ({ data: undefined, isLoading: false }))
+    useAccountingKpisByIdQuery: vi.fn(() => ({ data: undefined, isLoading: false, isError: false, refetch: vi.fn() }))
 }))
 vi.mock('../../hooks/mutations/useFetchCompanyMutation', () => ({
     useFetchCompanyMutation: vi.fn(() => ({ mutate: vi.fn(), isPending: false }))
@@ -71,7 +71,9 @@ describe('VirksomhetPage', () => {
 
         const mockState = {
             selectedYear: 2023,
+            selectedAccountingId: 123,
             setSelectedYear: vi.fn(),
+            setSelectedAccounting: vi.fn(),
             addRecentCompany: vi.fn(),
         }
         vi.mocked(useUiStore).mockImplementation((selector: any) =>

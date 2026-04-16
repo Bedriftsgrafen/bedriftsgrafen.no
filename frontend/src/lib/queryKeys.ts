@@ -39,6 +39,12 @@ export const accountingQueryKeys = {
     orgnr,
     year,
   ] as const,
+  kpiById: (orgnr: string, accountingId: number | null) => [
+    ...accountingQueryKeys.kpis(),
+    'byId',
+    orgnr,
+    accountingId,
+  ] as const,
 }
 
 export const municipalityQueryKeys = {

@@ -89,7 +89,7 @@ describe('Subunit Enhancements - OverviewTab', () => {
 })
 
 describe('Subunit Enhancements - FinancialsTab', () => {
-    const mockOnSelectYear = vi.fn()
+    const mockOnSelectAccounting = vi.fn()
     const mockOnRetryKpi = vi.fn()
     const mockOnImport = vi.fn()
 
@@ -98,7 +98,8 @@ describe('Subunit Enhancements - FinancialsTab', () => {
             <FinancialsTab 
                 company={mockSubunit} 
                 selectedYear={null}
-                onSelectYear={mockOnSelectYear}
+                selectedAccountingId={null}
+                onSelectAccounting={mockOnSelectAccounting}
                 kpiData={undefined}
                 kpiLoading={false}
                 kpiError={false}
@@ -118,7 +119,8 @@ describe('Subunit Enhancements - FinancialsTab', () => {
             <FinancialsTab 
                 company={mockSubunitWithData} 
                 selectedYear={2023}
-                onSelectYear={mockOnSelectYear}
+                selectedAccountingId={1}
+                onSelectAccounting={mockOnSelectAccounting}
                 kpiData={undefined}
                 kpiLoading={false}
                 kpiError={false}
@@ -138,7 +140,8 @@ describe('Subunit Enhancements - FinancialsTab', () => {
             <FinancialsTab 
                 company={mockSubunit} 
                 selectedYear={null}
-                onSelectYear={mockOnSelectYear}
+                selectedAccountingId={null}
+                onSelectAccounting={mockOnSelectAccounting}
                 kpiData={undefined}
                 kpiLoading={false}
                 kpiError={false}

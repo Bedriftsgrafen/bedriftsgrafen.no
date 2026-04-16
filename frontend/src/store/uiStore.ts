@@ -51,6 +51,7 @@ const DEFAULT_VISIBLE_COLUMNS: CompanyColumn[] = Object.entries(COLUMN_CONFIG)
 interface UiState {
   // Year selection (for company page)
   selectedYear: number | null
+  selectedAccountingId: number | null
 
   // Pagination
   currentPage: number
@@ -70,6 +71,7 @@ interface UiState {
 
   // Actions
   setSelectedYear: (year: number | null) => void
+  setSelectedAccounting: (year: number | null, accountingId: number | null) => void
   setPage: (page: number) => void
   setItemsPerPage: (items: number) => void
   setViewMode: (mode: 'list' | 'grid') => void
@@ -89,6 +91,7 @@ export const useUiStore = create<UiState>()(
     (set) => ({
       // Initial state
       selectedYear: null,
+      selectedAccountingId: null,
       currentPage: 1,
       itemsPerPage: 20,
       viewMode: 'list',
@@ -97,7 +100,8 @@ export const useUiStore = create<UiState>()(
       recentSearches: [],
 
       // Actions
-      setSelectedYear: (year) => set({ selectedYear: year }),
+      setSelectedYear: (year) => set({ selectedYear: year, selectedAccountingId: null }),
+      setSelectedAccounting: (year, accountingId) => set({ selectedYear: year, selectedAccountingId: accountingId }),
       setPage: (page) => set({ currentPage: page }),
       setItemsPerPage: (items) => set({ itemsPerPage: items, currentPage: 1 }),
       setViewMode: (mode) => set({ viewMode: mode }),
@@ -148,6 +152,7 @@ export const useUiStore = create<UiState>()(
       clearRecentSearches: () => set({ recentSearches: [] }),
       reset: () => set({
         selectedYear: null,
+        selectedAccountingId: null,
         currentPage: 1,
       }),
     }),

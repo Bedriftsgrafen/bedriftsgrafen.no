@@ -3,7 +3,6 @@ import { TrendingUp, Database, Wallet, Info, Home, ChevronRight } from 'lucide-r
 import { Link } from '@tanstack/react-router'
 import type { CompanyWithAccounting, AccountingWithKpis } from '../../types'
 import { formatDate } from '../../utils/formatters'
-import { deduplicateAccountingsByYear } from '../../utils/accountingHelpers'
 import { KpiDashboard } from '../KpiDashboard'
 import { CompanyCharts } from '../CompanyCharts'
 import { KpiCardSkeleton } from '../skeletons/KpiCardSkeleton'
@@ -21,7 +20,8 @@ const REVENUE_THRESHOLD_HIGH = 10_000_000 // 10M NOK
 interface FinancialsTabProps {
   company: CompanyWithAccounting
   selectedYear: number | null
-  onSelectYear: (year: number) => void
+  selectedAccountingId: number | null
+  onSelectAccounting: (year: number, accountingId: number) => void
   kpiData: AccountingWithKpis | undefined
   kpiLoading: boolean
   kpiError: boolean
@@ -64,7 +64,8 @@ function getAdConfig(company: CompanyWithAccounting) {
 export const FinancialsTab = React.memo(function FinancialsTab({
   company,
   selectedYear,
-  onSelectYear,
+  selectedAccountingId,
+  onSelectAccounting,
   kpiData,
   kpiLoading,
   kpiError,
@@ -73,25 +74,32 @@ export const FinancialsTab = React.memo(function FinancialsTab({
   isImporting
 }: FinancialsTabProps) {
 
-  // Filter accounting records to only show years with actual financial data
+  // Filter accounting records to only show periods with actual financial data
+  // No deduplication — show all periods including split fiscal years
   const validAccountings = useMemo(() => {
-    const rawFiltered = company.regnskap.filter(acc =>
-      acc.salgsinntekter != null ||
-      acc.aarsresultat != null ||
-      acc.sum_eiendeler != null
-    )
-    const deduplicated = deduplicateAccountingsByYear(rawFiltered)
-    return deduplicated.sort((a, b) => b.aar - a.aar)
+    return company.regnskap
+      .filter(acc =>
+        acc.salgsinntekter != null ||
+        acc.aarsresultat != null ||
+        acc.sum_eiendeler != null
+      )
+      .sort((a, b) => {
+        if (b.aar !== a.aar) return b.aar - a.aar
+        const aTil = a.periode_til || ''
+        const bTil = b.periode_til || ''
+        return aTil.localeCompare(bTil)
+      })
   }, [company.regnskap])
 
   const adConfig = useMemo(() => getAdConfig(company), [company])
 
-  // Auto-select latest year if none selected
+  // Auto-select latest period if none selected
   useEffect(() => {
-    if (selectedYear === null && validAccountings.length > 0) {
-      onSelectYear(validAccountings[0].aar)
+    if (selectedAccountingId === null && validAccountings.length > 0) {
+      const latest = validAccountings[0]
+      onSelectAccounting(latest.aar, latest.id)
     }
-  }, [selectedYear, validAccountings, onSelectYear])
+  }, [selectedAccountingId, validAccountings, onSelectAccounting])
 
   return (
     <div className="space-y-8 animate-fade-in pb-8">
@@ -163,13 +171,13 @@ export const FinancialsTab = React.memo(function FinancialsTab({
           <section aria-label="Velg regnskapsår">
             <YearSelector
               accountings={validAccountings}
-              selectedYear={selectedYear}
-              onSelectYear={onSelectYear}
+              selectedAccountingId={selectedAccountingId}
+              onSelectAccounting={onSelectAccounting}
             />
           </section>
 
           {/* KPI Dashboard */}
-          {selectedYear && (
+          {selectedAccountingId && (
             <section aria-labelledby="kpi-heading" className="space-y-4">
               <div className="flex flex-col sm:flex-row sm:items-baseline sm:justify-between gap-2">
                 <div className="flex items-center gap-2">

@@ -16,7 +16,8 @@ export interface CompanyDetailContentProps {
   companyLoading: boolean
   companyError: boolean
   selectedYear: number | null
-  onSelectYear: (year: number | null) => void
+  selectedAccountingId: number | null
+  onSelectAccounting: (year: number, accountingId: number) => void
   kpiData: AccountingWithKpis | undefined
   kpiLoading: boolean
   kpiError: boolean
@@ -40,7 +41,8 @@ export function CompanyDetailContent({
   companyLoading,
   companyError,
   selectedYear,
-  onSelectYear,
+  selectedAccountingId,
+  onSelectAccounting,
   kpiData,
   kpiLoading,
   kpiError,
@@ -142,7 +144,8 @@ export function CompanyDetailContent({
                 <FinancialsTab
                   company={company}
                   selectedYear={selectedYear}
-                  onSelectYear={onSelectYear}
+                  selectedAccountingId={selectedAccountingId}
+                  onSelectAccounting={onSelectAccounting}
                   kpiData={kpiData}
                   kpiLoading={kpiLoading}
                   kpiError={kpiError}

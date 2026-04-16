@@ -409,6 +409,25 @@ class CompanyService:
         response.kpis = KpiService.calculate_all_kpis(accounting)
         return response
 
+    async def get_accounting_with_kpis_by_id(self, accounting_id: int, orgnr: str) -> AccountingWithKpis | None:
+        """Get accounting data by record ID with calculated KPIs.
+
+        Used by the frontend to fetch KPIs for a specific fiscal period,
+        which is important for companies with split fiscal years (multiple
+        records per calendar year).
+
+        The orgnr parameter ensures the record belongs to the requested company,
+        preventing cross-company data access via arbitrary IDs.
+        """
+        accounting = await self.accounting_repo.get_by_id(accounting_id, orgnr)
+
+        if accounting is None:
+            return None
+
+        response = AccountingWithKpis.model_validate(accounting)
+        response.kpis = KpiService.calculate_all_kpis(accounting)
+        return response
+
     # ------------------------------------------------------------------
     # Map markers — moved from router to follow Repo→Service→Router
     # ------------------------------------------------------------------

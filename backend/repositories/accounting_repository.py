@@ -84,6 +84,10 @@ class AccountingRepository:
     async def get_by_orgnr_and_year(self, orgnr: str, year: int) -> models.Accounting:
         """Get accounting record for specific year.
 
+        For companies with split fiscal years (multiple records per year),
+        returns the record with the latest ``periode_til`` — typically the
+        full-year or most recent partial period.
+
         Args:
             orgnr: Organization number
             year: Accounting year
@@ -97,7 +101,10 @@ class AccountingRepository:
         """
         try:
             result = await self.db.execute(
-                select(models.Accounting).filter(models.Accounting.orgnr == orgnr, models.Accounting.aar == year)
+                select(models.Accounting)
+                .filter(models.Accounting.orgnr == orgnr, models.Accounting.aar == year)
+                .order_by(models.Accounting.periode_til.desc().nullslast())
+                .limit(1)
             )
             accounting = result.scalar_one_or_none()
 
@@ -110,6 +117,31 @@ class AccountingRepository:
         except Exception as e:
             logger.error(f"Database error fetching accounting for {orgnr} year {year}: {e}")
             raise DatabaseException(f"Failed to fetch accounting for {orgnr} year {year}", original_error=e)
+
+    async def get_by_id(self, accounting_id: int, orgnr: str) -> models.Accounting | None:
+        """Get accounting record by primary key, scoped to a specific company.
+
+        Args:
+            accounting_id: Primary key of the accounting record
+            orgnr: Organization number — ensures record belongs to this company
+
+        Returns:
+            Accounting model or None if not found (or wrong orgnr)
+
+        Raises:
+            DatabaseException: If database error occurs
+        """
+        try:
+            result = await self.db.execute(
+                select(models.Accounting).filter(
+                    models.Accounting.id == accounting_id,
+                    models.Accounting.orgnr == orgnr,
+                )
+            )
+            return result.scalar_one_or_none()
+        except Exception as e:
+            logger.error(f"Database error fetching accounting id {accounting_id}: {e}")
+            raise DatabaseException(f"Failed to fetch accounting id {accounting_id}", original_error=e)
 
     async def create_or_update(
         self,

@@ -297,11 +297,33 @@ async def get_similar_companies(
     return similar
 
 
+@router.get("/{orgnr}/accounting/record/{accounting_id}", response_model=AccountingWithKpis)
+@limiter.limit("10/second")
+async def get_accounting_by_id(
+    request: Request,
+    orgnr: str = Path(..., min_length=9, max_length=9, pattern=r"^\d{9}$"),
+    accounting_id: int = Path(..., gt=0),
+    db: AsyncSession = Depends(get_db),
+):
+    """
+    Get accounting data by record ID with calculated KPIs.
+    Used for selecting a specific fiscal period (e.g. split fiscal years).
+    """
+    service = CompanyService(db)
+    result = await service.get_accounting_with_kpis_by_id(accounting_id, orgnr)
+
+    if result is None:
+        raise HTTPException(status_code=404, detail="Accounting data not found")
+
+    return result
+
+
 @router.get("/{orgnr}/accounting/{year}", response_model=AccountingWithKpis)
 @limiter.limit("10/second")
 async def get_accounting_with_kpis(request: Request, orgnr: str, year: int, db: AsyncSession = Depends(get_db)):
     """
-    Get accounting data for a specific year with calculated KPIs
+    Get accounting data for a specific year with calculated KPIs.
+    For split fiscal years, returns the record with the latest period end.
     """
     service = CompanyService(db)
     result = await service.get_accounting_with_kpis(orgnr, year)

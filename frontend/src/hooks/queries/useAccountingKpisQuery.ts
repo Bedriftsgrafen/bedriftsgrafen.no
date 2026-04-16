@@ -5,7 +5,7 @@ import { accountingQueryKeys } from '../../lib/queryKeys'
 import axios from 'axios'
 
 /**
- * Create query options for accounting KPIs
+ * Create query options for accounting KPIs by year (legacy)
  * Note: 404 is expected and normal - most companies don't have accounting data
  * Returns null for missing data (404), which is properly typed.
  */
@@ -45,5 +45,36 @@ export function useAccountingKpisQuery(orgnr: string | null, year: number | null
   return useQuery({
     ...getAccountingKpisQueryOptions(orgnr || '', year || 0),
     enabled: !!orgnr && !!year, // Only run if both orgnr and year are provided
+  })
+}
+
+/**
+ * Fetch KPIs for a specific accounting record ID.
+ * Used when the frontend selects a specific fiscal period (split fiscal years).
+ */
+export function useAccountingKpisByIdQuery(orgnr: string | null, accountingId: number | null) {
+  return useQuery<AccountingWithKpis | null>({
+    queryKey: accountingQueryKeys.kpiById(orgnr || '', accountingId),
+    queryFn: async (): Promise<AccountingWithKpis | null> => {
+      try {
+        const response = await apiClient.get<AccountingWithKpis>(
+          `/v1/companies/${orgnr}/accounting/record/${accountingId}`
+        )
+        return response.data
+      } catch (error) {
+        if (axios.isAxiosError(error) && error.response?.status === 404) {
+          return null
+        }
+        throw error
+      }
+    },
+    enabled: !!orgnr && !!accountingId,
+    staleTime: Infinity,
+    retry: (failureCount, error) => {
+      if (axios.isAxiosError(error) && error.response?.status === 404) {
+        return false
+      }
+      return failureCount < 2
+    },
   })
 }
