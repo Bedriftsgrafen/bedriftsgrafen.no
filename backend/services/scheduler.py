@@ -338,9 +338,6 @@ class SchedulerService:
         """Sync accounting data for companies needing updates."""
         from datetime import datetime, timedelta
 
-        from sqlalchemy import select
-
-        from models import Company
         from services.update_service import UpdateService
 
         logger.info("Starting accounting sync batch...")
@@ -351,15 +348,22 @@ class SchedulerService:
                 limit = 50
                 cutoff_date = datetime.now(UTC).date() - timedelta(days=30)
 
-                # Fetch companies that need polling
-                stmt = (
-                    select(Company.orgnr)
-                    .where((Company.last_polled_regnskap.is_(None)) | (Company.last_polled_regnskap <= cutoff_date))
-                    .order_by(Company.last_polled_regnskap.asc().nulls_first())
-                    .limit(limit)
-                )
+                # UNION ALL so each branch uses its own index:
+                #   - never-polled branch: idx_bedrifter_needs_financial_polling (partial index on IS NULL)
+                #   - stale branch: ix_bedrifter_last_polled_regnskap (B-tree index + ORDER BY LIMIT)
+                # Avoids a full sequential scan caused by the OR predicate on 1.14M rows.
+                union_stmt = text("""
+                    (SELECT orgnr FROM bedrifter
+                     WHERE last_polled_regnskap IS NULL
+                     ORDER BY orgnr LIMIT :lim)
+                    UNION ALL
+                    (SELECT orgnr FROM bedrifter
+                     WHERE last_polled_regnskap <= :cutoff
+                     ORDER BY last_polled_regnskap ASC LIMIT :lim)
+                    LIMIT :lim
+                """)
 
-                result = await db.execute(stmt)
+                result = await db.execute(union_stmt, {"cutoff": cutoff_date, "lim": limit})
                 orgnrs = [row[0] for row in result.all()]
 
                 if not orgnrs:
