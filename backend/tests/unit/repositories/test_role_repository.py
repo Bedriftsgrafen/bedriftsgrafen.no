@@ -603,9 +603,10 @@ class TestGetPaginatedCommercialPeople:
         """Returns list of (name, birthdate, updated_at) tuples."""
         from datetime import datetime
 
+        # Raw SQL returns index-addressable rows; use plain tuples for the mock
         mock_rows = [
-            MagicMock(person_navn="Ola Nordmann", foedselsdato=date(1980, 1, 1), latest_update=datetime(2024, 1, 15)),
-            MagicMock(person_navn="Kari Hansen", foedselsdato=date(1975, 6, 20), latest_update=datetime(2024, 1, 10)),
+            ("Ola Nordmann", date(1980, 1, 1), datetime(2024, 1, 15)),
+            ("Kari Hansen", date(1975, 6, 20), datetime(2024, 1, 10)),
         ]
         mock_db_session.execute.return_value = mock_rows
 
@@ -712,37 +713,39 @@ class TestGetPersonSitemapAnchorsOptimized:
 class TestSitemapExcludesOrphanedPeople:
     """Verify that persons whose companies have been purged are excluded from sitemaps.
 
-    The INNER JOIN on models.Company in count_commercial_people() and
-    get_paginated_commercial_people() guarantees that roles referencing
-    deleted companies (no row in bedrifter) are excluded. These tests
-    document that structural guarantee.
+    Since migrating to the commercial_people_mv materialized view, the orphaned-role
+    exclusion guarantee is enforced structurally: the view is built with an INNER JOIN
+    on bedrifter, so roles referencing deleted companies are never included in the view.
+    At query time, count_commercial_people() and get_paginated_commercial_people()
+    simply read from the pre-filtered view — no runtime JOIN is required.
+
+    These tests verify the runtime query references the materialized view instead of
+    performing the expensive full-scan JOIN directly.
     """
 
     @pytest.mark.asyncio
-    async def test_count_uses_inner_join(self, repo, mock_db_session):
-        """count_commercial_people() uses INNER JOIN — orphaned roles excluded."""
+    async def test_count_queries_materialized_view(self, repo, mock_db_session):
+        """count_commercial_people() reads from commercial_people_mv (pre-filtered)."""
         mock_db_session.execute.return_value.scalar.return_value = 0
         result = await repo.count_commercial_people()
         assert result == 0
 
-        # Verify the executed query contains a JOIN on Company
+        # Verify the executed raw-text query references the materialized view
         call_args = mock_db_session.execute.call_args
         stmt = call_args[0][0]
-        compiled = str(stmt.compile(compile_kwargs={"literal_binds": True}))
-        assert "JOIN bedrifter" in compiled or "JOIN" in compiled
+        assert "commercial_people_mv" in str(stmt)
 
     @pytest.mark.asyncio
-    async def test_paginated_uses_inner_join(self, repo, mock_db_session):
-        """get_paginated_commercial_people() uses INNER JOIN — orphaned roles excluded."""
+    async def test_paginated_queries_materialized_view(self, repo, mock_db_session):
+        """get_paginated_commercial_people() reads from commercial_people_mv (pre-filtered)."""
         mock_db_session.execute.return_value = []
         result = await repo.get_paginated_commercial_people(offset=0, limit=10)
         assert result == []
 
-        # Verify the executed query contains a JOIN on Company
+        # Verify the executed raw-text query references the materialized view
         call_args = mock_db_session.execute.call_args
         stmt = call_args[0][0]
-        compiled = str(stmt.compile(compile_kwargs={"literal_binds": True}))
-        assert "JOIN bedrifter" in compiled or "JOIN" in compiled
+        assert "commercial_people_mv" in str(stmt)
 
 
 # ============================================================================

@@ -215,6 +215,7 @@ class SchedulerService:
             ("orgform_counts", False),
             ("latest_financials", True),
             ("latest_accountings", True),
+            ("commercial_people_mv", True),
         ]
 
         refreshed = 0

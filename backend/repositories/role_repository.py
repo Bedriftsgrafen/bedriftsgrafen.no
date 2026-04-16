@@ -4,7 +4,7 @@ import logging
 from datetime import UTC, date, datetime, timedelta
 from typing import Any
 
-from sqlalchemy import Select, delete, select, text, tuple_
+from sqlalchemy import Select, delete, select, text
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import contains_eager
 from sqlalchemy.sql import func
@@ -516,19 +516,12 @@ class RoleRepository:
         """
         Count total unique people with commercial roles.
         Used for sitemap generation.
+
+        Reads from the commercial_people_mv materialized view (pre-aggregated)
+        instead of joining 3.38M roller rows with 1.16M bedrifter rows.
         """
         try:
-            commercial_stmt = (
-                select(models.Role.person_navn, models.Role.foedselsdato)
-                .join(models.Company, models.Role.orgnr == models.Company.orgnr)
-                .where(models.Role.person_navn.is_not(None))
-                .where(models.Role.foedselsdato.is_not(None))
-            )
-            commercial_stmt = self._commercial_filter(commercial_stmt)
-            commercial_stmt = commercial_stmt.group_by(models.Role.person_navn, models.Role.foedselsdato)
-
-            stmt = select(func.count()).select_from(commercial_stmt.subquery())
-            result = await self.db.execute(stmt)
+            result = await self.db.execute(text("SELECT COUNT(*) FROM commercial_people_mv"))
             return result.scalar() or 0
         except Exception as e:
             logger.error(f"Error counting commercial people: {e}")
@@ -545,36 +538,36 @@ class RoleRepository:
         """
         Fetch paginated unique people with commercial roles.
         Used for sitemap generation.
-        Supports both OFFSET (slow) and Keyset (fast) pagination.
+        Supports both OFFSET and keyset pagination.
+
+        Reads from the commercial_people_mv materialized view (pre-aggregated)
+        instead of joining 3.38M roller rows with 1.16M bedrifter rows.
         """
         try:
-            stmt = (
-                select(
-                    models.Role.person_navn,
-                    models.Role.foedselsdato,
-                    func.max(models.Role.updated_at).label("latest_update"),
-                )
-                .join(models.Company, models.Role.orgnr == models.Company.orgnr)
-                .where(models.Role.person_navn.is_not(None))
-                .where(models.Role.foedselsdato.is_not(None))
-            )
-            stmt = self._commercial_filter(stmt)
-            stmt = stmt.group_by(models.Role.person_navn, models.Role.foedselsdato).order_by(
-                models.Role.person_navn, models.Role.foedselsdato
-            )
-
             if after_name is not None:
-                # Row-value comparison for stable keyset seeking
-                stmt = stmt.where(
-                    tuple_(models.Role.person_navn, models.Role.foedselsdato) > (after_name, after_birthdate)
+                # Keyset pagination: row-value comparison on unique index columns
+                query = text("""
+                    SELECT person_navn, foedselsdato, latest_update
+                    FROM commercial_people_mv
+                    WHERE (person_navn, foedselsdato) > (:after_name, :after_date)
+                    ORDER BY person_navn, foedselsdato
+                    LIMIT :limit
+                """)
+                result = await self.db.execute(
+                    query,
+                    {"after_name": after_name, "after_date": after_birthdate, "limit": limit},
                 )
             else:
-                stmt = stmt.offset(offset)
+                # Offset pagination (first page or no cursor)
+                query = text("""
+                    SELECT person_navn, foedselsdato, latest_update
+                    FROM commercial_people_mv
+                    ORDER BY person_navn, foedselsdato
+                    LIMIT :limit OFFSET :offset
+                """)
+                result = await self.db.execute(query, {"limit": limit, "offset": offset})
 
-            stmt = stmt.limit(limit)
-
-            result = await self.db.execute(stmt)
-            return [(row.person_navn, row.foedselsdato, row.latest_update) for row in result]
+            return [(row[0], row[1], row[2]) for row in result]
         except Exception as e:
             logger.error(f"Error fetching paginated commercial people: {e}")
             await self.db.rollback()
@@ -627,6 +620,8 @@ class RoleRepository:
 
         This is O(1) queries instead of O(n) where n = number of pages.
         Uses ROW_NUMBER() to identify page boundaries efficiently.
+        Reads from the commercial_people_mv materialized view so there is no
+        expensive JOIN at query time (pre-aggregated ~905K rows).
 
         Args:
             page_size: Number of URLs per sitemap page (default 50000)
@@ -634,35 +629,13 @@ class RoleRepository:
         Returns:
             List of (name, birthdate) tuples that start each page (page 2 onwards)
         """
-        from sqlalchemy import text
-
-        # NOTE: The raw SQL WHERE clause below mirrors _commercial_filter().
-        # If _commercial_filter() changes, update this query to match.
         query = text("""
-            WITH commercial_people AS (
-                SELECT DISTINCT ON (r.person_navn, r.foedselsdato)
-                    r.person_navn,
-                    r.foedselsdato
-                FROM roller r
-                JOIN bedrifter b ON r.orgnr = b.orgnr
-                WHERE r.person_navn IS NOT NULL
-                  AND r.foedselsdato IS NOT NULL
-                  AND (
-                      b.registrert_i_foretaksregisteret = true
-                      OR (
-                          b.organisasjonsform IN ('AS','ASA','ENK','ANS','DA','NUF','KS','SAM','IKS')
-                          AND b.organisasjonsform NOT IN ('FLI','BRL','ESEK','ANNA')
-                          AND b.organisasjonsform != 'STI'
-                      )
-                  )
-                ORDER BY r.person_navn, r.foedselsdato
-            ),
-            numbered AS (
+            WITH numbered AS (
                 SELECT
                     person_navn,
                     foedselsdato,
-                    ROW_NUMBER() OVER (ORDER BY person_navn, foedselsdato) as rn
-                FROM commercial_people
+                    ROW_NUMBER() OVER (ORDER BY person_navn, foedselsdato) AS rn
+                FROM commercial_people_mv
             )
             SELECT person_navn, foedselsdato
             FROM numbered
