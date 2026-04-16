@@ -40,10 +40,10 @@ class SchedulerService:
     def _setup_jobs(self) -> None:
         now = datetime.now(UTC)
 
-        # Refresh materialized views every 5 minutes
+        # Refresh materialized views every 10 minutes (heavy views like industry_stats need time)
         self.scheduler.add_job(
             self.refresh_materialized_views,
-            trigger=IntervalTrigger(minutes=5),
+            trigger=IntervalTrigger(minutes=10),
             id="refresh_views",
             replace_existing=True,
             max_instances=1,
@@ -223,6 +223,8 @@ class SchedulerService:
         for view_name, run_analyze in views_to_refresh:
             try:
                 async with engine.begin() as conn:
+                    # Override global timeout — heavy views (industry_stats) can take 12-51s
+                    await conn.execute(text("SET LOCAL statement_timeout = '180000'"))
                     await conn.execute(text(f"REFRESH MATERIALIZED VIEW CONCURRENTLY {view_name}"))
                     if run_analyze:
                         await conn.execute(text(f"ANALYZE {view_name}"))  # view_name from allowlist
@@ -565,7 +567,11 @@ class SchedulerService:
                             error.status = SyncErrorStatus.PENDING  # Reset to pending for next retry
 
                     # Commit after each error to preserve progress
-                    await db.commit()
+                    try:
+                        await db.commit()
+                    except Exception as commit_err:
+                        logger.warning(f"Commit failed for {error.orgnr}, rolling back: {commit_err}")
+                        await db.rollback()
 
                 logger.info(
                     "Retry batch completed",

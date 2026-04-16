@@ -381,6 +381,7 @@ class UpdateService:
                 await self.company_repo.update_last_polled_regnskap(orgnr)
             except Exception as e:
                 logger.error(f"Failed to update last_polled_regnskap for {orgnr}: {e}")
+                await self.db.rollback()
 
     async def _refresh_materialized_view(self, result: Any) -> None:
         """Helper to refresh materialized view after updates."""
@@ -578,6 +579,7 @@ class UpdateService:
                 count += 1
             except Exception as e:
                 logger.error(f"Failed to persist parent company {company_data.get('organisasjonsnummer')}: {e}")
+                await self.db.rollback()
 
         if count > 0:
             await self.db.commit()
