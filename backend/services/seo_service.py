@@ -2,6 +2,7 @@
 
 import asyncio
 import html
+import json
 import logging
 import textwrap
 from datetime import UTC, date, datetime, timedelta
@@ -24,6 +25,10 @@ URLS_PER_SITEMAP = SITEMAP_URLS_PER_FILE
 
 # Timeout for cache refresh operations (seconds)
 CACHE_REFRESH_TIMEOUT = SITEMAP_CACHE_TIMEOUT
+
+# Redis key for cross-container sitemap cache sharing
+REDIS_SITEMAP_KEY = "sitemap:cache"
+REDIS_SITEMAP_TTL = 6 * 3600  # 6 hours in seconds
 
 STATIC_ROUTES = [
     "",  # Homepage
@@ -82,6 +87,75 @@ class SEOService:
         """Check if cache warm-up is in progress."""
         return cls._sitemap_cache.get("is_warming", False)
 
+    @classmethod
+    async def _load_from_redis(cls) -> bool:
+        """Try to load sitemap cache from Redis (shared across containers).
+
+        Returns True if Redis had valid data and in-memory cache was populated.
+        Returns False on miss or error (caller should fall through to DB refresh).
+        """
+        try:
+            from utils.redis_client import get_redis
+
+            redis = get_redis()
+            raw = await redis.get(REDIS_SITEMAP_KEY)
+            if not raw:
+                return False
+
+            data = json.loads(raw)
+            cache = cls._sitemap_cache
+
+            cache["total_companies"] = data.get("total_companies", 0)
+            cache["total_people"] = data.get("total_people", 0)
+            cache["municipalities"] = [tuple(m) for m in data.get("municipalities", [])]
+            cache["company_anchors"] = data.get("company_anchors", [])
+
+            # Restore person_anchors with date objects for SQLAlchemy compatibility
+            raw_people = data.get("person_anchors", [])
+            cache["person_anchors"] = [
+                (p[0], date.fromisoformat(p[1]) if len(p) > 1 and p[1] else None) for p in raw_people
+            ]
+
+            # Use Redis key's remaining TTL for in-memory expiry
+            ttl = await redis.ttl(REDIS_SITEMAP_KEY)
+            cache["expiry"] = datetime.now(UTC) + timedelta(seconds=max(ttl, 60))
+            cache["populated"] = True
+
+            logger.info(f"Loaded sitemap cache from Redis ({cache['total_companies']} companies, TTL {ttl}s remaining)")
+            return True
+        except Exception as e:
+            logger.warning(f"Failed to load sitemap cache from Redis: {e}")
+            return False
+
+    @classmethod
+    async def _save_to_redis(cls) -> None:
+        """Save current sitemap cache to Redis for cross-container sharing."""
+        try:
+            from utils.redis_client import get_redis
+
+            redis = get_redis()
+            cache = cls._sitemap_cache
+
+            data = {
+                "total_companies": cache["total_companies"],
+                "total_people": cache["total_people"],
+                "municipalities": cache["municipalities"],
+                "company_anchors": cache["company_anchors"],
+                "person_anchors": [
+                    [p[0], p[1].isoformat() if isinstance(p[1], date) else str(p[1]) if p[1] else None]
+                    for p in cache["person_anchors"]
+                ],
+            }
+
+            await redis.setex(
+                REDIS_SITEMAP_KEY,
+                REDIS_SITEMAP_TTL,
+                json.dumps(data, default=str),
+            )
+            logger.info("Saved sitemap cache to Redis")
+        except Exception as e:
+            logger.warning(f"Failed to save sitemap cache to Redis: {e}")
+
     async def get_sitemap_data(self, force_refresh: bool = False) -> dict[str, Any]:
         """
         Get total counts and pagination anchors with 6-hour caching.
@@ -91,11 +165,15 @@ class SEOService:
         """
         cache = SEOService._sitemap_cache
 
-        # Fast path: cache is valid, return immediately
+        # Fast path: in-memory cache is valid, return immediately
         if not force_refresh and SEOService.is_cache_valid():
             return cache
 
-        # Try to acquire lock without blocking if cache has data (serve stale)
+        # Try loading from Redis (shared cache written by worker's scheduler)
+        if not force_refresh and await SEOService._load_from_redis():
+            return SEOService._sitemap_cache
+
+        # Expensive path: need to query DB directly
         lock = SEOService._get_lock()
 
         # If another request is already refreshing and we have stale data, return it
@@ -113,12 +191,14 @@ class SEOService:
                 await self._refresh_cache_with_timeout()
             except TimeoutError:
                 logger.error(f"Cache refresh timed out after {CACHE_REFRESH_TIMEOUT}s")
+                await self.db.rollback()
                 # If we have successfully populated data before, extend expiry
                 if cache["populated"]:
                     cache["expiry"] = datetime.now(UTC) + timedelta(minutes=30)
                     logger.warning("Using stale cache data due to timeout")
             except Exception as e:
                 logger.error(f"Cache refresh failed: {e}")
+                await self.db.rollback()
                 # Circuit breaker: extend expiry on failure to avoid retry storm
                 if cache["populated"]:
                     cache["expiry"] = datetime.now(UTC) + timedelta(minutes=5)
@@ -170,6 +250,9 @@ class SEOService:
         cache["expiry"] = datetime.now(UTC) + SEOService.CACHE_TTL
         elapsed = (datetime.now(UTC) - start_time).total_seconds()
         logger.info(f"Sitemap cache refreshed in {elapsed:.2f}s. Next expiry: {cache['expiry']}")
+
+        # Save to Redis so other containers (backend ↔ worker) share this data
+        await SEOService._save_to_redis()
 
     # ------------------------------------------------------------------
     # Sitemap pagination — thin delegations so routers don't touch repos

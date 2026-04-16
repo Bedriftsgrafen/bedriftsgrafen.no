@@ -9,6 +9,7 @@ from fastapi.responses import JSONResponse
 from prometheus_fastapi_instrumentator import Instrumentator
 from slowapi.errors import RateLimitExceeded
 from slowapi.middleware import SlowAPIMiddleware
+from sqlalchemy.exc import TimeoutError as SATimeoutError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from database import AsyncSessionLocal, get_db
@@ -45,10 +46,10 @@ from services.seo_service import SEOService  # noqa: E402
 
 async def warm_sitemap_cache() -> None:
     """
-    Pre-warm sitemap cache on startup to avoid blocking first request.
+    Pre-warm sitemap cache on startup.
 
-    This runs as a background task so the server can start accepting requests
-    immediately while cache warms up.
+    Tries Redis first (fast, populated by worker's scheduler).
+    Falls back to full DB refresh only if Redis is empty.
     """
     import asyncio
 
@@ -57,10 +58,17 @@ async def warm_sitemap_cache() -> None:
 
     logger.info("Starting sitemap cache warm-up...")
     try:
+        # Try Redis first — worker's scheduler writes here every 6h
+        if await SEOService._load_from_redis():
+            logger.info("Sitemap cache warm-up completed from Redis (no DB queries needed)")
+            return
+
+        # Redis empty — do full DB refresh (first startup or Redis cleared)
+        logger.info("Redis cache empty, performing full DB refresh...")
         async with AsyncSessionLocal() as db:
             seo_service = SEOService(db)
             await seo_service.get_sitemap_data(force_refresh=True)
-        logger.info("Sitemap cache warm-up completed successfully")
+        logger.info("Sitemap cache warm-up completed from DB")
     except Exception as e:
         logger.error(f"Sitemap cache warm-up failed: {e}")
         # Non-fatal - cache will be populated on first request
@@ -169,14 +177,46 @@ async def bedriftsgrafen_exception_handler(request: Request, exc: Bedriftsgrafen
 ENVIRONMENT = os.getenv("ENVIRONMENT", "development")
 
 
+# Graceful 503 for connection pool exhaustion
+@app.exception_handler(SATimeoutError)
+async def pool_exhaustion_handler(request: Request, exc: SATimeoutError):
+    """Return 503 when the DB connection pool is exhausted instead of raw 500."""
+    logger.warning(
+        "Connection pool exhausted",
+        extra={"path": request.url.path, "method": request.method},
+    )
+    return JSONResponse(
+        status_code=503,
+        content={"detail": "Service temporarily unavailable, please retry"},
+        headers={"Retry-After": "30"},
+    )
+
+
+# Graceful 503 for DB statement timeouts (asyncpg.QueryCanceledError)
 @app.exception_handler(Exception)
 async def generic_exception_handler(request: Request, exc: Exception):
     """
     Catch-all exception handler to prevent internal details from leaking.
 
-    In production: Returns generic error message, logs full details
-    In development: Returns full exception details for debugging
+    Returns 503 for DB timeouts (QueryCanceledError), generic 500 otherwise.
+    In production: Returns generic error message, logs full details.
+    In development: Returns full exception details for debugging.
     """
+    # Check for DB statement timeout (asyncpg.QueryCanceledError)
+    exc_name = type(exc).__name__
+    if exc_name == "QueryCanceledError" or (
+        hasattr(exc, "orig") and type(getattr(exc, "orig", None)).__name__ == "QueryCanceledError"
+    ):
+        logger.warning(
+            "DB statement timeout",
+            extra={"path": request.url.path, "method": request.method},
+        )
+        return JSONResponse(
+            status_code=503,
+            content={"detail": "Request timed out, please retry"},
+            headers={"Retry-After": "5"},
+        )
+
     # Always log the full exception
     logger.exception(
         f"Unhandled exception: {exc}",

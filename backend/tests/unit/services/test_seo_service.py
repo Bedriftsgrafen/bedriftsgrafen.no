@@ -235,6 +235,7 @@ class TestSEOServiceCache:
             await asyncio.sleep(200)  # Much longer than timeout
 
         mock_db.execute = slow_query
+        mock_db.rollback = AsyncMock()
 
         # Act - patch timeout to be very short
         with patch("services.seo_service.CACHE_REFRESH_TIMEOUT", 0.01):
