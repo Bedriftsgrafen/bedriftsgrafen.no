@@ -365,7 +365,7 @@ function ComparisonPage() {
                             <ArrowLeft className="h-5 w-5 text-slate-600 group-hover:-translate-x-1 transition-transform" />
                         </Link>
                         <div>
-                            <h1 className="text-3xl font-black text-slate-900 tracking-tight">
+                            <h1 className="text-2xl md:text-3xl font-black text-slate-900 tracking-tight">
                                 Sammenligning
                             </h1>
                             <p className="text-sm font-medium text-slate-400 mt-1">
@@ -403,7 +403,7 @@ function ComparisonPage() {
 
                 {/* Empty state */}
                 {orgNumbers.length === 0 && (
-                    <div className="bg-white rounded-3xl border border-slate-200 p-20 text-center shadow-sm">
+                    <div className="bg-white rounded-2xl md:rounded-3xl border border-slate-200 p-10 md:p-20 text-center shadow-sm">
                         <div className="h-20 w-20 bg-slate-50 text-slate-400 rounded-3xl flex items-center justify-center mx-auto mb-6">
                             <Building2 className="h-10 w-10" />
                         </div>
@@ -457,7 +457,7 @@ function ComparisonPage() {
 
                 {/* Battle Mode Tip - Only shown when Battle Mode is OFF */}
                 {orgNumbers.length > 1 && !battleMode && (
-                    <div className="mt-12 p-8 bg-slate-100/50 border border-slate-200 rounded-3xl flex items-center justify-between gap-6">
+                    <div className="mt-8 md:mt-12 p-5 md:p-8 bg-slate-100/50 border border-slate-200 rounded-2xl md:rounded-3xl flex flex-col sm:flex-row items-center justify-between gap-4 md:gap-6">
                         <div className="flex items-center gap-5">
                             <div className="h-12 w-12 bg-white text-slate-400 rounded-2xl flex items-center justify-center shadow-sm">
                                 <Swords className="h-6 w-6" />

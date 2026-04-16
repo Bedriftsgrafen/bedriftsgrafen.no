@@ -164,7 +164,7 @@ export function IndustryTopList({ naceCode, onSelectCompany }: IndustryTopListPr
                     </table>
                 </div>
                 {companies?.length === 0 && (
-                    <div className="p-12 text-center">
+                    <div className="p-8 md:p-12 text-center">
                         <Building2 className="h-12 w-12 text-gray-200 mx-auto mb-4" />
                         <p className="text-gray-500">Ingen virksomheter funnet i topplisten.</p>
                     </div>

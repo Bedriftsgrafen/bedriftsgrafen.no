@@ -132,7 +132,7 @@ export function Pagination({
         <button
           onClick={handleFirstPage}
           disabled={isFirstPage}
-          className="p-2 rounded-lg border border-gray-300 bg-white text-gray-700 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+          className="p-2.5 sm:p-2 rounded-lg border border-gray-300 bg-white text-gray-700 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
           aria-label="Første side"
           title="Første side"
         >
@@ -143,7 +143,7 @@ export function Pagination({
         <button
           onClick={onPreviousPage}
           disabled={isFirstPage}
-          className="p-2 rounded-lg border border-gray-300 bg-white text-gray-700 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+          className="p-2.5 sm:p-2 rounded-lg border border-gray-300 bg-white text-gray-700 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
           aria-label="Forrige side"
           title="Forrige side"
         >
@@ -171,7 +171,7 @@ export function Pagination({
                 key={page}
                 onClick={() => handlePageClick(page)}
                 className={`
-                  min-w-[40px] px-3 py-2 rounded-lg border transition-colors
+                  min-w-[44px] sm:min-w-[40px] min-h-[44px] sm:min-h-0 px-3 py-2.5 sm:py-2 rounded-lg border transition-colors
                   ${isActive
                     ? 'bg-blue-600 text-white border-blue-600 font-medium'
                     : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'
@@ -190,7 +190,7 @@ export function Pagination({
         <button
           onClick={onNextPage}
           disabled={isLastPage}
-          className="p-2 rounded-lg border border-gray-300 bg-white text-gray-700 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+          className="p-2.5 sm:p-2 rounded-lg border border-gray-300 bg-white text-gray-700 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
           aria-label="Neste side"
           title="Neste side"
         >
@@ -201,7 +201,7 @@ export function Pagination({
         <button
           onClick={handleLastPage}
           disabled={isLastPage}
-          className="p-2 rounded-lg border border-gray-300 bg-white text-gray-700 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+          className="p-2.5 sm:p-2 rounded-lg border border-gray-300 bg-white text-gray-700 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
           aria-label="Siste side"
           title="Siste side"
         >

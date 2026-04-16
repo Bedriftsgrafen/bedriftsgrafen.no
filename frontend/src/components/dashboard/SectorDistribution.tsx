@@ -14,17 +14,17 @@ export function SectorDistribution({
 }: SectorDistributionProps) {
   return (
     <section 
-      className="lg:col-span-2 bg-white rounded-[2.5rem] p-12 border border-slate-100 shadow-sm relative overflow-hidden group"
+      className="lg:col-span-2 bg-white rounded-2xl md:rounded-[2.5rem] p-6 md:p-12 border border-slate-100 shadow-sm relative overflow-hidden group"
       aria-labelledby="sector-distribution-title"
     >
       <h2 
         id="sector-distribution-title"
-        className="text-3xl font-black text-slate-900 mb-12 flex items-center gap-4 tracking-tight"
+        className="text-xl md:text-3xl font-black text-slate-900 mb-6 md:mb-12 flex items-center gap-3 md:gap-4 tracking-tight"
       >
         <div className="h-10 w-2 bg-blue-600 rounded-full" aria-hidden="true" />
         {title}
       </h2>
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-x-12 gap-y-8">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 md:gap-x-12 gap-y-6 md:gap-y-8">
         {sectors.map(sector => {
           const percentValue = sector.percentage_of_total ?? 0
           return (

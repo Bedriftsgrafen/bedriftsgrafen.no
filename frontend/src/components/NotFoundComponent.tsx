@@ -8,7 +8,7 @@ export function NotFoundComponent() {
         <AlertCircle className="h-24 w-24 text-gray-400 mx-auto" aria-hidden="true" />
         
         <div className="space-y-2">
-          <h1 className="text-5xl font-bold text-gray-900">404</h1>
+          <h1 className="text-3xl md:text-5xl font-bold text-gray-900">404</h1>
           <p className="text-xl text-gray-600">
             Siden du leter etter finnes ikke
           </p>

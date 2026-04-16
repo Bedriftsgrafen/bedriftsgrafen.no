@@ -109,7 +109,7 @@ export function KommunerPage() {
                 key={m.code}
                 to="/kommune/$code"
                 params={{ code: m.slug }}
-                className="group bg-white rounded-3xl p-8 border border-slate-200 hover:border-blue-200 shadow-sm hover:shadow-2xl hover:-translate-y-1.5 transition-all duration-500 flex flex-col justify-between relative overflow-hidden"
+                className="group bg-white rounded-2xl md:rounded-3xl p-5 md:p-8 border border-slate-200 hover:border-blue-200 shadow-sm hover:shadow-2xl hover:-translate-y-1.5 transition-all duration-500 flex flex-col justify-between relative overflow-hidden"
               >
                 {/* 
                    Static Map Background - Much more performant than 357 Leaflet instances.
@@ -158,7 +158,7 @@ export function KommunerPage() {
         )}
 
         {!isLoading && filtered.length === 0 && (
-          <div className="text-center py-32 bg-white rounded-[2.5rem] border border-dashed border-slate-200">
+          <div className="text-center py-16 md:py-32 bg-white rounded-2xl md:rounded-[2.5rem] border border-dashed border-slate-200">
             <Search className="h-12 w-12 text-slate-200 mx-auto mb-4" />
             <p className="text-slate-500 font-bold text-lg">Ingen kommuner samsvarte med søket ditt.</p>
             <button

@@ -203,7 +203,7 @@ function PersonerPage() {
             {/* Page header */}
             <div className="mb-6">
                 <div className="max-w-2xl">
-                    <h1 className="text-3xl font-bold text-black mb-2">Personsøk</h1>
+                    <h1 className="text-2xl md:text-3xl font-bold text-black mb-2">Personsøk</h1>
                     <p className="text-gray-700 text-lg mb-4">
                         Søk etter personer med roller i norsk næringsvirksomhet.
                     </p>

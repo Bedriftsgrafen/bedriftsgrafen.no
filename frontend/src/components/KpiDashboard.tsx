@@ -45,7 +45,7 @@ export const KpiDashboard = memo(function KpiDashboard({ data }: Props) {
               <div className="flex justify-between items-start">
                 <div>
                   <div className="text-sm font-medium text-gray-700">{name}</div>
-                  <div className={`text-3xl font-bold mt-1 tabular-nums ${color}`}>
+                  <div className={`text-2xl md:text-3xl font-bold mt-1 tabular-nums ${color}`}>
                     {key.includes('margin') || key.includes('grad') || key.includes('andel') || key.includes('rentabilitet')
                       ? formatPercent(value, 1)
                       : formatLargeNumber(value)}

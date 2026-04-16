@@ -28,12 +28,12 @@ export function TrendChart({
   
   return (
     <section 
-      className={`${className} bg-white rounded-[2.5rem] p-12 border border-slate-100 shadow-sm relative overflow-hidden`}
+      className={`${className} bg-white rounded-2xl md:rounded-[2.5rem] p-6 md:p-12 border border-slate-100 shadow-sm relative overflow-hidden`}
       aria-label={`${title} trend chart`}
     >
-      <div className="flex items-center justify-between mb-12">
+      <div className="flex items-center justify-between mb-6 md:mb-12">
         <h2 
-          className="text-3xl font-black text-slate-900 flex items-center gap-4 tracking-tight"
+          className="text-xl md:text-3xl font-black text-slate-900 flex items-center gap-3 md:gap-4 tracking-tight"
         >
           <div className="h-10 w-2 rounded-full" style={{ backgroundColor: color }} aria-hidden="true" />
           {title}

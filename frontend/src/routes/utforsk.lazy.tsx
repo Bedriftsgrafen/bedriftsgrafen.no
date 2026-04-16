@@ -129,7 +129,7 @@ export function UtforskPage() {
             <div className="mb-6">
                 <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
                     <div className="w-full sm:w-auto flex-1 max-w-2xl">
-                        <h1 className="text-3xl font-bold text-black mb-2">
+                        <h1 className="text-2xl md:text-3xl font-bold text-black mb-2">
                             Utforsk virksomheter
                         </h1>
                         <p className="text-gray-700 text-lg mb-4">

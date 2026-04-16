@@ -45,29 +45,29 @@ export function Modal({
     if (!isOpen) return null
 
     return (
-        <div className="fixed inset-0 bg-black/50 z-2000 flex items-start justify-center p-4 overflow-y-auto pt-10">
+        <div className="fixed inset-0 bg-black/50 z-2000 flex items-start justify-center p-2 sm:p-4 overflow-y-auto pt-4 sm:pt-10">
             <div
                 ref={modalRef}
-                className={`relative bg-white rounded-xl shadow-2xl ${width} ${maxWidth} flex flex-col my-auto`}
+                className={`relative bg-white rounded-lg sm:rounded-xl shadow-2xl ${width} ${maxWidth} flex flex-col my-auto`}
                 role="dialog"
                 aria-modal="true"
             >
-                {/* Close button - simplified without full header if title is missing */}
+                {/* Close button */}
                 <button
                     onClick={onClose}
-                    className="absolute right-4 top-4 p-2 rounded-lg hover:bg-gray-100 text-gray-500 transition-colors z-10"
+                    className="absolute right-2 top-2 sm:right-4 sm:top-4 p-3 sm:p-2 rounded-lg hover:bg-gray-100 text-gray-500 transition-colors z-10"
                     aria-label="Lukk"
                 >
                     <X className="w-5 h-5" />
                 </button>
 
                 {title && (
-                    <div className="px-6 py-4 border-b border-gray-200 pr-12">
-                        <h2 className="text-xl font-bold text-gray-900">{title}</h2>
+                    <div className="px-4 sm:px-6 py-4 border-b border-gray-200 pr-14 sm:pr-12">
+                        <h2 className="text-lg sm:text-xl font-bold text-gray-900">{title}</h2>
                     </div>
                 )}
 
-                <div className={padding ? 'p-6' : ''}>
+                <div className={padding ? 'p-4 sm:p-6' : ''}>
                     {children}
                 </div>
             </div>

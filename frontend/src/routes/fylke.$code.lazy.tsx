@@ -69,7 +69,7 @@ function CountyDashboardPage() {
 
       <main>
         {/* Hero Section */}
-        <div className="relative bg-slate-900 text-white pt-12 pb-24 px-4 shadow-2xl mb-12 overflow-hidden min-h-[600px] flex flex-col justify-center border-b border-white/5">
+        <div className="relative bg-slate-900 text-white pt-8 pb-16 md:pt-12 md:pb-24 px-4 shadow-2xl mb-8 md:mb-12 overflow-hidden min-h-[300px] md:min-h-[600px] flex flex-col justify-center border-b border-white/5">
           {/* Background Map with lower opacity */}
           {dashboard.lat && dashboard.lng && (
             <Suspense fallback={null}>
@@ -81,7 +81,7 @@ function CountyDashboardPage() {
 
           <div className="max-w-7xl mx-auto w-full relative z-10 px-4">
             {/* Breadcrumbs */}
-            <div className="mb-12">
+            <div className="mb-6 md:mb-12">
               <Breadcrumbs
                 items={[
                   { label: 'Hjem', to: '/', className: 'text-white/50 hover:text-white' },
@@ -92,9 +92,9 @@ function CountyDashboardPage() {
               />
             </div>
 
-            <div className="flex flex-col lg:flex-row lg:items-end justify-between gap-16">
+            <div className="flex flex-col lg:flex-row lg:items-end justify-between gap-8 lg:gap-16">
               <div className="flex-1">
-                <div className="flex items-center gap-3 mb-8">
+                <div className="flex items-center gap-3 mb-4 md:mb-8">
                   <span className="px-4 py-1.5 bg-blue-500/20 border border-blue-400/30 backdrop-blur-xl rounded-full text-xs font-black tracking-widest uppercase text-blue-200">
                     FYLKESKODE {dashboard.code}
                   </span>
@@ -103,7 +103,7 @@ function CountyDashboardPage() {
                     {dashboard.municipality_count} kommuner
                   </span>
                 </div>
-                <h1 className="text-7xl md:text-9xl font-black tracking-tighter mb-10 drop-shadow-2xl leading-none">
+                <h1 className="text-4xl md:text-7xl lg:text-9xl font-black tracking-tighter mb-6 md:mb-10 drop-shadow-2xl leading-none">
                   {dashboard.name}
                 </h1>
                 <p className="text-blue-100/80 text-xl md:text-2xl font-medium max-w-2xl leading-relaxed drop-shadow-md">
@@ -111,11 +111,11 @@ function CountyDashboardPage() {
                 </p>
               </div>
 
-              <div className="flex flex-col sm:flex-row gap-6">
-                <div className="bg-white/5 backdrop-blur-3xl rounded-4xl p-10 border border-white/10 shadow-2xl min-w-[240px]">
-                  <p className="text-blue-100/70 text-xs font-black uppercase tracking-widest mb-6">INNBYGGERE</p>
-                  <div className="flex items-center gap-6">
-                    <span className="text-6xl font-black tracking-tighter">{formatNumber(dashboard.population)}</span>
+              <div className="flex flex-row sm:flex-col sm:flex-row gap-3 sm:gap-6">
+                <div className="bg-white/5 backdrop-blur-3xl rounded-3xl sm:rounded-4xl p-5 sm:p-10 border border-white/10 shadow-2xl flex-1 sm:flex-initial sm:min-w-[240px]">
+                  <p className="text-blue-100/70 text-[10px] sm:text-xs font-black uppercase tracking-widest mb-3 sm:mb-6">INNBYGGERE</p>
+                  <div className="flex items-center gap-3 sm:gap-6">
+                    <span className="text-3xl sm:text-6xl font-black tracking-tighter">{formatNumber(dashboard.population)}</span>
                     {dashboard.population_growth_1y != null && (
                       <div className={`flex items-center gap-1.5 px-3 py-2 rounded-xl text-[10px] font-black ${dashboard.population_growth_1y > 0 ? 'bg-emerald-400/10 text-emerald-400 border border-emerald-400/20' : 'bg-rose-400/10 text-rose-400 border border-rose-400/20'}`}>
                         <TrendingUp className={`h-3.5 w-3.5 ${dashboard.population_growth_1y < 0 ? 'rotate-180' : ''}`} />
@@ -124,9 +124,9 @@ function CountyDashboardPage() {
                     )}
                   </div>
                 </div>
-                <div className="bg-white/5 backdrop-blur-3xl rounded-4xl p-10 border border-white/10 shadow-2xl min-w-[240px]">
-                  <p className="text-blue-100/70 text-xs font-black uppercase tracking-widest mb-6">VIRKSOMHETER</p>
-                  <span className="text-6xl font-black tracking-tighter">{formatNumber(dashboard.company_count)}</span>
+                <div className="bg-white/5 backdrop-blur-3xl rounded-3xl sm:rounded-4xl p-5 sm:p-10 border border-white/10 shadow-2xl flex-1 sm:flex-initial sm:min-w-[240px]">
+                  <p className="text-blue-100/70 text-[10px] sm:text-xs font-black uppercase tracking-widest mb-3 sm:mb-6">VIRKSOMHETER</p>
+                  <span className="text-3xl sm:text-6xl font-black tracking-tighter">{formatNumber(dashboard.company_count)}</span>
                 </div>
               </div>
             </div>
@@ -135,7 +135,7 @@ function CountyDashboardPage() {
 
         <div className="max-w-7xl mx-auto px-4 pb-32">
           {/* Trends Row */}
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-10 mb-10">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 md:gap-10 mb-6 md:mb-10">
             <EstablishmentTrendChart data={dashboard.establishment_trend} />
             <TrendChart
               data={dashboard.bankrupt_trend}
@@ -146,21 +146,21 @@ function CountyDashboardPage() {
           </div>
 
           {/* Core Metrics Grid */}
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-10 mb-16">
-            <section className="bg-slate-900 text-white rounded-[2.5rem] p-12 shadow-2xl flex flex-col justify-between relative overflow-hidden group">
-              <div className="absolute top-0 right-0 p-12 opacity-5 group-hover:opacity-10 transition-opacity">
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 md:gap-10 mb-10 md:mb-16">
+            <section className="bg-slate-900 text-white rounded-2xl md:rounded-[2.5rem] p-6 md:p-12 shadow-2xl flex flex-col justify-between relative overflow-hidden group">
+              <div className="absolute top-0 right-0 p-6 md:p-12 opacity-5 group-hover:opacity-10 transition-opacity">
                 <Map className="h-48 w-48 rotate-12" />
               </div>
               <div className="relative z-10">
-                <h2 className="text-3xl font-black mb-6 tracking-tight">Regional Styrke</h2>
-                <p className="text-blue-100/70 text-xl font-medium mb-10 leading-relaxed">
-                  Virksomhetstettheten er <strong className="text-white text-3xl font-black block mt-2">{dashboard.business_density?.toFixed(1) ?? '0.0'}</strong> virksomheter per 1000 innbyggere.
+                <h2 className="text-xl md:text-3xl font-black mb-6 tracking-tight">Regional Styrke</h2>
+                <p className="text-blue-100/70 text-base md:text-xl font-medium mb-6 md:mb-10 leading-relaxed">
+                  Virksomhetstettheten er <strong className="text-white text-xl md:text-3xl font-black block mt-2">{dashboard.business_density?.toFixed(1) ?? '0.0'}</strong> virksomheter per 1000 innbyggere.
                 </p>
                 <div className="bg-white/10 backdrop-blur-xl rounded-2xl p-6 border border-white/10 text-blue-100/60 text-sm leading-relaxed font-medium">
                   Landssnittet ligger på {dashboard.business_density_national_avg?.toFixed(1) ?? '0.0'}.
                 </div>
               </div>
-              <div className="mt-12 relative z-10">
+              <div className="mt-8 md:mt-12 relative z-10">
                 <Link
                   to="/kart"
                   search={{ county: dashboard.code }}
@@ -176,38 +176,38 @@ function CountyDashboardPage() {
             <SectorDistribution sectors={dashboard.top_sectors} />
 
             {/* National Ranking Card */}
-            <section className="bg-white rounded-[2.5rem] p-12 border border-slate-100 shadow-sm flex flex-col justify-between relative overflow-hidden group">
+            <section className="bg-white rounded-2xl md:rounded-[2.5rem] p-6 md:p-12 border border-slate-100 shadow-sm flex flex-col justify-between relative overflow-hidden group">
               <div>
-                <h2 className="text-3xl font-black text-slate-900 mb-10 tracking-tight font-display text-center">Nasjonal Ranking</h2>
+                <h2 className="text-xl md:text-3xl font-black text-slate-900 mb-6 md:mb-10 tracking-tight font-display text-center">Nasjonal Ranking</h2>
 
-                <div className="flex flex-col gap-6">
-                  <div className="bg-slate-50 rounded-3xl p-8 border border-slate-100 flex items-center justify-between group-hover:bg-blue-50/50 transition-colors">
+                <div className="flex flex-col gap-4 md:gap-6">
+                  <div className="bg-slate-50 rounded-2xl md:rounded-3xl p-5 md:p-8 border border-slate-100 flex items-center justify-between group-hover:bg-blue-50/50 transition-colors">
                     <div>
                       <p className="text-slate-500 text-xs font-black uppercase tracking-widest mb-1">TETTHET</p>
                       <p className="text-slate-600 text-xs font-bold">i Norge</p>
                     </div>
-                    <div className="text-5xl font-black text-slate-900 tracking-tighter">
-                      <span className="text-blue-600 text-2xl tracking-normal mr-1" aria-hidden="true">#</span>{dashboard.ranking_national_density?.rank ?? '—'}
+                    <div className="text-3xl md:text-5xl font-black text-slate-900 tracking-tighter">
+                      <span className="text-blue-600 text-xl md:text-2xl tracking-normal mr-1" aria-hidden="true">#</span>{dashboard.ranking_national_density?.rank ?? '—'}
                     </div>
                   </div>
 
-                  <div className="bg-slate-50 rounded-3xl p-8 border border-slate-100 flex items-center justify-between group-hover:bg-emerald-50/50 transition-colors">
+                  <div className="bg-slate-50 rounded-2xl md:rounded-3xl p-5 md:p-8 border border-slate-100 flex items-center justify-between group-hover:bg-emerald-50/50 transition-colors">
                     <div>
                       <p className="text-slate-500 text-xs font-black uppercase tracking-widest mb-1">OMSETNING</p>
                       <p className="text-slate-600 text-xs font-bold">i Norge</p>
                     </div>
-                    <div className="text-5xl font-black text-slate-900 tracking-tighter">
-                      <span className="text-emerald-600 text-2xl tracking-normal mr-1" aria-hidden="true">#</span>{dashboard.ranking_national_revenue?.rank ?? '—'}
+                    <div className="text-3xl md:text-5xl font-black text-slate-900 tracking-tighter">
+                      <span className="text-emerald-600 text-xl md:text-2xl tracking-normal mr-1" aria-hidden="true">#</span>{dashboard.ranking_national_revenue?.rank ?? '—'}
                     </div>
                   </div>
 
-                  <div className="bg-slate-50 rounded-3xl p-8 border border-slate-100 flex items-center justify-between group-hover:bg-indigo-50/50 transition-colors">
+                  <div className="bg-slate-50 rounded-2xl md:rounded-3xl p-5 md:p-8 border border-slate-100 flex items-center justify-between group-hover:bg-indigo-50/50 transition-colors">
                     <div>
                       <p className="text-slate-500 text-xs font-black uppercase tracking-widest mb-1">INNBYGGERE</p>
                       <p className="text-slate-600 text-xs font-bold">i Norge</p>
                     </div>
-                    <div className="text-5xl font-black text-slate-900 tracking-tighter">
-                      <span className="text-indigo-600 text-2xl tracking-normal mr-1" aria-hidden="true">#</span>{dashboard.ranking_national_population?.rank ?? '—'}
+                    <div className="text-3xl md:text-5xl font-black text-slate-900 tracking-tighter">
+                      <span className="text-indigo-600 text-xl md:text-2xl tracking-normal mr-1" aria-hidden="true">#</span>{dashboard.ranking_national_population?.rank ?? '—'}
                     </div>
                   </div>
                 </div>
@@ -220,8 +220,8 @@ function CountyDashboardPage() {
           </div>
 
           {/* Municipalities Drill-down */}
-          <section className="bg-white rounded-[2.5rem] p-12 border border-slate-100 shadow-sm mb-16">
-            <h2 className="text-3xl font-black text-slate-900 mb-12 flex items-center gap-4 tracking-tight">
+          <section className="bg-white rounded-2xl md:rounded-[2.5rem] p-6 md:p-12 border border-slate-100 shadow-sm mb-10 md:mb-16">
+            <h2 className="text-xl md:text-3xl font-black text-slate-900 mb-6 md:mb-12 flex items-center gap-3 md:gap-4 tracking-tight">
               <div className="h-10 w-2 bg-blue-600 rounded-full" />
               Kommuner i {dashboard.name}
             </h2>
@@ -253,7 +253,7 @@ function CountyDashboardPage() {
           </section>
 
           {/* Company Lists */}
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-16">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 md:gap-16">
             <TopCompanyList companies={dashboard.top_companies} />
             <NewestCompaniesList
               companies={dashboard.newest_companies}

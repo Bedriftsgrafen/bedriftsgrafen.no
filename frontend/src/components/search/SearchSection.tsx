@@ -32,8 +32,8 @@ export function SearchSection({ value, onChange, onSearch }: SearchSectionProps)
       <div className="absolute inset-0 z-0 bg-linear-to-br from-blue-900 via-blue-800 to-teal-900" />
 
       {/* Content */}
-      <div className="relative z-10 p-10">
-        <h2 className="text-3xl font-black text-white mb-6 uppercase tracking-wider text-shadow-sm">
+      <div className="relative z-10 p-6 md:p-10">
+        <h2 className="text-2xl md:text-3xl font-black text-white mb-6 uppercase tracking-wider text-shadow-sm">
           Søk i norske virksomheter
         </h2>
         <div className="relative max-w-2xl mx-auto group">

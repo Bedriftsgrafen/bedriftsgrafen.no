@@ -210,23 +210,24 @@ export const ComparisonModal = memo(function ComparisonModal() {
                 onClick={(e) => e.stopPropagation()}
             >
                 {/* Header */}
-                <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200">
-                    <h2 className="text-xl font-semibold text-gray-900">
+                <div className="flex items-center justify-between gap-3 px-4 sm:px-6 py-4 border-b border-gray-200">
+                    <h2 className="text-lg sm:text-xl font-semibold text-gray-900 flex-1 min-w-0 truncate">
                         Sammenligning av {companies.length} virksomheter
                     </h2>
                     <button
                         type="button"
                         onClick={handleClose}
-                        className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
+                        className="p-3 sm:p-2 hover:bg-gray-100 rounded-lg transition-colors shrink-0"
+                        aria-label="Lukk"
                     >
                         <X className="h-5 w-5 text-gray-500" />
                     </button>
                 </div>
 
                 {/* Content */}
-                <div className="flex-1 overflow-auto p-6">
+                <div className="flex-1 overflow-auto p-4 sm:p-6">
                     {/* Company comparison grid */}
-                    <div className={`grid gap-4 ${companies.length === 2 ? 'grid-cols-2' : 'grid-cols-3'}`}>
+                    <div className={`grid gap-3 sm:gap-4 ${companies.length === 2 ? 'grid-cols-1 sm:grid-cols-2' : 'grid-cols-1 sm:grid-cols-2 lg:grid-cols-3'}`}>
                         {data.map((item) => (
                             <ComparisonCard key={item.orgnr} item={item} />
                         ))}
@@ -249,7 +250,7 @@ export const ComparisonModal = memo(function ComparisonModal() {
                 </div>
 
                 {/* Footer */}
-                <div className="flex items-center justify-end gap-3 px-6 py-4 border-t border-gray-200 bg-gray-50">
+                <div className="flex items-center justify-end gap-3 px-4 sm:px-6 py-4 border-t border-gray-200 bg-gray-50">
                     <Button
                         type="button"
                         onClick={handleCloseAndClear}

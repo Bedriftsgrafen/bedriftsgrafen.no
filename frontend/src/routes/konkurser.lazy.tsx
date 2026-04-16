@@ -194,8 +194,8 @@ function KonkurserPage() {
 
             {/* Page header */}
             <div className="mb-6">
-                <h1 className="text-3xl font-bold text-black mb-2 flex items-center gap-3">
-                    <AlertTriangle className="h-8 w-8 text-red-500" />
+                <h1 className="text-2xl md:text-3xl font-bold text-black mb-2 flex items-center gap-3">
+                    <AlertTriangle className="h-7 w-7 md:h-8 md:w-8 text-red-500" />
                     Konkurser
                 </h1>
                 <p className="text-gray-700 text-lg">
@@ -268,7 +268,7 @@ function KonkurserPage() {
             </TabContainer>
 
             {/* Content */}
-            <div className="min-h-[600px]">
+            <div className="min-h-[400px] md:min-h-[600px]">
             {activeTab === 'list' && (
                 <BankruptcyList
                     onSelectCompany={setSelectedCompanyOrgnr}

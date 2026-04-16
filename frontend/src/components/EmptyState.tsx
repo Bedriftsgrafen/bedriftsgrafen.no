@@ -13,7 +13,7 @@ interface Props {
 
 export function EmptyState({ icon: Icon, title, description, action }: Props) {
   return (
-    <div className="bg-white rounded-xl shadow-md p-12 text-center">
+    <div className="bg-white rounded-xl shadow-md p-6 md:p-12 text-center">
       <div className="flex items-center justify-center w-16 h-16 bg-gray-100 rounded-full mx-auto mb-4">
         <Icon className="h-8 w-8 text-gray-400" />
       </div>

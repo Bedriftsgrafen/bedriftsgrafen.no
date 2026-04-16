@@ -50,11 +50,11 @@ export const ActiveFilterChips = memo(function ActiveFilterChips() {
               Søk: "{searchQuery}"
               <button
                 onClick={onClearSearch}
-                className="ml-1 hover:text-blue-900 transition-colors"
+                className="ml-1 p-0.5 hover:text-blue-900 hover:bg-blue-100 rounded transition-colors"
                 title="Fjern søkefilter"
                 aria-label="Fjern søkefilter"
               >
-                <X className="h-3 w-3" />
+                <X className="h-3.5 w-3.5" />
               </button>
             </span>
           )}

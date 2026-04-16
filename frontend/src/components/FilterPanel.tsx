@@ -314,7 +314,7 @@ export function FilterPanel() {
             onDeleteFilter={(id) => { deleteFilter(id); if (editingFilterId === id) setEditingFilterId(null) }}
           />
 
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-x-12 gap-y-10">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-x-6 md:gap-x-12 gap-y-6 md:gap-y-10">
             <BasisFilters
               draftFilters={draftFilters}
               setDraftFilters={setDraftFilters}

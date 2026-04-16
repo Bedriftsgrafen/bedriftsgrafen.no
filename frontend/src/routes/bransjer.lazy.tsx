@@ -195,7 +195,7 @@ function BransjerPage() {
 
             {/* Page header */}
             <div className="mb-6">
-                <h1 className="text-3xl font-bold text-black mb-2">
+                <h1 className="text-2xl md:text-3xl font-bold text-black mb-2">
                     Utforsk bransjer
                 </h1>
                 <p className="text-gray-700 text-lg">
@@ -232,7 +232,7 @@ function BransjerPage() {
             </TabContainer>
 
             {/* Content — min-height prevents CLS from footer shifting when data loads */}
-            <div className="min-h-[600px]">
+            <div className="min-h-[400px] md:min-h-[600px] min-w-0 overflow-x-hidden">
             {activeTab === 'stats' && <IndustryDashboard initialNace={nace} onSelectCompany={setSelectedCompanyOrgnr} />}
             {activeTab === 'map' && (
                 <Suspense fallback={<div className="flex items-center justify-center h-[800px]"><Loader2 className="h-8 w-8 animate-spin text-blue-600" /></div>}>

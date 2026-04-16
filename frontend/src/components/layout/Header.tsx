@@ -53,7 +53,7 @@ export function Header() {
                   key={to}
                   to={to}
                   aria-label={label}
-                  className={`flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm font-medium transition-all duration-200 ${isActive
+                  className={`flex items-center gap-1.5 px-3 py-2.5 sm:py-2 rounded-lg text-sm font-medium transition-all duration-200 ${isActive
                     ? 'bg-white/20 text-white'
                     : 'text-blue-100 hover:bg-white/10 hover:text-white'
                     }`}

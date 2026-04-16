@@ -52,14 +52,14 @@ export function PersonProfilePage() {
 
             <div className="max-w-4xl mx-auto py-8 px-4">
                 <div className="bg-white rounded-2xl shadow-xl overflow-hidden mb-8">
-                    <div className="bg-linear-to-br from-blue-900 via-blue-800 to-indigo-900 p-8 text-white">
+                    <div className="bg-linear-to-br from-blue-900 via-blue-800 to-indigo-900 p-5 md:p-8 text-white">
                         <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
                             <div className="flex items-center gap-6">
                                 <div className="p-4 bg-white/10 rounded-2xl backdrop-blur-sm border border-white/20">
                                     <User className="h-12 w-12" />
                                 </div>
                                 <div>
-                                    <h1 className="text-3xl font-bold mb-1">{decodedName}</h1>
+                                    <h1 className="text-2xl md:text-3xl font-bold mb-1">{decodedName}</h1>
                                     <div className="flex items-center gap-4 text-blue-100/90">
                                         {normalizedBirthdate && !hasNoRoles && (
                                             <span className="flex items-center gap-1.5 text-sm">

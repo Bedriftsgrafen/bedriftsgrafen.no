@@ -25,10 +25,10 @@ export const Route = createRootRoute({
 
 function RootComponent() {
   return (
-    <div className="flex flex-col min-h-screen bg-gray-50 text-gray-900 font-sans">
+    <div className="flex flex-col min-h-screen bg-gray-50 text-gray-900 font-sans overflow-x-hidden">
       <Header />
 
-      <main className="flex-1 container mx-auto px-4 py-8">
+      <main className="flex-1 container mx-auto px-4 py-8 max-w-full overflow-x-hidden">
         <Outlet /> {/* Child routes render here */}
       </main>
 

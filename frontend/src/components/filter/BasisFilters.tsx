@@ -81,7 +81,7 @@ export function BasisFilters({
                     {draftFilters.searchQuery && (
                         <button
                             onClick={() => setDraftFilters((prev) => ({ ...prev, searchQuery: '' }))}
-                            className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-300 hover:text-slate-500 transition-colors"
+                            className="absolute right-1 top-1/2 -translate-y-1/2 p-2 text-slate-300 hover:text-slate-500 hover:bg-slate-100 rounded-lg transition-colors"
                             aria-label="Tøm søkefelt"
                         >
                             <X className="h-4 w-4" />

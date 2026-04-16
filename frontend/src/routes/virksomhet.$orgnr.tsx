@@ -57,7 +57,7 @@ export const Route = createFileRoute('/virksomhet/$orgnr')({
 
     return (
       <div className="text-center py-16">
-        <h1 className="text-3xl font-bold text-red-700 mb-4">
+        <h1 className="text-2xl md:text-3xl font-bold text-red-700 mb-4">
           {isValidationError
             ? 'Ugyldig organisasjonsnummer'
             : 'Feil ved lasting av virksomhet'}

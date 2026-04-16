@@ -129,8 +129,8 @@ export function KartPage() {
 
             {/* Page header */}
             <div className="mb-6">
-                <h1 className="text-3xl font-bold text-black mb-2 flex items-center gap-3">
-                    <MapIcon className="h-8 w-8 text-blue-500" />
+                <h1 className="text-2xl md:text-3xl font-bold text-black mb-2 flex items-center gap-3">
+                    <MapIcon className="h-7 w-7 md:h-8 md:w-8 text-blue-500" />
                     Virksomhetskart
                 </h1>
                 <p className="text-gray-700 text-lg">
