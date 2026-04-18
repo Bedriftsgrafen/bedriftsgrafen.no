@@ -1,5 +1,5 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import { render, screen, waitFor } from '@testing-library/react'
+import { render, screen, waitFor, fireEvent } from '@testing-library/react'
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { PersonProfilePage } from '../person.$name.$birthdate.lazy'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
@@ -61,11 +61,20 @@ describe('PersonProfilePage', () => {
 
         expect(screen.getByText('Test Person')).toBeInTheDocument()
 
+        // Default tab is Oversikt — verify overview renders
+        await waitFor(() => {
+            expect(screen.getByText('Oversikt')).toBeInTheDocument()
+            expect(screen.getByText('Roller')).toBeInTheDocument()
+        })
+
+        // Switch to Roller tab to verify role details
+        fireEvent.click(screen.getByText('Roller'))
+
         await waitFor(() => {
             expect(screen.getByText('MOCK COMPANY AS')).toBeInTheDocument()
             expect(screen.getByText('Daglig leder')).toBeInTheDocument()
             expect(screen.getByText('HISTORICAL CORP')).toBeInTheDocument()
-            expect(screen.getByText('Fratrådt')).toBeInTheDocument()
+            expect(screen.getAllByText('Fratrådt').length).toBeGreaterThanOrEqual(1)
         })
     })
 

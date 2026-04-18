@@ -17,6 +17,8 @@ export const personQueryKeys = {
         [...personQueryKeys.all, 'searchResultsCount', query] as const,
     roles: (name: string, birthdate: string | null) =>
         [...personQueryKeys.all, 'roles', name, birthdate] as const,
+    connections: (name: string, birthdate: string | null) =>
+        [...personQueryKeys.all, 'connections', name, birthdate] as const,
 }
 
 /**

@@ -14,7 +14,7 @@ import models
 from database import get_db
 from repositories.accounting_repository import AccountingRepository
 from repositories.role_repository import RoleRepository
-from schemas.people import PersonRoleResponse
+from schemas.people import PersonConnectionResponse, PersonRoleResponse, SharedCompanyInfo
 
 logger = logging.getLogger(__name__)
 
@@ -67,6 +67,35 @@ class PersonService:
             latest_driftsresultat=fin.driftsresultat if fin else None,
             latest_egenkapitalandel=fin.egenkapitalandel if fin else None,
         )
+
+    async def get_connections(
+        self,
+        name: str,
+        birthdate: date | None,
+        birthyear: int | None,
+        include_all: bool,
+        limit: int = 25,
+    ) -> list[PersonConnectionResponse]:
+        """Find people connected via shared board memberships.
+
+        GDPR: Converts foedselsdato → birth_year (int) for third parties.
+        """
+        raw = await self.role_repo.get_person_connections(
+            name,
+            birthdate=birthdate,
+            birthyear=birthyear,
+            include_all=include_all,
+            limit=limit,
+        )
+        return [
+            PersonConnectionResponse(
+                name=c["name"],
+                birth_year=c["foedselsdato"].year if c.get("foedselsdato") else None,
+                shared_company_count=c["shared_company_count"],
+                shared_companies=[SharedCompanyInfo(**sc) for sc in c["shared_companies"]],
+            )
+            for c in raw
+        ]
 
 
 def get_person_service(db: AsyncSession = Depends(get_db)) -> PersonService:

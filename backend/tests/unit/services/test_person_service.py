@@ -132,3 +132,98 @@ class TestPersonServiceGetEnrichedRoles:
         service.role_repo.get_person_commercial_roles.assert_called_once_with(
             "Ola Nordmann", birthdate=date(1996, 3, 12), birthyear=None, include_all=True
         )
+
+
+class TestPersonServiceGetConnections:
+    """Tests for PersonService.get_connections orchestration."""
+
+    @pytest.fixture
+    def service(self):
+        from services.person_service import PersonService
+
+        svc = PersonService(AsyncMock())
+        svc.role_repo = MagicMock()
+        svc.accounting_repo = MagicMock()
+        return svc
+
+    @pytest.mark.asyncio
+    async def test_returns_connections_with_gdpr_birth_year(self, service):
+        """Connections return birth_year (int) instead of full birthdate."""
+        from schemas.people import PersonConnectionResponse
+
+        service.role_repo.get_person_connections = AsyncMock(
+            return_value=[
+                {
+                    "name": "Kari Nordmann",
+                    "foedselsdato": date(1975, 6, 15),
+                    "shared_company_count": 2,
+                    "shared_companies": [
+                        {
+                            "orgnr": "111111111",
+                            "navn": "Felles AS",
+                            "person_role": "Daglig leder",
+                            "connection_role": "Styreleder",
+                        },
+                        {
+                            "orgnr": "222222222",
+                            "navn": "Annet AS",
+                            "person_role": "Styremedlem",
+                            "connection_role": "Daglig leder",
+                        },
+                    ],
+                }
+            ]
+        )
+
+        result = await service.get_connections("Ola", None, 1980, False)
+
+        assert len(result) == 1
+        assert isinstance(result[0], PersonConnectionResponse)
+        assert result[0].name == "Kari Nordmann"
+        assert result[0].birth_year == 1975
+        assert result[0].shared_company_count == 2
+        assert len(result[0].shared_companies) == 2
+
+    @pytest.mark.asyncio
+    async def test_null_birthdate_gives_null_birth_year(self, service):
+        """Connections without birthdate have birth_year=None."""
+        service.role_repo.get_person_connections = AsyncMock(
+            return_value=[
+                {
+                    "name": "Ukjent Person",
+                    "foedselsdato": None,
+                    "shared_company_count": 1,
+                    "shared_companies": [
+                        {"orgnr": "333333333", "navn": "X AS", "person_role": "DAGL", "connection_role": "STYR"},
+                    ],
+                }
+            ]
+        )
+
+        result = await service.get_connections("Ola", None, None, False)
+
+        assert result[0].birth_year is None
+
+    @pytest.mark.asyncio
+    async def test_empty_connections(self, service):
+        """Returns empty list when no connections found."""
+        service.role_repo.get_person_connections = AsyncMock(return_value=[])
+
+        result = await service.get_connections("Nobody", None, None, False)
+
+        assert result == []
+
+    @pytest.mark.asyncio
+    async def test_forwards_params_to_repo(self, service):
+        """Correctly forwards all params to role_repo.get_person_connections."""
+        service.role_repo.get_person_connections = AsyncMock(return_value=[])
+
+        await service.get_connections("Ola", date(1980, 1, 1), None, True, limit=10)
+
+        service.role_repo.get_person_connections.assert_called_once_with(
+            "Ola",
+            birthdate=date(1980, 1, 1),
+            birthyear=None,
+            include_all=True,
+            limit=10,
+        )

@@ -1,13 +1,18 @@
 /* eslint-disable react-refresh/only-export-components */
 import { createLazyFileRoute } from '@tanstack/react-router'
-import { User, ShieldCheck, Briefcase, AlertTriangle } from 'lucide-react'
+import { useState, useCallback } from 'react'
+import { User, ShieldCheck, Briefcase, Users, LayoutDashboard, AlertTriangle } from 'lucide-react'
 import { SEOHead, Breadcrumbs } from '../components/layout'
+import { TabContainer } from '../components/common/TabContainer'
+import { TabButton } from '../components/common/TabButton'
 import { usePersonRolesQuery } from '../hooks/queries/usePersonRolesQuery'
+import { usePersonConnectionsQuery } from '../hooks/queries/usePersonConnectionsQuery'
 import { useSlowLoadingToast } from '../hooks/useSlowLoadingToast'
 import { Button } from '../components/common/Button'
-import { PersonSummaryStats, PersonRoleGroups } from '../components/person'
+import { PersonSummaryStats, PersonRoleGroups, PersonConnectionsList, PersonRoleFilters } from '../components/person'
+import type { PersonRole } from '../types/person'
 import logo1881 from '../img/1881-logo.png'
-import { get1881SearchUrl, getLinkedInSearchUrl } from '../utils/formatters'
+import { get1881SearchUrl, getLinkedInSearchUrl, formatLargeCurrency } from '../utils/formatters'
 
 const LinkedinIcon = ({ className }: { className?: string }) => (
     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className={className}>
@@ -15,9 +20,43 @@ const LinkedinIcon = ({ className }: { className?: string }) => (
     </svg>
 )
 
+type TabType = 'oversikt' | 'roller' | 'forbindelser'
+
 export const Route = createLazyFileRoute('/person/$name/$birthdate')({
     component: PersonProfilePage,
 })
+
+function TopCompaniesByRevenue({ roles }: { roles: PersonRole[] }) {
+    const top5 = roles
+        .filter((r) => !r.fratraadt && r.latest_salgsinntekter !== null)
+        .sort((a, b) => (b.latest_salgsinntekter ?? 0) - (a.latest_salgsinntekter ?? 0))
+        .slice(0, 5)
+
+    if (top5.length === 0) return null
+
+    return (
+        <div className="mt-6">
+            <h3 className="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-3">
+                Største selskaper etter omsetning
+            </h3>
+            <div className="space-y-2">
+                {top5.map((r) => (
+                    <div key={`${r.orgnr}-${r.type_kode}`} className="flex items-center justify-between text-sm">
+                        <div className="min-w-0 flex-1">
+                            <span className="font-medium text-gray-900 truncate">{r.enhet_navn}</span>
+                            {r.organisasjonsform && (
+                                <span className="text-xs text-gray-400 ml-1.5">{r.organisasjonsform}</span>
+                            )}
+                        </div>
+                        <span className="text-gray-500 font-medium shrink-0 ml-3">
+                            {formatLargeCurrency(r.latest_salgsinntekter)}
+                        </span>
+                    </div>
+                ))}
+            </div>
+        </div>
+    )
+}
 
 export function PersonProfilePage() {
     const { name, birthdate } = Route.useParams()
@@ -25,15 +64,29 @@ export function PersonProfilePage() {
     const normalizedBirthdate = birthdate === 'unknown' ? null : birthdate
     const isYearOnly = normalizedBirthdate ? /^\d{4}$/.test(normalizedBirthdate) : false
 
+    const [activeTab, setActiveTab] = useState<TabType>('oversikt')
+    const [filteredRoles, setFilteredRoles] = useState<PersonRole[] | null>(null)
+
     const {
         data: roles,
         isLoading,
         isError,
     } = usePersonRolesQuery(decodedName, normalizedBirthdate)
 
+    const {
+        data: connections,
+        isLoading: connectionsLoading,
+    } = usePersonConnectionsQuery(decodedName, normalizedBirthdate, activeTab === 'forbindelser')
+
     useSlowLoadingToast(isLoading, 'Henter rolleoversikt...')
 
+    const handleFilteredRoles = useCallback((roles: PersonRole[]) => {
+        setFilteredRoles(roles)
+    }, [])
+
     const hasNoRoles = !isLoading && !isError && roles?.length === 0
+    const activeRoleCount = roles?.filter((r) => !r.fratraadt).length ?? 0
+    const connectionCount = connections?.length ?? 0
 
     return (
         <>
@@ -100,11 +153,6 @@ export function PersonProfilePage() {
                     </div>
 
                     <div className="p-8">
-                        <div className="flex items-center gap-2 mb-6">
-                            <Briefcase className="h-5 w-5 text-blue-600" />
-                            <h2 className="text-xl font-bold text-gray-900">Roller og verv</h2>
-                        </div>
-
                         {isLoading ? (
                             <div className="space-y-4">
                                 {[1, 2, 3].map(i => (
@@ -125,8 +173,55 @@ export function PersonProfilePage() {
                             </div>
                         ) : (
                             <>
-                                <PersonSummaryStats roles={roles!} />
-                                <PersonRoleGroups roles={roles!} />
+                                <TabContainer>
+                                    <TabButton
+                                        active={activeTab === 'oversikt'}
+                                        icon={<LayoutDashboard className="h-4 w-4" />}
+                                        label="Oversikt"
+                                        onClick={() => setActiveTab('oversikt')}
+                                    />
+                                    <TabButton
+                                        active={activeTab === 'roller'}
+                                        icon={<Briefcase className="h-4 w-4" />}
+                                        label="Roller"
+                                        onClick={() => setActiveTab('roller')}
+                                        badge={activeRoleCount}
+                                        badgeColor="blue"
+                                    />
+                                    <TabButton
+                                        active={activeTab === 'forbindelser'}
+                                        icon={<Users className="h-4 w-4" />}
+                                        label="Forbindelser"
+                                        onClick={() => setActiveTab('forbindelser')}
+                                        badge={connectionCount}
+                                        badgeColor="green"
+                                    />
+                                </TabContainer>
+
+                                <div role="tabpanel" aria-label={activeTab}>
+                                    {activeTab === 'oversikt' && (
+                                        <>
+                                            <PersonSummaryStats roles={roles!} />
+                                            <TopCompaniesByRevenue roles={roles!} />
+                                        </>
+                                    )}
+
+                                    {activeTab === 'roller' && (
+                                        <>
+                                            <PersonRoleFilters roles={roles!} onFilteredRoles={handleFilteredRoles} />
+                                            <div className="mt-4">
+                                                <PersonRoleGroups roles={filteredRoles ?? roles!} />
+                                            </div>
+                                        </>
+                                    )}
+
+                                    {activeTab === 'forbindelser' && (
+                                        <PersonConnectionsList
+                                            connections={connections ?? []}
+                                            isLoading={connectionsLoading}
+                                        />
+                                    )}
+                                </div>
                             </>
                         )}
 

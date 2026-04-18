@@ -13,7 +13,13 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from database import get_db
 from repositories.role_repository import RoleRepository
-from schemas.people import PaginatedPersonSearch, PersonRoleResponse, PersonSearchResult, PersonSearchResultDetailed
+from schemas.people import (
+    PaginatedPersonSearch,
+    PersonConnectionResponse,
+    PersonRoleResponse,
+    PersonSearchResult,
+    PersonSearchResultDetailed,
+)
 from services.person_service import PersonService, get_person_service
 from utils.auth import is_admin
 
@@ -110,3 +116,23 @@ async def get_person_roles(
     """
     parsed_date, parsed_year = _parse_birthdate(birthdate)
     return await service.get_enriched_roles(name, parsed_date, parsed_year, is_admin(x_admin_key))
+
+
+@router.get("/connections", response_model=list[PersonConnectionResponse])
+async def get_person_connections(
+    request: Request,
+    name: str = Query(..., description="Person's full name"),
+    birthdate: str | None = Query(None, description="Birth date or year for disambiguation"),
+    limit: int = Query(25, ge=1, le=100, description="Max connections to return"),
+    x_admin_key: str | None = Header(None, alias="X-Admin-Key"),
+    service: PersonService = Depends(get_person_service),
+) -> list[PersonConnectionResponse]:
+    """
+    Find people connected via shared board/role memberships.
+
+    Returns people who share active roles at the same companies,
+    sorted by shared company count (most overlap first).
+    GDPR: Only birth year is exposed for connected persons.
+    """
+    parsed_date, parsed_year = _parse_birthdate(birthdate)
+    return await service.get_connections(name, parsed_date, parsed_year, is_admin(x_admin_key), limit=limit)

@@ -70,3 +70,27 @@ class PersonRoleResponse(BaseModel):
     latest_egenkapitalandel: float | None = Field(None, description="Latest equity ratio (%)")
 
     model_config = ConfigDict(from_attributes=True)
+
+
+class SharedCompanyInfo(BaseModel):
+    """A company shared between two people."""
+
+    orgnr: str = Field(..., description="Company organization number")
+    navn: str = Field(..., description="Company name")
+    person_role: str = Field(..., description="Role the target person holds")
+    connection_role: str = Field(..., description="Role the connected person holds")
+
+
+class PersonConnectionResponse(BaseModel):
+    """A person connected via shared board/role memberships.
+
+    GDPR: birth_year (int) instead of full birthdate for third parties
+    to comply with data minimization principles.
+    """
+
+    name: str = Field(..., description="Connected person's full name")
+    birth_year: int | None = Field(None, description="Birth year only (GDPR data minimization)")
+    shared_company_count: int = Field(..., description="Number of companies shared")
+    shared_companies: list[SharedCompanyInfo] = Field(default_factory=list)
+
+    model_config = ConfigDict(from_attributes=True)

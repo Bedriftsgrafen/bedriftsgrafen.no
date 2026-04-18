@@ -561,3 +561,106 @@ class TestSearchPeopleResultsEndpoint:
         )
         assert result.total_count == 1
         assert result.query == "Test"
+
+
+# ============================================================================
+# Category 7: GET /v1/people/connections
+# ============================================================================
+class TestGetPersonConnectionsEndpoint:
+    """Tests for the person connections endpoint."""
+
+    @pytest.fixture(autouse=True)
+    def _setup_service(self):
+        """Override get_person_service dependency with a mock."""
+        from main import app
+        from services.person_service import get_person_service
+
+        self.mock_service = MagicMock()
+        self.mock_service.get_connections = AsyncMock(return_value=[])
+        app.dependency_overrides[get_person_service] = lambda: self.mock_service
+        yield
+        app.dependency_overrides.pop(get_person_service, None)
+
+    @pytest.mark.asyncio
+    async def test_returns_connections(self, client):
+        """Returns list of connected persons."""
+        from schemas.people import PersonConnectionResponse, SharedCompanyInfo
+
+        connection = PersonConnectionResponse(
+            name="Kari Nordmann",
+            birth_year=1975,
+            shared_company_count=2,
+            shared_companies=[
+                SharedCompanyInfo(
+                    orgnr="111111111",
+                    navn="Felles AS",
+                    person_role="Daglig leder",
+                    connection_role="Styreleder",
+                ),
+            ],
+        )
+        self.mock_service.get_connections.return_value = [connection]
+
+        response = client.get("/v1/people/connections?name=Ola%20Nordmann")
+
+        assert response.status_code == 200
+        data = response.json()
+        assert len(data) == 1
+        assert data[0]["name"] == "Kari Nordmann"
+        assert data[0]["birth_year"] == 1975
+        assert data[0]["shared_company_count"] == 2
+        assert len(data[0]["shared_companies"]) == 1
+
+    @pytest.mark.asyncio
+    async def test_requires_name_parameter(self, client):
+        """Name parameter is required."""
+        response = client.get("/v1/people/connections")
+        assert response.status_code == 422
+
+    @pytest.mark.asyncio
+    async def test_returns_empty_for_no_connections(self, client):
+        """Returns empty list for person with no connections."""
+        response = client.get("/v1/people/connections?name=Lonely%20Person")
+
+        assert response.status_code == 200
+        assert response.json() == []
+
+    @pytest.mark.asyncio
+    async def test_accepts_limit_parameter(self, client):
+        """Limit parameter is forwarded to service."""
+        response = client.get("/v1/people/connections?name=Ola&limit=5")
+
+        assert response.status_code == 200
+        self.mock_service.get_connections.assert_called_once()
+        call_kwargs = self.mock_service.get_connections.call_args
+        assert call_kwargs.kwargs.get("limit") == 5 or call_kwargs[0][-1] == 5
+
+    @pytest.mark.asyncio
+    async def test_limit_validation(self, client):
+        """Limit must be between 1 and 100."""
+        response = client.get("/v1/people/connections?name=Ola&limit=0")
+        assert response.status_code == 422
+
+        response = client.get("/v1/people/connections?name=Ola&limit=200")
+        assert response.status_code == 422
+
+    @pytest.mark.asyncio
+    async def test_connection_response_schema(self):
+        """PersonConnectionResponse + SharedCompanyInfo schemas validate."""
+        from schemas.people import PersonConnectionResponse, SharedCompanyInfo
+
+        conn = PersonConnectionResponse(
+            name="Test",
+            birth_year=None,
+            shared_company_count=1,
+            shared_companies=[
+                SharedCompanyInfo(
+                    orgnr="999999999",
+                    navn="Shared AS",
+                    person_role="DAGL",
+                    connection_role="STYR",
+                )
+            ],
+        )
+        assert conn.birth_year is None
+        assert conn.shared_companies[0].orgnr == "999999999"

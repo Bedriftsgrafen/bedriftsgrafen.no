@@ -38,3 +38,20 @@ export interface PersonRole {
     latest_driftsresultat: number | null
     latest_egenkapitalandel: number | null
 }
+
+/** A company shared between two people. */
+export interface SharedCompanyInfo {
+    orgnr: string
+    navn: string
+    person_role: string
+    connection_role: string
+}
+
+/** A person connected via shared board/role memberships.
+ *  GDPR: birth_year (number) instead of full birthdate for third parties. */
+export interface PersonConnection {
+    name: string
+    birth_year: number | null
+    shared_company_count: number
+    shared_companies: SharedCompanyInfo[]
+}

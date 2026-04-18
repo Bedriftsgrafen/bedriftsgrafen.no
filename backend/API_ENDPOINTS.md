@@ -42,6 +42,7 @@ Fetch company and financial data from Brønnøysundregistrene
 ### Person & Role Network
 - `GET /v1/people/search?q=...`: Search for people by name (name + birthdate unique keys)
 - `GET /v1/people/roles?name=...&birthdate=...`: List all legally compliant commercial roles for a person, enriched with company context (organisasjonsform, antall_ansatte, naeringskode, etc.) and latest financials (salgsinntekter, aarsresultat, driftsresultat, egenkapitalandel).
+- `GET /v1/people/connections?name=...&birthdate=...&limit=20`: Find people who share companies with the given person. Returns connections sorted by number of shared companies, with each connection including shared company details (name, orgnr, roles). Birth year only (not full date) for GDPR compliance. Limit: 1-100 (default 20).
 
 ## Stats Endpoints
 

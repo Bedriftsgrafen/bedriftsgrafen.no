@@ -469,6 +469,118 @@ class RoleRepository:
             )
             return []
 
+    async def get_person_connections(
+        self,
+        name: str,
+        birthdate: date | None = None,
+        birthyear: int | None = None,
+        include_all: bool = False,
+        limit: int = 25,
+    ) -> list[dict]:
+        """Find people sharing companies with this person.
+
+        Strategy:
+        1. Get all orgnrs for the target person (commercial filter applied)
+        2. Find distinct (person_navn, foedselsdato) from roller WHERE orgnr IN those orgnrs
+        3. Exclude the target person themselves
+        4. Group by connected person, aggregate shared company details
+        5. Sort by shared_company_count DESC
+
+        Uses existing ix_roller_orgnr and ix_roller_person_navn_foedselsdato indexes.
+        """
+        try:
+            # Step 1: Get person's company orgnrs
+            orgnr_stmt = (
+                select(models.Role.orgnr)
+                .join(models.Company, models.Role.orgnr == models.Company.orgnr)
+                .where(models.Role.person_navn == name)
+                .where(models.Role.fratraadt.is_(False))
+            )
+
+            if birthdate is not None:
+                orgnr_stmt = orgnr_stmt.where(models.Role.foedselsdato == birthdate)
+            elif birthyear is not None:
+                orgnr_stmt = orgnr_stmt.where(func.extract("year", models.Role.foedselsdato) == birthyear)
+
+            if not include_all:
+                orgnr_stmt = self._commercial_filter(orgnr_stmt)
+
+            orgnr_result = await self.db.execute(orgnr_stmt)
+            person_orgnrs = [row[0] for row in orgnr_result.all()]
+
+            if not person_orgnrs:
+                return []
+
+            # Step 2: Find other active people on those same companies
+            conn_stmt = (
+                select(
+                    models.Role.person_navn,
+                    models.Role.foedselsdato,
+                    models.Role.orgnr,
+                    models.Role.type_beskrivelse,
+                    models.Company.navn,
+                )
+                .join(models.Company, models.Role.orgnr == models.Company.orgnr)
+                .where(models.Role.orgnr.in_(person_orgnrs))
+                .where(models.Role.fratraadt.is_(False))
+                .where(models.Role.person_navn != name)
+            )
+
+            conn_result = await self.db.execute(conn_stmt)
+            rows = conn_result.all()
+
+            # Step 3: Get the target person's roles per company for context
+            target_roles_stmt = (
+                select(models.Role.orgnr, models.Role.type_beskrivelse)
+                .where(models.Role.person_navn == name)
+                .where(models.Role.orgnr.in_(person_orgnrs))
+                .where(models.Role.fratraadt.is_(False))
+            )
+            if birthdate is not None:
+                target_roles_stmt = target_roles_stmt.where(models.Role.foedselsdato == birthdate)
+            elif birthyear is not None:
+                target_roles_stmt = target_roles_stmt.where(func.extract("year", models.Role.foedselsdato) == birthyear)
+
+            target_result = await self.db.execute(target_roles_stmt)
+            target_role_map: dict[str, str] = {}
+            for orgnr_val, role_desc in target_result.all():
+                if orgnr_val not in target_role_map:
+                    target_role_map[orgnr_val] = role_desc
+
+            # Step 4: Group by connected person
+            connections: dict[tuple[str, date | None], list[dict]] = {}
+            for person_navn, foedselsdato, orgnr_val, type_beskrivelse, company_navn in rows:
+                key = (person_navn, foedselsdato)
+                if key not in connections:
+                    connections[key] = []
+                connections[key].append(
+                    {
+                        "orgnr": orgnr_val,
+                        "navn": company_navn,
+                        "person_role": target_role_map.get(orgnr_val, ""),
+                        "connection_role": type_beskrivelse,
+                    }
+                )
+
+            # Step 5: Sort by shared company count DESC, apply limit
+            sorted_connections = sorted(connections.items(), key=lambda x: len(x[1]), reverse=True)[:limit]
+
+            return [
+                {
+                    "name": conn_name,
+                    "foedselsdato": conn_birthdate,
+                    "shared_company_count": len(shared),
+                    "shared_companies": shared,
+                }
+                for (conn_name, conn_birthdate), shared in sorted_connections
+            ]
+        except Exception as e:
+            logger.error(
+                "Error fetching person connections",
+                extra={"person_name": name, "error": str(e)},
+            )
+            return []
+
     async def count_total_roles(self) -> int:
         """Count total number of roles in the database."""
         try:

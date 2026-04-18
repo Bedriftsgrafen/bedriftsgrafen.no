@@ -1,3 +1,6 @@
 export { PersonRoleCard } from './PersonRoleCard'
 export { PersonRoleGroups } from './PersonRoleGroups'
 export { PersonSummaryStats } from './PersonSummaryStats'
+export { PersonConnectionCard } from './PersonConnectionCard'
+export { PersonConnectionsList } from './PersonConnectionsList'
+export { PersonRoleFilters } from './PersonRoleFilters'
