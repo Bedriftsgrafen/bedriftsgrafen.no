@@ -41,7 +41,10 @@ Fetch company and financial data from Brønnøysundregistrene
 
 ### Person & Role Network
 - `GET /v1/people/search?q=...`: Search for people by name (name + birthdate unique keys)
-- `GET /v1/people/roles?name=...&birthdate=...`: List all legally compliant commercial roles for a person.
+- `GET /v1/people/roles?name=...&birthdate=...`: List all legally compliant commercial roles for a person, enriched with company context (organisasjonsform, antall_ansatte, naeringskode, etc.) and latest financials (salgsinntekter, aarsresultat, driftsresultat, egenkapitalandel).
+- `GET /v1/people/connections?name=...&birthdate=...&limit=20`: Find people who share companies with the given person. Returns connections sorted by number of shared companies, with each connection including shared company details (name, orgnr, roles). Birth year only (not full date) for GDPR compliance. Limit: 1-100 (default 20).
+- `GET /v1/people/sparklines?name=...&birthdate=...&years=5`: Mini financial time-series (salgsinntekter + aarsresultat per year) for each company a person has roles in. Returns array of `{ orgnr, data_points: [{ aar, salgsinntekter, aarsresultat }] }`. Used for inline sparkline charts on role cards.
+- `POST /v1/people/network-path`: Find shortest path between two people via shared board memberships (BFS, max depth 3). Request body: `{ person_a_name, person_a_birthdate, person_b_name, person_b_birthdate, max_depth? }`. Returns `{ found, depth, path: [{ type, name, identifier, role }] }`.
 
 ## Stats Endpoints
 

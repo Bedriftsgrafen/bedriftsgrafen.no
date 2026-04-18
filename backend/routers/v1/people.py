@@ -13,12 +13,37 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from database import get_db
 from repositories.role_repository import RoleRepository
-from schemas.people import PaginatedPersonSearch, PersonRoleResponse, PersonSearchResult, PersonSearchResultDetailed
+from schemas.people import (
+    CompanySparklineData,
+    NetworkPathRequest,
+    NetworkPathResponse,
+    PaginatedPersonSearch,
+    PersonConnectionResponse,
+    PersonRoleResponse,
+    PersonSearchResult,
+    PersonSearchResultDetailed,
+)
+from services.person_service import PersonService, get_person_service
 from utils.auth import is_admin
 
 logger = logging.getLogger(__name__)
 
 router: APIRouter = APIRouter(prefix="/v1/people", tags=["people"])
+
+
+def _parse_birthdate(birthdate: str | None) -> tuple[date | None, int | None]:
+    """Parse birthdate param: year-only, full ISO date, or None.
+
+    Returns:
+        Tuple of (parsed_date, parsed_year). At most one is non-None.
+    """
+    if not birthdate or birthdate in ("unknown", "none"):
+        return None, None
+    if re.fullmatch(r"\d{4}", birthdate):
+        return None, int(birthdate)
+    if re.fullmatch(r"\d{4}-\d{2}-\d{2}", birthdate):
+        return date.fromisoformat(birthdate), None
+    return None, None
 
 
 @router.get("/search", response_model=list[PersonSearchResult])
@@ -78,10 +103,10 @@ async def get_person_roles(
     name: str = Query(..., description="Person's full name"),
     birthdate: str | None = Query(None, description="Birth date or year for disambiguation"),
     x_admin_key: str | None = Header(None, alias="X-Admin-Key"),
-    db: AsyncSession = Depends(get_db),
+    service: PersonService = Depends(get_person_service),
 ) -> list[PersonRoleResponse]:
     """
-    Fetch all LEGALLY ALLOWED roles for a person.
+    Fetch all LEGALLY ALLOWED roles for a person, enriched with company context and financials.
 
     Only includes commercial entities (næringsvirksomhet) as per Enhetsregisterloven § 22.
     Roles in voluntary organizations, housing cooperatives, and other non-commercial
@@ -92,32 +117,67 @@ async def get_person_roles(
       - "1996-03-12"   → exact date match
       - None / omitted → no birthdate filter
     """
-    role_repo = RoleRepository(db)
-    admin = is_admin(x_admin_key)
+    parsed_date, parsed_year = _parse_birthdate(birthdate)
+    return await service.get_enriched_roles(name, parsed_date, parsed_year, is_admin(x_admin_key))
 
-    # Parse birthdate param: year-only, full ISO date, or None
-    parsed_date: date | None = None
-    parsed_year: int | None = None
 
-    if birthdate and birthdate not in ("unknown", "none"):
-        if re.fullmatch(r"\d{4}", birthdate):
-            parsed_year = int(birthdate)
-        elif re.fullmatch(r"\d{4}-\d{2}-\d{2}", birthdate):
-            parsed_date = date.fromisoformat(birthdate)
+@router.get("/connections", response_model=list[PersonConnectionResponse])
+async def get_person_connections(
+    request: Request,
+    name: str = Query(..., description="Person's full name"),
+    birthdate: str | None = Query(None, description="Birth date or year for disambiguation"),
+    limit: int = Query(25, ge=1, le=100, description="Max connections to return"),
+    x_admin_key: str | None = Header(None, alias="X-Admin-Key"),
+    service: PersonService = Depends(get_person_service),
+) -> list[PersonConnectionResponse]:
+    """
+    Find people connected via shared board/role memberships.
 
-    roles = await role_repo.get_person_commercial_roles(
-        name, birthdate=parsed_date, birthyear=parsed_year, include_all=admin
+    Returns people who share active roles at the same companies,
+    sorted by shared company count (most overlap first).
+    GDPR: Only birth year is exposed for connected persons.
+    """
+    parsed_date, parsed_year = _parse_birthdate(birthdate)
+    return await service.get_connections(name, parsed_date, parsed_year, is_admin(x_admin_key), limit=limit)
+
+
+@router.get("/sparklines", response_model=list[CompanySparklineData])
+async def get_person_sparklines(
+    request: Request,
+    name: str = Query(..., description="Person's full name"),
+    birthdate: str | None = Query(None, description="Birth date or year for disambiguation"),
+    years: int = Query(5, ge=3, le=10, description="Number of years of data"),
+    x_admin_key: str | None = Header(None, alias="X-Admin-Key"),
+    service: PersonService = Depends(get_person_service),
+) -> list[CompanySparklineData]:
+    """
+    Mini revenue + profit sparklines for all companies a person is connected to.
+
+    Returns time-series data for the last N years per company, suitable for
+    inline sparkline chart rendering.
+    """
+    parsed_date, parsed_year = _parse_birthdate(birthdate)
+    return await service.get_role_sparklines(name, parsed_date, parsed_year, is_admin(x_admin_key), years=years)
+
+
+@router.post("/network-path", response_model=NetworkPathResponse)
+async def find_network_path(
+    request: Request,
+    body: NetworkPathRequest,
+    x_admin_key: str | None = Header(None, alias="X-Admin-Key"),
+    service: PersonService = Depends(get_person_service),
+) -> NetworkPathResponse:
+    """
+    Find shortest path between two people via shared board seats.
+
+    BFS traversal: Person A → Companies → People → Companies → ... → Person B.
+    Returns the path as alternating person/company nodes.
+    """
+    a_date, a_year = _parse_birthdate(body.person_a_birthdate)
+    b_date, b_year = _parse_birthdate(body.person_b_birthdate)
+    return await service.find_network_path(
+        (body.person_a_name, a_date, a_year),
+        (body.person_b_name, b_date, b_year),
+        max_depth=body.max_depth,
+        include_all=is_admin(x_admin_key),
     )
-
-    return [
-        PersonRoleResponse(
-            orgnr=r.orgnr or "",
-            type_kode=r.type_kode or "UKJENT",
-            type_beskrivelse=r.type_beskrivelse or "Ukjent rolle",
-            enhet_navn=r.enhet_navn or (r.company.navn if r.company else None) or "Ukjent virksomhet",
-            fratraadt=r.fratraadt if r.fratraadt is not None else False,
-            rekkefoelge=r.rekkefoelge,
-            foedselsdato=r.foedselsdato,
-        )
-        for r in roles
-    ]

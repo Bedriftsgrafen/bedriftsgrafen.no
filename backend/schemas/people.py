@@ -40,7 +40,7 @@ class PaginatedPersonSearch(BaseModel):
 
 
 class PersonRoleResponse(BaseModel):
-    """A commercial role held by a person.
+    """A commercial role held by a person, enriched with company context and latest financials.
 
     Renamed from RoleResponse (in people router) to avoid collision with
     CompanyRoleResponse (roles belonging to a company).
@@ -54,4 +54,91 @@ class PersonRoleResponse(BaseModel):
     rekkefoelge: int | None = Field(None, description="Role sequence/priority")
     foedselsdato: date | None = Field(None, description="Birth date for disambiguation (year-only URLs)")
 
+    # Company context (from eager-loaded Company model)
+    organisasjonsform: str | None = Field(None, description="Legal form (e.g. AS, ASA, ENK)")
+    antall_ansatte: int | None = Field(None, description="Number of employees")
+    naeringskode: str | None = Field(None, description="NACE industry code (e.g. '62.010')")
+    stiftelsesdato: date | None = Field(None, description="Company founding date")
+    konkurs: bool = Field(False, description="Whether the company is bankrupt")
+    under_avvikling: bool = Field(False, description="Whether the company is being liquidated")
+
+    # Latest financials (from LatestFinancials materialized view)
+    latest_aar: int | None = Field(None, description="Year of latest financial data")
+    latest_salgsinntekter: float | None = Field(None, description="Latest revenue (NOK)")
+    latest_aarsresultat: float | None = Field(None, description="Latest annual profit/loss (NOK)")
+    latest_driftsresultat: float | None = Field(None, description="Latest operating profit (NOK)")
+    latest_egenkapitalandel: float | None = Field(None, description="Latest equity ratio (%)")
+
     model_config = ConfigDict(from_attributes=True)
+
+
+class SharedCompanyInfo(BaseModel):
+    """A company shared between two people."""
+
+    orgnr: str = Field(..., description="Company organization number")
+    navn: str = Field(..., description="Company name")
+    person_role: str = Field(..., description="Role the target person holds")
+    connection_role: str = Field(..., description="Role the connected person holds")
+
+
+class PersonConnectionResponse(BaseModel):
+    """A person connected via shared board/role memberships.
+
+    GDPR: birth_year (int) instead of full birthdate for third parties
+    to comply with data minimization principles.
+    """
+
+    name: str = Field(..., description="Connected person's full name")
+    birth_year: int | None = Field(None, description="Birth year only (GDPR data minimization)")
+    shared_company_count: int = Field(..., description="Number of companies shared")
+    shared_companies: list[SharedCompanyInfo] = Field(default_factory=list)
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+class SparklinePoint(BaseModel):
+    """A single data point for sparkline rendering."""
+
+    aar: int = Field(..., description="Year")
+    salgsinntekter: float | None = Field(None, description="Revenue (NOK)")
+    aarsresultat: float | None = Field(None, description="Annual profit/loss (NOK)")
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+class CompanySparklineData(BaseModel):
+    """Mini time-series for sparkline rendering."""
+
+    orgnr: str = Field(..., description="Company organization number")
+    data_points: list[SparklinePoint] = Field(default_factory=list)
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+class NetworkPathNode(BaseModel):
+    """A node in the network path between two people."""
+
+    type: str = Field(..., description="'person' or 'company'")
+    name: str = Field(..., description="Person name or company name")
+    identifier: str = Field(..., description="person_navn+birthdate or orgnr")
+    role: str | None = Field(None, description="Role connecting person to company")
+
+
+class NetworkPathResponse(BaseModel):
+    """Result of a network path search."""
+
+    found: bool = Field(..., description="Whether a path was found")
+    depth: int | None = Field(None, description="Number of hops in the path")
+    path: list[NetworkPathNode] = Field(default_factory=list)
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+class NetworkPathRequest(BaseModel):
+    """Request for finding shortest path between two people."""
+
+    person_a_name: str = Field(..., description="First person's full name")
+    person_a_birthdate: str | None = Field(None, description="First person's birth date or year")
+    person_b_name: str = Field(..., description="Second person's full name")
+    person_b_birthdate: str | None = Field(None, description="Second person's birth date or year")
+    max_depth: int = Field(default=3, ge=1, le=5, description="Maximum path depth (hops)")

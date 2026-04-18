@@ -1,16 +1,9 @@
 import { useQuery } from '@tanstack/react-query'
 import { apiClient } from '../../utils/apiClient'
 import { personQueryKeys } from './usePersonSearchQuery'
+import type { PersonRole } from '../../types/person'
 
-export interface PersonRole {
-    orgnr: string
-    type_kode: string
-    type_beskrivelse: string
-    enhet_navn: string
-    fratraadt: boolean
-    rekkefoelge: number | null
-    foedselsdato: string | null
-}
+export type { PersonRole }
 
 /**
  * Hook for fetching all LEGALLY ALLOWED roles for a person.

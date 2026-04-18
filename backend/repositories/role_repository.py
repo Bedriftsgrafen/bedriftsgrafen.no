@@ -4,7 +4,7 @@ import logging
 from datetime import UTC, date, datetime, timedelta
 from typing import Any
 
-from sqlalchemy import Select, delete, select, text
+from sqlalchemy import Select, and_, delete, or_, select, text
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import contains_eager
 from sqlalchemy.sql import func
@@ -451,8 +451,10 @@ class RoleRepository:
                     birthdate = date.fromisoformat(birthdate)
                 stmt = stmt.where(models.Role.foedselsdato == birthdate)
             elif birthyear is not None:
-                stmt = stmt.where(func.extract("year", models.Role.foedselsdato) == birthyear)
-
+                stmt = stmt.where(
+                    models.Role.foedselsdato >= date(birthyear, 1, 1),
+                    models.Role.foedselsdato < date(birthyear + 1, 1, 1),
+                )
             if not include_all:
                 stmt = self._commercial_filter(stmt)
 
@@ -467,6 +469,282 @@ class RoleRepository:
                 "Error fetching commercial roles",
                 extra={"person_name": name, "birthdate": "REDACTED", "error": str(e)},
             )
+            return []
+
+    async def get_person_connections(
+        self,
+        name: str,
+        birthdate: date | None = None,
+        birthyear: int | None = None,
+        include_all: bool = False,
+        limit: int = 25,
+    ) -> list[dict]:
+        """Find people sharing companies with this person.
+
+        Strategy:
+        1. Get all orgnrs for the target person (commercial filter applied)
+        2. Find distinct (person_navn, foedselsdato) from roller WHERE orgnr IN those orgnrs
+        3. Exclude the target person themselves
+        4. Group by connected person, aggregate shared company details
+        5. Sort by shared_company_count DESC
+
+        Uses existing ix_roller_orgnr and ix_roller_person_navn_foedselsdato indexes.
+        """
+        try:
+            # Step 1: Get person's company orgnrs
+            orgnr_stmt = (
+                select(models.Role.orgnr)
+                .join(models.Company, models.Role.orgnr == models.Company.orgnr)
+                .where(models.Role.person_navn == name)
+                .where(models.Role.fratraadt.is_(False))
+            )
+
+            if birthdate is not None:
+                orgnr_stmt = orgnr_stmt.where(models.Role.foedselsdato == birthdate)
+            elif birthyear is not None:
+                orgnr_stmt = orgnr_stmt.where(
+                    models.Role.foedselsdato >= date(birthyear, 1, 1),
+                    models.Role.foedselsdato < date(birthyear + 1, 1, 1),
+                )
+
+            if not include_all:
+                orgnr_stmt = self._commercial_filter(orgnr_stmt)
+
+            orgnr_result = await self.db.execute(orgnr_stmt)
+            person_orgnrs = [row[0] for row in orgnr_result.all()]
+
+            if not person_orgnrs:
+                return []
+
+            # Step 2: Find other active people on those same companies
+            conn_stmt = (
+                select(
+                    models.Role.person_navn,
+                    models.Role.foedselsdato,
+                    models.Role.orgnr,
+                    models.Role.type_beskrivelse,
+                    models.Company.navn,
+                )
+                .join(models.Company, models.Role.orgnr == models.Company.orgnr)
+                .where(models.Role.orgnr.in_(person_orgnrs))
+                .where(models.Role.fratraadt.is_(False))
+                .where(models.Role.person_navn != name)
+            )
+
+            conn_result = await self.db.execute(conn_stmt)
+            rows = conn_result.all()
+
+            # Step 3: Get the target person's roles per company for context
+            target_roles_stmt = (
+                select(models.Role.orgnr, models.Role.type_beskrivelse)
+                .where(models.Role.person_navn == name)
+                .where(models.Role.orgnr.in_(person_orgnrs))
+                .where(models.Role.fratraadt.is_(False))
+            )
+            if birthdate is not None:
+                target_roles_stmt = target_roles_stmt.where(models.Role.foedselsdato == birthdate)
+            elif birthyear is not None:
+                target_roles_stmt = target_roles_stmt.where(
+                    models.Role.foedselsdato >= date(birthyear, 1, 1),
+                    models.Role.foedselsdato < date(birthyear + 1, 1, 1),
+                )
+
+            target_result = await self.db.execute(target_roles_stmt)
+            target_role_map: dict[str, str] = {}
+            for orgnr_val, role_desc in target_result.all():
+                if orgnr_val not in target_role_map:
+                    target_role_map[orgnr_val] = role_desc
+
+            # Step 4: Group by connected person
+            connections: dict[tuple[str, date | None], list[dict]] = {}
+            for person_navn, foedselsdato, orgnr_val, type_beskrivelse, company_navn in rows:
+                key = (person_navn, foedselsdato)
+                if key not in connections:
+                    connections[key] = []
+                connections[key].append(
+                    {
+                        "orgnr": orgnr_val,
+                        "navn": company_navn,
+                        "person_role": target_role_map.get(orgnr_val, ""),
+                        "connection_role": type_beskrivelse,
+                    }
+                )
+
+            # Step 5: Sort by shared company count DESC, apply limit
+            sorted_connections = sorted(connections.items(), key=lambda x: len(x[1]), reverse=True)[:limit]
+
+            return [
+                {
+                    "name": conn_name,
+                    "foedselsdato": conn_birthdate,
+                    "shared_company_count": len(shared),
+                    "shared_companies": shared,
+                }
+                for (conn_name, conn_birthdate), shared in sorted_connections
+            ]
+        except Exception as e:
+            logger.error(
+                "Error fetching person connections",
+                extra={"person_name": name, "error": str(e)},
+            )
+            return []
+
+    async def get_companies_for_person(
+        self,
+        name: str,
+        birthdate: date | None,
+        birthyear: int | None,
+        include_all: bool = False,
+    ) -> list[str]:
+        """Return list of orgnrs where this person has active roles.
+
+        Used as a BFS primitive for network path finding.
+        Uses ix_roller_person_navn_foedselsdato index.
+        """
+        try:
+            stmt = (
+                select(models.Role.orgnr)
+                .join(models.Company, models.Role.orgnr == models.Company.orgnr)
+                .where(
+                    models.Role.person_navn == name,
+                    models.Role.fratraadt == False,  # noqa: E712
+                )
+                .distinct()
+            )
+
+            if birthdate:
+                stmt = stmt.where(models.Role.foedselsdato == birthdate)
+            elif birthyear:
+                # Use date range instead of EXTRACT() to allow index usage
+                stmt = stmt.where(
+                    models.Role.foedselsdato >= date(birthyear, 1, 1),
+                    models.Role.foedselsdato < date(birthyear + 1, 1, 1),
+                )
+
+            if not include_all:
+                stmt = self._commercial_filter(stmt)
+
+            result = await self.db.execute(stmt)
+            return [row[0] for row in result.all()]
+        except Exception as e:
+            logger.error("Error in get_companies_for_person", extra={"person_name": name, "error": str(e)})
+            return []
+
+    async def get_companies_for_persons_batch(
+        self,
+        persons: list[tuple[str, date | None, int | None]],
+        include_all: bool = False,
+    ) -> dict[tuple[str, str | None], list[str]]:
+        """Batch version: get companies for multiple persons in a single query.
+
+        Returns mapping of (upper_name, date_iso_str | None) → list of orgnrs.
+        Full-date precision avoids merging the ~1% of persons who share name+year.
+        Uses OR conditions per person to leverage ix_roller_person_navn_foedselsdato.
+        """
+        if not persons:
+            return {}
+        try:
+            conditions = []
+            for name, bd, by in persons:
+                name_cond = models.Role.person_navn == name
+                if bd:
+                    conditions.append(and_(name_cond, models.Role.foedselsdato == bd))
+                elif by:
+                    conditions.append(
+                        and_(
+                            name_cond,
+                            models.Role.foedselsdato >= date(by, 1, 1),
+                            models.Role.foedselsdato < date(by + 1, 1, 1),
+                        )
+                    )
+                else:
+                    conditions.append(name_cond)
+
+            stmt = (
+                select(
+                    models.Role.person_navn,
+                    models.Role.foedselsdato,
+                    models.Role.orgnr,
+                )
+                .join(models.Company, models.Role.orgnr == models.Company.orgnr)
+                .where(
+                    or_(*conditions),
+                    models.Role.fratraadt == False,  # noqa: E712
+                )
+                .distinct()
+            )
+
+            if not include_all:
+                stmt = self._commercial_filter(stmt)
+
+            result = await self.db.execute(stmt)
+            rows = result.all()
+
+            mapping: dict[tuple[str, str | None], list[str]] = {}
+            for row in rows:
+                key = (row.person_navn.upper(), str(row.foedselsdato) if row.foedselsdato else None)
+                mapping.setdefault(key, []).append(row.orgnr)
+            return mapping
+        except Exception as e:
+            logger.error("Error in get_companies_for_persons_batch", extra={"count": len(persons), "error": str(e)})
+            return {}
+
+    async def get_people_for_companies(
+        self,
+        orgnrs: list[str],
+        include_all: bool = False,
+        exclude_persons: set[tuple[str, str | None]] | None = None,
+    ) -> list[dict]:
+        """Return distinct people with active roles in the given companies.
+
+        Excludes already-visited persons to prevent BFS cycles.
+        Used as a BFS primitive for network path finding.
+
+        Returns list of dicts with keys: name, foedselsdato, orgnr, role_beskrivelse, enhet_navn
+        """
+        if not orgnrs:
+            return []
+        try:
+            stmt = (
+                select(
+                    models.Role.person_navn,
+                    models.Role.foedselsdato,
+                    models.Role.orgnr,
+                    models.Role.type_beskrivelse,
+                    models.Company.navn.label("enhet_navn"),
+                )
+                .join(models.Company, models.Role.orgnr == models.Company.orgnr)
+                .where(
+                    models.Role.orgnr.in_(orgnrs),
+                    models.Role.fratraadt == False,  # noqa: E712
+                )
+            )
+
+            if not include_all:
+                stmt = self._commercial_filter(stmt)
+
+            result = await self.db.execute(stmt)
+            rows = result.all()
+
+            people = []
+            for row in rows:
+                if not row.person_navn:
+                    continue
+                person_key = (row.person_navn.upper(), str(row.foedselsdato) if row.foedselsdato else None)
+                if exclude_persons and person_key in exclude_persons:
+                    continue
+                people.append(
+                    {
+                        "name": row.person_navn,
+                        "foedselsdato": row.foedselsdato,
+                        "orgnr": row.orgnr,
+                        "role_beskrivelse": row.type_beskrivelse,
+                        "enhet_navn": row.enhet_navn,
+                    }
+                )
+            return people
+        except Exception as e:
+            logger.error("Error in get_people_for_companies", extra={"orgnrs_count": len(orgnrs), "error": str(e)})
             return []
 
     async def count_total_roles(self) -> int:
