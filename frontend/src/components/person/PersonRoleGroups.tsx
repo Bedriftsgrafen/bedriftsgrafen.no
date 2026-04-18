@@ -1,5 +1,5 @@
 import { memo } from 'react'
-import type { PersonRole } from '../../types/person'
+import type { PersonRole, CompanySparklineData } from '../../types/person'
 import { PersonRoleCard } from './PersonRoleCard'
 
 const ROLE_GROUPS: { label: string; codes: Set<string> }[] = [
@@ -35,9 +35,10 @@ function groupRoles(roles: PersonRole[]): RoleGroup[] {
 
 interface PersonRoleGroupProps {
     roles: PersonRole[]
+    sparklineMap?: Map<string, CompanySparklineData>
 }
 
-export const PersonRoleGroups = memo(function PersonRoleGroups({ roles }: PersonRoleGroupProps) {
+export const PersonRoleGroups = memo(function PersonRoleGroups({ roles, sparklineMap }: PersonRoleGroupProps) {
     const groups = groupRoles(roles)
 
     return (
@@ -50,7 +51,11 @@ export const PersonRoleGroups = memo(function PersonRoleGroups({ roles }: Person
                     </h3>
                     <div className="grid gap-3">
                         {group.roles.map((role, idx) => (
-                            <PersonRoleCard key={`${role.orgnr}-${role.type_kode}-${idx}`} role={role} />
+                            <PersonRoleCard
+                                key={`${role.orgnr}-${role.type_kode}-${idx}`}
+                                role={role}
+                                sparkline={sparklineMap?.get(role.orgnr)}
+                            />
                         ))}
                     </div>
                 </section>

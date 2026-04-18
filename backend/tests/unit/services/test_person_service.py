@@ -227,3 +227,154 @@ class TestPersonServiceGetConnections:
             include_all=True,
             limit=10,
         )
+
+
+class TestPersonServiceGetRoleSparklines:
+    """Tests for PersonService.get_role_sparklines orchestration."""
+
+    @pytest.fixture
+    def service(self):
+        from services.person_service import PersonService
+
+        svc = PersonService(AsyncMock())
+        svc.role_repo = MagicMock()
+        svc.accounting_repo = MagicMock()
+        return svc
+
+    def _make_role(self, orgnr="123456789"):
+        role = MagicMock()
+        role.orgnr = orgnr
+        return role
+
+    @pytest.mark.asyncio
+    async def test_returns_sparkline_data(self, service):
+        """Returns sparkline data for each company the person has roles in."""
+        from schemas.people import CompanySparklineData
+
+        roles = [self._make_role("111111111"), self._make_role("222222222")]
+        service.role_repo.get_person_commercial_roles = AsyncMock(return_value=roles)
+        service.accounting_repo.get_sparkline_data_batch = AsyncMock(
+            return_value={
+                "111111111": [{"aar": 2022, "salgsinntekter": 1_000_000, "aarsresultat": 100_000}],
+                "222222222": [{"aar": 2023, "salgsinntekter": 2_000_000, "aarsresultat": 200_000}],
+            }
+        )
+
+        result = await service.get_role_sparklines("Ola", None, 1980, False)
+
+        assert len(result) == 2
+        assert all(isinstance(r, CompanySparklineData) for r in result)
+        orgnrs = {r.orgnr for r in result}
+        assert orgnrs == {"111111111", "222222222"}
+        for item in result:
+            assert len(item.data_points) == 1
+
+    @pytest.mark.asyncio
+    async def test_empty_roles_returns_empty(self, service):
+        """Empty roles list returns empty result without calling sparkline batch."""
+        service.role_repo.get_person_commercial_roles = AsyncMock(return_value=[])
+
+        result = await service.get_role_sparklines("Nobody", None, None, False)
+
+        assert result == []
+        service.accounting_repo.get_sparkline_data_batch.assert_not_called()
+
+    @pytest.mark.asyncio
+    async def test_handles_missing_sparkline_data(self, service):
+        """Only companies with sparkline data are included in the result."""
+        roles = [self._make_role("111111111"), self._make_role("222222222")]
+        service.role_repo.get_person_commercial_roles = AsyncMock(return_value=roles)
+        service.accounting_repo.get_sparkline_data_batch = AsyncMock(
+            return_value={
+                "111111111": [{"aar": 2023, "salgsinntekter": 5_000_000, "aarsresultat": 300_000}],
+            }
+        )
+
+        result = await service.get_role_sparklines("Ola", None, 1980, False)
+
+        assert len(result) == 1
+        assert result[0].orgnr == "111111111"
+
+
+class TestPersonServiceFindNetworkPath:
+    """Tests for PersonService.find_network_path BFS orchestration."""
+
+    @pytest.fixture
+    def service(self):
+        from services.person_service import PersonService
+
+        svc = PersonService(AsyncMock())
+        svc.role_repo = MagicMock()
+        svc.accounting_repo = MagicMock()
+        return svc
+
+    @pytest.mark.asyncio
+    async def test_direct_connection_found(self, service):
+        """Person A and Person B share a company directly (depth 1)."""
+        service.role_repo.get_companies_for_persons_batch = AsyncMock(
+            return_value={("PERSON A", "1980-01-01"): ["111111111"]}
+        )
+        service.role_repo.get_people_for_companies = AsyncMock(
+            return_value=[
+                {
+                    "name": "Person B",
+                    "foedselsdato": date(1975, 3, 15),
+                    "orgnr": "111111111",
+                    "role_beskrivelse": "Styreleder",
+                    "enhet_navn": "Felles AS",
+                }
+            ]
+        )
+
+        result = await service.find_network_path(
+            ("Person A", date(1980, 1, 1), None),
+            ("Person B", None, 1975),
+        )
+
+        assert result.found is True
+        assert result.depth == 1
+        assert len(result.path) == 3
+        assert result.path[0].type == "person"
+        assert result.path[1].type == "company"
+        assert result.path[2].type == "person"
+        assert result.path[2].name == "Person B"
+
+    @pytest.mark.asyncio
+    async def test_no_path_found(self, service):
+        """Person A has no companies → no path possible."""
+        service.role_repo.get_companies_for_persons_batch = AsyncMock(return_value={})
+
+        result = await service.find_network_path(
+            ("Person A", date(1980, 1, 1), None),
+            ("Person B", None, 1975),
+        )
+
+        assert result.found is False
+        assert result.depth is None
+        assert result.path == []
+
+    @pytest.mark.asyncio
+    async def test_respects_max_depth(self, service):
+        """Indirect connection requiring depth 2 is not found with max_depth=1."""
+        service.role_repo.get_companies_for_persons_batch = AsyncMock(
+            return_value={("PERSON A", "1980-01-01"): ["111111111"]}
+        )
+        service.role_repo.get_people_for_companies = AsyncMock(
+            return_value=[
+                {
+                    "name": "Person C",
+                    "foedselsdato": date(1990, 6, 1),
+                    "orgnr": "111111111",
+                    "role_beskrivelse": "Styremedlem",
+                    "enhet_navn": "Mellom AS",
+                }
+            ]
+        )
+
+        result = await service.find_network_path(
+            ("Person A", date(1980, 1, 1), None),
+            ("Person B", None, 1975),
+            max_depth=1,
+        )
+
+        assert result.found is False

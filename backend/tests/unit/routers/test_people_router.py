@@ -14,6 +14,8 @@ from unittest.mock import AsyncMock, MagicMock, patch
 import pytest
 from fastapi.testclient import TestClient
 
+from schemas.people import NetworkPathResponse
+
 
 # Mock dependencies before importing router
 @pytest.fixture(autouse=True)
@@ -664,3 +666,154 @@ class TestGetPersonConnectionsEndpoint:
         )
         assert conn.birth_year is None
         assert conn.shared_companies[0].orgnr == "999999999"
+
+
+# ============================================================================
+# Category 7: GET /v1/people/sparklines (Phase 3)
+# ============================================================================
+class TestGetPersonSparklineEndpoint:
+    """Tests for GET /v1/people/sparklines."""
+
+    @pytest.fixture(autouse=True)
+    def _setup_service(self):
+        from main import app
+        from services.person_service import get_person_service
+
+        self.mock_service = MagicMock()
+        self.mock_service.get_role_sparklines = AsyncMock(return_value=[])
+        app.dependency_overrides[get_person_service] = lambda: self.mock_service
+        yield
+        app.dependency_overrides.pop(get_person_service, None)
+
+    @pytest.mark.asyncio
+    async def test_returns_sparkline_data(self, client):
+        """Returns sparkline data for person's companies."""
+        from schemas.people import CompanySparklineData, SparklinePoint
+
+        sparkline = CompanySparklineData(
+            orgnr="123456789",
+            data_points=[
+                SparklinePoint(aar=2022, salgsinntekter=1_000_000, aarsresultat=100_000),
+                SparklinePoint(aar=2023, salgsinntekter=1_500_000, aarsresultat=150_000),
+            ],
+        )
+        self.mock_service.get_role_sparklines.return_value = [sparkline]
+
+        response = client.get("/v1/people/sparklines?name=Ola%20Nordmann")
+
+        assert response.status_code == 200
+        data = response.json()
+        assert len(data) == 1
+        assert data[0]["orgnr"] == "123456789"
+        assert len(data[0]["data_points"]) == 2
+        assert data[0]["data_points"][0]["aar"] == 2022
+
+    @pytest.mark.asyncio
+    async def test_requires_name_parameter(self, client):
+        """Name parameter is required."""
+        response = client.get("/v1/people/sparklines")
+        assert response.status_code == 422
+
+    @pytest.mark.asyncio
+    async def test_accepts_years_parameter(self, client):
+        """Years parameter is forwarded to service."""
+        response = client.get("/v1/people/sparklines?name=Ola&years=3")
+
+        assert response.status_code == 200
+        call_kwargs = self.mock_service.get_role_sparklines.call_args
+        assert call_kwargs.kwargs.get("years") == 3
+
+    @pytest.mark.asyncio
+    async def test_years_validation(self, client):
+        """Years must be between 3 and 10."""
+        response = client.get("/v1/people/sparklines?name=Ola&years=1")
+        assert response.status_code == 422
+
+        response = client.get("/v1/people/sparklines?name=Ola&years=15")
+        assert response.status_code == 422
+
+
+# ============================================================================
+# Category 8: POST /v1/people/network-path (Phase 3)
+# ============================================================================
+class TestFindNetworkPathEndpoint:
+    """Tests for POST /v1/people/network-path."""
+
+    @pytest.fixture(autouse=True)
+    def _setup_service(self):
+        from main import app
+        from services.person_service import get_person_service
+
+        self.mock_service = MagicMock()
+        self.mock_service.find_network_path = AsyncMock(
+            return_value=NetworkPathResponse(found=False, depth=None, path=[])
+        )
+        app.dependency_overrides[get_person_service] = lambda: self.mock_service
+        yield
+        app.dependency_overrides.pop(get_person_service, None)
+
+    @pytest.mark.asyncio
+    async def test_returns_path_found(self, client):
+        """Returns found path with nodes."""
+        from schemas.people import NetworkPathNode
+
+        self.mock_service.find_network_path.return_value = NetworkPathResponse(
+            found=True,
+            depth=1,
+            path=[
+                NetworkPathNode(type="person", name="Person A", identifier="Person A|1980-01-01"),
+                NetworkPathNode(type="company", name="Felles AS", identifier="111111111", role="Styreleder"),
+                NetworkPathNode(type="person", name="Person B", identifier="Person B|1975-03-15"),
+            ],
+        )
+
+        response = client.post(
+            "/v1/people/network-path",
+            json={"person_a_name": "Person A", "person_b_name": "Person B"},
+        )
+
+        assert response.status_code == 200
+        data = response.json()
+        assert data["found"] is True
+        assert data["depth"] == 1
+        assert len(data["path"]) == 3
+        assert data["path"][0]["type"] == "person"
+        assert data["path"][1]["type"] == "company"
+
+    @pytest.mark.asyncio
+    async def test_returns_not_found(self, client):
+        """Returns found=false when no path exists."""
+        response = client.post(
+            "/v1/people/network-path",
+            json={"person_a_name": "Person A", "person_b_name": "Person B"},
+        )
+
+        assert response.status_code == 200
+        data = response.json()
+        assert data["found"] is False
+        assert data["depth"] is None
+        assert data["path"] == []
+
+    @pytest.mark.asyncio
+    async def test_requires_both_persons(self, client):
+        """Both person names are required."""
+        response = client.post(
+            "/v1/people/network-path",
+            json={"person_a_name": "Person A"},
+        )
+        assert response.status_code == 422
+
+    @pytest.mark.asyncio
+    async def test_max_depth_validation(self, client):
+        """max_depth must be between 1 and 5."""
+        response = client.post(
+            "/v1/people/network-path",
+            json={"person_a_name": "A", "person_b_name": "B", "max_depth": 0},
+        )
+        assert response.status_code == 422
+
+        response = client.post(
+            "/v1/people/network-path",
+            json={"person_a_name": "A", "person_b_name": "B", "max_depth": 10},
+        )
+        assert response.status_code == 422

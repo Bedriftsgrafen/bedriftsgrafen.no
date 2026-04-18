@@ -1,11 +1,13 @@
 import { memo } from 'react'
 import { Link } from '@tanstack/react-router'
 import { Building2, ExternalLink, TrendingUp, TrendingDown } from 'lucide-react'
-import type { PersonRole } from '../../types/person'
+import type { PersonRole, CompanySparklineData } from '../../types/person'
 import { formatLargeCurrency, formatPercentValue } from '../../utils/formatters'
+import { PersonRoleSparkline } from './PersonRoleSparkline'
 
 interface PersonRoleCardProps {
     role: PersonRole
+    sparkline?: CompanySparklineData
 }
 
 function resultIndicator(value: number | null) {
@@ -14,7 +16,7 @@ function resultIndicator(value: number | null) {
     return <TrendingDown className="h-3.5 w-3.5 text-red-500" />
 }
 
-export const PersonRoleCard = memo(function PersonRoleCard({ role }: PersonRoleCardProps) {
+export const PersonRoleCard = memo(function PersonRoleCard({ role, sparkline }: PersonRoleCardProps) {
     const isInactive = role.fratraadt || role.konkurs || role.under_avvikling
 
     return (
@@ -92,6 +94,12 @@ export const PersonRoleCard = memo(function PersonRoleCard({ role }: PersonRoleC
                         <span className="inline-block mt-1.5 text-xs text-gray-400">
                             {role.antall_ansatte} ansatte
                         </span>
+                    )}
+
+                    {sparkline && sparkline.data_points.length > 0 && (
+                        <div className="mt-2">
+                            <PersonRoleSparkline dataPoints={sparkline.data_points} />
+                        </div>
                     )}
                 </div>
             </div>

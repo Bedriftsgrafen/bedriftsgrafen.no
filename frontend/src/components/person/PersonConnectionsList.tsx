@@ -6,6 +6,7 @@ import { PersonConnectionCard } from './PersonConnectionCard'
 interface PersonConnectionsListProps {
     connections: PersonConnection[]
     isLoading: boolean
+    personName: string
 }
 
 function LoadingSkeleton() {
@@ -26,7 +27,7 @@ function LoadingSkeleton() {
     )
 }
 
-export function PersonConnectionsList({ connections, isLoading }: PersonConnectionsListProps) {
+export function PersonConnectionsList({ connections, isLoading, personName }: PersonConnectionsListProps) {
     const [expandAll, setExpandAll] = useState(false)
 
     if (isLoading) return <LoadingSkeleton />
@@ -57,9 +58,10 @@ export function PersonConnectionsList({ connections, isLoading }: PersonConnecti
             <div className="space-y-3">
                 {connections.map((connection) => (
                     <PersonConnectionCard
-                        key={`${connection.name}-${connection.birth_year}`}
+                        key={`${connection.name}-${connection.birth_year}-${expandAll}`}
                         connection={connection}
                         defaultExpanded={expandAll}
+                        personName={personName}
                     />
                 ))}
             </div>

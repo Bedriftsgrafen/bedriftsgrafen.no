@@ -94,3 +94,51 @@ class PersonConnectionResponse(BaseModel):
     shared_companies: list[SharedCompanyInfo] = Field(default_factory=list)
 
     model_config = ConfigDict(from_attributes=True)
+
+
+class SparklinePoint(BaseModel):
+    """A single data point for sparkline rendering."""
+
+    aar: int = Field(..., description="Year")
+    salgsinntekter: float | None = Field(None, description="Revenue (NOK)")
+    aarsresultat: float | None = Field(None, description="Annual profit/loss (NOK)")
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+class CompanySparklineData(BaseModel):
+    """Mini time-series for sparkline rendering."""
+
+    orgnr: str = Field(..., description="Company organization number")
+    data_points: list[SparklinePoint] = Field(default_factory=list)
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+class NetworkPathNode(BaseModel):
+    """A node in the network path between two people."""
+
+    type: str = Field(..., description="'person' or 'company'")
+    name: str = Field(..., description="Person name or company name")
+    identifier: str = Field(..., description="person_navn+birthdate or orgnr")
+    role: str | None = Field(None, description="Role connecting person to company")
+
+
+class NetworkPathResponse(BaseModel):
+    """Result of a network path search."""
+
+    found: bool = Field(..., description="Whether a path was found")
+    depth: int | None = Field(None, description="Number of hops in the path")
+    path: list[NetworkPathNode] = Field(default_factory=list)
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+class NetworkPathRequest(BaseModel):
+    """Request for finding shortest path between two people."""
+
+    person_a_name: str = Field(..., description="First person's full name")
+    person_a_birthdate: str | None = Field(None, description="First person's birth date or year")
+    person_b_name: str = Field(..., description="Second person's full name")
+    person_b_birthdate: str | None = Field(None, description="Second person's birth date or year")
+    max_depth: int = Field(default=3, ge=1, le=5, description="Maximum path depth (hops)")

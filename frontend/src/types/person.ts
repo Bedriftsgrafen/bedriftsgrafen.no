@@ -55,3 +55,27 @@ export interface PersonConnection {
     shared_company_count: number
     shared_companies: SharedCompanyInfo[]
 }
+
+export interface SparklinePoint {
+    aar: number
+    salgsinntekter: number | null
+    aarsresultat: number | null
+}
+
+export interface CompanySparklineData {
+    orgnr: string
+    data_points: SparklinePoint[]
+}
+
+export interface NetworkPathNode {
+    type: 'person' | 'company'
+    name: string
+    identifier: string
+    role: string | null
+}
+
+export interface NetworkPathResponse {
+    found: boolean
+    depth: number | null
+    path: NetworkPathNode[]
+}

@@ -1,16 +1,24 @@
 /* eslint-disable react-refresh/only-export-components */
 import { createLazyFileRoute } from '@tanstack/react-router'
-import { useState, useCallback } from 'react'
-import { User, ShieldCheck, Briefcase, Users, LayoutDashboard, AlertTriangle } from 'lucide-react'
+import { useState, useCallback, useMemo } from 'react'
+import { User, ShieldCheck, Briefcase, Users, LayoutDashboard, AlertTriangle, Network } from 'lucide-react'
 import { SEOHead, Breadcrumbs } from '../components/layout'
 import { TabContainer } from '../components/common/TabContainer'
 import { TabButton } from '../components/common/TabButton'
 import { usePersonRolesQuery } from '../hooks/queries/usePersonRolesQuery'
 import { usePersonConnectionsQuery } from '../hooks/queries/usePersonConnectionsQuery'
+import { usePersonSparklineQuery } from '../hooks/queries/usePersonSparklineQuery'
 import { useSlowLoadingToast } from '../hooks/useSlowLoadingToast'
 import { Button } from '../components/common/Button'
-import { PersonSummaryStats, PersonRoleGroups, PersonConnectionsList, PersonRoleFilters } from '../components/person'
-import type { PersonRole } from '../types/person'
+import {
+    PersonSummaryStats,
+    PersonRoleGroups,
+    PersonConnectionsList,
+    PersonRoleFilters,
+    PersonIndustryChart,
+    PersonNetworkSearch,
+} from '../components/person'
+import type { PersonRole, CompanySparklineData } from '../types/person'
 import logo1881 from '../img/1881-logo.png'
 import { get1881SearchUrl, getLinkedInSearchUrl, formatLargeCurrency } from '../utils/formatters'
 
@@ -20,7 +28,7 @@ const LinkedinIcon = ({ className }: { className?: string }) => (
     </svg>
 )
 
-type TabType = 'oversikt' | 'roller' | 'forbindelser'
+type TabType = 'oversikt' | 'roller' | 'forbindelser' | 'nettverkssok'
 
 export const Route = createLazyFileRoute('/person/$name/$birthdate')({
     component: PersonProfilePage,
@@ -78,7 +86,17 @@ export function PersonProfilePage() {
         isLoading: connectionsLoading,
     } = usePersonConnectionsQuery(decodedName, normalizedBirthdate, activeTab === 'forbindelser')
 
+    const { data: sparklineData } = usePersonSparklineQuery(
+        decodedName, normalizedBirthdate, activeTab === 'roller'
+    )
+
     useSlowLoadingToast(isLoading, 'Henter rolleoversikt...')
+
+    // Build sparkline lookup map by orgnr
+    const sparklineMap = useMemo(() => {
+        if (!sparklineData) return new Map<string, CompanySparklineData>()
+        return new Map(sparklineData.map((s) => [s.orgnr, s]))
+    }, [sparklineData])
 
     const handleFilteredRoles = useCallback((roles: PersonRole[]) => {
         setFilteredRoles(roles)
@@ -196,6 +214,12 @@ export function PersonProfilePage() {
                                         badge={connectionCount}
                                         badgeColor="green"
                                     />
+                                    <TabButton
+                                        active={activeTab === 'nettverkssok'}
+                                        icon={<Network className="h-4 w-4" />}
+                                        label="Nettverkssøk"
+                                        onClick={() => setActiveTab('nettverkssok')}
+                                    />
                                 </TabContainer>
 
                                 <div role="tabpanel" aria-label={activeTab}>
@@ -203,6 +227,7 @@ export function PersonProfilePage() {
                                         <>
                                             <PersonSummaryStats roles={roles!} />
                                             <TopCompaniesByRevenue roles={roles!} />
+                                            <PersonIndustryChart roles={roles!} />
                                         </>
                                     )}
 
@@ -210,7 +235,7 @@ export function PersonProfilePage() {
                                         <>
                                             <PersonRoleFilters roles={roles!} onFilteredRoles={handleFilteredRoles} />
                                             <div className="mt-4">
-                                                <PersonRoleGroups roles={filteredRoles ?? roles!} />
+                                                <PersonRoleGroups roles={filteredRoles ?? roles!} sparklineMap={sparklineMap} />
                                             </div>
                                         </>
                                     )}
@@ -219,6 +244,16 @@ export function PersonProfilePage() {
                                         <PersonConnectionsList
                                             connections={connections ?? []}
                                             isLoading={connectionsLoading}
+                                            personName={decodedName}
+                                        />
+                                    )}
+
+                                    {activeTab === 'nettverkssok' && (
+                                        <PersonNetworkSearch
+                                            initialPersonA={{
+                                                name: decodedName,
+                                                birthdate: normalizedBirthdate,
+                                            }}
                                         />
                                     )}
                                 </div>

@@ -14,6 +14,9 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from database import get_db
 from repositories.role_repository import RoleRepository
 from schemas.people import (
+    CompanySparklineData,
+    NetworkPathRequest,
+    NetworkPathResponse,
     PaginatedPersonSearch,
     PersonConnectionResponse,
     PersonRoleResponse,
@@ -136,3 +139,45 @@ async def get_person_connections(
     """
     parsed_date, parsed_year = _parse_birthdate(birthdate)
     return await service.get_connections(name, parsed_date, parsed_year, is_admin(x_admin_key), limit=limit)
+
+
+@router.get("/sparklines", response_model=list[CompanySparklineData])
+async def get_person_sparklines(
+    request: Request,
+    name: str = Query(..., description="Person's full name"),
+    birthdate: str | None = Query(None, description="Birth date or year for disambiguation"),
+    years: int = Query(5, ge=3, le=10, description="Number of years of data"),
+    x_admin_key: str | None = Header(None, alias="X-Admin-Key"),
+    service: PersonService = Depends(get_person_service),
+) -> list[CompanySparklineData]:
+    """
+    Mini revenue + profit sparklines for all companies a person is connected to.
+
+    Returns time-series data for the last N years per company, suitable for
+    inline sparkline chart rendering.
+    """
+    parsed_date, parsed_year = _parse_birthdate(birthdate)
+    return await service.get_role_sparklines(name, parsed_date, parsed_year, is_admin(x_admin_key), years=years)
+
+
+@router.post("/network-path", response_model=NetworkPathResponse)
+async def find_network_path(
+    request: Request,
+    body: NetworkPathRequest,
+    x_admin_key: str | None = Header(None, alias="X-Admin-Key"),
+    service: PersonService = Depends(get_person_service),
+) -> NetworkPathResponse:
+    """
+    Find shortest path between two people via shared board seats.
+
+    BFS traversal: Person A → Companies → People → Companies → ... → Person B.
+    Returns the path as alternating person/company nodes.
+    """
+    a_date, a_year = _parse_birthdate(body.person_a_birthdate)
+    b_date, b_year = _parse_birthdate(body.person_b_birthdate)
+    return await service.find_network_path(
+        (body.person_a_name, a_date, a_year),
+        (body.person_b_name, b_date, b_year),
+        max_depth=body.max_depth,
+        include_all=is_admin(x_admin_key),
+    )

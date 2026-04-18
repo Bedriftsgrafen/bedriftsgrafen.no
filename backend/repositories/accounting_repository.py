@@ -103,6 +103,58 @@ class AccountingRepository:
             logger.error(f"Database error batch-fetching latest financials: {e}")
             raise DatabaseException("Failed to batch-fetch latest financials", original_error=e)
 
+    async def get_sparkline_data_batch(self, orgnrs: list[str], years: int = 5) -> dict[str, list[dict]]:
+        """Batch-fetch last N years of key financials for multiple orgnrs.
+
+        Uses the existing idx_regnskap_orgnr_aar covering index for efficient
+        time-series retrieval.
+
+        Args:
+            orgnrs: List of organization numbers
+            years: Number of recent years to include (default 5)
+
+        Returns:
+            Dict mapping orgnr → list of {aar, salgsinntekter, aarsresultat} dicts,
+            ordered by year ascending.
+        """
+        if not orgnrs:
+            return {}
+        try:
+            stmt = (
+                select(
+                    models.Accounting.orgnr,
+                    models.Accounting.aar,
+                    models.Accounting.salgsinntekter,
+                    models.Accounting.aarsresultat,
+                )
+                .where(models.Accounting.orgnr.in_(orgnrs))
+                .order_by(models.Accounting.orgnr, models.Accounting.aar.desc())
+            )
+            result = await self.db.execute(stmt)
+            rows = result.all()
+
+            # Group by orgnr and keep only the last N years per company
+            data: dict[str, list[dict]] = {}
+            for row in rows:
+                orgnr_list = data.setdefault(row.orgnr, [])
+                if len(orgnr_list) < years:
+                    orgnr_list.append(
+                        {
+                            "aar": row.aar,
+                            "salgsinntekter": row.salgsinntekter,
+                            "aarsresultat": row.aarsresultat,
+                        }
+                    )
+
+            # Reverse to ascending order for sparkline rendering
+            for orgnr_list in data.values():
+                orgnr_list.reverse()
+
+            return data
+        except Exception as e:
+            logger.error(f"Database error batch-fetching sparkline data: {e}")
+            raise DatabaseException("Failed to batch-fetch sparkline data", original_error=e)
+
     async def get_by_orgnr_and_year(self, orgnr: str, year: int) -> models.Accounting:
         """Get accounting record for specific year.
 

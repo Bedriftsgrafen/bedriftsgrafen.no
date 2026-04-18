@@ -6,11 +6,14 @@ import type { PersonConnection } from '../../types/person'
 interface PersonConnectionCardProps {
     connection: PersonConnection
     defaultExpanded?: boolean
+    /** Name of the person whose page we're viewing */
+    personName: string
 }
 
 export const PersonConnectionCard = memo(function PersonConnectionCard({
     connection,
     defaultExpanded = false,
+    personName,
 }: PersonConnectionCardProps) {
     const [expanded, setExpanded] = useState(defaultExpanded)
 
@@ -58,7 +61,7 @@ export const PersonConnectionCard = memo(function PersonConnectionCard({
                                         {sc.navn}
                                     </Link>
                                     <div className="text-xs text-gray-400 mt-0.5">
-                                        Du: {sc.person_role} · {connection.name.split(' ')[0]}: {sc.connection_role}
+                                        {personName.split(' ')[0]}: {sc.person_role} · {connection.name.split(' ')[0]}: {sc.connection_role}
                                     </div>
                                 </div>
                                 <Link
