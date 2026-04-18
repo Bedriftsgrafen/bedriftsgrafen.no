@@ -104,90 +104,101 @@ class TestSearchPeopleEndpoint:
 # Category 2: GET /v1/people/roles
 # ============================================================================
 class TestGetPersonRolesEndpoint:
-    """Tests for the person roles endpoint."""
+    """Tests for the person roles endpoint (uses PersonService via dependency_overrides)."""
+
+    @pytest.fixture(autouse=True)
+    def _setup_service(self):
+        """Override get_person_service dependency with a mock."""
+        from main import app
+        from services.person_service import get_person_service
+
+        self.mock_service = MagicMock()
+        self.mock_service.get_enriched_roles = AsyncMock(return_value=[])
+        app.dependency_overrides[get_person_service] = lambda: self.mock_service
+        yield
+        app.dependency_overrides.pop(get_person_service, None)
 
     @pytest.mark.asyncio
-    async def test_returns_commercial_roles(self, client):
-        """Returns list of commercial roles for person."""
-        mock_role = MagicMock()
-        mock_role.orgnr = "123456789"
-        mock_role.type_kode = "DAGL"
-        mock_role.type_beskrivelse = "Daglig leder"
-        mock_role.enhet_navn = "Test AS"
-        mock_role.fratraadt = False
-        mock_role.rekkefoelge = 1
-        mock_role.foedselsdato = date(1980, 5, 15)
+    async def test_returns_enriched_commercial_roles(self, client):
+        """Returns list of enriched commercial roles for person."""
+        from schemas.people import PersonRoleResponse
 
-        with patch("routers.v1.people.RoleRepository") as MockRepo:
-            mock_repo = MockRepo.return_value
-            mock_repo.get_person_commercial_roles = AsyncMock(return_value=[mock_role])
+        role = PersonRoleResponse(
+            orgnr="123456789",
+            type_kode="DAGL",
+            type_beskrivelse="Daglig leder",
+            enhet_navn="Test AS",
+            fratraadt=False,
+            rekkefoelge=1,
+            foedselsdato=date(1980, 5, 15),
+            organisasjonsform="AS",
+            antall_ansatte=50,
+            naeringskode="62.010",
+            latest_aar=2023,
+            latest_salgsinntekter=10_000_000,
+            latest_aarsresultat=500_000,
+        )
+        self.mock_service.get_enriched_roles.return_value = [role]
 
-            response = client.get("/v1/people/roles?name=Ola%20Nordmann")
+        response = client.get("/v1/people/roles?name=Ola%20Nordmann")
 
-            assert response.status_code == 200
-            data = response.json()
-            assert len(data) == 1
-            assert data[0]["orgnr"] == "123456789"
-            assert data[0]["type_kode"] == "DAGL"
-            assert data[0]["fratraadt"] is False
+        assert response.status_code == 200
+        data = response.json()
+        assert len(data) == 1
+        assert data[0]["orgnr"] == "123456789"
+        assert data[0]["type_kode"] == "DAGL"
+        assert data[0]["fratraadt"] is False
+        assert data[0]["organisasjonsform"] == "AS"
+        assert data[0]["antall_ansatte"] == 50
+        assert data[0]["latest_aar"] == 2023
 
     @pytest.mark.asyncio
     async def test_requires_name_parameter(self, client):
         """Name parameter is required."""
         response = client.get("/v1/people/roles")
-
-        assert response.status_code == 422  # Validation error
+        assert response.status_code == 422
 
     @pytest.mark.asyncio
     async def test_accepts_birthdate_parameter(self, client):
         """Birthdate parameter is optional and accepted."""
-        with patch("routers.v1.people.RoleRepository") as MockRepo:
-            mock_repo = MockRepo.return_value
-            mock_repo.get_person_commercial_roles = AsyncMock(return_value=[])
+        response = client.get("/v1/people/roles?name=Ola&birthdate=1980-05-15")
 
-            response = client.get("/v1/people/roles?name=Ola&birthdate=1980-05-15")
-
-            assert response.status_code == 200
-            mock_repo.get_person_commercial_roles.assert_called_once()
+        assert response.status_code == 200
+        self.mock_service.get_enriched_roles.assert_called_once()
 
     @pytest.mark.asyncio
     async def test_returns_empty_for_unknown_person(self, client):
         """Returns empty list for person with no roles."""
-        with patch("routers.v1.people.RoleRepository") as MockRepo:
-            mock_repo = MockRepo.return_value
-            mock_repo.get_person_commercial_roles = AsyncMock(return_value=[])
+        response = client.get("/v1/people/roles?name=Unknown%20Person")
 
-            response = client.get("/v1/people/roles?name=Unknown%20Person")
-
-            assert response.status_code == 200
-            assert response.json() == []
+        assert response.status_code == 200
+        assert response.json() == []
 
     @pytest.mark.asyncio
-    async def test_handles_null_fields_gracefully(self, client):
-        """Handles null role fields with defaults."""
-        mock_role = MagicMock()
-        mock_role.orgnr = None
-        mock_role.type_kode = None
-        mock_role.type_beskrivelse = None
-        mock_role.enhet_navn = None
-        mock_role.fratraadt = None
-        mock_role.rekkefoelge = None
-        mock_role.foedselsdato = None
-        mock_role.company = None
+    async def test_null_optional_fields_default_correctly(self, client):
+        """Enriched response defaults optional fields to None/False."""
+        from schemas.people import PersonRoleResponse
 
-        with patch("routers.v1.people.RoleRepository") as MockRepo:
-            mock_repo = MockRepo.return_value
-            mock_repo.get_person_commercial_roles = AsyncMock(return_value=[mock_role])
+        role = PersonRoleResponse(
+            orgnr="",
+            type_kode="UKJENT",
+            type_beskrivelse="Ukjent rolle",
+            enhet_navn="Ukjent virksomhet",
+            fratraadt=False,
+        )
+        self.mock_service.get_enriched_roles.return_value = [role]
 
-            response = client.get("/v1/people/roles?name=Test")
+        response = client.get("/v1/people/roles?name=Test")
 
-            assert response.status_code == 200
-            data = response.json()
-            assert data[0]["orgnr"] == ""
-            assert data[0]["type_kode"] == "UKJENT"
-            assert data[0]["type_beskrivelse"] == "Ukjent rolle"
-            assert data[0]["enhet_navn"] == "Ukjent virksomhet"
-            assert data[0]["fratraadt"] is False
+        assert response.status_code == 200
+        data = response.json()
+        assert data[0]["orgnr"] == ""
+        assert data[0]["type_kode"] == "UKJENT"
+        assert data[0]["type_beskrivelse"] == "Ukjent rolle"
+        assert data[0]["enhet_navn"] == "Ukjent virksomhet"
+        assert data[0]["fratraadt"] is False
+        assert data[0]["organisasjonsform"] is None
+        assert data[0]["latest_aar"] is None
 
 
 # ============================================================================
@@ -254,6 +265,18 @@ class TestBirthdateParamParsing:
     """Tests for year-only and full-date birthdate parsing in /roles endpoint."""
 
     @pytest.fixture(autouse=True)
+    def _setup_service(self):
+        """Override get_person_service dependency with a mock."""
+        from main import app
+        from services.person_service import get_person_service
+
+        self.mock_service = MagicMock()
+        self.mock_service.get_enriched_roles = AsyncMock(return_value=[])
+        app.dependency_overrides[get_person_service] = lambda: self.mock_service
+        yield
+        app.dependency_overrides.pop(get_person_service, None)
+
+    @pytest.fixture(autouse=True)
     def _mock_is_admin(self):
         """Ensure is_admin returns False regardless of ADMIN_API_KEY env."""
         with patch("routers.v1.people.is_admin", return_value=False):
@@ -262,58 +285,34 @@ class TestBirthdateParamParsing:
     @pytest.mark.asyncio
     async def test_year_only_passes_birthyear(self, client):
         """Year-only birthdate (e.g. '1996') is parsed as birthyear int."""
-        with patch("routers.v1.people.RoleRepository") as MockRepo:
-            mock_repo = MockRepo.return_value
-            mock_repo.get_person_commercial_roles = AsyncMock(return_value=[])
+        response = client.get("/v1/people/roles?name=Ola&birthdate=1996")
 
-            response = client.get("/v1/people/roles?name=Ola&birthdate=1996")
-
-            assert response.status_code == 200
-            mock_repo.get_person_commercial_roles.assert_called_once_with(
-                "Ola", birthdate=None, birthyear=1996, include_all=False
-            )
+        assert response.status_code == 200
+        self.mock_service.get_enriched_roles.assert_called_once_with("Ola", None, 1996, False)
 
     @pytest.mark.asyncio
     async def test_full_date_passes_birthdate(self, client):
         """Full ISO date (e.g. '1996-03-12') is parsed as date object."""
-        with patch("routers.v1.people.RoleRepository") as MockRepo:
-            mock_repo = MockRepo.return_value
-            mock_repo.get_person_commercial_roles = AsyncMock(return_value=[])
+        response = client.get("/v1/people/roles?name=Ola&birthdate=1996-03-12")
 
-            response = client.get("/v1/people/roles?name=Ola&birthdate=1996-03-12")
-
-            assert response.status_code == 200
-            mock_repo.get_person_commercial_roles.assert_called_once_with(
-                "Ola", birthdate=date(1996, 3, 12), birthyear=None, include_all=False
-            )
+        assert response.status_code == 200
+        self.mock_service.get_enriched_roles.assert_called_once_with("Ola", date(1996, 3, 12), None, False)
 
     @pytest.mark.asyncio
     async def test_none_passes_no_filter(self, client):
         """No birthdate param passes None for both."""
-        with patch("routers.v1.people.RoleRepository") as MockRepo:
-            mock_repo = MockRepo.return_value
-            mock_repo.get_person_commercial_roles = AsyncMock(return_value=[])
+        response = client.get("/v1/people/roles?name=Ola")
 
-            response = client.get("/v1/people/roles?name=Ola")
-
-            assert response.status_code == 200
-            mock_repo.get_person_commercial_roles.assert_called_once_with(
-                "Ola", birthdate=None, birthyear=None, include_all=False
-            )
+        assert response.status_code == 200
+        self.mock_service.get_enriched_roles.assert_called_once_with("Ola", None, None, False)
 
     @pytest.mark.asyncio
     async def test_unknown_passes_no_filter(self, client):
         """'unknown' birthdate is treated as None (no filter)."""
-        with patch("routers.v1.people.RoleRepository") as MockRepo:
-            mock_repo = MockRepo.return_value
-            mock_repo.get_person_commercial_roles = AsyncMock(return_value=[])
+        response = client.get("/v1/people/roles?name=Ola&birthdate=unknown")
 
-            response = client.get("/v1/people/roles?name=Ola&birthdate=unknown")
-
-            assert response.status_code == 200
-            mock_repo.get_person_commercial_roles.assert_called_once_with(
-                "Ola", birthdate=None, birthyear=None, include_all=False
-            )
+        assert response.status_code == 200
+        self.mock_service.get_enriched_roles.assert_called_once_with("Ola", None, None, False)
 
 
 # ============================================================================
@@ -322,49 +321,60 @@ class TestBirthdateParamParsing:
 class TestFoedselsdatoInResponse:
     """Tests for foedselsdato field in PersonRoleResponse."""
 
+    @pytest.fixture(autouse=True)
+    def _setup_service(self):
+        """Override get_person_service dependency with a mock."""
+        from main import app
+        from services.person_service import get_person_service
+
+        self.mock_service = MagicMock()
+        self.mock_service.get_enriched_roles = AsyncMock(return_value=[])
+        app.dependency_overrides[get_person_service] = lambda: self.mock_service
+        yield
+        app.dependency_overrides.pop(get_person_service, None)
+
     @pytest.mark.asyncio
     async def test_response_includes_foedselsdato(self, client):
         """PersonRoleResponse includes foedselsdato for disambiguation."""
-        mock_role = MagicMock()
-        mock_role.orgnr = "123456789"
-        mock_role.type_kode = "DAGL"
-        mock_role.type_beskrivelse = "Daglig leder"
-        mock_role.enhet_navn = "Test AS"
-        mock_role.fratraadt = False
-        mock_role.rekkefoelge = 1
-        mock_role.foedselsdato = date(1996, 3, 12)
+        from schemas.people import PersonRoleResponse
 
-        with patch("routers.v1.people.RoleRepository") as MockRepo:
-            mock_repo = MockRepo.return_value
-            mock_repo.get_person_commercial_roles = AsyncMock(return_value=[mock_role])
+        role = PersonRoleResponse(
+            orgnr="123456789",
+            type_kode="DAGL",
+            type_beskrivelse="Daglig leder",
+            enhet_navn="Test AS",
+            fratraadt=False,
+            rekkefoelge=1,
+            foedselsdato=date(1996, 3, 12),
+        )
+        self.mock_service.get_enriched_roles.return_value = [role]
 
-            response = client.get("/v1/people/roles?name=Ola&birthdate=1996")
+        response = client.get("/v1/people/roles?name=Ola&birthdate=1996")
 
-            assert response.status_code == 200
-            data = response.json()
-            assert data[0]["foedselsdato"] == "1996-03-12"
+        assert response.status_code == 200
+        data = response.json()
+        assert data[0]["foedselsdato"] == "1996-03-12"
 
     @pytest.mark.asyncio
     async def test_response_allows_null_foedselsdato(self, client):
         """PersonRoleResponse handles null foedselsdato."""
-        mock_role = MagicMock()
-        mock_role.orgnr = "123456789"
-        mock_role.type_kode = "DAGL"
-        mock_role.type_beskrivelse = "Daglig leder"
-        mock_role.enhet_navn = "Test AS"
-        mock_role.fratraadt = False
-        mock_role.rekkefoelge = 1
-        mock_role.foedselsdato = None
+        from schemas.people import PersonRoleResponse
 
-        with patch("routers.v1.people.RoleRepository") as MockRepo:
-            mock_repo = MockRepo.return_value
-            mock_repo.get_person_commercial_roles = AsyncMock(return_value=[mock_role])
+        role = PersonRoleResponse(
+            orgnr="123456789",
+            type_kode="DAGL",
+            type_beskrivelse="Daglig leder",
+            enhet_navn="Test AS",
+            fratraadt=False,
+            rekkefoelge=1,
+        )
+        self.mock_service.get_enriched_roles.return_value = [role]
 
-            response = client.get("/v1/people/roles?name=Ola")
+        response = client.get("/v1/people/roles?name=Ola")
 
-            assert response.status_code == 200
-            data = response.json()
-            assert data[0]["foedselsdato"] is None
+        assert response.status_code == 200
+        data = response.json()
+        assert data[0]["foedselsdato"] is None
 
     def test_schema_includes_foedselsdato(self):
         """PersonRoleResponse schema accepts foedselsdato."""

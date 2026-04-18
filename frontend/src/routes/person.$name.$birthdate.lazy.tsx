@@ -1,10 +1,11 @@
 /* eslint-disable react-refresh/only-export-components */
-import { createLazyFileRoute, Link } from '@tanstack/react-router'
-import { User, Building2, ExternalLink, ShieldCheck, Briefcase, AlertTriangle } from 'lucide-react'
+import { createLazyFileRoute } from '@tanstack/react-router'
+import { User, ShieldCheck, Briefcase, AlertTriangle } from 'lucide-react'
 import { SEOHead, Breadcrumbs } from '../components/layout'
 import { usePersonRolesQuery } from '../hooks/queries/usePersonRolesQuery'
 import { useSlowLoadingToast } from '../hooks/useSlowLoadingToast'
 import { Button } from '../components/common/Button'
+import { PersonSummaryStats, PersonRoleGroups } from '../components/person'
 import logo1881 from '../img/1881-logo.png'
 import { get1881SearchUrl, getLinkedInSearchUrl } from '../utils/formatters'
 
@@ -123,47 +124,10 @@ export function PersonProfilePage() {
                                 </p>
                             </div>
                         ) : (
-                            <div className="grid gap-4">
-                                {roles?.map((role, idx) => (
-                                    <div
-                                        key={`${role.orgnr}-${role.type_kode}-${idx}`}
-                                        className="group p-5 rounded-xl border border-gray-100 bg-white hover:border-blue-200 hover:shadow-md transition-all flex items-center justify-between"
-                                    >
-                                        <div className="flex items-start gap-4">
-                                            <div className="p-3 bg-blue-50 rounded-lg text-blue-600 group-hover:bg-blue-600 group-hover:text-white transition-colors">
-                                                <Building2 className="h-5 w-5" />
-                                            </div>
-                                            <div>
-                                                <h3 className="font-bold text-gray-900 group-hover:text-blue-700 transition-colors">
-                                                    {role.enhet_navn}
-                                                </h3>
-                                                <div className="flex items-center gap-2 text-sm text-gray-500 mt-1">
-                                                    <span className="font-medium text-blue-600/80 bg-blue-50 px-2 py-0.5 rounded">
-                                                        {role.type_beskrivelse}
-                                                    </span>
-                                                    <span>•</span>
-                                                    <span>Orgnr: {role.orgnr}</span>
-                                                    {role.fratraadt && (
-                                                        <>
-                                                            <span>•</span>
-                                                            <span className="text-red-500 font-medium">Fratrådt</span>
-                                                        </>
-                                                    )}
-                                                </div>
-                                            </div>
-                                        </div>
-                                        <Link
-                                            to="/virksomhet/$orgnr"
-                                            params={{ orgnr: role.orgnr }}
-                                            className="p-2 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-all"
-                                            title="Se virksomhetsprofil"
-                                            aria-label={`Se virksomhetsprofil for ${role.enhet_navn}`}
-                                        >
-                                            <ExternalLink className="h-5 w-5" />
-                                        </Link>
-                                    </div>
-                                ))}
-                            </div>
+                            <>
+                                <PersonSummaryStats roles={roles!} />
+                                <PersonRoleGroups roles={roles!} />
+                            </>
                         )}
 
                         <div className="mt-8 p-4 bg-amber-50 rounded-xl border border-amber-100 flex gap-3">

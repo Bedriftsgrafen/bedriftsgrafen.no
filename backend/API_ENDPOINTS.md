@@ -41,7 +41,7 @@ Fetch company and financial data from Brønnøysundregistrene
 
 ### Person & Role Network
 - `GET /v1/people/search?q=...`: Search for people by name (name + birthdate unique keys)
-- `GET /v1/people/roles?name=...&birthdate=...`: List all legally compliant commercial roles for a person.
+- `GET /v1/people/roles?name=...&birthdate=...`: List all legally compliant commercial roles for a person, enriched with company context (organisasjonsform, antall_ansatte, naeringskode, etc.) and latest financials (salgsinntekter, aarsresultat, driftsresultat, egenkapitalandel).
 
 ## Stats Endpoints
 

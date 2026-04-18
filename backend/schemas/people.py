@@ -40,7 +40,7 @@ class PaginatedPersonSearch(BaseModel):
 
 
 class PersonRoleResponse(BaseModel):
-    """A commercial role held by a person.
+    """A commercial role held by a person, enriched with company context and latest financials.
 
     Renamed from RoleResponse (in people router) to avoid collision with
     CompanyRoleResponse (roles belonging to a company).
@@ -53,5 +53,20 @@ class PersonRoleResponse(BaseModel):
     fratraadt: bool = Field(..., description="Whether the person has resigned from this role")
     rekkefoelge: int | None = Field(None, description="Role sequence/priority")
     foedselsdato: date | None = Field(None, description="Birth date for disambiguation (year-only URLs)")
+
+    # Company context (from eager-loaded Company model)
+    organisasjonsform: str | None = Field(None, description="Legal form (e.g. AS, ASA, ENK)")
+    antall_ansatte: int | None = Field(None, description="Number of employees")
+    naeringskode: str | None = Field(None, description="NACE industry code (e.g. '62.010')")
+    stiftelsesdato: date | None = Field(None, description="Company founding date")
+    konkurs: bool = Field(False, description="Whether the company is bankrupt")
+    under_avvikling: bool = Field(False, description="Whether the company is being liquidated")
+
+    # Latest financials (from LatestFinancials materialized view)
+    latest_aar: int | None = Field(None, description="Year of latest financial data")
+    latest_salgsinntekter: float | None = Field(None, description="Latest revenue (NOK)")
+    latest_aarsresultat: float | None = Field(None, description="Latest annual profit/loss (NOK)")
+    latest_driftsresultat: float | None = Field(None, description="Latest operating profit (NOK)")
+    latest_egenkapitalandel: float | None = Field(None, description="Latest equity ratio (%)")
 
     model_config = ConfigDict(from_attributes=True)

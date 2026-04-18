@@ -81,6 +81,28 @@ class AccountingRepository:
             logger.error(f"Database error fetching accounting for {orgnr}: {e}")
             raise DatabaseException(f"Failed to fetch accounting for {orgnr}", original_error=e)
 
+    async def get_latest_financials_batch(self, orgnrs: list[str]) -> dict[str, models.LatestFinancials]:
+        """Batch-fetch latest financials for a list of orgnrs.
+
+        Uses the LatestFinancials materialized view for efficient access
+        to pre-computed latest-year data per company.
+
+        Args:
+            orgnrs: List of organization numbers
+
+        Returns:
+            Dict mapping orgnr → LatestFinancials row
+        """
+        if not orgnrs:
+            return {}
+        try:
+            stmt = select(models.LatestFinancials).where(models.LatestFinancials.orgnr.in_(orgnrs))
+            result = await self.db.execute(stmt)
+            return {row.orgnr: row for row in result.scalars().all()}
+        except Exception as e:
+            logger.error(f"Database error batch-fetching latest financials: {e}")
+            raise DatabaseException("Failed to batch-fetch latest financials", original_error=e)
+
     async def get_by_orgnr_and_year(self, orgnr: str, year: int) -> models.Accounting:
         """Get accounting record for specific year.
 
