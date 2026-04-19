@@ -24,13 +24,15 @@ The project leverages a modern, type-safe, and performance-oriented stack:
 ### Interactive Dashboard
 - **Real-time KPIs**: Tracks Total Revenue, Profitability, and Solvency across the entire dataset.
 - **Industry Benchmarking**: Compare any company against its industry peers (NACE 5-digit) with percentile rankings.
+- **Geographic Dashboards**: Dedicated pages for all counties (`/fylke`) and municipalities (`/kommune`) with local statistics.
 - **Visualizations**: Dynamic charts powered by `Recharts` showing trends over time.
-- **Responsive Design**: Fully optimized for desktop and mobile using Tailwind CSS.
+- **Battle Mode**: Head-to-head company comparison with winners per financial metric.
 
 ### Advanced Search Engine
-- **Full-Text Search**: Custom PostgreSQL FTS implementation supporting Norwegian language stemming.
-- **Instant Filtering**: Filter 1.1M+ records by Industry (NACE), Employee Count, Revenue, and Foundation Date in milliseconds.
-- **Vector Search**: (Experimental) Semantic search capabilities for finding related businesses.
+- **Full-Text Search**: Custom PostgreSQL FTS implementation supporting Norwegian language stemming with GIN indexes.
+- **Instant Filtering**: Filter 1.1M+ records by 30+ parameters including Industry (NACE), Employee Count, Revenue, Location, and Foundation Date.
+- **Person & Role Network**: Search individuals, explore board connections, and find shortest paths between people via shared company roles.
+- **CSV Export**: Streamed export of filtered company datasets.
 
 ### High-Performance Sync Engine
 - **Robust Data Pipeline**: Custom Python service that synchronizes data from Brønnøysundregistrene.
@@ -39,22 +41,22 @@ The project leverages a modern, type-safe, and performance-oriented stack:
 
 ## Architecture
 
-The system is designed as a microservices-style architecture containerized with Docker:
+The system is a containerized three-tier application with a dedicated background worker:
 
 ```mermaid
 graph TD
-    Client["Frontend (React)"] <-->|REST API| API["Backend (FastAPI)"]
-    API <-->|"Async Queries"| DB[("PostgreSQL")]
-    API <-->|"Cache"| Redis[("Redis")]
-    API -->|"Background Tasks"| Sync["Scheduler Service"]
-    Sync <-->|"Fetch Updates"| External["Brønnøysund API"]
-    Sync -->|"Upsert Data"| DB
+    Client["Frontend (React + Nginx)"] <-->|REST API| API["Backend (FastAPI)"]
+    API <-->|"Async Queries"| DB[("PostgreSQL 18")]
+    API <-->|"Cache + Rate Limiting"| Redis[("Redis")]
+    Worker["Background Worker (FastAPI)"] <-->|"Scheduled Sync"| External["Brønnøysund API"]
+    Worker <-->|"Upsert Data"| DB
+    Worker <-->|"Cache"| Redis
 ```
 
 ### Optimization Highlights
-- **Database**: Heavy use of **Materialized Views** and **Generated Columns** for instant KPI calculations.
-- **Caching**: Multi-level caching: Redis for API responses, React Query for frontend state.
-- **Build**: Vite build optimization with **Code Splitting** to ensure fast load times (<1s).
+- **Database**: **Generated Columns** for instant KPI calculations, GIN indexes for full-text search.
+- **Caching**: Multi-level caching: Redis for API responses and rate limiting, React Query for frontend state.
+- **Build**: Vite build optimization with **Code Splitting** to ensure fast load times.
 
 ## 👨‍💻 Development
 
@@ -97,12 +99,12 @@ See [CONTRIBUTING.md](CONTRIBUTING.md) for details.
    
    **Development** (with hot-reload and debugging):
    ```bash
-   docker compose up -d
+   docker compose -f docker-compose.dev.yml up -d --build
    ```
    
    **Production** (optimized build):
    ```bash
-   docker compose -f docker-compose.prod.yml up -d
+   docker compose -f docker-compose.prod.yml up -d --build
    ```
    
 4. **Access the application**

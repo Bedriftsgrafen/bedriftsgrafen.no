@@ -56,10 +56,10 @@ Retention: 7 snapshots, stored on external SSD (`/mnt/ssd/backups/`).
 ## Docker
 
 ```bash
-docker compose -f docker-compose.yml -f docker-compose.dev.yml up -d --build  # Dev (hot reload)
-docker compose up -d --build                                                    # Production
-docker compose build frontend && docker compose up -d                          # Quick frontend rebuild
-docker compose down                                                            # Stop
+docker compose -f docker-compose.dev.yml up -d --build                           # Dev (hot reload)
+docker compose -f docker-compose.prod.yml up -d --build                          # Production
+docker compose -f docker-compose.prod.yml build frontend && docker compose -f docker-compose.prod.yml up -d  # Quick frontend rebuild
+docker compose -f docker-compose.prod.yml down                                   # Stop
 ```
 
 ---
@@ -70,6 +70,9 @@ docker compose down                                                            #
 docker stats --no-stream                                          # Container resources
 docker exec bedriftsgrafen-db psql -U admin -d bedriftsgrafen \
   -c "SELECT pg_size_pretty(pg_database_size('bedriftsgrafen'));" # DB size
+docker exec bedriftsgrafen-redis redis-cli ping                   # Redis health
+docker logs --tail 20 bedriftsgrafen-worker                       # Worker/scheduler logs
+curl -s http://localhost:8000/health | python3 -m json.tool       # API health
 df -h /                                                           # Disk space
 ```
 

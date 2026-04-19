@@ -31,7 +31,7 @@ cd backend && .venv/bin/alembic upgrade head
 
 Verify in psql:
 ```bash
-docker exec -it bedriftsgrafen-db psql -U admin -d selskaper -c "\d+ <table_name>"
+docker exec -it bedriftsgrafen-db psql -U admin -d bedriftsgrafen -c "\d+ <table_name>"
 ```
 
 ## Rollback

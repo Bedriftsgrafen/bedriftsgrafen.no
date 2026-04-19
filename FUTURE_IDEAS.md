@@ -18,13 +18,12 @@ This document consolidates feature ideas and strategic plans for the future deve
 - **Issue**: 826K subunits need geocoding (~9 days at API rate limit). High effort for niche value.
 - **Plan**: [SUBUNIT_MAP_VIEW.md](docs/internal/plans/BACKLOG/SUBUNIT_MAP_VIEW.md)
 
-### Share Cards v2 (SEO + Social)
+### Share Cards v2 (SEO + Social) 🟡 PARTIAL
 - **Goal**: Rich Open Graph images for company, municipality, county, and industry pages.
-- **Features**:
-  - KPI highlights (growth, margin, equity ratio).
+- **Status**: SVG OG images implemented for companies and municipalities (`/v1/og/company/{orgnr}.svg`, `/v1/og/municipality/{code}.svg`). Missing: county and industry OG images, sparklines in cards.
+- **Remaining**:
   - Mini sparklines (last 3–5 years).
-  - Localized text in Norwegian.
-- **Why**: Higher CTR on social and better brand consistency.
+  - County and industry OG images.
 
 ### ~~Smart Badges for Search Results~~ ✅ (Jan 24, 2026)
 - **Goal**: Add visual badges to search results to highlight key company traits.
@@ -57,12 +56,12 @@ This document consolidates feature ideas and strategic plans for the future deve
 - **Tech**: `/fylke/[code]` route with premium dashboard, shared components with municipalities.
 - **Status**: **IMPLEMENTED**. Full premium dashboard with drill-down navigation to municipalities, DRY components, A11y improvements.
 
-### Industry Landing Pages (NACE) 🏗️
+### ~~Industry Landing Pages (NACE)~~ ✅
 - **Goal**: Dedicated SEO pages for industry sectors (e.g., `/bransje/41` for Byggevirksomhet).
 - **Features**:
   - Industry-specific benchmarks and growth trends.
   - "Top performers" in the sector.
-- **Why**: Captures professional search traffic for specific business sectors.
+- **Status**: **IMPLEMENTED**. Full `/bransje/{code}` routes with dashboard, top lists, and benchmarking.
 
 ### Shareable Insights (Permalinks + Snapshots)
 - **Goal**: One-click share of filters and charts with stable URLs.
@@ -158,3 +157,5 @@ This document consolidates feature ideas and strategic plans for the future deve
 - **[x] Smart Badges for Search Results**: Dynamic badges (💎 Solid, 🆕 Ny, 🏛️ Etablert) on company cards.
 - **[x] Search Speed Boost**: Trigram GIN index for 50x faster short-query name search.
 - **[x] Precomputed Trend Caches**: 8 materialized views for fast aggregated stats.
+- **[x] Industry Landing Pages (NACE)**: Dedicated `/bransje/{code}` pages with dashboard, top lists, and benchmarking.
+- **[x] OG Images**: SVG Open Graph images for companies and municipalities.

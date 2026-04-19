@@ -2,7 +2,7 @@
 
 **Bedriftsgrafen.no** is a financial analytics platform for 1.14M Norwegian companies.
 
-**Stack:** React 19 + TypeScript + Vite | FastAPI + Python 3.11 | PostgreSQL 15 | Docker Compose
+**Stack:** React 19 + TypeScript + Vite | FastAPI + Python 3.14 | PostgreSQL 18 | Docker Compose
 
 ## Mandatory Skills
 

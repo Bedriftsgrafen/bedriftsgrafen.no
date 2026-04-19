@@ -1,91 +1,239 @@
 # Bedriftsgrafen API Endpoints
 
-## Company Endpoints
+Base URL: `http://localhost:8000` (dev) | `https://bedriftsgrafen.no/api` (prod)
+
+Auto-generated docs: `GET /docs` (Swagger UI) | `GET /redoc` (ReDoc)
+
+---
+
+## Company Endpoints (`/v1/companies`)
 
 ### GET /v1/companies
-List companies with pagination
-- Query params: `skip` (default: 0), `limit` (default: 100)
-- Returns: List of companies
+List companies with filtering, sorting, and pagination.
+
+**Key query params** (32+ total — see `/docs` for full list):
+- `name` — Search by name or org number
+- `organisasjonsform` — Filter by org form codes (repeatable)
+- `naeringskode` — NACE industry code
+- `municipality_code` — 4-digit municipality code
+- `county` — 2-digit county code
+- `min_revenue`, `max_revenue` — Revenue range filter
+- `min_employees`, `max_employees` — Employee count range
+- `has_accounting` — Only companies with financial data
+- `is_bankrupt` — Bankruptcy status filter
+- `sort_by` — `navn`, `antall_ansatte`, `stiftelsesdato`, `revenue`, `profit`, `operating_profit`
+- `sort_order` — `asc` or `desc`
+- `skip`, `limit` — Pagination (default: 0, 100)
+
+### GET /v1/companies/count
+Count companies matching filters. Same query params as above.
+
+### GET /v1/companies/stats
+Aggregate statistics for filtered companies.
+
+### GET /v1/companies/export
+CSV export of filtered companies. Same query params as list endpoint. Streamed response.
 
 ### GET /v1/companies/search
-Search companies by name
-- Query params: `name` (required), `limit` (default: 20)
-- Returns: List of matching companies
+Full-text search by company name.
+- `name` (required) — Search query
+- `limit` (default: 20)
+
+### GET /v1/companies/search/subunits
+Fuzzy search across subunits (underenheter).
+
+### GET /v1/companies/nace/{prefix}/subclasses
+Get NACE subclasses for a given prefix.
+
+### GET /v1/companies/nace/hierarchy
+Full NACE code hierarchy tree.
+
+### GET /v1/companies/industry/{nace_code}
+Companies in a specific industry.
+
+### GET /v1/companies/markers
+Map markers for geographic visualization. Returns simplified company data with coordinates.
 
 ### GET /v1/companies/{orgnr}
-Get company details with accounting data
-- Path param: `orgnr` (9-digit organization number)
-- Returns: Company with list of accounting records
+Company details with all accounting records.
+- Path: `orgnr` — 9-digit organization number
+
+### GET /v1/companies/{orgnr}/similar
+Find companies similar to the given company.
 
 ### GET /v1/companies/{orgnr}/accounting/{year}
-Get accounting data for a specific year with calculated KPIs
-- Path params: `orgnr`, `year`
-- Returns: Accounting data with KPIs including:
-  - `likviditetsgrad1`: Liquidity Ratio 1 (Current Ratio)
-  - `ebitda`: EBITDA
-  - `ebitda_margin`: EBITDA Margin
-  - `egenkapitalandel`: Equity Ratio
-  - `resultatgrad`: Profit Margin
-  - `totalkapitalrentabilitet`: Return on Assets
+Accounting data for a specific year with calculated KPIs:
+- `likviditetsgrad1` — Liquidity Ratio (Current Ratio)
+- `ebitda` — EBITDA
+- `ebitda_margin` — EBITDA Margin
+- `egenkapitalandel` — Equity Ratio
+- `resultatgrad` — Profit Margin
+- `totalkapitalrentabilitet` — Return on Assets (ROA)
+
+### GET /v1/companies/{orgnr}/accounting/record/{accounting_id}
+Accounting record by database ID.
 
 ### POST /v1/companies/{orgnr}/fetch
-Fetch company and financial data from Brønnøysundregistrene
-- Path param: `orgnr`
-- Request body: `{"fetch_financials": true}` (optional, defaults to true)
-- Returns: Fetch status with counts and errors
+Fetch company and financial data from Brønnøysundregistrene.
+- Body: `{"fetch_financials": true}` (optional, defaults to true)
 
-### Stats & Trends
-- `GET /v1/stats/companies`: Overall company statistics
-- `GET /v1/trends/bankruptcies`: Bankruptcy trends and feed
-- `GET /v1/trends/new-establishments`: New companies feed
+### GET /v1/companies/{orgnr}/subunits
+List all subunits (underenheter/avdelinger) for a company.
 
-### Person & Role Network
-- `GET /v1/people/search?q=...`: Search for people by name (name + birthdate unique keys)
-- `GET /v1/people/roles?name=...&birthdate=...`: List all legally compliant commercial roles for a person, enriched with company context (organisasjonsform, antall_ansatte, naeringskode, etc.) and latest financials (salgsinntekter, aarsresultat, driftsresultat, egenkapitalandel).
-- `GET /v1/people/connections?name=...&birthdate=...&limit=20`: Find people who share companies with the given person. Returns connections sorted by number of shared companies, with each connection including shared company details (name, orgnr, roles). Birth year only (not full date) for GDPR compliance. Limit: 1-100 (default 20).
-- `GET /v1/people/sparklines?name=...&birthdate=...&years=5`: Mini financial time-series (salgsinntekter + aarsresultat per year) for each company a person has roles in. Returns array of `{ orgnr, data_points: [{ aar, salgsinntekter, aarsresultat }] }`. Used for inline sparkline charts on role cards.
-- `POST /v1/people/network-path`: Find shortest path between two people via shared board memberships (BFS, max depth 3). Request body: `{ person_a_name, person_a_birthdate, person_b_name, person_b_birthdate, max_depth? }`. Returns `{ found, depth, path: [{ type, name, identifier, role }] }`.
+### GET /v1/companies/{orgnr}/roles
+List all registered roles (board members, CEO, etc.) for a company.
 
-## Stats Endpoints
+---
 
-### GET /stats
-Get database statistics
-- Returns: Total companies and accounting reports count
+## Person & Role Network (`/v1/people`)
+
+### GET /v1/people/search
+Search for people by name. Returns name + birth year (GDPR compliant).
+
+### GET /v1/people/search/results
+Paginated person search results.
+
+### GET /v1/people/roles
+List all commercial roles for a person, enriched with company context and latest financials.
+- `name` (required), `birthdate` (required)
+
+### GET /v1/people/connections
+Find people who share companies with the given person.
+- `name`, `birthdate` (required), `limit` (default: 20, max: 100)
+- Returns connections sorted by number of shared companies. Birth year only for GDPR compliance.
+
+### GET /v1/people/sparklines
+Mini financial time-series per company for inline sparkline charts.
+- `name`, `birthdate` (required), `years` (default: 5)
+
+### POST /v1/people/network-path
+Find shortest path between two people via shared board memberships (BFS, max depth 3).
+- Body: `{ person_a_name, person_a_birthdate, person_b_name, person_b_birthdate, max_depth? }`
+
+---
+
+## Statistics (`/v1/stats`)
+
+### GET /v1/stats/industries
+List industry statistics across all NACE divisions.
+
+### GET /v1/stats/industries/{nace_division}
+Statistics for a specific industry division.
+
+### GET /v1/stats/industries/{nace_division}/dashboard
+Full dashboard data for an industry.
 
 ### GET /v1/stats/industries/{nace_code}/benchmark/{orgnr}
-Get benchmark comparison for a company against its industry.
-- Path params:
-  - `nace_code`: 2-digit division (e.g., '62') or 5-digit subclass (e.g., '62.010')
-  - `orgnr`: 9-digit organization number
-- Returns: Benchmark data with percentile rankings for Revenue, Profit, Employees, and Operating Margin.
-- Notes: Automatically falls back to 2-digit division stats if 5-digit data is insufficient.
+Benchmark a company against its industry peers with percentile rankings.
+- `nace_code`: 2-digit division or 5-digit subclass. Falls back to 2-digit if insufficient data.
 
-## Health Check
+### GET /v1/stats/geography
+Geographic company distribution statistics.
+
+### GET /v1/stats/geography/averages
+Geographic averages (per-capita metrics).
+
+### GET /v1/stats/timeline
+Timeline/trend statistics.
+
+---
+
+## Geographic (`/v1/municipality`, `/v1/county`)
+
+### GET /v1/municipality/
+List all municipalities with summary statistics.
+
+### GET /v1/municipality/{code}
+Municipality dashboard with local company statistics.
+
+### GET /v1/county/
+List all counties with summary statistics.
+
+### GET /v1/county/{code}
+County dashboard with regional statistics and drill-down to municipalities.
+
+---
+
+## Trends (`/v1/trends`)
+
+### GET /v1/trends/timeline
+Monthly trend data (new establishments, bankruptcies).
+
+---
+
+## OG Images (`/v1/og`)
+
+### GET /v1/og/company/{orgnr}.svg
+Open Graph image for a company (SVG).
+
+### GET /v1/og/municipality/{code}.svg
+Open Graph image for a municipality (SVG).
+
+---
+
+## Admin (`/admin/import`) — Requires `X-Admin-Key` header
+
+### POST /admin/import/updates
+Fetch incremental updates from Brønnøysund.
+- Query: `since_date` (ISO format), `limit`
+
+### POST /admin/import/queue/populate
+Populate the import queue for bulk processing.
+
+### POST /admin/import/bulk/start
+Start bulk import processing.
+
+### GET /admin/import/progress
+Get current import progress statistics.
+
+### POST /admin/import/retry-failed
+Retry failed import items.
+
+### POST /admin/import/ssb/population
+Sync SSB population data for per-capita metrics.
+
+### POST /admin/import/geocode
+Run geocoding batch (up to 100, rate limited 1 req/sec).
+
+### GET /admin/import/geocode/status
+Get geocoding progress statistics.
+
+### POST /admin/import/geocode/fast-fill
+Trigger background coordinate backfill.
+
+---
+
+## Infrastructure
 
 ### GET /health
-Health check endpoint
-- Returns: Service status
+Health check — returns service status including DB and Redis connectivity.
+
+### GET /sitemap_index.xml
+XML sitemap index for SEO (also available at `/sitemap-index.xml` and `/sitemap.xml`).
+
+### GET /sitemaps/{filename}.xml
+Paginated sitemap files.
+
+---
 
 ## Example Usage
 
-### Fetch company data from Brønnøysund:
 ```bash
-curl -X POST "http://localhost:8000/companies/123456789/fetch" \
+# Search companies
+curl "http://localhost:8000/v1/companies/search?name=Equinor"
+
+# Get company with accounting
+curl "http://localhost:8000/v1/companies/123456789"
+
+# Get accounting with KPIs
+curl "http://localhost:8000/v1/companies/123456789/accounting/2023"
+
+# Fetch from Brønnøysund
+curl -X POST "http://localhost:8000/v1/companies/123456789/fetch" \
   -H "Content-Type: application/json" \
   -d '{"fetch_financials": true}'
-```
 
-### Get company with accounting:
-```bash
-curl "http://localhost:8000/companies/123456789"
-```
-
-### Get accounting with KPIs:
-```bash
-curl "http://localhost:8000/companies/123456789/accounting/2023"
-```
-
-### Search companies:
-```bash
-curl "http://localhost:8000/companies/search?name=Equinor"
+# Admin: trigger update sync (requires API key)
+curl -X POST "http://localhost:8000/admin/import/updates?limit=1000" \
+  -H "X-Admin-Key: your-admin-api-key"
 ```

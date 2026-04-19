@@ -42,6 +42,7 @@ npm run security:frontend # Frontend-only audit
 ### Configuration
 
 - Database credentials stored in environment variables (`.env`, never committed)
+- Admin endpoints (`/admin/*`) require `X-Admin-Key` header; enforced at startup in production
 - CORS restricts API access to allowed origins
-- Rate limiting via SlowAPI (100 req/min)
+- Rate limiting via SlowAPI + Redis (100 req/min)
 - PostgreSQL statement timeout (5s) prevents slow query abuse

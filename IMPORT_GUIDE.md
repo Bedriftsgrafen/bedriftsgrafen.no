@@ -52,7 +52,7 @@ At 10 req/sec, full import takes ~35-40 hours. ~35% of companies have financial 
 ## Data Quality Checks
 
 ```bash
-docker exec bedriftsgrafen-db psql -U admin -d selskaper -c "
+docker exec bedriftsgrafen-db psql -U admin -d bedriftsgrafen -c "
   SELECT
     (SELECT COUNT(*) FROM bedrifter) as companies,
     (SELECT COUNT(*) FROM regnskap) as statements,
