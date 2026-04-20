@@ -117,7 +117,7 @@ export function PersonProfilePage() {
             <Breadcrumbs
                 items={[
                     { label: 'Hjem', to: '/' },
-                    { label: 'Person', to: '/' },
+                    { label: 'Person', to: '/person' },
                     { label: decodedName },
                 ]}
             />

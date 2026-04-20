@@ -21,6 +21,9 @@ export const personQueryKeys = {
         [...personQueryKeys.all, 'connections', name, birthdate] as const,
     sparklines: (name: string, birthdate: string | null) =>
         [...personQueryKeys.all, 'sparklines', name, birthdate] as const,
+    toplists: (limit: number) =>
+        [...personQueryKeys.all, 'toplists', limit] as const,
+    stats: () => [...personQueryKeys.all, 'stats'] as const,
 }
 
 /**

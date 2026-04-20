@@ -12,6 +12,7 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as UtforskRouteImport } from './routes/utforsk'
 import { Route as SammenlignRouteImport } from './routes/sammenlign'
 import { Route as PersonerRouteImport } from './routes/personer'
+import { Route as PersonRouteImport } from './routes/person'
 import { Route as OmRouteImport } from './routes/om'
 import { Route as NyetableringerRouteImport } from './routes/nyetableringer'
 import { Route as KonkurserRouteImport } from './routes/konkurser'
@@ -21,6 +22,7 @@ import { Route as FylkerRouteImport } from './routes/fylker'
 import { Route as BransjerRouteImport } from './routes/bransjer'
 import { Route as SplatRouteImport } from './routes/$'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as PersonIndexRouteImport } from './routes/person.index'
 import { Route as VirksomhetOrgnrRouteImport } from './routes/virksomhet.$orgnr'
 import { Route as KommuneCodeRouteImport } from './routes/kommune.$code'
 import { Route as FylkeCodeRouteImport } from './routes/fylke.$code'
@@ -43,6 +45,11 @@ const PersonerRoute = PersonerRouteImport.update({
   path: '/personer',
   getParentRoute: () => rootRouteImport,
 } as any).lazy(() => import('./routes/personer.lazy').then((d) => d.Route))
+const PersonRoute = PersonRouteImport.update({
+  id: '/person',
+  path: '/person',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const OmRoute = OmRouteImport.update({
   id: '/om',
   path: '/om',
@@ -90,6 +97,11 @@ const IndexRoute = IndexRouteImport.update({
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any).lazy(() => import('./routes/index.lazy').then((d) => d.Route))
+const PersonIndexRoute = PersonIndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => PersonRoute,
+} as any).lazy(() => import('./routes/person.index.lazy').then((d) => d.Route))
 const VirksomhetOrgnrRoute = VirksomhetOrgnrRouteImport.update({
   id: '/virksomhet/$orgnr',
   path: '/virksomhet/$orgnr',
@@ -118,9 +130,9 @@ const BedriftOrgnrRoute = BedriftOrgnrRouteImport.update({
   getParentRoute: () => rootRouteImport,
 } as any)
 const PersonNameBirthdateRoute = PersonNameBirthdateRouteImport.update({
-  id: '/person/$name/$birthdate',
-  path: '/person/$name/$birthdate',
-  getParentRoute: () => rootRouteImport,
+  id: '/$name/$birthdate',
+  path: '/$name/$birthdate',
+  getParentRoute: () => PersonRoute,
 } as any).lazy(() =>
   import('./routes/person.$name.$birthdate.lazy').then((d) => d.Route),
 )
@@ -135,6 +147,7 @@ export interface FileRoutesByFullPath {
   '/konkurser': typeof KonkurserRoute
   '/nyetableringer': typeof NyetableringerRoute
   '/om': typeof OmRoute
+  '/person': typeof PersonRouteWithChildren
   '/personer': typeof PersonerRoute
   '/sammenlign': typeof SammenlignRoute
   '/utforsk': typeof UtforskRoute
@@ -143,6 +156,7 @@ export interface FileRoutesByFullPath {
   '/fylke/$code': typeof FylkeCodeRoute
   '/kommune/$code': typeof KommuneCodeRoute
   '/virksomhet/$orgnr': typeof VirksomhetOrgnrRoute
+  '/person/': typeof PersonIndexRoute
   '/person/$name/$birthdate': typeof PersonNameBirthdateRoute
 }
 export interface FileRoutesByTo {
@@ -163,6 +177,7 @@ export interface FileRoutesByTo {
   '/fylke/$code': typeof FylkeCodeRoute
   '/kommune/$code': typeof KommuneCodeRoute
   '/virksomhet/$orgnr': typeof VirksomhetOrgnrRoute
+  '/person': typeof PersonIndexRoute
   '/person/$name/$birthdate': typeof PersonNameBirthdateRoute
 }
 export interface FileRoutesById {
@@ -176,6 +191,7 @@ export interface FileRoutesById {
   '/konkurser': typeof KonkurserRoute
   '/nyetableringer': typeof NyetableringerRoute
   '/om': typeof OmRoute
+  '/person': typeof PersonRouteWithChildren
   '/personer': typeof PersonerRoute
   '/sammenlign': typeof SammenlignRoute
   '/utforsk': typeof UtforskRoute
@@ -184,6 +200,7 @@ export interface FileRoutesById {
   '/fylke/$code': typeof FylkeCodeRoute
   '/kommune/$code': typeof KommuneCodeRoute
   '/virksomhet/$orgnr': typeof VirksomhetOrgnrRoute
+  '/person/': typeof PersonIndexRoute
   '/person/$name/$birthdate': typeof PersonNameBirthdateRoute
 }
 export interface FileRouteTypes {
@@ -198,6 +215,7 @@ export interface FileRouteTypes {
     | '/konkurser'
     | '/nyetableringer'
     | '/om'
+    | '/person'
     | '/personer'
     | '/sammenlign'
     | '/utforsk'
@@ -206,6 +224,7 @@ export interface FileRouteTypes {
     | '/fylke/$code'
     | '/kommune/$code'
     | '/virksomhet/$orgnr'
+    | '/person/'
     | '/person/$name/$birthdate'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -226,6 +245,7 @@ export interface FileRouteTypes {
     | '/fylke/$code'
     | '/kommune/$code'
     | '/virksomhet/$orgnr'
+    | '/person'
     | '/person/$name/$birthdate'
   id:
     | '__root__'
@@ -238,6 +258,7 @@ export interface FileRouteTypes {
     | '/konkurser'
     | '/nyetableringer'
     | '/om'
+    | '/person'
     | '/personer'
     | '/sammenlign'
     | '/utforsk'
@@ -246,6 +267,7 @@ export interface FileRouteTypes {
     | '/fylke/$code'
     | '/kommune/$code'
     | '/virksomhet/$orgnr'
+    | '/person/'
     | '/person/$name/$birthdate'
   fileRoutesById: FileRoutesById
 }
@@ -259,6 +281,7 @@ export interface RootRouteChildren {
   KonkurserRoute: typeof KonkurserRoute
   NyetableringerRoute: typeof NyetableringerRoute
   OmRoute: typeof OmRoute
+  PersonRoute: typeof PersonRouteWithChildren
   PersonerRoute: typeof PersonerRoute
   SammenlignRoute: typeof SammenlignRoute
   UtforskRoute: typeof UtforskRoute
@@ -267,7 +290,6 @@ export interface RootRouteChildren {
   FylkeCodeRoute: typeof FylkeCodeRoute
   KommuneCodeRoute: typeof KommuneCodeRoute
   VirksomhetOrgnrRoute: typeof VirksomhetOrgnrRoute
-  PersonNameBirthdateRoute: typeof PersonNameBirthdateRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -291,6 +313,13 @@ declare module '@tanstack/react-router' {
       path: '/personer'
       fullPath: '/personer'
       preLoaderRoute: typeof PersonerRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/person': {
+      id: '/person'
+      path: '/person'
+      fullPath: '/person'
+      preLoaderRoute: typeof PersonRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/om': {
@@ -356,6 +385,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/person/': {
+      id: '/person/'
+      path: '/'
+      fullPath: '/person/'
+      preLoaderRoute: typeof PersonIndexRouteImport
+      parentRoute: typeof PersonRoute
+    }
     '/virksomhet/$orgnr': {
       id: '/virksomhet/$orgnr'
       path: '/virksomhet/$orgnr'
@@ -393,13 +429,26 @@ declare module '@tanstack/react-router' {
     }
     '/person/$name/$birthdate': {
       id: '/person/$name/$birthdate'
-      path: '/person/$name/$birthdate'
+      path: '/$name/$birthdate'
       fullPath: '/person/$name/$birthdate'
       preLoaderRoute: typeof PersonNameBirthdateRouteImport
-      parentRoute: typeof rootRouteImport
+      parentRoute: typeof PersonRoute
     }
   }
 }
+
+interface PersonRouteChildren {
+  PersonIndexRoute: typeof PersonIndexRoute
+  PersonNameBirthdateRoute: typeof PersonNameBirthdateRoute
+}
+
+const PersonRouteChildren: PersonRouteChildren = {
+  PersonIndexRoute: PersonIndexRoute,
+  PersonNameBirthdateRoute: PersonNameBirthdateRoute,
+}
+
+const PersonRouteWithChildren =
+  PersonRoute._addFileChildren(PersonRouteChildren)
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
@@ -411,6 +460,7 @@ const rootRouteChildren: RootRouteChildren = {
   KonkurserRoute: KonkurserRoute,
   NyetableringerRoute: NyetableringerRoute,
   OmRoute: OmRoute,
+  PersonRoute: PersonRouteWithChildren,
   PersonerRoute: PersonerRoute,
   SammenlignRoute: SammenlignRoute,
   UtforskRoute: UtforskRoute,
@@ -419,7 +469,6 @@ const rootRouteChildren: RootRouteChildren = {
   FylkeCodeRoute: FylkeCodeRoute,
   KommuneCodeRoute: KommuneCodeRoute,
   VirksomhetOrgnrRoute: VirksomhetOrgnrRoute,
-  PersonNameBirthdateRoute: PersonNameBirthdateRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

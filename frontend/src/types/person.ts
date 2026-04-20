@@ -79,3 +79,47 @@ export interface NetworkPathResponse {
     depth: number | null
     path: NetworkPathNode[]
 }
+
+// --- Person Toplist & Stats types ---
+
+export type ToplistCategory =
+    | 'active_roles'
+    | 'LEDE'
+    | 'DAGL'
+    | 'MEDL'
+    | 'active_companies'
+    | 'industry_diversity'
+
+export interface PersonToplistEntry {
+    rank: number
+    name: string
+    birth_year: number | null
+    value: number
+    active_roles: number
+    active_companies: number
+}
+
+export interface PersonToplistResponse {
+    category: ToplistCategory
+    entries: PersonToplistEntry[]
+}
+
+export interface RoleTypeCount {
+    type_kode: string
+    type_beskrivelse: string
+    count: number
+}
+
+export interface GenerationCount {
+    generation: string
+    birth_year_range: string
+    count: number
+}
+
+export interface PersonAggregateStats {
+    total_persons: number
+    total_active_roles: number
+    role_type_distribution: RoleTypeCount[]
+    generation_distribution: GenerationCount[]
+    avg_board_age: number
+}
