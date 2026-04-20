@@ -110,6 +110,13 @@ Mini financial time-series per company for inline sparkline charts.
 Find shortest path between two people via shared board memberships (BFS, max depth 3).
 - Body: `{ person_a_name, person_a_birthdate, person_b_name, person_b_birthdate, max_depth? }`
 
+### GET /v1/people/toplists
+All person toplist categories (active roles, styreleder, CEO, styremedlem, industry diversity, revenue) in one response.
+- `limit` (default: 10, max: 50) — entries per category
+
+### GET /v1/people/stats
+Aggregate person statistics: total persons, total active roles, role type distribution, generation breakdown, average board age.
+
 ---
 
 ## Statistics (`/v1/stats`)

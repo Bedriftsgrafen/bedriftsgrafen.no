@@ -768,10 +768,10 @@ class RoleRepository:
         """
         Calculate the average age of active board members.
         Board members are defined as day manager, chairman, and board members.
+        Uses official BRREG type codes: DAGL, LEDE, MEDL.
         """
         try:
-            # Board roles: dagligLeder (MD), styreleder (Chairman), styremedlem (Board Member)
-            board_role_codes = ["dagligLeder", "styreleder", "styremedlem"]
+            board_role_codes = ["DAGL", "LEDE", "MEDL"]
 
             # Age calculation: current_year - birth_year
             # We filter for roles where foedselsdato is not null and fratraadt is False
@@ -929,3 +929,122 @@ class RoleRepository:
             await self.db.rollback()
             # Fallback to legacy method
             return await self.get_person_sitemap_anchors(page_size)
+
+    async def get_all_person_toplists(self, limit: int = 10) -> list[Any]:
+        """Fetch all toplist categories in a single UNION ALL query.
+
+        Returns ~6*limit rows, each tagged with a 'category' column.
+        Category keys use official BRREG type codes where applicable.
+        Ref: https://data.brreg.no/enhetsregisteret/api/roller/rolletyper
+        All reads from pre-aggregated person_toplist_mv for fast response.
+        """
+        query = text("""
+            (SELECT 'active_roles' AS category,
+                    person_navn, foedselsdato,
+                    active_roles AS value,
+                    active_roles, active_companies
+             FROM person_toplist_mv
+             ORDER BY active_roles DESC
+             LIMIT :lim)
+            UNION ALL
+            (SELECT 'LEDE' AS category,
+                    person_navn, foedselsdato,
+                    styreleder_count AS value,
+                    active_roles, active_companies
+             FROM person_toplist_mv
+             WHERE styreleder_count > 0
+             ORDER BY styreleder_count DESC
+             LIMIT :lim)
+            UNION ALL
+            (SELECT 'DAGL' AS category,
+                    person_navn, foedselsdato,
+                    ceo_count AS value,
+                    active_roles, active_companies
+             FROM person_toplist_mv
+             WHERE ceo_count > 0
+             ORDER BY ceo_count DESC
+             LIMIT :lim)
+            UNION ALL
+            (SELECT 'MEDL' AS category,
+                    person_navn, foedselsdato,
+                    styremedlem_count AS value,
+                    active_roles, active_companies
+             FROM person_toplist_mv
+             WHERE styremedlem_count > 0
+             ORDER BY styremedlem_count DESC
+             LIMIT :lim)
+            UNION ALL
+            (SELECT 'active_companies' AS category,
+                    person_navn, foedselsdato,
+                    active_companies AS value,
+                    active_roles, active_companies
+             FROM person_toplist_mv
+             ORDER BY active_companies DESC
+             LIMIT :lim)
+            UNION ALL
+            (SELECT 'industry_diversity' AS category,
+                    person_navn, foedselsdato,
+                    industry_diversity AS value,
+                    active_roles, active_companies
+             FROM person_toplist_mv
+             WHERE industry_diversity > 0
+             ORDER BY industry_diversity DESC
+             LIMIT :lim)
+        """)
+        try:
+            result = await self.db.execute(query, {"lim": limit})
+            return list(result.fetchall())
+        except Exception as e:
+            logger.error("Error fetching person toplists", extra={"error": str(e)})
+            return []
+
+    async def get_person_aggregate_stats(self) -> dict[str, Any]:
+        """Aggregate statistics for the person landing page.
+
+        Reads from pre-computed person_landing_stats_mv (single-row MV).
+        Includes full role type distribution from all BRREG types.
+        """
+        try:
+            result = await self.db.execute(text("SELECT * FROM person_landing_stats_mv LIMIT 1"))
+            row = result.fetchone()
+
+            if not row:
+                raise ValueError("person_landing_stats_mv is empty")
+
+            total_persons = int(row.total_persons or 0)
+            total_active_roles = int(row.total_active_roles or 0)
+
+            # role_types is stored as JSON array in the MV
+            import json
+
+            raw_role_types = row.role_types
+            if isinstance(raw_role_types, str):
+                raw_role_types = json.loads(raw_role_types)
+            role_type_distribution = raw_role_types or []
+
+            generation_distribution = [
+                {"generation": "Gen Z", "birth_year_range": "2000+", "count": int(row.gen_z or 0)},
+                {"generation": "Millennials", "birth_year_range": "1980-1999", "count": int(row.millennials or 0)},
+                {"generation": "Gen X", "birth_year_range": "1960-1979", "count": int(row.gen_x or 0)},
+                {"generation": "Boomers", "birth_year_range": "1940-1959", "count": int(row.boomers or 0)},
+                {"generation": "Silent", "birth_year_range": "<1940", "count": int(row.silent or 0)},
+            ]
+
+            avg_board_age = round(float(row.avg_board_age), 1) if row.avg_board_age else 0.0
+
+            return {
+                "total_persons": total_persons,
+                "total_active_roles": total_active_roles,
+                "role_type_distribution": role_type_distribution,
+                "generation_distribution": generation_distribution,
+                "avg_board_age": avg_board_age,
+            }
+        except Exception as e:
+            logger.error("Error fetching person aggregate stats", extra={"error": str(e)})
+            return {
+                "total_persons": 0,
+                "total_active_roles": 0,
+                "role_type_distribution": [],
+                "generation_distribution": [],
+                "avg_board_age": 0.0,
+            }
