@@ -378,3 +378,115 @@ class TestPersonServiceFindNetworkPath:
         )
 
         assert result.found is False
+
+
+class TestPersonServiceGetAllToplists:
+    """Tests for PersonService.get_all_toplists."""
+
+    @pytest.fixture
+    def service(self):
+        from services.person_service import PersonService
+
+        svc = PersonService(AsyncMock())
+        svc.role_repo = MagicMock()
+        svc.accounting_repo = MagicMock()
+        return svc
+
+    def _make_toplist_row(self, category, person_navn, foedselsdato, value, active_roles=5, active_companies=3):
+        row = MagicMock()
+        row.category = category
+        row.person_navn = person_navn
+        row.foedselsdato = foedselsdato
+        row.value = value
+        row.active_roles = active_roles
+        row.active_companies = active_companies
+        return row
+
+    @pytest.mark.asyncio
+    async def test_get_all_toplists(self, service):
+        """Groups rows by category and maps to PersonToplistResponse."""
+        service.role_repo.get_all_person_toplists = AsyncMock(
+            return_value=[
+                self._make_toplist_row("active_roles", "Egil Test", date(1960, 5, 1), 100),
+                self._make_toplist_row("active_roles", "Kari Test", date(1975, 3, 10), 90),
+                self._make_toplist_row("LEDE", "Trude Test", date(1970, 1, 1), 50),
+            ]
+        )
+
+        result = await service.get_all_toplists(limit=10)
+
+        assert len(result) == 2
+        categories = {r.category.value for r in result}
+        assert categories == {"active_roles", "LEDE"}
+        active = next(r for r in result if r.category.value == "active_roles")
+        assert len(active.entries) == 2
+        assert active.entries[0].rank == 1
+        assert active.entries[0].name == "Egil Test"
+        assert active.entries[0].value == 100
+
+    @pytest.mark.asyncio
+    async def test_get_all_toplists_empty(self, service):
+        """Empty MV returns empty list."""
+        service.role_repo.get_all_person_toplists = AsyncMock(return_value=[])
+        result = await service.get_all_toplists()
+        assert result == []
+
+
+class TestPersonServiceGetStats:
+    """Tests for PersonService.get_stats."""
+
+    @pytest.fixture
+    def service(self):
+        from services.person_service import PersonService
+
+        svc = PersonService(AsyncMock())
+        svc.role_repo = MagicMock()
+        svc.accounting_repo = MagicMock()
+        return svc
+
+    @pytest.mark.asyncio
+    async def test_get_stats(self, service):
+        """Maps raw dict to PersonAggregateStats schema."""
+        service.role_repo.get_person_aggregate_stats = AsyncMock(
+            return_value={
+                "total_persons": 1_000_000,
+                "total_active_roles": 3_000_000,
+                "role_type_distribution": [
+                    {"type_kode": "DAGL", "type_beskrivelse": "Daglig leder", "count": 500_000},
+                ],
+                "generation_distribution": [
+                    {"generation": "Gen X", "birth_year_range": "1960-1979", "count": 531_000},
+                ],
+                "avg_board_age": 52.3,
+            }
+        )
+
+        result = await service.get_stats()
+
+        assert result.total_persons == 1_000_000
+        assert result.total_active_roles == 3_000_000
+        assert len(result.role_type_distribution) == 1
+        assert result.role_type_distribution[0].type_kode == "DAGL"
+        assert len(result.generation_distribution) == 1
+        assert result.generation_distribution[0].generation == "Gen X"
+        assert result.avg_board_age == 52.3
+
+    @pytest.mark.asyncio
+    async def test_get_stats_no_roles(self, service):
+        """Zero active roles returns valid empty stats."""
+        service.role_repo.get_person_aggregate_stats = AsyncMock(
+            return_value={
+                "total_persons": 0,
+                "total_active_roles": 0,
+                "role_type_distribution": [],
+                "generation_distribution": [],
+                "avg_board_age": 0.0,
+            }
+        )
+
+        result = await service.get_stats()
+
+        assert result.total_persons == 0
+        assert result.total_active_roles == 0
+        assert result.role_type_distribution == []
+        assert result.generation_distribution == []

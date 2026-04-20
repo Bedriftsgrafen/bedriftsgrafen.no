@@ -18,10 +18,12 @@ from schemas.people import (
     NetworkPathRequest,
     NetworkPathResponse,
     PaginatedPersonSearch,
+    PersonAggregateStats,
     PersonConnectionResponse,
     PersonRoleResponse,
     PersonSearchResult,
     PersonSearchResultDetailed,
+    PersonToplistResponse,
 )
 from services.person_service import PersonService, get_person_service
 from utils.auth import is_admin
@@ -181,3 +183,20 @@ async def find_network_path(
         max_depth=body.max_depth,
         include_all=is_admin(x_admin_key),
     )
+
+
+@router.get("/toplists", response_model=list[PersonToplistResponse])
+async def get_person_toplists(
+    limit: int = Query(10, ge=1, le=50, description="Entries per category"),
+    service: PersonService = Depends(get_person_service),
+) -> list[PersonToplistResponse]:
+    """All toplist categories in one response (~60 rows)."""
+    return await service.get_all_toplists(limit)
+
+
+@router.get("/stats", response_model=PersonAggregateStats)
+async def get_person_stats(
+    service: PersonService = Depends(get_person_service),
+) -> PersonAggregateStats:
+    """Aggregate statistics across all persons in commercial entities."""
+    return await service.get_stats()

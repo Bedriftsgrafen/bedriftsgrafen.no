@@ -817,3 +817,102 @@ class TestFindNetworkPathEndpoint:
             json={"person_a_name": "A", "person_b_name": "B", "max_depth": 10},
         )
         assert response.status_code == 422
+
+
+# ============================================================================
+# Category 7: GET /v1/people/toplists
+# ============================================================================
+class TestToplistsEndpoint:
+    """Tests for the person toplists endpoint."""
+
+    @pytest.fixture(autouse=True)
+    def _setup_service(self):
+        """Override get_person_service dependency."""
+        from main import app
+        from services.person_service import get_person_service
+
+        self.mock_service = MagicMock()
+        self.mock_service.get_all_toplists = AsyncMock(return_value=[])
+        app.dependency_overrides[get_person_service] = lambda: self.mock_service
+        yield
+        app.dependency_overrides.pop(get_person_service, None)
+
+    @pytest.mark.asyncio
+    async def test_toplists_success(self, client):
+        """Returns list of toplist categories."""
+        from schemas.people import PersonToplistEntry, PersonToplistResponse, ToplistCategory
+
+        self.mock_service.get_all_toplists = AsyncMock(
+            return_value=[
+                PersonToplistResponse(
+                    category=ToplistCategory.ACTIVE_ROLES,
+                    entries=[
+                        PersonToplistEntry(
+                            rank=1,
+                            name="Egil Test",
+                            birth_year=1960,
+                            value=100,
+                            active_roles=100,
+                            active_companies=50,
+                        ),
+                    ],
+                ),
+            ]
+        )
+
+        response = client.get("/v1/people/toplists")
+
+        assert response.status_code == 200
+        data = response.json()
+        assert len(data) == 1
+        assert data[0]["category"] == "active_roles"
+        assert len(data[0]["entries"]) == 1
+
+    @pytest.mark.asyncio
+    async def test_toplists_limit_bounds(self, client):
+        """Rejects limit outside [1, 50]."""
+        response = client.get("/v1/people/toplists?limit=0")
+        assert response.status_code == 422
+
+        response = client.get("/v1/people/toplists?limit=51")
+        assert response.status_code == 422
+
+
+# ============================================================================
+# Category 8: GET /v1/people/stats
+# ============================================================================
+class TestStatsEndpoint:
+    """Tests for the person stats endpoint."""
+
+    @pytest.fixture(autouse=True)
+    def _setup_service(self):
+        """Override get_person_service dependency."""
+        from main import app
+        from services.person_service import get_person_service
+
+        self.mock_service = MagicMock()
+        app.dependency_overrides[get_person_service] = lambda: self.mock_service
+        yield
+        app.dependency_overrides.pop(get_person_service, None)
+
+    @pytest.mark.asyncio
+    async def test_stats_success(self, client):
+        """Returns aggregate statistics."""
+        from schemas.people import PersonAggregateStats
+
+        self.mock_service.get_stats = AsyncMock(
+            return_value=PersonAggregateStats(
+                total_persons=1_000_000,
+                total_active_roles=3_000_000,
+                role_type_distribution=[],
+                generation_distribution=[],
+                avg_board_age=52.3,
+            )
+        )
+
+        response = client.get("/v1/people/stats")
+
+        assert response.status_code == 200
+        data = response.json()
+        assert data["total_persons"] == 1_000_000
+        assert data["avg_board_age"] == 52.3

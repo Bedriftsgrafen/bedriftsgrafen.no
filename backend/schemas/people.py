@@ -4,6 +4,7 @@ Moved from routers/v1/people.py to follow separation of concerns.
 """
 
 from datetime import date
+from enum import StrEnum
 
 from pydantic import BaseModel, ConfigDict, Field
 
@@ -142,3 +143,67 @@ class NetworkPathRequest(BaseModel):
     person_b_name: str = Field(..., description="Second person's full name")
     person_b_birthdate: str | None = Field(None, description="Second person's birth date or year")
     max_depth: int = Field(default=3, ge=1, le=5, description="Maximum path depth (hops)")
+
+
+# --- Person Toplist & Stats schemas ---
+
+
+class ToplistCategory(StrEnum):
+    """Category identifier in toplist response.
+
+    Role-based categories use official BRREG type codes.
+    Ref: https://data.brreg.no/enhetsregisteret/api/roller/rolletyper
+    """
+
+    ACTIVE_ROLES = "active_roles"
+    LEDE = "LEDE"  # Styrets leder
+    DAGL = "DAGL"  # Daglig leder
+    MEDL = "MEDL"  # Styremedlem
+    ACTIVE_COMPANIES = "active_companies"
+    INDUSTRY_DIVERSITY = "industry_diversity"
+
+
+class PersonToplistEntry(BaseModel):
+    """A single ranked person entry in a toplist."""
+
+    rank: int = Field(..., description="Position in the ranking (1-based)")
+    name: str = Field(..., description="Person's full name")
+    birth_year: int | None = Field(None, description="Birth year (GDPR: year only)")
+    value: int = Field(..., description="The ranked metric value")
+    active_roles: int = Field(..., description="Number of active roles")
+    active_companies: int = Field(..., description="Number of active companies")
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+class PersonToplistResponse(BaseModel):
+    """One toplist category with its ranked entries."""
+
+    category: ToplistCategory
+    entries: list[PersonToplistEntry]
+
+
+class RoleTypeCount(BaseModel):
+    """Role type with aggregated count."""
+
+    type_kode: str = Field(..., description="BRREG role type code (e.g., DAGL, LEDE, MEDL)")
+    type_beskrivelse: str = Field(..., description="Human-readable role description")
+    count: int = Field(..., description="Number of active roles of this type")
+
+
+class GenerationCount(BaseModel):
+    """Generation bucket with person count."""
+
+    generation: str = Field(..., description="Generation label (e.g., Gen X)")
+    birth_year_range: str = Field(..., description="Year range (e.g., 1960-1979)")
+    count: int = Field(..., description="Number of persons in this generation")
+
+
+class PersonAggregateStats(BaseModel):
+    """Aggregate statistics across all persons."""
+
+    total_persons: int = Field(..., description="Total unique persons in commercial entities")
+    total_active_roles: int = Field(..., description="Total active (non-resigned) roles")
+    role_type_distribution: list[RoleTypeCount] = Field(default_factory=list)
+    generation_distribution: list[GenerationCount] = Field(default_factory=list)
+    avg_board_age: float = Field(..., description="Average age of board members")

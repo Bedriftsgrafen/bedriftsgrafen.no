@@ -16,12 +16,18 @@ from repositories.accounting_repository import AccountingRepository
 from repositories.role_repository import RoleRepository
 from schemas.people import (
     CompanySparklineData,
+    GenerationCount,
     NetworkPathNode,
     NetworkPathResponse,
+    PersonAggregateStats,
     PersonConnectionResponse,
     PersonRoleResponse,
+    PersonToplistEntry,
+    PersonToplistResponse,
+    RoleTypeCount,
     SharedCompanyInfo,
     SparklinePoint,
+    ToplistCategory,
 )
 
 logger = logging.getLogger(__name__)
@@ -288,6 +294,40 @@ class PersonService:
             frontier = next_frontier
 
         return NetworkPathResponse(found=False, depth=None, path=[])
+
+    async def get_all_toplists(self, limit: int = 10) -> list[PersonToplistResponse]:
+        """Fetch all toplist categories, group rows by category, map to schema."""
+        rows = await self.role_repo.get_all_person_toplists(limit)
+
+        categories: dict[str, list[PersonToplistEntry]] = {}
+        for row in rows:
+            cat = row.category
+            entries = categories.setdefault(cat, [])
+            entries.append(
+                PersonToplistEntry(
+                    rank=len(entries) + 1,
+                    name=row.person_navn,
+                    birth_year=row.foedselsdato.year if row.foedselsdato else None,
+                    value=int(row.value),
+                    active_roles=int(row.active_roles),
+                    active_companies=int(row.active_companies),
+                )
+            )
+
+        return [
+            PersonToplistResponse(category=ToplistCategory(cat), entries=entries) for cat, entries in categories.items()
+        ]
+
+    async def get_stats(self) -> PersonAggregateStats:
+        """Fetch aggregate person statistics."""
+        raw = await self.role_repo.get_person_aggregate_stats()
+        return PersonAggregateStats(
+            total_persons=raw["total_persons"],
+            total_active_roles=raw["total_active_roles"],
+            role_type_distribution=[RoleTypeCount(**r) for r in raw["role_type_distribution"]],
+            generation_distribution=[GenerationCount(**g) for g in raw["generation_distribution"]],
+            avg_board_age=raw["avg_board_age"],
+        )
 
 
 def get_person_service(db: AsyncSession = Depends(get_db)) -> PersonService:
