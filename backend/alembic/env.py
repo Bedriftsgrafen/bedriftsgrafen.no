@@ -41,6 +41,8 @@ def include_object(object, name, type_, reflected, compare_to):
             "latest_accountings",
             "orgform_counts",
             "dashboard_stats",
+            "person_toplist_mv",
+            "person_landing_stats_mv",
             "system_state",
         ]
     )

@@ -4,6 +4,7 @@ from models_import import BulkImportQueue, ImportBatch
 from .accounting import Accounting, LatestAccountings, LatestFinancials
 from .company import Company, Role, SubUnit
 from .geo import MunicipalityPopulation
+from .person_toplist import PersonToplist
 from .stats import (
     CompanyTotals,
     CountyStats,
@@ -30,6 +31,7 @@ __all__ = [
     "MunicipalityPopulation",
     "MunicipalityStats",
     "OrgFormCounts",
+    "PersonToplist",
     "Role",
     "SubUnit",
     "SyncError",

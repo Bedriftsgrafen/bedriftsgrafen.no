@@ -216,6 +216,8 @@ class SchedulerService:
             ("latest_financials", True),
             ("latest_accountings", True),
             ("commercial_people_mv", True),
+            ("person_toplist_mv", True),
+            ("person_landing_stats_mv", True),
         ]
 
         refreshed = 0

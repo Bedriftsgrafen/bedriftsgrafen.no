@@ -420,7 +420,8 @@ class Role(Base):
     id: Mapped[int] = mapped_column(Integer, primary_key=True, index=True)
     orgnr: Mapped[str] = mapped_column(String, ForeignKey("bedrifter.orgnr"), index=True, nullable=False)
 
-    # Type: e.g. "dagligLeder", "styreleder", "styremedlem", "varamedlem"
+    # Type: BRREG role type code — e.g. "DAGL" (daglig leder), "LEDE" (styrets leder), "MEDL" (styremedlem)
+    # Full list: https://data.brreg.no/enhetsregisteret/api/roller/rolletyper
     type_kode: Mapped[str | None] = mapped_column(String, index=True, nullable=True)
     type_beskrivelse: Mapped[str | None] = mapped_column(String, nullable=True)
 
