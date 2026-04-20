@@ -75,5 +75,68 @@ export const handlers = [
             '0001': [59.9, 10.7],
             '1234': [60.0, 11.0]
         })
-    })
+    }),
+
+    // Mock person toplists
+    http.get('*/api/v1/people/toplists', () => {
+        return HttpResponse.json([
+            {
+                category: 'active_roles',
+                entries: [
+                    { rank: 1, name: 'Ola Nordmann', birth_year: 1970, value: 120, active_roles: 120, active_companies: 45 },
+                    { rank: 2, name: 'Kari Hansen', birth_year: 1965, value: 98, active_roles: 98, active_companies: 32 },
+                ],
+            },
+            {
+                category: 'LEDE',
+                entries: [
+                    { rank: 1, name: 'Trude Moen', birth_year: 1972, value: 50, active_roles: 80, active_companies: 50 },
+                ],
+            },
+            {
+                category: 'DAGL',
+                entries: [
+                    { rank: 1, name: 'Egil Langemyr', birth_year: 1968, value: 40, active_roles: 100, active_companies: 40 },
+                ],
+            },
+            {
+                category: 'MEDL',
+                entries: [
+                    { rank: 1, name: 'Per Olsen', birth_year: 1975, value: 60, active_roles: 90, active_companies: 35 },
+                ],
+            },
+            {
+                category: 'active_companies',
+                entries: [
+                    { rank: 1, name: 'Nils Berg', birth_year: 1980, value: 55, active_roles: 70, active_companies: 55 },
+                ],
+            },
+            {
+                category: 'industry_diversity',
+                entries: [
+                    { rank: 1, name: 'Rune Plener', birth_year: 1960, value: 30, active_roles: 60, active_companies: 30 },
+                ],
+            },
+        ])
+    }),
+
+    // Mock person aggregate stats
+    http.get('*/api/v1/people/stats', () => {
+        return HttpResponse.json({
+            total_persons: 906050,
+            total_active_roles: 1842630,
+            avg_board_age: 53,
+            role_type_distribution: [
+                { type_kode: 'MEDL', type_beskrivelse: 'Styremedlem', count: 580000 },
+                { type_kode: 'DAGL', type_beskrivelse: 'Daglig leder', count: 420000 },
+                { type_kode: 'LEDE', type_beskrivelse: 'Styrets leder', count: 350000 },
+            ],
+            generation_distribution: [
+                { generation: 'Gen X', birth_year_range: '1965-1980', count: 531000 },
+                { generation: 'Millennials', birth_year_range: '1981-1996', count: 447000 },
+                { generation: 'Boomers', birth_year_range: '1946-1964', count: 246000 },
+                { generation: 'Gen Z', birth_year_range: '1997-2012', count: 65000 },
+            ],
+        })
+    }),
 ]
