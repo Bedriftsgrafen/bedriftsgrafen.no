@@ -10,17 +10,27 @@ const GENERATION_COLORS: Record<string, string> = {
     'Silent': '#6b7280',
 }
 
+const GENERATION_ORDER: Record<string, number> = {
+    'Silent': 0,
+    'Boomers': 1,
+    'Gen X': 2,
+    'Millennials': 3,
+    'Gen Z': 4,
+}
+
 interface PersonGenerationChartProps {
     data: GenerationCount[]
 }
 
 export const PersonGenerationChart = memo(function PersonGenerationChart({ data }: PersonGenerationChartProps) {
     const chartData = useMemo(
-        () => data.map(g => ({
-            name: `${g.generation} (${g.birth_year_range})`,
-            value: g.count,
-            color: GENERATION_COLORS[g.generation] || '#94a3b8',
-        })),
+        () => [...data]
+            .sort((a, b) => (GENERATION_ORDER[a.generation] ?? 99) - (GENERATION_ORDER[b.generation] ?? 99))
+            .map(g => ({
+                name: `${g.generation} (${g.birth_year_range})`,
+                value: g.count,
+                color: GENERATION_COLORS[g.generation] || '#94a3b8',
+            })),
         [data]
     )
 
@@ -40,12 +50,12 @@ export const PersonGenerationChart = memo(function PersonGenerationChart({ data 
                         paddingAngle={2}
                         dataKey="value"
                     >
-                        {chartData.map((entry, index) => (
-                            <Cell key={index} fill={entry.color} />
+                        {chartData.map((entry) => (
+                            <Cell key={entry.name} fill={entry.color} />
                         ))}
                     </Pie>
                     <Tooltip formatter={(value) => Number(value).toLocaleString('nb-NO')} />
-                    <Legend />
+                    <Legend itemSorter={null} />
                 </PieChart>
             </ResponsiveContainer>
         </div>
