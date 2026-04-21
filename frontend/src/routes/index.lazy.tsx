@@ -48,7 +48,7 @@ export function HomePage() {
 
         if (searchMode === 'person') {
             // Navigate to person search results page
-            navigate({ to: '/personer', search: { q: trimmed } })
+            navigate({ to: '/person', search: { tab: 'sok' as const, q: trimmed } })
             return
         }
 
@@ -170,8 +170,8 @@ export function HomePage() {
                                                     </Link>
                                                 ))}
                                                 <Link
-                                                    to="/personer"
-                                                    search={{ q: searchQuery.trim() }}
+                                                    to="/person"
+                                                    search={{ tab: 'sok' as const, q: searchQuery.trim() }}
                                                     className="flex items-center justify-center gap-2 p-3 border-t border-gray-100 text-sm font-bold text-blue-600 hover:bg-blue-50 transition-colors"
                                                 >
                                                     Se alle resultater
