@@ -599,10 +599,11 @@ class StatsService:
         sectors = await self.stats_repo.get_county_sector_distribution(county_code)
         municipalities = await self.stats_repo.get_county_municipalities(county_code)
 
-        # National rankings
-        ranking_density = await self.stats_repo.get_county_rankings(county_code, metric="density")
-        ranking_revenue = await self.stats_repo.get_county_rankings(county_code, metric="revenue")
-        ranking_population = await self.stats_repo.get_county_rankings(county_code, metric="population")
+        # National rankings — single combined query (3 round-trips → 1)
+        rankings = await self.stats_repo.get_county_combined_rankings(county_code)
+        ranking_density = rankings.get("density") if rankings else None
+        ranking_revenue = rankings.get("revenue") if rankings else None
+        ranking_population = rankings.get("population") if rankings else None
 
         # Fetch trends sequentially to avoid session race conditions
         establishment_trend = await self.stats_repo.get_county_establishment_trend(county_code)

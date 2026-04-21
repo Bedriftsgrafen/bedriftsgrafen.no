@@ -17,6 +17,9 @@ logger = logging.getLogger(__name__)
 # National density changes at most nightly (materialized view refresh)
 _national_density_cache = RedisCache(prefix="stats:national_density", ttl=3600)
 
+# Latest population year changes only when new population data is imported (~annually)
+_latest_year_cache = RedisCache(prefix="stats:latest_year", ttl=3600)
+
 
 class StatsRepository:
     def __init__(self, db: AsyncSession):
@@ -141,8 +144,13 @@ class StatsRepository:
         """Get the most recent year with valid (named) population data.
 
         Excludes years where municipality names are missing (incomplete imports).
+        Cached 1hr — this value changes only when new population data is imported.
         """
         from sqlalchemy import func as sa_func
+
+        cached = await _latest_year_cache.get("year")
+        if cached is not None:
+            return int(cached)
 
         query = select(sa_func.max(models.MunicipalityPopulation.year)).where(
             and_(
@@ -151,7 +159,11 @@ class StatsRepository:
             )
         )
         result = await self.db.execute(query)
-        return result.scalar()
+        year = result.scalar()
+
+        if year is not None:
+            await _latest_year_cache.set("year", year)
+        return year
 
     async def get_municipality_populations(self, year: int | None = None) -> Sequence[models.MunicipalityPopulation]:
         """Get population data for all municipalities for a specific year.
@@ -724,6 +736,67 @@ class StatsRepository:
         for r in ranks:
             if r.county_code == county_code:
                 return {"rank": r.rank, "out_of": r.total}
+        return None
+
+    async def get_county_combined_rankings(self, county_code: str) -> dict[str, Any] | None:
+        """Get national rankings for density, revenue, and population in a single query.
+
+        Mirrors get_municipality_combined_rankings — combines 3 separate calls into
+        one window function query to reduce round-trips from 3 to 1.
+        """
+        from sqlalchemy import Float, cast
+
+        latest_year = await self.get_latest_population_year() or 2024
+
+        # Aggregate company counts per county from municipality_stats
+        company_counts = (
+            select(
+                func.left(models.MunicipalityStats.municipality_code, 2).label("county_code"),
+                func.sum(models.MunicipalityStats.company_count).label("company_count"),
+                func.sum(models.MunicipalityStats.total_revenue).label("revenue"),
+            )
+            .group_by(func.left(models.MunicipalityStats.municipality_code, 2))
+            .subquery()
+        )
+
+        # Aggregate population per county
+        pop_counts = (
+            select(
+                func.left(models.MunicipalityPopulation.municipality_code, 2).label("county_code"),
+                func.sum(models.MunicipalityPopulation.population).label("population"),
+            )
+            .where(models.MunicipalityPopulation.year == latest_year)
+            .group_by(func.left(models.MunicipalityPopulation.municipality_code, 2))
+            .subquery()
+        )
+
+        # Join and compute density, then rank all three metrics in one pass
+        rank_query = select(
+            company_counts.c.county_code,
+            func.rank()
+            .over(
+                order_by=(
+                    cast(company_counts.c.company_count, Float)
+                    / func.nullif(cast(pop_counts.c.population, Float), 0)
+                    * 1000
+                ).desc()
+            )
+            .label("rank_density"),
+            func.rank().over(order_by=company_counts.c.revenue.desc()).label("rank_revenue"),
+            func.rank().over(order_by=pop_counts.c.population.desc()).label("rank_population"),
+            func.count().over().label("total"),
+        ).join(pop_counts, company_counts.c.county_code == pop_counts.c.county_code)
+
+        result = await self.db.execute(rank_query)
+        ranks = result.all()
+
+        for r in ranks:
+            if r.county_code == county_code:
+                return {
+                    "density": {"rank": r.rank_density, "out_of": r.total},
+                    "revenue": {"rank": r.rank_revenue, "out_of": r.total},
+                    "population": {"rank": r.rank_population, "out_of": r.total},
+                }
         return None
 
     async def get_county_municipalities(self, county_code: str):

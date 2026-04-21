@@ -7,8 +7,12 @@ from constants.county_coords import COUNTY_COORDS
 from database import get_db
 from schemas.county import CountyListResponse, CountyPremiumResponse
 from services.stats_service import StatsService
+from utils.redis_cache import RedisCache
 
 router = APIRouter(prefix="/v1/county", tags=["county"])
+
+# Cache full dashboard responses 1hr — county data changes at most nightly
+_dashboard_cache = RedisCache(prefix="dashboard:county", ttl=3600)
 
 
 @router.get("/", response_model=list[CountyListResponse])
@@ -45,10 +49,16 @@ async def get_county_dashboard(
     Get consolidated premium dashboard data for a county.
     Includes population, trends, top sectors, top companies, and municipalities.
     """
+    cached = await _dashboard_cache.get(code)
+    if cached is not None:
+        return CountyPremiumResponse.model_validate(cached)
+
     service = StatsService(db)
     dashboard = await service.get_county_premium_dashboard(code)
 
     if not dashboard or (not dashboard.get("population") and not dashboard.get("company_count")):
         raise HTTPException(status_code=404, detail=f"County {code} not found")
 
-    return CountyPremiumResponse.model_validate(dashboard)
+    response = CountyPremiumResponse.model_validate(dashboard)
+    await _dashboard_cache.set(code, response.model_dump(mode="json"))
+    return response

@@ -6,8 +6,12 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from database import get_db
 from schemas.municipality import MunicipalityListResponse, MunicipalityPremiumResponse
 from services.stats_service import StatsService
+from utils.redis_cache import RedisCache
 
 router = APIRouter(prefix="/v1/municipality", tags=["municipality"])
+
+# Cache full dashboard responses 1hr — municipality data changes at most nightly
+_dashboard_cache = RedisCache(prefix="dashboard:municipality", ttl=3600)
 
 
 @router.get("/", response_model=list[MunicipalityListResponse])
@@ -45,10 +49,16 @@ async def get_municipality_dashboard(
     Get consolidated premium dashboard data for a municipality.
     Includes population, trends, top sectors, and top companies.
     """
+    cached = await _dashboard_cache.get(code)
+    if cached is not None:
+        return MunicipalityPremiumResponse.model_validate(cached)
+
     service = StatsService(db)
     dashboard = await service.get_municipality_premium_dashboard(code)
 
     if not dashboard or (not dashboard.get("population") and not dashboard.get("company_count")):
         raise HTTPException(status_code=404, detail=f"Municipality {code} not found")
 
-    return MunicipalityPremiumResponse.model_validate(dashboard)
+    response = MunicipalityPremiumResponse.model_validate(dashboard)
+    await _dashboard_cache.set(code, response.model_dump(mode="json"))
+    return response
