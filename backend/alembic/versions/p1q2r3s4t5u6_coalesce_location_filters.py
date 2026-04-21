@@ -153,8 +153,12 @@ def upgrade() -> None:
 
         import redis as redis_lib
 
-        redis_url = os.environ.get("REDIS_URL", "redis://bedriftsgrafen-redis:6379/0")
-        r = redis_lib.from_url(redis_url)
+        # Use same env vars as redis_client.py (no REDIS_URL var exists in .env)
+        redis_host = os.environ.get("REDIS_HOST", "bedriftsgrafen-redis")
+        redis_port = int(os.environ.get("REDIS_PORT", "6379"))
+        redis_db = int(os.environ.get("REDIS_DB", "0"))
+        redis_password = os.environ.get("REDIS_PASSWORD") or None
+        r = redis_lib.Redis(host=redis_host, port=redis_port, db=redis_db, password=redis_password)
         deleted = 0
         for pattern in ("dashboard:county:*", "dashboard:municipality:*"):
             for key in r.scan_iter(pattern):

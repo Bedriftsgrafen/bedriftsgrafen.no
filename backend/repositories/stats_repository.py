@@ -246,7 +246,11 @@ class StatsRepository:
             .where(
                 and_(
                     nace_filter,
-                    models.Company.forretningsadresse["kommunenummer"].astext == municipality_code,
+                    func.coalesce(
+                        func.nullif(models.Company.forretningsadresse["kommunenummer"].astext, ""),
+                        func.nullif(models.Company.postadresse["kommunenummer"].astext, ""),
+                    )
+                    == municipality_code,
                     models.Company.konkurs.is_(False),
                 )
             )
@@ -280,11 +284,12 @@ class StatsRepository:
         """
         from repositories.company_filter_builder import CompanyFilterBuilder
 
-        # Determine geographic column
-        if level == "county":
-            geo_col = func.left(models.Company.forretningsadresse["kommunenummer"].astext, 2).label("code")
-        else:
-            geo_col = models.Company.forretningsadresse["kommunenummer"].astext.label("code")
+        # Determine geographic column — COALESCE for consistency with filter_builder and MATVIEWs
+        _eff_muni = func.coalesce(
+            func.nullif(models.Company.forretningsadresse["kommunenummer"].astext, ""),
+            func.nullif(models.Company.postadresse["kommunenummer"].astext, ""),
+        )
+        geo_col = func.left(_eff_muni, 2).label("code") if level == "county" else _eff_muni.label("code")
 
         # Determine metric aggregation
         metric_col: Any
