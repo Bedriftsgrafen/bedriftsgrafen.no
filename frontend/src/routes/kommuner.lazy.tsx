@@ -2,16 +2,10 @@
 import { createLazyFileRoute } from '@tanstack/react-router'
 import { useMunicipalitiesListQuery } from '../hooks/queries/useMunicipalityQuery'
 import { SEOHead, Breadcrumbs } from '../components/layout'
-import { Loader2, MapPin, Search, ChevronDown } from 'lucide-react'
+import { Loader2, Search, ChevronDown } from 'lucide-react'
 import { useState, useMemo } from 'react'
-import { Link } from '@tanstack/react-router'
 import { COUNTIES } from '../constants/explorer'
-import { getStaticMapUrl } from '../utils/mapTiles'
-
-const MUNICIPALITY_MAP_CLASS =
-  'absolute inset-0 opacity-75 group-hover:opacity-85 transition-opacity pointer-events-none bg-cover bg-center filter contrast-150 brightness-90'
-const MUNICIPALITY_MAP_OVERLAY_CLASS =
-  'absolute inset-0 bg-linear-to-b from-white/15 via-white/5 to-white/25 pointer-events-none'
+import { RegionCard } from '../components/regions/RegionCard'
 
 export const Route = createLazyFileRoute('/kommuner')({
   component: KommunerPage,
@@ -52,6 +46,7 @@ export function KommunerPage() {
         <Breadcrumbs
           items={[
             { label: 'Hjem', to: '/' },
+            { label: 'Regioner', to: '/regioner' },
             { label: 'Kommuner' }
           ]}
         />
@@ -105,54 +100,17 @@ export function KommunerPage() {
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-8">
             {filtered.map(m => (
-              <Link
+              <RegionCard
                 key={m.code}
-                to="/kommune/$code"
-                params={{ code: m.slug }}
-                className="group bg-white rounded-2xl md:rounded-3xl p-5 md:p-8 border border-slate-200 hover:border-blue-200 shadow-sm hover:shadow-2xl hover:-translate-y-1.5 transition-all duration-500 flex flex-col justify-between relative overflow-hidden"
-              >
-                {/* 
-                   Static Map Background - Much more performant than 357 Leaflet instances.
-                   Uses a single tile image as a subtle texture for premium feel.
-                */}
-                {m.lat && m.lng && (
-                  <div
-                    data-testid={`municipality-map-${m.code}`}
-                    className={MUNICIPALITY_MAP_CLASS}
-                    style={{
-                      backgroundImage: `url(${getStaticMapUrl(m.lat, m.lng, 11)})`,
-                    }}
-                  />
-                )}
-                {/* Subtle gradient overlay for text readability */}
-                <div className={MUNICIPALITY_MAP_OVERLAY_CLASS} />
-
-                <div className="relative z-10">
-                  <div className="flex items-center justify-between mb-8">
-                    <div className="h-14 w-14 bg-slate-50 border border-slate-100 text-slate-400 rounded-2xl flex items-center justify-center group-hover:bg-blue-600 group-hover:text-white group-hover:border-blue-500 transition-all duration-300">
-                      <MapPin className="h-6 w-6" />
-                    </div>
-                    <span className="text-[10px] font-black text-slate-400 group-hover:text-blue-600 transition-colors tracking-[0.2em] uppercase">
-                      {m.code}
-                    </span>
-                  </div>
-                  <h2 className="text-2xl font-black text-slate-900 mb-2 group-hover:text-blue-700 transition-colors leading-tight tracking-tight">
-                    {m.name}
-                  </h2>
-                  <div className="h-1 w-8 bg-slate-100 rounded-full group-hover:w-12 group-hover:bg-blue-500 transition-all duration-300 mb-4" />
-                </div>
-
-                <div className="mt-8 pt-8 border-t border-slate-50 flex items-center justify-between relative z-10">
-                  <div className="flex flex-col">
-                    <span className="text-slate-900 font-black tabular-nums text-xl tracking-tighter">{m.company_count.toLocaleString('no-NO')}</span>
-                    <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest mt-0.5">Virksomheter</span>
-                  </div>
-                  <div className="flex flex-col items-end">
-                    <span className="text-slate-900 font-black tabular-nums text-xl tracking-tighter">{m.population?.toLocaleString('no-NO') ?? '-'}</span>
-                    <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest mt-0.5">Innbyggere</span>
-                  </div>
-                </div>
-              </Link>
+                kind="kommune"
+                code={m.code}
+                name={m.name}
+                slug={m.slug}
+                companyCount={m.company_count}
+                population={m.population}
+                lat={m.lat}
+                lng={m.lng}
+              />
             ))}
           </div>
         )}

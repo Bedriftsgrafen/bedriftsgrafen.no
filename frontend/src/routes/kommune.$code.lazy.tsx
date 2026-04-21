@@ -86,6 +86,7 @@ export function MunicipalityDashboardPage() {
               <Breadcrumbs
                 items={[
                   { label: 'Hjem', to: '/', className: 'text-white/50 hover:text-white' },
+                  { label: 'Regioner', to: '/regioner', className: 'text-white/50 hover:text-white' },
                   { label: 'Fylker', to: '/fylker', className: 'text-white/50 hover:text-white' },
                   { label: dashboard.county_name, to: `/fylke/${createRouteCode(dashboard.county_code, dashboard.county_name)}`, className: 'text-white/50 hover:text-white' },
                   { label: dashboard.name, className: 'text-white font-bold' }
