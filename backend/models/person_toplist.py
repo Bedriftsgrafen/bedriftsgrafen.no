@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from datetime import date
 
-from sqlalchemy import Date, Integer, String
+from sqlalchemy import BigInteger, Date, Integer, String
 from sqlalchemy.orm import Mapped, mapped_column
 
 from database import Base
@@ -25,3 +25,4 @@ class PersonToplist(Base):
     styremedlem_count: Mapped[int] = mapped_column(Integer)
     active_companies: Mapped[int] = mapped_column(Integer)
     industry_diversity: Mapped[int] = mapped_column(Integer)
+    total_revenue: Mapped[int] = mapped_column(BigInteger, default=0)

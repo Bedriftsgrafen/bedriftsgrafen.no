@@ -161,6 +161,7 @@ class ToplistCategory(StrEnum):
     MEDL = "MEDL"  # Styremedlem
     ACTIVE_COMPANIES = "active_companies"
     INDUSTRY_DIVERSITY = "industry_diversity"
+    SALGSINNTEKTER = "salgsinntekter"
 
 
 class PersonToplistEntry(BaseModel):

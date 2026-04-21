@@ -990,6 +990,15 @@ class RoleRepository:
              WHERE industry_diversity > 0
              ORDER BY industry_diversity DESC
              LIMIT :lim)
+            UNION ALL
+            (SELECT 'salgsinntekter' AS category,
+                    person_navn, foedselsdato,
+                    total_revenue AS value,
+                    active_roles, active_companies
+             FROM person_toplist_mv
+             WHERE total_revenue > 0
+             ORDER BY total_revenue DESC
+             LIMIT :lim)
         """)
         try:
             result = await self.db.execute(query, {"lim": limit})
