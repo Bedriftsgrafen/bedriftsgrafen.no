@@ -63,6 +63,7 @@ export function IndustryDashboardPage() {
       <SEOHead
         title={`${dashboard.nace_name ?? `NACE ${dashboard.nace_division}`} - Bransjeoversikt | Bedriftsgrafen.no`}
         description={`Bransjeinnsikt for ${dashboard.nace_name ?? dashboard.nace_division}. ${formatNumber(dashboard.company_count)} virksomheter, ${formatNumber(dashboard.total_employees ?? 0)} ansatte. Se trender, topplister og underbransjer.`}
+        ogImage={`/api/v1/og/industry/${dashboard.nace_division}.svg`}
       />
 
       <main>

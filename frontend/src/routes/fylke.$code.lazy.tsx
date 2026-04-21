@@ -64,7 +64,7 @@ function CountyDashboardPage() {
       <SEOHead
         title={`${dashboard.name} Fylke - Næringsliv & Statistikk | Bedriftsgrafen.no`}
         description={`Regional innsikt for ${dashboard.name}. ${formatNumber(dashboard.company_count)} virksomheter, ${dashboard.municipality_count} kommuner. Se vekst, bransjefordeling og topplister.`}
-        ogImage={`/v1/og/county/${dashboard.code}.svg`}
+        ogImage={`/api/v1/og/county/${dashboard.code}.svg`}
       />
 
       <main>
