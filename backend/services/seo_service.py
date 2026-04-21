@@ -20,6 +20,134 @@ from repositories.stats_repository import StatsRepository
 
 logger = logging.getLogger(__name__)
 
+
+# ---------------------------------------------------------------------------
+# OG image SVG helpers (module-level, reused by all generators)
+# ---------------------------------------------------------------------------
+
+
+def _format_og_currency(val: float | None) -> str:
+    """Format a currency value for OG card display (e.g. 5,0M / 500K / —)."""
+    if val is None:
+        return "—"
+    if val >= 1_000_000:
+        return f"{val / 1_000_000:.1f}M".replace(".", ",")
+    if val >= 1_000:
+        return f"{val / 1_000:.0f}K".replace(".", ",")
+    return str(int(val))
+
+
+def _format_og_number(val: int | float | None) -> str:
+    """Format an integer for OG card display with space-separated thousands."""
+    if val is None:
+        return "—"
+    return f"{int(val):,}".replace(",", "\u00a0")
+
+
+def _truncate(text: str, max_len: int) -> str:
+    """Truncate text to max_len chars, appending an ellipsis if truncated."""
+    if len(text) <= max_len:
+        return text
+    return text[:max_len] + "\u2026"
+
+
+def _title_font_size(title: str) -> int:
+    """Adaptive font size for OG card title. Prevents overflow for long names."""
+    n = len(title)
+    if n <= 20:
+        return 64
+    if n <= 30:
+        return 52
+    if n <= 42:
+        return 40
+    return 32
+
+
+def _stat_font_size(val: str) -> int:
+    """Adaptive font size for OG card stat values. Prevents overflow for long strings."""
+    n = len(val)
+    if n <= 7:
+        return 64
+    if n <= 12:
+        return 48
+    return 36
+
+
+def _build_og_svg_shell(
+    title: str,
+    subtitle: str,
+    stats: list[tuple[str, str]],
+    pill_text: str,
+    body_line: str = "",
+) -> str:
+    """
+    Build a standard 1200x630 OG SVG card.
+
+    Args:
+        title: Main heading (should already be HTML-escaped + truncated).
+        subtitle: Secondary line below title.
+        stats: Exactly 3 ``(label, value)`` tuples for the bottom stat row.
+        pill_text: Text inside the status pill (top-left badge).
+        body_line: Optional extra line rendered between subtitle and stats.
+    """
+    if len(stats) != 3:
+        raise ValueError("stats must contain exactly 3 (label, value) tuples")
+    (label1, val1), (label2, val2), (label3, val3) = stats
+    title_size = _title_font_size(title)
+    fs1, fs2, fs3 = _stat_font_size(val1), _stat_font_size(val2), _stat_font_size(val3)
+    body_svg = (
+        f'<text x="80" y="345" font-family="sans-serif" font-size="24" fill="#64748b">{body_line}</text>'
+        if body_line
+        else ""
+    )
+    return textwrap.dedent(f"""
+        <svg width="1200" height="630" viewBox="0 0 1200 630" xmlns="http://www.w3.org/2000/svg">
+            <defs>
+                <linearGradient id="grad" x1="0%" y1="0%" x2="100%" y2="100%">
+                    <stop offset="0%" style="stop-color:#1e3a8a;stop-opacity:1" />
+                    <stop offset="100%" style="stop-color:#1e293b;stop-opacity:1" />
+                </linearGradient>
+            </defs>
+            <rect width="1200" height="630" fill="url(#grad)" />
+
+            <!-- Pattern -->
+            <circle cx="1100" cy="100" r="250" fill="white" opacity="0.03" />
+            <rect x="50" y="50" width="1100" height="530" rx="30" fill="none" stroke="white" stroke-opacity="0.1" stroke-width="2" />
+
+            <!-- Brand -->
+            <text x="80" y="100" font-family="sans-serif" font-size="28" font-weight="bold" fill="#60a5fa">BEDRIFTSGRAFEN.NO</text>
+
+            <!-- Status Pill -->
+            <rect x="80" y="130" width="180" height="32" rx="16" fill="#3b82f6" opacity="0.2" />
+            <text x="170" y="152" font-family="sans-serif" font-size="14" font-weight="bold" fill="#93c5fd" text-anchor="middle">{pill_text}</text>
+
+            <!-- Title &amp; Subtitle -->
+            <text x="80" y="240" font-family="sans-serif" font-size="{title_size}" font-weight="900" fill="white">{title}</text>
+            <text x="80" y="300" font-family="sans-serif" font-size="28" font-weight="bold" fill="#94a3b8">{subtitle}</text>
+            {body_svg}
+
+            <!-- Stats Row -->
+            <g transform="translate(80, 480)">
+                <text x="0" y="0" font-family="sans-serif" font-size="20" font-weight="bold" fill="#94a3b8" letter-spacing="2">{label1}</text>
+                <text x="0" y="55" font-family="sans-serif" font-size="{fs1}" font-weight="bold" fill="white">{val1}</text>
+            </g>
+
+            <g transform="translate(450, 480)">
+                <text x="0" y="0" font-family="sans-serif" font-size="20" font-weight="bold" fill="#94a3b8" letter-spacing="2">{label2}</text>
+                <text x="0" y="55" font-family="sans-serif" font-size="{fs2}" font-weight="bold" fill="white">{val2}</text>
+            </g>
+
+            <g transform="translate(850, 480)">
+                <text x="0" y="0" font-family="sans-serif" font-size="20" font-weight="bold" fill="#94a3b8" letter-spacing="2">{label3}</text>
+                <text x="0" y="55" font-family="sans-serif" font-size="{fs3}" font-weight="bold" fill="white">{val3}</text>
+            </g>
+
+            <!-- Bottom Line -->
+            <rect x="0" y="620" width="1200" height="10" fill="#3b82f6" />
+        </svg>
+    """)
+
+
 # Constants for sitemap pagination
 URLS_PER_SITEMAP = SITEMAP_URLS_PER_FILE
 
@@ -313,70 +441,75 @@ class SEOService:
 
     def generate_company_og_svg(self, data: dict[str, Any]) -> str:
         """Generates a dynamic SVG OpenGraph card for a company."""
-        # Sanitize inputs for SVG safety
-        name = html.escape(data["navn"])
+        name = _truncate(html.escape(data["navn"]), 60)
+        industry = _truncate(html.escape(data["nace_name"]), 70)
         orgnr = html.escape(data["orgnr"])
-        industry = html.escape(data["nace_name"])
+        emp = str(data["employees"]) if data["employees"] is not None else "—"
 
-        # Format numbers
-        def format_curr(val):
-            if val is None:
-                return "—"
-            if val >= 1_000_000:
-                return f"{val / 1_000_000:.1f}M".replace(".", ",")
-            if val >= 1_000:
-                return f"{val / 1_000:.0f}K".replace(".", ",")
-            return str(val)
+        return _build_og_svg_shell(
+            title=name,
+            subtitle=industry,
+            stats=[
+                ("OMSETNING", _format_og_currency(data["revenue"])),
+                ("\u00c5RSRESULTAT", _format_og_currency(data["profit"])),
+                ("ANSATTE", emp),
+            ],
+            pill_text="OFFISIELL DATA",
+            body_line=f"Org.nr: {orgnr}",
+        )
 
-        rev = format_curr(data["revenue"])
-        prof = format_curr(data["profit"])
-        emp = data["employees"] if data["employees"] is not None else "—"
+    def generate_municipality_og_svg(self, data: dict[str, Any]) -> str:
+        """Generates a dynamic SVG OpenGraph card for a municipality."""
+        name = _truncate(html.escape(data.get("name", "Ukjent kommune")), 60)
+        population = data.get("population")
+        company_count = data.get("company_count")
+        growth = data.get("population_growth_1y")
+        growth_str = f"{growth:+.1f}%" if growth is not None else "—"
 
-        # SVG template - optimized for high-impact social sharing
-        svg = f"""
-        <svg width="1200" height="630" viewBox="0 0 1200 630" xmlns="http://www.w3.org/2000/svg">
-            <defs>
-                <linearGradient id="grad" x1="0%" y1="0%" x2="100%" y2="100%">
-                    <stop offset="0%" style="stop-color:#1e3a8a;stop-opacity:1" />
-                    <stop offset="100%" style="stop-color:#1e293b;stop-opacity:1" />
-                </linearGradient>
-            </defs>
-            <rect width="1200" height="630" fill="url(#grad)" />
+        return _build_og_svg_shell(
+            title=name,
+            subtitle=html.escape("N\u00e6ringsrapport & Demografi"),
+            stats=[
+                ("INNBYGGERE", _format_og_number(population)),
+                ("VIRKSOMHETER", _format_og_number(company_count)),
+                ("VEKST", growth_str),
+            ],
+            pill_text="KOMMUNEDATA",
+        )
 
-            <!-- Pattern -->
-            <circle cx="1100" cy="100" r="250" fill="white" opacity="0.03" />
-            <rect x="50" y="50" width="1100" height="530" rx="30" fill="none" stroke="white" stroke-opacity="0.1" stroke-width="2" />
+    def generate_county_og_svg(self, data: dict[str, Any]) -> str:
+        """Generates a dynamic SVG OpenGraph card for a county."""
+        name = _truncate(html.escape(data.get("name", "Ukjent fylke")), 60)
+        top_sectors = data.get("top_sectors") or []
+        raw_sector = top_sectors[0].get("nace_name") or "—" if top_sectors else "—"
+        top_sector = _truncate(html.escape(raw_sector), 15)
 
-            <!-- Brand -->
-            <text x="80" y="100" font-family="sans-serif" font-size="28" font-weight="bold" fill="#60a5fa">BEDRIFTSGRAFEN.NO</text>
+        return _build_og_svg_shell(
+            title=name,
+            subtitle="Fylkesrapport",
+            stats=[
+                ("INNBYGGERE", _format_og_number(data.get("population"))),
+                ("VIRKSOMHETER", _format_og_number(data.get("company_count"))),
+                ("ST\u00d8RSTE BRANSJE", top_sector),
+            ],
+            pill_text="FYLKESDATA",
+        )
 
-            <!-- Company Info -->
-            <text x="80" y="240" font-family="sans-serif" font-size="64" font-weight="900" fill="white">{name[:60]}{"..." if len(name) > 60 else ""}</text>
-            <text x="80" y="300" font-family="sans-serif" font-size="28" font-weight="bold" fill="#94a3b8">{industry[:70]}{"..." if len(industry) > 70 else ""}</text>
-            <text x="80" y="345" font-family="sans-serif" font-size="24" fill="#64748b">Org.nr: {orgnr}</text>
+    def generate_industry_og_svg(self, data: dict[str, Any]) -> str:
+        """Generates a dynamic SVG OpenGraph card for an industry division."""
+        nace_name = data.get("nace_name")
+        nace_division = data.get("nace_division", "")
+        raw_title = nace_name if nace_name else f"NACE {nace_division}"
+        title = _truncate(html.escape(raw_title), 60)
+        employees = data.get("total_employees") or 0
 
-            <!-- Stats Row -->
-            <g transform="translate(80, 480)">
-                <text x="0" y="0" font-family="sans-serif" font-size="20" font-weight="bold" fill="#94a3b8" letter-spacing="2">OMSETNING</text>
-                <text x="0" y="55" font-family="sans-serif" font-size="64" font-weight="bold" fill="white">{rev}</text>
-            </g>
-
-            <g transform="translate(450, 480)">
-                <text x="0" y="0" font-family="sans-serif" font-size="20" font-weight="bold" fill="#94a3b8" letter-spacing="2">ÅRSRESULTAT</text>
-                <text x="0" y="55" font-family="sans-serif" font-size="64" font-weight="bold" fill="white">{prof}</text>
-            </g>
-
-            <g transform="translate(850, 480)">
-                <text x="0" y="0" font-family="sans-serif" font-size="20" font-weight="bold" fill="#94a3b8" letter-spacing="2">ANSATTE</text>
-                <text x="0" y="55" font-family="sans-serif" font-size="64" font-weight="bold" fill="white">{emp}</text>
-            </g>
-
-            <!-- Status Pill -->
-            <rect x="80" y="130" width="120" height="32" rx="16" fill="#3b82f6" opacity="0.2" />
-            <text x="140" y="152" font-family="sans-serif" font-size="14" font-weight="bold" fill="#93c5fd" text-anchor="middle">OFFISIELL DATA</text>
-
-            <!-- Bottom Line -->
-            <rect x="0" y="620" width="1200" height="10" fill="#3b82f6" />
-        </svg>
-        """
-        return textwrap.dedent(svg)
+        return _build_og_svg_shell(
+            title=title,
+            subtitle="Bransjeoversikt",
+            stats=[
+                ("VIRKSOMHETER", _format_og_number(data.get("company_count"))),
+                ("ANSATTE", _format_og_number(employees)),
+                ("GJ.SNITT OMSETNING", _format_og_currency(data.get("avg_revenue"))),
+            ],
+            pill_text="BRANSJEDATA",
+        )
