@@ -172,9 +172,29 @@ Monthly trend data (new establishments, bankruptcies).
 
 ### GET /v1/og/company/{orgnr}.svg
 Open Graph image for a company (SVG).
+- Rate limit: 60/minute
+- Cache: `public, max-age=3600, s-maxage=86400`
+- Returns 404 on unknown orgnr or any error.
 
 ### GET /v1/og/municipality/{code}.svg
 Open Graph image for a municipality (SVG).
+- Rate limit: 60/minute
+- Cache: `public, max-age=3600, s-maxage=86400`
+- Returns 404 on unknown code or any error.
+
+### GET /v1/og/county/{code}.svg
+Open Graph image for a county (SVG). Stats: population, company count, top sector.
+- Params: `code` — Norwegian county code (e.g. `46`)
+- Rate limit: 60/minute
+- Cache: `public, max-age=3600, s-maxage=86400`
+- Returns 404 on unknown code or any error.
+
+### GET /v1/og/industry/{code}.svg
+Open Graph image for an industry NACE division (SVG). Stats: company count, employees, avg. revenue.
+- Params: `code` — NACE division code (e.g. `62`)
+- Rate limit: 60/minute
+- Cache: `public, max-age=3600, s-maxage=86400`
+- Returns 404 on unknown code or any error.
 
 ---
 
