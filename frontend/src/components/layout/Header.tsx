@@ -8,7 +8,7 @@ const navItems = [
   { to: '/person', label: 'Personer', icon: Users },
   { to: '/bransjer', label: 'Bransjer', icon: BarChart3 },
   { to: '/kart', label: 'Kart', icon: Map },
-  { to: '/fylker', label: 'Regioner', icon: Globe },
+  { to: '/regioner', label: 'Regioner', icon: Globe },
   { to: '/nyetableringer', label: 'Nyetableringer', icon: Sparkles },
   { to: '/konkurser', label: 'Konkurser', icon: AlertTriangle },
   { to: '/om', label: 'Om', icon: Info },
@@ -41,9 +41,10 @@ export function Header() {
           {/* Navigation */}
           <nav className="flex items-center gap-1">
             {navItems.map(({ to, label, icon: Icon }) => {
-              // Special case for "Regioner" - active on /fylker, /fylke/*, /kommuner, /kommune/*
-              const isRegionRoute = to === '/fylker' && (
-                currentPath.startsWith('/fylker') || 
+              // Special case for "Regioner" - active on /regioner, /fylker, /fylke/*, /kommuner, /kommune/*
+              const isRegionRoute = to === '/regioner' && (
+                currentPath.startsWith('/regioner') ||
+                currentPath.startsWith('/fylker') ||
                 currentPath.startsWith('/fylke/') ||
                 currentPath.startsWith('/kommuner') ||
                 currentPath.startsWith('/kommune/')
