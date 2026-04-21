@@ -8,6 +8,7 @@ const searchSchema = z.object({
     sort: z.enum(['role_count', 'active_roles', 'name']).optional(),
     order: z.enum(['asc', 'desc']).optional(),
     view: z.enum(['cards', 'list']).optional(),
+    page: z.number().optional(),
 })
 
 export const Route = createFileRoute('/person/')({
