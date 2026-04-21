@@ -939,21 +939,31 @@ class RoleRepository:
         All reads from pre-aggregated person_toplist_mv for fast response.
         """
         query = text("""
-            (SELECT 'active_roles' AS category,
+            (SELECT 'salgsinntekter' AS category,
                     person_navn, foedselsdato,
-                    active_roles AS value,
+                    total_revenue AS value,
                     active_roles, active_companies
              FROM person_toplist_mv
-             ORDER BY active_roles DESC
+             WHERE total_revenue > 0
+             ORDER BY total_revenue DESC
              LIMIT :lim)
             UNION ALL
-            (SELECT 'LEDE' AS category,
+            (SELECT 'total_profit' AS category,
                     person_navn, foedselsdato,
-                    styreleder_count AS value,
+                    total_profit AS value,
                     active_roles, active_companies
              FROM person_toplist_mv
-             WHERE styreleder_count > 0
-             ORDER BY styreleder_count DESC
+             WHERE total_profit > 0
+             ORDER BY total_profit DESC
+             LIMIT :lim)
+            UNION ALL
+            (SELECT 'total_employees' AS category,
+                    person_navn, foedselsdato,
+                    total_employees AS value,
+                    active_roles, active_companies
+             FROM person_toplist_mv
+             WHERE total_employees > 0
+             ORDER BY total_employees DESC
              LIMIT :lim)
             UNION ALL
             (SELECT 'DAGL' AS category,
@@ -963,15 +973,6 @@ class RoleRepository:
              FROM person_toplist_mv
              WHERE ceo_count > 0
              ORDER BY ceo_count DESC
-             LIMIT :lim)
-            UNION ALL
-            (SELECT 'MEDL' AS category,
-                    person_navn, foedselsdato,
-                    styremedlem_count AS value,
-                    active_roles, active_companies
-             FROM person_toplist_mv
-             WHERE styremedlem_count > 0
-             ORDER BY styremedlem_count DESC
              LIMIT :lim)
             UNION ALL
             (SELECT 'active_companies' AS category,
@@ -991,13 +992,30 @@ class RoleRepository:
              ORDER BY industry_diversity DESC
              LIMIT :lim)
             UNION ALL
-            (SELECT 'salgsinntekter' AS category,
+            (SELECT 'LEDE' AS category,
                     person_navn, foedselsdato,
-                    total_revenue AS value,
+                    styreleder_count AS value,
                     active_roles, active_companies
              FROM person_toplist_mv
-             WHERE total_revenue > 0
-             ORDER BY total_revenue DESC
+             WHERE styreleder_count > 0
+             ORDER BY styreleder_count DESC
+             LIMIT :lim)
+            UNION ALL
+            (SELECT 'MEDL' AS category,
+                    person_navn, foedselsdato,
+                    styremedlem_count AS value,
+                    active_roles, active_companies
+             FROM person_toplist_mv
+             WHERE styremedlem_count > 0
+             ORDER BY styremedlem_count DESC
+             LIMIT :lim)
+            UNION ALL
+            (SELECT 'active_roles' AS category,
+                    person_navn, foedselsdato,
+                    active_roles AS value,
+                    active_roles, active_companies
+             FROM person_toplist_mv
+             ORDER BY active_roles DESC
              LIMIT :lim)
         """)
         try:
@@ -1032,11 +1050,11 @@ class RoleRepository:
             role_type_distribution = raw_role_types or []
 
             generation_distribution = [
-                {"generation": "Gen Z", "birth_year_range": "2000+", "count": int(row.gen_z or 0)},
-                {"generation": "Millennials", "birth_year_range": "1980-1999", "count": int(row.millennials or 0)},
-                {"generation": "Gen X", "birth_year_range": "1960-1979", "count": int(row.gen_x or 0)},
-                {"generation": "Boomers", "birth_year_range": "1940-1959", "count": int(row.boomers or 0)},
                 {"generation": "Silent", "birth_year_range": "<1940", "count": int(row.silent or 0)},
+                {"generation": "Boomers", "birth_year_range": "1940-1959", "count": int(row.boomers or 0)},
+                {"generation": "Gen X", "birth_year_range": "1960-1979", "count": int(row.gen_x or 0)},
+                {"generation": "Millennials", "birth_year_range": "1980-1999", "count": int(row.millennials or 0)},
+                {"generation": "Gen Z", "birth_year_range": "2000+", "count": int(row.gen_z or 0)},
             ]
 
             avg_board_age = round(float(row.avg_board_age), 1) if row.avg_board_age else 0.0

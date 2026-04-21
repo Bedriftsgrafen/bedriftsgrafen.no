@@ -162,6 +162,8 @@ class ToplistCategory(StrEnum):
     ACTIVE_COMPANIES = "active_companies"
     INDUSTRY_DIVERSITY = "industry_diversity"
     SALGSINNTEKTER = "salgsinntekter"
+    TOTAL_PROFIT = "total_profit"
+    TOTAL_EMPLOYEES = "total_employees"
 
 
 class PersonToplistEntry(BaseModel):

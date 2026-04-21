@@ -784,7 +784,7 @@ class TestEscapeLike:
 
 
 class TestRoleRepositoryGetAllPersonToplistsQuery:
-    """Verify the salgsinntekter UNION ALL block exists in get_all_person_toplists."""
+    """Verify UNION ALL blocks exist in get_all_person_toplists."""
 
     def test_query_contains_salgsinntekter_block(self):
         """7th UNION ALL block for salgsinntekter is present in source."""
@@ -796,3 +796,23 @@ class TestRoleRepositoryGetAllPersonToplistsQuery:
         assert "'salgsinntekter'" in source
         assert "total_revenue" in source
         assert "total_revenue > 0" in source
+
+    def test_query_contains_total_profit_block(self):
+        """8th UNION ALL block for total_profit is present in source."""
+        import inspect
+
+        from repositories.role_repository import RoleRepository
+
+        source = inspect.getsource(RoleRepository.get_all_person_toplists)
+        assert "'total_profit'" in source
+        assert "total_profit > 0" in source
+
+    def test_query_contains_total_employees_block(self):
+        """9th UNION ALL block for total_employees is present in source."""
+        import inspect
+
+        from repositories.role_repository import RoleRepository
+
+        source = inspect.getsource(RoleRepository.get_all_person_toplists)
+        assert "'total_employees'" in source
+        assert "total_employees > 0" in source
