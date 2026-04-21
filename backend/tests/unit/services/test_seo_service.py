@@ -86,6 +86,151 @@ class TestSEOServiceOG:
         assert "500K" in svg  # Formatted profit
         assert "10" in svg  # Employees
 
+    def test_generate_municipality_og_svg_contains_data(self):
+        mock_db = MagicMock()
+        service = SEOService(mock_db)
+        data = {
+            "name": "Oslo",
+            "population": 700000,
+            "population_growth_1y": 1.5,
+            "company_count": 50000,
+        }
+
+        svg = service.generate_municipality_og_svg(data)
+
+        assert "<svg" in svg
+        assert "Oslo" in svg
+        assert "INNBYGGERE" in svg
+        assert "VIRKSOMHETER" in svg
+        assert "+1.5%" in svg
+
+    def test_generate_municipality_og_svg_null_growth(self):
+        mock_db = MagicMock()
+        service = SEOService(mock_db)
+        data = {
+            "name": "Ny Kommune",
+            "population": 5000,
+            "population_growth_1y": None,
+            "company_count": 100,
+        }
+
+        svg = service.generate_municipality_og_svg(data)
+
+        assert "<svg" in svg
+        assert "—" in svg  # Growth falls back to em-dash
+
+    def test_generate_county_og_svg_contains_data(self):
+        mock_db = MagicMock()
+        service = SEOService(mock_db)
+        data = {
+            "name": "Vestland",
+            "population": 634463,
+            "company_count": 42000,
+            "top_sectors": [{"nace_name": "Havbruk"}, {"nace_name": "Handel"}],
+        }
+
+        svg = service.generate_county_og_svg(data)
+
+        assert "<svg" in svg
+        assert "Vestland" in svg
+        assert "Fylkesrapport" in svg
+        assert "Havbruk" in svg
+
+    def test_generate_county_og_svg_empty_sectors(self):
+        mock_db = MagicMock()
+        service = SEOService(mock_db)
+        data = {
+            "name": "Testfylke",
+            "population": 10000,
+            "company_count": 1000,
+            "top_sectors": [],
+        }
+
+        svg = service.generate_county_og_svg(data)
+
+        assert "<svg" in svg
+        assert "—" in svg  # Sector falls back to em-dash
+
+    def test_generate_county_og_svg_null_population(self):
+        mock_db = MagicMock()
+        service = SEOService(mock_db)
+        data = {
+            "name": "Testfylke",
+            "population": None,
+            "company_count": 1000,
+            "top_sectors": [],
+        }
+
+        svg = service.generate_county_og_svg(data)
+
+        assert "<svg" in svg
+        assert "—" in svg  # Population falls back to em-dash
+
+    def test_generate_county_og_svg_escapes_xss(self):
+        mock_db = MagicMock()
+        service = SEOService(mock_db)
+        data = {
+            "name": "<script>alert(1)</script>",
+            "population": 1000,
+            "company_count": 100,
+            "top_sectors": [{"nace_name": "<img src=x>"}],
+        }
+
+        svg = service.generate_county_og_svg(data)
+
+        assert "<script>" not in svg
+        assert "&lt;script&gt;" in svg
+
+    def test_generate_industry_og_svg_contains_data(self):
+        mock_db = MagicMock()
+        service = SEOService(mock_db)
+        data = {
+            "nace_division": "62",
+            "nace_name": "Programmeringstjenester",
+            "company_count": 15000,
+            "total_employees": 80000,
+            "avg_revenue": 3500000.0,
+        }
+
+        svg = service.generate_industry_og_svg(data)
+
+        assert "<svg" in svg
+        assert "Programmeringstjenester" in svg
+        assert "Bransjeoversikt" in svg
+        assert "3,5M" in svg  # Formatted avg_revenue
+
+    def test_generate_industry_og_svg_null_nace_name(self):
+        mock_db = MagicMock()
+        service = SEOService(mock_db)
+        data = {
+            "nace_division": "99",
+            "nace_name": None,
+            "company_count": 100,
+            "total_employees": None,
+            "avg_revenue": None,
+        }
+
+        svg = service.generate_industry_og_svg(data)
+
+        assert "<svg" in svg
+        assert "NACE 99" in svg
+
+    def test_generate_industry_og_svg_escapes_xss(self):
+        mock_db = MagicMock()
+        service = SEOService(mock_db)
+        data = {
+            "nace_division": "62",
+            "nace_name": "<script>alert(1)</script>",
+            "company_count": 100,
+            "total_employees": 500,
+            "avg_revenue": 1000000.0,
+        }
+
+        svg = service.generate_industry_og_svg(data)
+
+        assert "<script>" not in svg
+        assert "&lt;script&gt;" in svg
+
 
 class TestSEOServiceCache:
     """Tests for sitemap caching functionality."""
