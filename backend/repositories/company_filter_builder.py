@@ -358,19 +358,22 @@ class CompanyFilterBuilder:
         """
         Apply municipality and county filters.
 
-        Municipality: Exact match on kommune field (case-insensitive)
-        Municipality Code: Exact match on kommunenummer field
-        County: Prefix match on kommunenummer (2-digit fylke code)
+        Uses COALESCE(forretningsadresse, postadresse) semantics: the legal
+        registered address takes precedence; postadresse is a fallback for
+        the ~1.86% of companies that have no forretningsadresse.kommunenummer.
+
+        This is consistent with how municipality_stats is built and avoids
+        double-counting companies whose two addresses point to different counties.
         """
-        # Municipality code filter (Language-independent) - Prioritize over name
+        # Municipality code filter — COALESCE: forretningsadresse first, postadresse fallback
         if self._f.municipality_code:
-            muni_code_filter = or_(
-                models.Company.forretningsadresse["kommunenummer"].astext == self._f.municipality_code,
-                models.Company.postadresse["kommunenummer"].astext == self._f.municipality_code,
+            effective_muni = func.coalesce(
+                func.nullif(models.Company.forretningsadresse["kommunenummer"].astext, ""),
+                func.nullif(models.Company.postadresse["kommunenummer"].astext, ""),
             )
-            self._clauses.append(muni_code_filter)
+            self._clauses.append(effective_muni == self._f.municipality_code)
         elif self._f.municipality:
-            # Fallback to name-based filter
+            # Fallback to name-based filter (no COALESCE equivalent for names)
             muni_upper = self._f.municipality.upper()
             muni_filter = or_(
                 func.upper(models.Company.forretningsadresse["kommune"].astext) == muni_upper,
@@ -378,15 +381,18 @@ class CompanyFilterBuilder:
             )
             self._clauses.append(muni_filter)
 
-        # County filter
+        # County filter — COALESCE: forretningsadresse first, postadresse fallback
         if self._f.county:
             county_code = get_county_code(self._f.county) if not is_county_code(self._f.county) else self._f.county
             if county_code:
-                county_filter = or_(
-                    func.left(models.Company.forretningsadresse["kommunenummer"].astext, 2) == county_code,
-                    func.left(models.Company.postadresse["kommunenummer"].astext, 2) == county_code,
+                effective_county = func.left(
+                    func.coalesce(
+                        func.nullif(models.Company.forretningsadresse["kommunenummer"].astext, ""),
+                        func.nullif(models.Company.postadresse["kommunenummer"].astext, ""),
+                    ),
+                    2,
                 )
-                self._clauses.append(county_filter)
+                self._clauses.append(effective_county == county_code)
 
         return self
 

@@ -107,15 +107,14 @@ class TestCompanyFilterBuilder:
         builder = CompanyFilterBuilder(filters)
         builder.apply_location_filter()
         assert len(builder.clauses) == 2
-        # Municipality OR structure
+        # Municipality name filter still uses OR (no COALESCE equivalent for name lookups)
         muni_clause = builder.clauses[0]
         assert isinstance(muni_clause, BooleanClauseList)
         assert len(muni_clause.clauses) == 2  # forretningsadresse OR postadresse
 
-        # County OR structure
+        # County filter now uses COALESCE — produces a single BinaryExpression (== comparison)
         county_clause = builder.clauses[1]
-        assert isinstance(county_clause, BooleanClauseList)
-        # Should check left 2 chars
+        assert isinstance(county_clause, BinaryExpression)
 
     def test_apply_date_filters(self):
         d1 = date(2020, 1, 1)
