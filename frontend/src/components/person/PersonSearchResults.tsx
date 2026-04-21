@@ -6,12 +6,12 @@ import { useSlowLoadingToast } from '../../hooks/useSlowLoadingToast'
 import { formatNumber } from '../../utils/formatters'
 import { PersonResultCard } from './PersonResultCard'
 import { PersonResultRow } from './PersonResultRow'
+import type { PersonSortField, PersonSortOrder, PersonViewMode } from '../../types/person'
+import { PERSON_ITEMS_PER_PAGE } from '../../types/person'
 
-const ITEMS_PER_PAGE = 20
-
-type SortField = 'role_count' | 'active_roles' | 'name'
-type SortOrder = 'asc' | 'desc'
-type ViewMode = 'cards' | 'list'
+type SortField = PersonSortField
+type SortOrder = PersonSortOrder
+type ViewMode = PersonViewMode
 
 const SORT_OPTIONS: { value: SortField; label: string }[] = [
     { value: 'role_count', label: 'Antall roller' },
@@ -40,12 +40,12 @@ export function PersonSearchResults({
     onSortChange,
     onViewModeChange,
 }: PersonSearchResultsProps) {
-    const offset = (currentPage - 1) * ITEMS_PER_PAGE
+    const offset = (currentPage - 1) * PERSON_ITEMS_PER_PAGE
 
     const { data, isLoading, isError } = usePersonSearchResultsQuery(
         query,
         offset,
-        ITEMS_PER_PAGE,
+        PERSON_ITEMS_PER_PAGE,
         sortBy,
         sortOrder,
     )
@@ -209,7 +209,7 @@ export function PersonSearchResults({
                     <Pagination
                         currentPage={currentPage}
                         totalCount={totalCount}
-                        itemsPerPage={ITEMS_PER_PAGE}
+                        itemsPerPage={PERSON_ITEMS_PER_PAGE}
                         currentItemsCount={results.length}
                         onPreviousPage={handlePreviousPage}
                         onNextPage={handleNextPage}

@@ -3,6 +3,9 @@ import { useNavigate, useSearch } from '@tanstack/react-router'
 import { AlertTriangle } from 'lucide-react'
 import { PersonSearchBar } from '../PersonSearchBar'
 import { PersonSearchResults } from './PersonSearchResults'
+import type { PersonSortField, PersonViewMode } from '../../types/person'
+import { PERSON_ITEMS_PER_PAGE } from '../../types/person'
+import { usePersonSearchResultsQuery } from '../../hooks/queries/usePersonSearchResultsQuery'
 
 export const PersonSearchTab = memo(function PersonSearchTab() {
     const navigate = useNavigate({ from: '/person/' })
@@ -13,6 +16,15 @@ export const PersonSearchTab = memo(function PersonSearchTab() {
     const viewMode = view ?? 'cards'
     const currentPage = page ?? 1
 
+    const offset = (currentPage - 1) * PERSON_ITEMS_PER_PAGE
+    const { isLoading } = usePersonSearchResultsQuery(
+        q && q.length >= 3 ? q : '',
+        offset,
+        PERSON_ITEMS_PER_PAGE,
+        sort ?? 'role_count',
+        order ?? 'desc',
+    )
+
     const handleSearch = useCallback((query: string) => {
         const trimmed = query.trim()
         navigate({
@@ -21,7 +33,7 @@ export const PersonSearchTab = memo(function PersonSearchTab() {
         })
     }, [navigate])
 
-    const handleSortChange = useCallback((field: 'role_count' | 'active_roles' | 'name') => {
+    const handleSortChange = useCallback((field: PersonSortField) => {
         const newOrder: 'asc' | 'desc' = sortBy === field
             ? (sortOrder === 'desc' ? 'asc' : 'desc')
             : (field === 'name' ? 'asc' : 'desc')
@@ -31,7 +43,7 @@ export const PersonSearchTab = memo(function PersonSearchTab() {
         })
     }, [navigate, sortBy, sortOrder])
 
-    const handleViewModeChange = useCallback((mode: 'cards' | 'list') => {
+    const handleViewModeChange = useCallback((mode: PersonViewMode) => {
         navigate({
             to: '/person',
             search: (prev) => ({ ...prev, view: mode }),
@@ -51,6 +63,7 @@ export const PersonSearchTab = memo(function PersonSearchTab() {
                 <PersonSearchBar
                     initialValue={q || ''}
                     onSearch={handleSearch}
+                    isLoading={isLoading}
                 />
             </div>
 

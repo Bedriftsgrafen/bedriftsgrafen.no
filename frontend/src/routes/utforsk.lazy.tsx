@@ -17,7 +17,6 @@ import { useFilterStore } from '../store/filterStore'
 import { useSlowLoadingToast } from '../hooks/useSlowLoadingToast'
 import { ExplorerSearchBar } from '../components/explorer/ExplorerSearchBar'
 import { ViewModeToggle } from '../components/explorer'
-import { SearchTypeNav } from '../components/common'
 
 export const Route = createLazyFileRoute('/utforsk')({
     component: UtforskPage,
@@ -122,8 +121,6 @@ export function UtforskPage() {
                     { label: 'Utforsk virksomheter' },
                 ]}
             />
-
-            <SearchTypeNav active="virksomheter" query={q} />
 
             {/* Page header */}
             <div className="mb-6">

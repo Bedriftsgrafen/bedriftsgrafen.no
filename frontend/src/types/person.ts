@@ -1,3 +1,9 @@
+export type PersonSortField = 'role_count' | 'active_roles' | 'name'
+export type PersonSortOrder = 'asc' | 'desc'
+export type PersonViewMode = 'cards' | 'list'
+
+export const PERSON_ITEMS_PER_PAGE = 20
+
 export interface PersonSearchResultDetailed {
     name: string
     birthdate: string | null
