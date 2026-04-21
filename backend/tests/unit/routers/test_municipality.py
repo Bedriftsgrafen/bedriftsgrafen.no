@@ -61,6 +61,39 @@ async def test_get_municipality_dashboard(mock_stats_service):
 
 
 @pytest.mark.asyncio
+async def test_get_municipality_dashboard_cache_hit(mock_stats_service):
+    with patch("routers.v1.municipality._dashboard_cache") as mock_cache:
+        mock_cache.get = AsyncMock(
+            return_value={
+                "code": "0301",
+                "name": "Oslo",
+                "county_code": "03",
+                "county_name": "Oslo",
+                "population": 700000,
+                "population_growth_1y": 1.2,
+                "company_count": 50000,
+                "business_density": 71.4,
+                "business_density_national_avg": 50.0,
+                "total_revenue": None,
+                "establishment_trend": [],
+                "top_sectors": [],
+                "top_companies": [],
+                "newest_companies": [],
+                "ranking_in_county_density": {"rank": 1, "out_of": 10},
+                "ranking_in_county_revenue": {"rank": 1, "out_of": 10},
+            }
+        )
+
+        async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as ac:
+            response = await ac.get("/v1/municipality/0301")
+
+        assert response.status_code == 200
+        assert response.json()["code"] == "0301"
+        # Service should NOT be called — response came from cache
+        mock_stats_service.get_municipality_premium_dashboard.assert_not_called()
+
+
+@pytest.mark.asyncio
 async def test_get_municipality_not_found(mock_stats_service):
     # Arrange
     mock_stats_service.get_municipality_premium_dashboard = AsyncMock(

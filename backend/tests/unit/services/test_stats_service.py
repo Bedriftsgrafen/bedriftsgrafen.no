@@ -475,6 +475,55 @@ class TestGetCountyPremiumDashboard:
     """Tests for get_county_premium_dashboard method."""
 
     @pytest.mark.asyncio
+    async def test_returns_dashboard_with_rankings(self):
+        """Happy path: returns full dashboard dict including combined rankings."""
+        # Arrange
+        mock_db = MagicMock()
+        service = StatsService(mock_db)
+
+        service.stats_repo.get_county_premium_summary = AsyncMock(
+            return_value={
+                "population": 650000,
+                "population_growth_1y": 0.8,
+                "company_count": 35000,
+                "municipality_count": 43,
+                "national_density": 50.0,
+                "total_revenue": 1_000_000_000_000,
+            }
+        )
+        service.stats_repo.get_county_sector_distribution = AsyncMock(
+            return_value=[{"nace_division": "G", "nace_name": "Handel", "company_count": 5000}]
+        )
+        service.stats_repo.get_county_municipalities = AsyncMock(
+            return_value=[{"code": "4601", "name": "Bergen", "company_count": 20000, "population": 285000}]
+        )
+        service.stats_repo.get_county_combined_rankings = AsyncMock(
+            return_value={
+                "density": {"rank": 3, "out_of": 15},
+                "revenue": {"rank": 2, "out_of": 15},
+                "population": {"rank": 2, "out_of": 15},
+            }
+        )
+        service.stats_repo.get_county_establishment_trend = AsyncMock(return_value=[{"label": "Jan 24", "value": 200}])
+        service.stats_repo.get_county_bankrupt_trend = AsyncMock(return_value=[])
+        service.company_repo.get_all = AsyncMock(return_value=[])
+
+        # Act
+        result = await service.get_county_premium_dashboard("46")
+
+        # Assert
+        assert result is not None
+        assert result["code"] == "46"
+        assert result["population"] == 650000
+        assert result["company_count"] == 35000
+        assert result["business_density"] > 0
+        assert result["ranking_national_density"] == {"rank": 3, "out_of": 15}
+        assert result["ranking_national_revenue"] == {"rank": 2, "out_of": 15}
+        assert result["ranking_national_population"] == {"rank": 2, "out_of": 15}
+        assert len(result["top_sectors"]) == 1
+        service.stats_repo.get_county_combined_rankings.assert_called_once_with("46")
+
+    @pytest.mark.asyncio
     async def test_returns_none_for_nonexistent_county(self):
         """Early bailout: returns None when both population and company_count are 0."""
         # Arrange

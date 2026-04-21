@@ -97,6 +97,7 @@ class MunicipalityStats(Base):
     __table_args__ = {"extend_existing": True}
 
     municipality_code: Mapped[str] = mapped_column(String, primary_key=True)
+    county_code: Mapped[str | None] = mapped_column(String, nullable=True)
     nace_division: Mapped[str] = mapped_column(String, primary_key=True)
     company_count: Mapped[int | None] = mapped_column(Integer, nullable=True)
     new_last_year: Mapped[int | None] = mapped_column(Integer, nullable=True)

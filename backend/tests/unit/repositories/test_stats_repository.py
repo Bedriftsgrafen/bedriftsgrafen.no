@@ -417,6 +417,50 @@ async def test_get_municipality_combined_rankings_not_found(repo, mock_db_sessio
 
 
 @pytest.mark.asyncio
+async def test_get_county_combined_rankings_found(repo, mock_db_session):
+    """Test county ranking returns density, revenue, population rankings."""
+    mock_rank = MagicMock(
+        county_code="46",
+        rank_density=3,
+        rank_revenue=2,
+        rank_population=2,
+        total=15,
+    )
+
+    call_count = [0]
+
+    def mock_execute_side_effect(*args, **kwargs):
+        call_count[0] += 1
+        result = MagicMock()
+        if call_count[0] == 1:  # Year query
+            result.scalar.return_value = 2024
+        else:  # Ranking query
+            result.all.return_value = [mock_rank]
+        return result
+
+    mock_db_session.execute.side_effect = mock_execute_side_effect
+
+    result = await repo.get_county_combined_rankings("46")
+
+    assert result is not None
+    assert result["density"]["rank"] == 3
+    assert result["revenue"]["rank"] == 2
+    assert result["population"]["rank"] == 2
+    assert result["density"]["out_of"] == 15
+
+
+@pytest.mark.asyncio
+async def test_get_county_combined_rankings_not_found(repo, mock_db_session):
+    """Test county ranking when county not in results."""
+    mock_db_session.execute.return_value.scalar.return_value = 2024
+    mock_db_session.execute.return_value.all.return_value = []
+
+    result = await repo.get_county_combined_rankings("99")
+
+    assert result is None
+
+
+@pytest.mark.asyncio
 async def test_get_establishment_trend(repo, mock_db_session):
     """Test monthly registration trend for municipality."""
     from datetime import datetime

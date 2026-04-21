@@ -753,25 +753,33 @@ class StatsRepository:
 
         latest_year = await self.get_latest_population_year() or 2024
 
-        # Aggregate company counts per county from municipality_stats
+        # Aggregate company counts per county from municipality_stats.
+        # Use the county_code column directly (added in p1q2r3s4t5u6) to avoid
+        # the SQLAlchemy double-parameter issue where func.left(col, 2) in SELECT
+        # and func.left(col, 2) in GROUP BY receive different bind slots ($N vs $M),
+        # causing PostgreSQL to reject the query with a GroupingError.
         company_counts = (
             select(
-                func.left(models.MunicipalityStats.municipality_code, 2).label("county_code"),
+                models.MunicipalityStats.county_code,
                 func.sum(models.MunicipalityStats.company_count).label("company_count"),
                 func.sum(models.MunicipalityStats.total_revenue).label("revenue"),
             )
-            .group_by(func.left(models.MunicipalityStats.municipality_code, 2))
+            .group_by(models.MunicipalityStats.county_code)
             .subquery()
         )
 
-        # Aggregate population per county
+        # Aggregate population per county.
+        # Reuse the same expression object for SELECT and GROUP BY to avoid
+        # SQLAlchemy assigning different bind parameter slots ($N vs $M) for the
+        # same constant 2, which would cause a PostgreSQL GroupingError.
+        pop_county_expr = func.left(models.MunicipalityPopulation.municipality_code, 2)
         pop_counts = (
             select(
-                func.left(models.MunicipalityPopulation.municipality_code, 2).label("county_code"),
+                pop_county_expr.label("county_code"),
                 func.sum(models.MunicipalityPopulation.population).label("population"),
             )
             .where(models.MunicipalityPopulation.year == latest_year)
-            .group_by(func.left(models.MunicipalityPopulation.municipality_code, 2))
+            .group_by(pop_county_expr)
             .subquery()
         )
 
