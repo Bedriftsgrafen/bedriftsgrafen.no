@@ -781,3 +781,18 @@ class TestEscapeLike:
     def test_preserves_unicode(self):
         """Norwegian characters preserved unchanged."""
         assert _escape_like("Ærlig Økonomi AS") == "Ærlig Økonomi AS"
+
+
+class TestRoleRepositoryGetAllPersonToplistsQuery:
+    """Verify the salgsinntekter UNION ALL block exists in get_all_person_toplists."""
+
+    def test_query_contains_salgsinntekter_block(self):
+        """7th UNION ALL block for salgsinntekter is present in source."""
+        import inspect
+
+        from repositories.role_repository import RoleRepository
+
+        source = inspect.getsource(RoleRepository.get_all_person_toplists)
+        assert "'salgsinntekter'" in source
+        assert "total_revenue" in source
+        assert "total_revenue > 0" in source

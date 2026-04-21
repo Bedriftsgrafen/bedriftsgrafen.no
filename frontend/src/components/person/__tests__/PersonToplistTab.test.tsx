@@ -25,6 +25,12 @@ const MOCK_TOPLISTS: PersonToplistResponse[] = [
             { rank: 1, name: 'Trude Moen', birth_year: 1972, value: 50, active_roles: 80, active_companies: 50 },
         ],
     },
+    {
+        category: 'salgsinntekter',
+        entries: [
+            { rank: 1, name: 'Stor Bedrift', birth_year: 1955, value: 5_000_000_000, active_roles: 8, active_companies: 5 },
+        ],
+    },
 ]
 
 describe('PersonToplistTab', () => {
@@ -45,6 +51,7 @@ describe('PersonToplistTab', () => {
         expect(buttonLabels).toContain('Styremedlem')
         expect(buttonLabels).toContain('Selskaper')
         expect(buttonLabels).toContain('Bransjemangfold')
+        expect(buttonLabels).toContain('Omsetning')
     })
 
     it('renders entries for the selected category', () => {
@@ -128,5 +135,17 @@ describe('PersonToplistTab', () => {
         // Category buttons still render, no table
         expect(screen.getByText('Aktive roller')).toBeInTheDocument()
         expect(container.querySelector('table')).not.toBeInTheDocument()
+    })
+
+    it('formats revenue with formatCurrency for salgsinntekter category', () => {
+        render(
+            <PersonToplistTab
+                toplists={MOCK_TOPLISTS}
+                selectedCategory="salgsinntekter"
+                onCategoryChange={vi.fn()}
+            />
+        )
+        // formatCurrency(5_000_000_000) = '5.0 mrd'
+        expect(screen.getByText('5.0 mrd')).toBeInTheDocument()
     })
 })

@@ -431,6 +431,21 @@ class TestPersonServiceGetAllToplists:
         result = await service.get_all_toplists()
         assert result == []
 
+    @pytest.mark.asyncio
+    async def test_get_all_toplists_includes_salgsinntekter(self, service):
+        """salgsinntekter category is grouped and value is cast to int."""
+        service.role_repo.get_all_person_toplists = AsyncMock(
+            return_value=[
+                self._make_toplist_row("salgsinntekter", "Stor Bedrift", date(1955, 1, 1), 5_000_000_000),
+            ]
+        )
+
+        result = await service.get_all_toplists(limit=10)
+
+        assert len(result) == 1
+        assert result[0].category.value == "salgsinntekter"
+        assert result[0].entries[0].value == 5_000_000_000
+
 
 class TestPersonServiceGetStats:
     """Tests for PersonService.get_stats."""

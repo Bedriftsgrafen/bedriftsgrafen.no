@@ -37,6 +37,12 @@ const MOCK_TOPLISTS: PersonToplistResponse[] = [
             { rank: 1, name: 'Trude Moen', birth_year: 1972, value: 50, active_roles: 80, active_companies: 50 },
         ],
     },
+    {
+        category: 'salgsinntekter',
+        entries: [
+            { rank: 1, name: 'Stor Bedrift', birth_year: 1955, value: 5_000_000_000, active_roles: 8, active_companies: 5 },
+        ],
+    },
 ]
 
 const MOCK_STATS: PersonAggregateStats = {
@@ -59,6 +65,7 @@ describe('PersonOverviewTab', () => {
 
         expect(screen.getByText('Flest aktive roller')).toBeInTheDocument()
         expect(screen.getByText('Flest styreleder')).toBeInTheDocument()
+        expect(screen.getByText('Størst omsetning')).toBeInTheDocument()
     })
 
     it('renders person names in toplist entries', () => {
@@ -116,5 +123,13 @@ describe('PersonOverviewTab', () => {
         )
 
         expect(screen.queryByText('Se alle')).not.toBeInTheDocument()
+    })
+
+    it('formats revenue values with formatCurrency for salgsinntekter category', () => {
+        render(
+            <PersonOverviewTab toplists={MOCK_TOPLISTS} stats={MOCK_STATS} onTabChange={vi.fn()} />
+        )
+        // formatCurrency(5_000_000_000) = '5.0 mrd'
+        expect(screen.getByText('5.0 mrd')).toBeInTheDocument()
     })
 })
