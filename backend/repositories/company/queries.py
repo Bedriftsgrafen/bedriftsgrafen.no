@@ -319,7 +319,20 @@ class QueryMixin:
         """
         Query with financial join - used when filtering/sorting by financial data.
         Uses INNER JOIN so only companies with financial data are returned.
+
+        When a geographic filter (municipality/county) is combined with a financial
+        sort, uses a two-phase approach: scan bedrifter with the expression index
+        first, then join to financials. This prevents the planner from choosing
+        an incremental sort that walks the entire revenue index and probes bedrifter
+        row-by-row (which is catastrophically slow for small geographic subsets).
         """
+        # Two-phase path for geographic + financial sort: force municipality/county
+        # index scan first, then join to financials for sorting.
+        has_geo_filter = bool(filters.municipality_code or filters.county)
+        financial_sort = sort_by in ("revenue", "profit", "operating_profit", "operating_margin", "equity_ratio")
+        if has_geo_filter and financial_sort:
+            return await self._get_all_geo_with_financial_sort(filters, skip, limit, sort_by, sort_order)
+
         query = select(
             models.Company,
             *LATEST_FINANCIAL_COLUMNS,
@@ -356,6 +369,86 @@ class QueryMixin:
         query = query.offset(skip).limit(limit)
 
         result = await self.db.execute(query)
+        rows = result.all()
+
+        return [
+            CompanyWithFinancials(
+                company=row[0],
+                latest_revenue=row[1],
+                latest_profit=row[2],
+                latest_operating_profit=row[3],
+                latest_operating_margin=row[4],
+                latest_equity_ratio=row[5],
+            )
+            for row in rows
+        ]
+
+    async def _get_all_geo_with_financial_sort(
+        self,
+        filters: FilterParams,
+        skip: int,
+        limit: int,
+        sort_by: str,
+        sort_order: str,
+    ) -> list[CompanyWithFinancials]:
+        """
+        Single-query approach for geographic filter + financial sort.
+
+        Builds a correlated subquery that evaluates the geographic filter
+        on bedrifter using the municipality/county expression index, then
+        joins to latest_financials for the financial sort. Keeping this as
+        one SQL statement lets PostgreSQL choose a hash join — starting from
+        the geographically-filtered rows (~1% of the table) rather than
+        scanning the entire revenue index and probing bedrifter row-by-row.
+
+        This prevents the catastrophically slow incremental-sort plan
+        (26 s for municipality-sized subsets) while avoiding the overhead
+        of fetching thousands of orgnrs to Python and re-sending them as
+        a literal IN list (also slow for large municipalities).
+        """
+        # Build the geographic + non-financial filter as a subquery
+        builder = CompanyFilterBuilder(filters)
+        builder.apply_all(include_financial=False)
+        geo_orgnr_subq = builder.apply_to_query(select(models.Company.orgnr)).subquery("geo_filter")
+
+        extended_sort_map = {
+            **SORT_COLUMN_MAP,
+            "revenue": models.LatestFinancials.salgsinntekter,
+            "profit": models.LatestFinancials.aarsresultat,
+            "operating_profit": models.LatestFinancials.driftsresultat,
+            "operating_margin": models.LatestFinancials.operating_margin,
+            "equity_ratio": models.LatestFinancials.egenkapitalandel,
+        }
+        sort_column = extended_sort_map.get(sort_by, models.Company.navn)
+
+        fin_query = (
+            select(models.Company, *LATEST_FINANCIAL_COLUMNS)
+            .options(*LIST_VIEW_OPTIONS)
+            .join(models.LatestFinancials, models.Company.orgnr == models.LatestFinancials.orgnr)
+            .where(models.Company.orgnr.in_(select(geo_orgnr_subq.c.orgnr)))
+        )
+
+        # Apply any financial range filters (e.g. min_revenue)
+        if filters.has_financial_filters():
+            fin_builder = CompanyFilterBuilder(filters)
+            fin_builder.apply_financial_filters()
+            fin_query = fin_builder.apply_to_query(fin_query)
+
+        if sort_order == "desc":
+            fin_query = fin_query.order_by(
+                sort_column.desc().nullslast(),
+                models.Company.stiftelsesdato.desc().nullslast(),
+                models.Company.navn.asc(),
+            )
+        else:
+            fin_query = fin_query.order_by(
+                sort_column.asc().nullslast(),
+                models.Company.stiftelsesdato.asc().nullslast(),
+                models.Company.navn.asc(),
+            )
+
+        fin_query = fin_query.offset(skip).limit(limit)
+        result = await self.db.execute(fin_query)
         rows = result.all()
 
         return [
