@@ -96,6 +96,8 @@ export type ToplistCategory =
     | 'active_companies'
     | 'industry_diversity'
     | 'salgsinntekter'
+    | 'total_profit'
+    | 'total_employees'
 
 export interface PersonToplistEntry {
     rank: number

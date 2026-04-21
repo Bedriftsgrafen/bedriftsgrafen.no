@@ -43,6 +43,18 @@ const MOCK_TOPLISTS: PersonToplistResponse[] = [
             { rank: 1, name: 'Stor Bedrift', birth_year: 1955, value: 5_000_000_000, active_roles: 8, active_companies: 5 },
         ],
     },
+    {
+        category: 'total_profit',
+        entries: [
+            { rank: 1, name: 'Lønnsom Gründer', birth_year: 1968, value: 2_000_000_000, active_roles: 6, active_companies: 4 },
+        ],
+    },
+    {
+        category: 'total_employees',
+        entries: [
+            { rank: 1, name: 'Stor Arbeidsgiver', birth_year: 1962, value: 25000, active_roles: 3, active_companies: 2 },
+        ],
+    },
 ]
 
 const MOCK_STATS: PersonAggregateStats = {
@@ -66,6 +78,8 @@ describe('PersonOverviewTab', () => {
         expect(screen.getByText('Flest aktive roller')).toBeInTheDocument()
         expect(screen.getByText('Flest styreleder')).toBeInTheDocument()
         expect(screen.getByText('Størst omsetning')).toBeInTheDocument()
+        expect(screen.getByText('Størst overskudd')).toBeInTheDocument()
+        expect(screen.getByText('Flest ansatte')).toBeInTheDocument()
     })
 
     it('renders person names in toplist entries', () => {

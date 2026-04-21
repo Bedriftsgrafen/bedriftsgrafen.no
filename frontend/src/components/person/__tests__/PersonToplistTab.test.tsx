@@ -31,6 +31,18 @@ const MOCK_TOPLISTS: PersonToplistResponse[] = [
             { rank: 1, name: 'Stor Bedrift', birth_year: 1955, value: 5_000_000_000, active_roles: 8, active_companies: 5 },
         ],
     },
+    {
+        category: 'total_profit',
+        entries: [
+            { rank: 1, name: 'Lønnsom Gründer', birth_year: 1968, value: 2_000_000_000, active_roles: 6, active_companies: 4 },
+        ],
+    },
+    {
+        category: 'total_employees',
+        entries: [
+            { rank: 1, name: 'Stor Arbeidsgiver', birth_year: 1962, value: 25000, active_roles: 3, active_companies: 2 },
+        ],
+    },
 ]
 
 describe('PersonToplistTab', () => {
@@ -49,9 +61,11 @@ describe('PersonToplistTab', () => {
         expect(buttonLabels).toContain('Styreleder')
         expect(buttonLabels).toContain('Daglig leder')
         expect(buttonLabels).toContain('Styremedlem')
-        expect(buttonLabels).toContain('Selskaper')
+        expect(buttonLabels).toContain('Virksomheter')
         expect(buttonLabels).toContain('Bransjemangfold')
         expect(buttonLabels).toContain('Omsetning')
+        expect(buttonLabels).toContain('Overskudd')
+        expect(buttonLabels).toContain('Ansatte')
     })
 
     it('renders entries for the selected category', () => {
@@ -147,5 +161,29 @@ describe('PersonToplistTab', () => {
         )
         // formatCurrency(5_000_000_000) = '5.0 mrd'
         expect(screen.getByText('5.0 mrd')).toBeInTheDocument()
+    })
+
+    it('formats profit with formatCurrency for total_profit category', () => {
+        render(
+            <PersonToplistTab
+                toplists={MOCK_TOPLISTS}
+                selectedCategory="total_profit"
+                onCategoryChange={vi.fn()}
+            />
+        )
+        // formatCurrency(2_000_000_000) = '2.0 mrd'
+        expect(screen.getByText('2.0 mrd')).toBeInTheDocument()
+    })
+
+    it('formats employees with formatNumber for total_employees category', () => {
+        render(
+            <PersonToplistTab
+                toplists={MOCK_TOPLISTS}
+                selectedCategory="total_employees"
+                onCategoryChange={vi.fn()}
+            />
+        )
+        // formatNumber(25000) = '25 000'
+        expect(screen.getByText('25 000')).toBeInTheDocument()
     })
 })

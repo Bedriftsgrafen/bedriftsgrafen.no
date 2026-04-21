@@ -1,17 +1,20 @@
 import { memo, useMemo } from 'react'
 import { Link } from '@tanstack/react-router'
 import { Trophy, Medal, Award } from 'lucide-react'
-import { formatCurrency, formatNumber } from '../../utils/formatters'
+import { formatCategoryValue } from './toplistFormatters'
+import { formatNumber } from '../../utils/formatters'
 import type { PersonToplistResponse, ToplistCategory } from '../../types/person'
 
 const CATEGORIES: { key: ToplistCategory; label: string }[] = [
-    { key: 'active_roles', label: 'Aktive roller' },
-    { key: 'LEDE', label: 'Styreleder' },
-    { key: 'DAGL', label: 'Daglig leder' },
-    { key: 'MEDL', label: 'Styremedlem' },
-    { key: 'active_companies', label: 'Selskaper' },
-    { key: 'industry_diversity', label: 'Bransjemangfold' },
     { key: 'salgsinntekter', label: 'Omsetning' },
+    { key: 'total_profit', label: 'Overskudd' },
+    { key: 'total_employees', label: 'Ansatte' },
+    { key: 'DAGL', label: 'Daglig leder' },
+    { key: 'active_companies', label: 'Virksomheter' },
+    { key: 'industry_diversity', label: 'Bransjemangfold' },
+    { key: 'LEDE', label: 'Styreleder' },
+    { key: 'MEDL', label: 'Styremedlem' },
+    { key: 'active_roles', label: 'Aktive roller' },
 ]
 
 const RANK_ICONS = [
@@ -65,7 +68,7 @@ export const PersonToplistTab = memo(function PersonToplistTab({
                                 <th className="text-left px-4 py-3">Navn</th>
                                 <th className="text-right px-4 py-3">Verdi</th>
                                 <th className="text-right px-4 py-3 hidden sm:table-cell">Aktive roller</th>
-                                <th className="text-right px-4 py-3 hidden md:table-cell">Selskaper</th>
+                                <th className="text-right px-4 py-3 hidden md:table-cell">Virksomheter</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -92,9 +95,7 @@ export const PersonToplistTab = memo(function PersonToplistTab({
                                         )}
                                     </td>
                                     <td className="px-4 py-2.5 text-sm text-right font-medium text-slate-900 tabular-nums">
-                                        {selectedCategory === 'salgsinntekter'
-                                            ? formatCurrency(entry.value)
-                                            : formatNumber(entry.value)}
+                                        {formatCategoryValue(selectedCategory, entry.value)}
                                     </td>
                                     <td className="px-4 py-2.5 text-sm text-right text-slate-500 tabular-nums hidden sm:table-cell">
                                         {formatNumber(entry.active_roles)}
