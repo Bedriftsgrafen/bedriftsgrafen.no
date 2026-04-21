@@ -95,6 +95,7 @@ export type ToplistCategory =
     | 'MEDL'
     | 'active_companies'
     | 'industry_diversity'
+    | 'salgsinntekter'
 
 export interface PersonToplistEntry {
     rank: number

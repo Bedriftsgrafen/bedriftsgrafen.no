@@ -1,7 +1,7 @@
 import { memo, useMemo } from 'react'
 import { Link } from '@tanstack/react-router'
 import { Trophy, Medal, Award } from 'lucide-react'
-import { formatNumber } from '../../utils/formatters'
+import { formatCurrency, formatNumber } from '../../utils/formatters'
 import type { PersonToplistResponse, ToplistCategory } from '../../types/person'
 
 const CATEGORIES: { key: ToplistCategory; label: string }[] = [
@@ -11,6 +11,7 @@ const CATEGORIES: { key: ToplistCategory; label: string }[] = [
     { key: 'MEDL', label: 'Styremedlem' },
     { key: 'active_companies', label: 'Selskaper' },
     { key: 'industry_diversity', label: 'Bransjemangfold' },
+    { key: 'salgsinntekter', label: 'Omsetning' },
 ]
 
 const RANK_ICONS = [
@@ -91,7 +92,9 @@ export const PersonToplistTab = memo(function PersonToplistTab({
                                         )}
                                     </td>
                                     <td className="px-4 py-2.5 text-sm text-right font-medium text-slate-900 tabular-nums">
-                                        {formatNumber(entry.value)}
+                                        {selectedCategory === 'salgsinntekter'
+                                            ? formatCurrency(entry.value)
+                                            : formatNumber(entry.value)}
                                     </td>
                                     <td className="px-4 py-2.5 text-sm text-right text-slate-500 tabular-nums hidden sm:table-cell">
                                         {formatNumber(entry.active_roles)}

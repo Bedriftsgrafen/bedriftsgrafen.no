@@ -1,7 +1,7 @@
 import { memo } from 'react'
 import { Link } from '@tanstack/react-router'
 import { Trophy } from 'lucide-react'
-import { formatNumber } from '../../utils/formatters'
+import { formatCurrency, formatNumber } from '../../utils/formatters'
 import { PersonGenerationChart } from './PersonGenerationChart'
 import { PersonRoleTypeChart } from './PersonRoleTypeChart'
 import type { PersonToplistResponse, PersonAggregateStats, ToplistCategory } from '../../types/person'
@@ -13,6 +13,7 @@ const CATEGORY_LABELS: Record<ToplistCategory, string> = {
     MEDL: 'Flest styremedlem',
     active_companies: 'Flest selskaper',
     industry_diversity: 'Mest bransjemangfold',
+    salgsinntekter: 'Størst omsetning',
 }
 
 interface PersonOverviewTabProps {
@@ -55,7 +56,9 @@ export const PersonOverviewTab = memo(function PersonOverviewTab({ toplists, sta
                                         {entry.name}
                                     </Link>
                                     <span className="text-slate-500 font-medium tabular-nums shrink-0">
-                                        {formatNumber(entry.value)}
+                                        {list.category === 'salgsinntekter'
+                                            ? formatCurrency(entry.value)
+                                            : formatNumber(entry.value)}
                                     </span>
                                 </li>
                             ))}
