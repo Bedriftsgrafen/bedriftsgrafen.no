@@ -13,7 +13,9 @@ from constants.org_forms import (
     COMMERCIAL_ORG_FORMS,
     FOUNDATION_ORG_FORM,
     NON_COMMERCIAL_ORG_FORMS,
+    PUBLIC_ORG_FORMS,
     is_commercial_role,
+    is_private_commercial,
 )
 
 
@@ -22,7 +24,7 @@ class TestCommercialOrgForms:
 
     def test_contains_expected_commercial_forms(self):
         """All expected commercial forms are in the whitelist."""
-        expected = {"AS", "ASA", "ENK", "ANS", "DA", "NUF", "KS", "SAM", "IKS"}
+        expected = frozenset({"AS", "ASA", "ENK", "ANS", "DA", "NUF", "KS", "SAM", "IKS"})
         assert expected == COMMERCIAL_ORG_FORMS
 
     def test_does_not_contain_non_commercial_forms(self):
@@ -40,7 +42,7 @@ class TestNonCommercialOrgForms:
 
     def test_contains_expected_non_commercial_forms(self):
         """All expected non-commercial forms are in the blacklist."""
-        expected = {"FLI", "BRL", "ESEK", "ANNA"}
+        expected = frozenset({"FLI", "BRL", "ESEK", "ANNA"})
         assert expected == NON_COMMERCIAL_ORG_FORMS
 
     def test_includes_housing_cooperatives(self):
@@ -125,3 +127,64 @@ class TestLegalCompliance:
         """AS (Aksjeselskap) should always be considered commercial."""
         assert is_commercial_role("AS", False) is True
         assert is_commercial_role("AS", True) is True
+
+
+class TestPublicOrgForms:
+    """Tests for the PUBLIC_ORG_FORMS set and is_private_commercial helper."""
+
+    def test_contains_helseforetak(self):
+        """SÆR (helseforetak etc.) is in PUBLIC_ORG_FORMS."""
+        assert "SÆR" in PUBLIC_ORG_FORMS
+
+    def test_contains_all_expected_governmental_forms(self):
+        """All major governmental org forms are present."""
+        expected = {"SÆR", "ORGL", "KOMM", "FYLK", "STAT", "KF", "FKF", "SF", "KIRK", "IKS", "OPMV"}
+        assert expected.issubset(PUBLIC_ORG_FORMS)
+
+    def test_does_not_contain_private_commercial_forms(self):
+        """Private commercial forms must not appear in PUBLIC_ORG_FORMS."""
+        overlap = PUBLIC_ORG_FORMS & {"AS", "ASA", "ENK", "ANS", "DA", "NUF", "KS", "SAM"}
+        assert len(overlap) == 0, f"Unexpected overlap: {overlap}"
+
+
+class TestIsPrivateCommercial:
+    """Tests for is_private_commercial() — strict filter for commercial leaderboards."""
+
+    def test_as_registered_is_private_commercial(self):
+        """AS registered in foretaksreg is private commercial."""
+        assert is_private_commercial("AS", True) is True
+
+    def test_as_not_registered_is_private_commercial(self):
+        """AS even without foretaksreg is private commercial (whitelist)."""
+        assert is_private_commercial("AS", False) is True
+
+    def test_asa_is_private_commercial(self):
+        assert is_private_commercial("ASA", True) is True
+
+    def test_saer_registered_is_NOT_private_commercial(self):
+        """SÆR (helseforetak) is registered in foretaksreg but NOT private commercial."""
+        assert is_private_commercial("SÆR", True) is False
+
+    def test_orgl_is_NOT_private_commercial(self):
+        """ORGL (statlig organisasjonsledd) is not private commercial."""
+        assert is_private_commercial("ORGL", True) is False
+
+    def test_iks_is_NOT_private_commercial(self):
+        """IKS (interkommunalt selskap) is excluded from private commercial."""
+        assert is_private_commercial("IKS", True) is False
+
+    def test_fli_is_NOT_private_commercial(self):
+        """FLI (frivillig organisasjon) fails even the commercial check."""
+        assert is_private_commercial("FLI", True) is False
+
+    def test_sti_without_foretaksreg_is_NOT_private_commercial(self):
+        """STI without foretaksreg is not even commercial."""
+        assert is_private_commercial("STI", False) is False
+
+    def test_none_org_form_is_NOT_private_commercial(self):
+        """None org_form is not private commercial."""
+        assert is_private_commercial(None, True) is False
+
+    def test_enk_is_private_commercial(self):
+        """ENK (enkeltpersonforetak) is private commercial."""
+        assert is_private_commercial("ENK", False) is True
