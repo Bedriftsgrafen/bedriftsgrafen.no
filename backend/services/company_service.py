@@ -49,6 +49,7 @@ _stats_lock = asyncio.Lock()
 class CompanyService:
     # Class-level set to track active sync tasks across service instances
     _syncing_orgnrs: set[str] = set()
+    _background_tasks: set[asyncio.Task[None]] = set()
 
     def __init__(self, db: AsyncSession):
         self.db = db
@@ -165,7 +166,9 @@ class CompanyService:
                             setattr(company, "parent_navn", parent_name)  # noqa: B010  -- dynamic attr on ORM model
                         await parent_name_cache.set(parent_orgnr, parent_name)
                     else:
-                        _task = asyncio.create_task(self._background_parent_sync(parent_orgnr))  # noqa: RUF006
+                        _task = asyncio.create_task(self._background_parent_sync(parent_orgnr))
+                        CompanyService._background_tasks.add(_task)
+                        _task.add_done_callback(CompanyService._background_tasks.discard)
                 except Exception:
                     logger.debug(f"Parent name lookup failed for {parent_orgnr}", exc_info=True)
 

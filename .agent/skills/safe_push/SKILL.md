@@ -15,7 +15,7 @@ Run in order — stop on any failure:
 # Format + lint + type-check + test (one-liner)
 backend/.venv/bin/ruff check backend --fix \
   && backend/.venv/bin/ruff format backend \
-  && backend/.venv/bin/mypy backend \
+  && backend/.venv/bin/mypy backend --config-file backend/pyproject.toml \
   && backend/.venv/bin/pytest backend
 ```
 

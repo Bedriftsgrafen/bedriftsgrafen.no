@@ -60,7 +60,6 @@ jobs:
       - name: Install dependencies
         run: |
           pip install -r requirements.txt
-          pip install ruff mypy
       
       - name: Run Ruff (Lint & Format)
         run: |
@@ -89,7 +88,6 @@ jobs:
       - name: Install dependencies
         run: |
           pip install -r requirements.txt
-          pip install pytest pytest-asyncio pytest-cov pytest-mock polyfactory
       
       - name: Run unit tests
         run: python -m pytest tests/unit -v --tb=short

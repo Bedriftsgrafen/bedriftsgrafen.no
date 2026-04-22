@@ -99,6 +99,20 @@ exclude = [
 module = "alembic.*"
 ignore_errors = true
 
+[[tool.mypy.overrides]]
+module = "apscheduler.*"
+ignore_missing_imports = true
+disable_error_code = ["import-untyped"]
+
+
+[tool.coverage.run]
+omit = [
+    "*/tests/*",
+    "*/scripts/*",
+    "*/ops_scripts/*",
+    "*/alembic/*",
+    "*/.venv/*",
+]
 
 [tool.pytest.ini_options]
 asyncio_mode = "auto"
@@ -106,9 +120,9 @@ testpaths = ["tests"]
 python_files = ["test_*.py"]
 python_classes = ["Test*"]
 python_functions = ["test_*"]
-addopts = "-v --tb=short --cov=. --cov-report=term-missing"
+addopts = "-v --tb=short --cov=. --cov-report=term-missing --cov-config=backend/pyproject.toml"
 filterwarnings = [
-    "ignore::DeprecationWarning",
+    "ignore::DeprecationWarning:slowapi",  # asyncio.iscoroutinefunction deprecated in 3.14, removed in 3.16; upstream slowapi issue
     "ignore:This AsyncLimiter instance:RuntimeWarning",
     "ignore:coroutine.*was never awaited:RuntimeWarning",
 ]
