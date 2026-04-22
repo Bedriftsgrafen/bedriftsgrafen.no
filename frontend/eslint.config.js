@@ -19,6 +19,10 @@ export default defineConfig(
         ],
         languageOptions: {
             globals: globals.browser,
+            parserOptions: {
+                project: true,
+                tsconfigRootDir: import.meta.dirname,
+            },
         },
         plugins: {
             'react-refresh': reactRefresh,
@@ -39,6 +43,7 @@ export default defineConfig(
             ],
             '@typescript-eslint/no-explicit-any': 'error',
             '@eslint-react/no-array-index-key': 'off',
+            '@typescript-eslint/no-deprecated': 'warn',
         },
     },
     {
@@ -51,6 +56,9 @@ export default defineConfig(
         files: ['*.config.js', '*.config.ts'],
         languageOptions: {
             globals: globals.node,
+            parserOptions: {
+                project: ['tsconfig.node.json'],
+            },
         },
     },
 );

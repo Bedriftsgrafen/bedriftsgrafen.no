@@ -41,7 +41,7 @@ class GeocodingService(BaseExternalService):
         simple_address = self._extract_street_and_number(address)
         zip_code = self._extract_zip_code(address)
 
-        search_query = simple_address if simple_address else address.replace("Postboks", "").strip()
+        search_query = simple_address or address.replace("Postboks", "").strip()
 
         params = {"sok": search_query, "treffPerSide": 10, "utkoordsys": "4258", "asciiKompatibel": "true"}
 

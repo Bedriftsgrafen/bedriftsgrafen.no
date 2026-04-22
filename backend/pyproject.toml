@@ -65,6 +65,7 @@ select = [
     "S",      # flake8-bandit (security)
     "T20",    # flake8-print
     "RUF",    # ruff-specific rules
+    "FURB",   # refurb - catches deprecated stdlib and third-party API usage
 ]
 ignore = [
     "E501",   # line too long (handled by formatter)

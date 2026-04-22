@@ -499,7 +499,7 @@ class SEOService:
         """Generates a dynamic SVG OpenGraph card for an industry division."""
         nace_name = data.get("nace_name")
         nace_division = data.get("nace_division", "")
-        raw_title = nace_name if nace_name else f"NACE {nace_division}"
+        raw_title = nace_name or f"NACE {nace_division}"
         title = _truncate(html.escape(raw_title), 60)
         employees = data.get("total_employees") or 0
 

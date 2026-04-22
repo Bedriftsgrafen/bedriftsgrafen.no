@@ -6,24 +6,16 @@ describe('clipboard util', () => {
 
     beforeEach(() => {
         originalClipboard = navigator.clipboard;
-        // Mock clipboard API
         Object.assign(navigator, {
             clipboard: {
                 writeText: vi.fn().mockResolvedValue(undefined)
             }
         });
-
-        // Mock deprecated execCommand for fallback test
-        document.execCommand = vi.fn().mockReturnValue(true);
     });
 
     afterEach(() => {
-        // Restore
         if (originalClipboard) {
             Object.assign(navigator, { clipboard: originalClipboard });
-        } else {
-            // If it was undefined, delete it (careful in jsdom)
-            // simplified: just keep mock, tests are isolated
         }
         vi.restoreAllMocks();
     });
@@ -34,13 +26,13 @@ describe('clipboard util', () => {
         expect(result).toBe(true);
     });
 
-    it('falls back to execCommand if clipboard API fails', async () => {
-        // Force failure
+    it('returns false and logs error if clipboard API fails', async () => {
         (navigator.clipboard.writeText as unknown as ReturnType<typeof vi.fn>).mockRejectedValue(new Error('Not supported'));
+        const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
 
         const result = await copyToClipboard('fallback text');
 
-        expect(document.execCommand).toHaveBeenCalledWith('copy');
-        expect(result).toBe(true);
+        expect(result).toBe(false);
+        expect(consoleSpy).toHaveBeenCalled();
     });
 });
