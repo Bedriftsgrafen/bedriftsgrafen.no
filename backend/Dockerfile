@@ -2,8 +2,9 @@ FROM python:3.14-slim
 
 WORKDIR /app
 
-# Install system dependencies for psycopg2 and health check
+# Patch fixable OS-level CVEs and install system dependencies
 RUN apt-get update && \
+    apt-get upgrade -y --no-install-recommends && \
     apt-get install -y --no-install-recommends libpq-dev gcc curl && \
     rm -rf /var/lib/apt/lists/*
 
