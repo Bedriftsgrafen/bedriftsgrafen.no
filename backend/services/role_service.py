@@ -9,6 +9,7 @@ import models
 from repositories.role_repository import RoleRepository
 from services.brreg_api_service import BrregApiService
 from services.brreg_mappers import map_role_from_api
+from utils.logging_config import sanitize_log
 
 logger = logging.getLogger(__name__)
 
@@ -39,7 +40,7 @@ class RoleService:
         if not force_refresh:
             cache_valid = await self.role_repo.is_cache_valid(orgnr)
             if cache_valid:
-                logger.debug("Using cached roles for %s", orgnr)
+                logger.debug("Using cached roles for %s", sanitize_log(orgnr))
                 return await self.role_repo.get_by_orgnr(orgnr)
 
         # Safety Check: Prevent force_refresh spam (max once per 60s)
@@ -48,12 +49,14 @@ class RoleService:
             if last_update:
                 elapsed = datetime.now(UTC) - last_update
                 if elapsed < timedelta(seconds=60):
-                    logger.info("Skipping force refresh for %s (last update %ds ago)", orgnr, elapsed.seconds)
+                    logger.info(
+                        "Skipping force refresh for %s (last update %ds ago)", sanitize_log(orgnr), elapsed.seconds
+                    )
                     return await self.role_repo.get_by_orgnr(orgnr)
 
         # Fetch from API
         try:
-            logger.info("Fetching roles from API for %s", orgnr)
+            logger.info("Fetching roles from API for %s", sanitize_log(orgnr))
             api_roles = await self.brreg_api.fetch_roles(orgnr)
 
             if not api_roles:
@@ -80,10 +83,10 @@ class RoleService:
             return new_roles
 
         except Exception as e:
-            logger.error("Error fetching roles for %s: %s", orgnr, e)
+            logger.error("Error fetching roles for %s: %s", sanitize_log(orgnr), e)
             # Return cached data if available, even if stale
             cached = await self.role_repo.get_by_orgnr(orgnr)
             if cached:
-                logger.info("Returning stale cached roles for %s", orgnr)
+                logger.info("Returning stale cached roles for %s", sanitize_log(orgnr))
                 return cached
             raise

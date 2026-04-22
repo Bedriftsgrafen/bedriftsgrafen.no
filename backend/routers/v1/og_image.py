@@ -9,6 +9,7 @@ from database import get_db
 from limiter import limiter
 from services.seo_service import SEOService
 from services.stats_service import StatsService
+from utils.logging_config import sanitize_log
 
 logger = logging.getLogger(__name__)
 
@@ -37,7 +38,7 @@ async def get_company_og_svg(request: Request, orgnr: str, db: AsyncSession = De
             return Response(status_code=404)
         return _svg_response(seo_service.generate_company_og_svg(data))
     except Exception:
-        logger.exception("Error generating company OG SVG for %s", orgnr)
+        logger.exception("Error generating company OG SVG for %s", sanitize_log(orgnr))
         return Response(status_code=404)
 
 
@@ -53,7 +54,7 @@ async def get_municipality_og_svg(request: Request, code: str, db: AsyncSession 
             return Response(status_code=404)
         return _svg_response(seo_service.generate_municipality_og_svg(dashboard))
     except Exception:
-        logger.exception("Error generating municipality OG SVG for %s", code)
+        logger.exception("Error generating municipality OG SVG for %s", sanitize_log(code))
         return Response(status_code=404)
 
 
@@ -69,7 +70,7 @@ async def get_county_og_svg(request: Request, code: str, db: AsyncSession = Depe
             return Response(status_code=404)
         return _svg_response(seo_service.generate_county_og_svg(dashboard))
     except Exception:
-        logger.exception("Error generating county OG SVG for %s", code)
+        logger.exception("Error generating county OG SVG for %s", sanitize_log(code))
         return Response(status_code=404)
 
 
@@ -85,5 +86,5 @@ async def get_industry_og_svg(request: Request, code: str, db: AsyncSession = De
             return Response(status_code=404)
         return _svg_response(seo_service.generate_industry_og_svg(dashboard))
     except Exception:
-        logger.exception("Error generating industry OG SVG for %s", code)
+        logger.exception("Error generating industry OG SVG for %s", sanitize_log(code))
         return Response(status_code=404)

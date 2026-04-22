@@ -2,8 +2,6 @@
 import asyncio
 import logging
 from database import AsyncSessionLocal
-from services.repair_service import RepairService
-from services.update_service import UpdateService
 from repositories.company.repository import CompanyRepository
 
 logging.basicConfig(level=logging.INFO)
@@ -11,11 +9,7 @@ logger = logging.getLogger(__name__)
 
 async def run_backfill():
     async with AsyncSessionLocal() as session:
-        # We need to construct the dependencies manually or use a simple loop
-        # RepairService needs UpdateService which needs CompanyRepository
         company_repo = CompanyRepository(session)
-        update_service = UpdateService(session)
-        repair_service = RepairService(session, update_service)
         
         # Run in a loop to process all companies (RepairService.backfill_registration_dates has a limit)
         total_backfilled = 0

@@ -8,6 +8,15 @@ from contextvars import ContextVar
 request_id_ctx: ContextVar[str | None] = ContextVar("request_id", default=None)
 
 
+def sanitize_log(value: object) -> str:
+    """Strip CR/LF from a value before interpolating it into a log message.
+
+    Prevents log injection attacks where user-controlled input containing
+    newlines could forge additional log entries.
+    """
+    return str(value).replace("\r", "").replace("\n", "")
+
+
 class ContextFilter(logging.Filter):
     """Add request context (request_id) to log records"""
 

@@ -106,8 +106,7 @@ class TestSecurityHeadersMiddleware:
             # Re-import to pick up new env
             import importlib
 
-            import middleware as middleware_module
-
+            middleware_module = importlib.import_module("middleware")
             importlib.reload(middleware_module)
 
             middleware = middleware_module.SecurityHeadersMiddleware(app=MagicMock())
@@ -128,8 +127,7 @@ class TestSecurityHeadersMiddleware:
         with patch.dict(os.environ, {"ENVIRONMENT": "development"}):
             import importlib
 
-            import middleware as middleware_module
-
+            middleware_module = importlib.import_module("middleware")
             importlib.reload(middleware_module)
 
             middleware = middleware_module.SecurityHeadersMiddleware(app=MagicMock())

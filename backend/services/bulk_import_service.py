@@ -9,6 +9,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from constants.concurrency import BULK_IMPORT_BATCH_SIZE
 from models_import import BulkImportQueue, ImportBatch, ImportStatus
 from services.company_service import CompanyService
+from utils.logging_config import sanitize_log
 
 logger = logging.getLogger(__name__)
 
@@ -96,7 +97,7 @@ class BulkImportService:
                 if orgnr:
                     orgnr_list.append(orgnr)
 
-        logger.info("Loaded %d companies from %s", len(orgnr_list), file_path)
+        logger.info("Loaded %d companies from %s", len(orgnr_list), sanitize_log(file_path))
         return await self.populate_queue(orgnr_list)
 
     async def process_single_company(self, orgnr: str) -> dict[str, Any]:

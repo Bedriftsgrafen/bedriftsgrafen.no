@@ -8,6 +8,7 @@ from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 import models
+from utils.logging_config import sanitize_log
 
 logger = logging.getLogger(__name__)
 
@@ -103,7 +104,7 @@ class NaceService:
 
             return results
         except Exception as e:
-            logger.error("Error fetching NACE subclasses for %s: %s", prefix, e)
+            logger.error("Error fetching NACE subclasses for %s: %s", sanitize_log(prefix), e)
             return []
 
     @classmethod

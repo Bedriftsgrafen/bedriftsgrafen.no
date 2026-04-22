@@ -11,6 +11,7 @@ from sqlalchemy.sql import func
 
 import models
 from constants.org_forms import COMMERCIAL_ORG_FORMS, NON_COMMERCIAL_ORG_FORMS
+from utils.logging_config import sanitize_log
 
 logger = logging.getLogger(__name__)
 
@@ -254,7 +255,7 @@ class RoleRepository:
                 for row in result
             ]
         except Exception as e:
-            logger.error("Error searching people", extra={"query": query, "error": str(e)})
+            logger.error("Error searching people", extra={"query": sanitize_log(query), "error": str(e)})
             return []
 
     async def search_people_detailed(
@@ -390,7 +391,7 @@ class RoleRepository:
 
             return people
         except Exception as e:
-            logger.error("Error in detailed people search", extra={"query": query, "error": str(e)})
+            logger.error("Error in detailed people search", extra={"query": sanitize_log(query), "error": str(e)})
             return []
 
     async def count_people_search(self, query: str, include_all: bool = False) -> int:
@@ -415,7 +416,7 @@ class RoleRepository:
             result = await self.db.execute(stmt)
             return result.scalar() or 0
         except Exception as e:
-            logger.error("Error counting people search", extra={"query": query, "error": str(e)})
+            logger.error("Error counting people search", extra={"query": sanitize_log(query), "error": str(e)})
             return 0
 
     async def get_person_commercial_roles(

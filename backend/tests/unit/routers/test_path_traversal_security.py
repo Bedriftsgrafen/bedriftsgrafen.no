@@ -239,8 +239,7 @@ class TestAllowedImportDir:
             # Re-import to pick up new env
             import importlib
 
-            import routers.admin_import as admin_import_module
-
+            admin_import_module = importlib.import_module("routers.admin_import")
             importlib.reload(admin_import_module)
 
             assert str(admin_import_module.ALLOWED_IMPORT_DIR) == "/custom/import/path"
@@ -253,8 +252,7 @@ class TestAllowedImportDir:
         with patch.dict(os.environ, env_copy, clear=True):
             import importlib
 
-            import routers.admin_import as admin_import_module
-
+            admin_import_module = importlib.import_module("routers.admin_import")
             importlib.reload(admin_import_module)
 
             assert str(admin_import_module.ALLOWED_IMPORT_DIR) == "/app/data"

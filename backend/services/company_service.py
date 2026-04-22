@@ -28,6 +28,7 @@ from services.geocoding_service import GeocodingService
 from services.kpi_service import KpiService
 from services.nace_service import NaceService
 from utils.cache import AsyncLRUCache
+from utils.logging_config import sanitize_log
 from utils.redis_cache import RedisCache
 
 logger = logging.getLogger(__name__)
@@ -106,7 +107,9 @@ class CompanyService:
         try:
             return await self.company_repo.get_by_orgnr(orgnr)
         except Exception:
-            logger.warning("get_by_orgnr failed for %s, falling back to subunit lookup", orgnr, exc_info=True)
+            logger.warning(
+                "get_by_orgnr failed for %s, falling back to subunit lookup", sanitize_log(orgnr), exc_info=True
+            )
             return await self.get_company_detail(orgnr)
 
     async def get_company_detail(self, orgnr: str) -> models.Company | Any | None:
@@ -115,14 +118,14 @@ class CompanyService:
         try:
             company = await self.company_repo.get_by_orgnr(orgnr)
         except Exception:
-            logger.warning("get_by_orgnr failed for %s, trying subunit fallback", orgnr, exc_info=True)
+            logger.warning("get_by_orgnr failed for %s, trying subunit fallback", sanitize_log(orgnr), exc_info=True)
             subunit = await self.subunit_repo.get_by_orgnr(orgnr)
             if not subunit:
                 return None
 
             # Map SubUnit to a Company-compatible dictionary for Pydantic
             # This allows the frontend to open sub-units in the same Modal
-            logger.info("Using SubUnit fallback for %s", orgnr)
+            logger.info("Using SubUnit fallback for %s", sanitize_log(orgnr))
             # Map to dict for Pydantic (will be validated by CompanyWithAccounting)
             comp_dict: dict[str, Any] = {
                 "orgnr": subunit.orgnr,

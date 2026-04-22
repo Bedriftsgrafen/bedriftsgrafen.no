@@ -1,4 +1,3 @@
-import contextlib
 import logging
 import os
 from contextlib import asynccontextmanager
@@ -106,8 +105,10 @@ async def lifespan(app):
     # Shutdown
     if cache_task and not cache_task.done():
         cache_task.cancel()
-        with contextlib.suppress(asyncio.CancelledError):
+        try:  # noqa: SIM105 — contextlib.suppress() with await is a CodeQL false positive
             await cache_task
+        except asyncio.CancelledError:
+            pass
 
     if scheduler_service:
         logger.info("Shutting down scheduler service...")

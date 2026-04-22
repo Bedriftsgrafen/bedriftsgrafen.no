@@ -509,7 +509,7 @@ class SEOService:
             stats=[
                 ("VIRKSOMHETER", _format_og_number(data.get("company_count"))),
                 ("ANSATTE", _format_og_number(employees)),
-                ("GJ.SNITT OMSETNING", _format_og_currency(data.get("avg_revenue"))),
+                ("GJENNOMSNITT OMSETNING", _format_og_currency(data.get("avg_revenue"))),
             ],
             pill_text="BRANSJEDATA",
         )

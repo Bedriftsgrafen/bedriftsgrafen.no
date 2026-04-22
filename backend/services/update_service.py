@@ -20,6 +20,7 @@ from schemas.brreg import FetchResult, UpdateBatchResult
 from services.brreg_api_service import BrregApiService
 from services.brreg_mappers import map_role_from_api, map_subunit_from_api
 from services.rate_limits import BRREG_RATE_LIMITER
+from utils.logging_config import sanitize_log
 from utils.metrics import SYNC_BATCH_PAGES_TOTAL, SYNC_LATENCY, SYNC_OPERATIONS_TOTAL
 
 logger = logging.getLogger(__name__)
@@ -131,8 +132,8 @@ class UpdateService:
 
         logger.info(
             "Starting update sync. Start ID: %s, Date: %s. Batch size: %s, Concurrency: %s",
-            start_id,
-            since_iso,
+            sanitize_log(start_id),
+            sanitize_log(since_iso),
             page_size,
             API_CONCURRENCY_LIMIT,
         )

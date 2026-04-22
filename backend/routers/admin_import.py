@@ -13,6 +13,7 @@ from services.bulk_import_service import BulkImportService
 from services.ssb_service import SsbService
 from services.update_service import UpdateService
 from utils.auth import verify_admin_key
+from utils.logging_config import sanitize_log
 
 logger = logging.getLogger(__name__)
 
@@ -81,7 +82,9 @@ async def populate_import_queue(
         # 1. Only accept basename (no path components allowed)
         safe_basename = Path(queue_request.from_file).name
         if safe_basename != queue_request.from_file:
-            logger.warning("SECURITY: Path traversal attempt blocked - input: %s", queue_request.from_file)
+            logger.warning(
+                "SECURITY: Path traversal attempt blocked - input: %s", sanitize_log(queue_request.from_file)
+            )
             raise HTTPException(status_code=400, detail="Invalid file path - use filename only")
 
         # 2. Construct full path within allowed directory
@@ -89,12 +92,12 @@ async def populate_import_queue(
 
         # 3. Verify final path is still within allowed directory (defense in depth)
         if not str(requested_path).startswith(str(ALLOWED_IMPORT_DIR)):
-            logger.warning("SECURITY: Path escape attempt blocked - resolved: %s", requested_path)
+            logger.warning("SECURITY: Path escape attempt blocked - resolved: %s", sanitize_log(requested_path))
             raise HTTPException(status_code=400, detail="Invalid file path")
 
         # 4. Reject symlinks (could point outside allowed directory)
         if requested_path.is_symlink():
-            logger.warning("SECURITY: Symlink rejected - path: %s", requested_path)
+            logger.warning("SECURITY: Symlink rejected - path: %s", sanitize_log(requested_path))
             raise HTTPException(status_code=400, detail="Symlinks not allowed")
 
         # 5. Verify file exists

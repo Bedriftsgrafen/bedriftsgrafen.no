@@ -31,6 +31,7 @@ from services.export_service import ExportService
 from services.nace_service import NaceService
 from services.role_service import RoleService
 from utils.caching import set_http_cache_headers
+from utils.logging_config import sanitize_log
 from utils.response_builders import build_response_metadata
 
 router: APIRouter = APIRouter(prefix="/v1/companies", tags=["companies-v1"])
@@ -424,8 +425,8 @@ async def get_company_roles(
         return RolesWithMetadata(data=role_responses, total=len(role_responses), metadata=build_response_metadata())
 
     except BrregApiException as e:
-        logging.warning("External API error fetching roles for %s: %s", orgnr, e)
+        logging.warning("External API error fetching roles for %s: %s", sanitize_log(orgnr), e)
         raise HTTPException(status_code=502, detail="Failed to fetch roles from Brønnøysund")
     except Exception as e:
-        logging.exception("Unexpected error fetching roles for %s: %s", orgnr, e)
+        logging.exception("Unexpected error fetching roles for %s: %s", sanitize_log(orgnr), e)
         raise HTTPException(status_code=500, detail="Internal server error")
