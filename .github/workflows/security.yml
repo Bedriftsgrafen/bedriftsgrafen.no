@@ -187,8 +187,8 @@ jobs:
           tags: ${{ matrix.image }}:latest
           load: true
           target: ${{ matrix.target || '' }}
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
+          pull: true
+          no-cache: true
 
       - name: Run Trivy vulnerability scanner
         uses: aquasecurity/trivy-action@0.35.0
