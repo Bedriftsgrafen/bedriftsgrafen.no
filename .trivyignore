@@ -12,3 +12,6 @@ CVE-2025-61726  # net/url memory exhaustion — gosu doesn't parse URLs
 CVE-2025-61728  # archive/zip CPU exhaustion — gosu doesn't parse zip files
 CVE-2025-61729  # crypto/x509 resource consumption — gosu doesn't validate certs
 CVE-2026-25679  # net/url IPv6 parsing — gosu doesn't parse URLs
+CVE-2026-32280  # crypto/x509/tls DoS in cert chain building — gosu doesn't validate certs
+CVE-2026-32281  # crypto/x509 DoS via cert chain validation — gosu doesn't validate certs
+CVE-2026-32283  # crypto/tls key update DoS — gosu doesn't use TLS
