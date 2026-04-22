@@ -103,11 +103,11 @@ prometheus-client==0.25.0
     # via prometheus-fastapi-instrumentator
 prometheus-fastapi-instrumentator==7.1.0
     # via bedriftsgrafen-backend (pyproject.toml)
-pydantic==2.13.1
+pydantic==2.13.3
     # via
     #   bedriftsgrafen-backend (pyproject.toml)
     #   fastapi
-pydantic-core==2.46.1
+pydantic-core==2.46.3
     # via pydantic
 pygments==2.20.0
     # via pytest
@@ -172,7 +172,7 @@ tzlocal==5.3.1
     # via apscheduler
 urllib3==2.6.3
     # via requests
-uvicorn[standard]==0.44.0
+uvicorn[standard]==0.45.0
     # via bedriftsgrafen-backend (pyproject.toml)
 uvloop==0.22.1
     # via uvicorn
