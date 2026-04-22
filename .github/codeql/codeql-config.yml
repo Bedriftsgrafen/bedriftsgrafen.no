@@ -1,0 +1,7 @@
+name: "Bedriftsgrafen CodeQL Config"
+
+paths-ignore:
+  # Alembic migration files use module-level variables (revision, down_revision,
+  # branch_labels, depends_on) that are read by the Alembic framework via
+  # introspection — they are not dead code.
+  - backend/alembic/versions
