@@ -1,5 +1,5 @@
 import { memo, useMemo } from 'react'
-import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, Legend } from 'recharts'
+import { PieChart, Pie, ResponsiveContainer, Tooltip, Legend } from 'recharts'
 import type { GenerationCount } from '../../types/person'
 
 const GENERATION_COLORS: Record<string, string> = {
@@ -29,7 +29,7 @@ export const PersonGenerationChart = memo(function PersonGenerationChart({ data 
             .map(g => ({
                 name: `${g.generation} (${g.birth_year_range})`,
                 value: g.count,
-                color: GENERATION_COLORS[g.generation] || '#94a3b8',
+                fill: GENERATION_COLORS[g.generation] || '#94a3b8',
             })),
         [data]
     )
@@ -49,11 +49,7 @@ export const PersonGenerationChart = memo(function PersonGenerationChart({ data 
                         outerRadius={100}
                         paddingAngle={2}
                         dataKey="value"
-                    >
-                        {chartData.map((entry) => (
-                            <Cell key={entry.name} fill={entry.color} />
-                        ))}
-                    </Pie>
+                    />
                     <Tooltip formatter={(value) => Number(value).toLocaleString('nb-NO')} />
                     <Legend itemSorter={null} />
                 </PieChart>

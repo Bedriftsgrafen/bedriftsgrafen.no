@@ -13,7 +13,6 @@ vi.mock('recharts', () => ({
     XAxis: () => <div />,
     YAxis: () => <div />,
     Tooltip: () => <div />,
-    Cell: () => <div />
 }))
 
 describe('BenchmarkCard', () => {

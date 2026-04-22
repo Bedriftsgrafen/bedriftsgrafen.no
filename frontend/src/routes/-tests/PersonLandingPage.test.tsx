@@ -18,7 +18,6 @@ vi.mock('@tanstack/react-router', () => ({
 vi.mock('recharts', () => ({
     PieChart: ({ children }: any) => <div data-testid="pie-chart">{children}</div>,
     Pie: () => null,
-    Cell: () => null,
     BarChart: ({ children }: any) => <div data-testid="bar-chart">{children}</div>,
     Bar: () => null,
     XAxis: () => null,

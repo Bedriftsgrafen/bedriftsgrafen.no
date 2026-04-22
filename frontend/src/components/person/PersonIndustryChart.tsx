@@ -1,5 +1,5 @@
 import { useMemo } from 'react'
-import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from 'recharts'
+import { PieChart, Pie, ResponsiveContainer, Tooltip } from 'recharts'
 import type { PersonRole } from '../../types/person'
 import { getNaceSectionName } from '../../constants/naceSections'
 
@@ -30,11 +30,11 @@ export function PersonIndustryChart({ roles }: PersonIndustryChartProps) {
             .map(([name, count]) => ({ name, value: count }))
             .sort((a, b) => b.value - a.value)
 
-        if (sorted.length <= 6) return sorted
+        if (sorted.length <= 6) return sorted.map((item, i) => ({ ...item, fill: COLORS[i % COLORS.length] }))
 
         const top5 = sorted.slice(0, 5)
         const otherCount = sorted.slice(5).reduce((sum, s) => sum + s.value, 0)
-        return [...top5, { name: 'Andre', value: otherCount }]
+        return [...top5, { name: 'Andre', value: otherCount }].map((item, i) => ({ ...item, fill: COLORS[i % COLORS.length] }))
     }, [roles])
 
     if (chartData.length === 0) return null
@@ -56,11 +56,7 @@ export function PersonIndustryChart({ roles }: PersonIndustryChartProps) {
                                 outerRadius={50}
                                 dataKey="value"
                                 stroke="none"
-                            >
-                                {chartData.map((_, i) => (
-                                    <Cell key={i} fill={COLORS[i % COLORS.length]} />
-                                ))}
-                            </Pie>
+                            />
                             <Tooltip
                                 formatter={(value) => [`${value} roller`, '']}
                                 contentStyle={{ fontSize: '12px', borderRadius: '8px' }}

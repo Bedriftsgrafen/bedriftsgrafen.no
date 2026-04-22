@@ -6,7 +6,6 @@ import {
     YAxis,
     Tooltip,
     ResponsiveContainer,
-    Cell
 } from 'recharts'
 import type { BenchmarkMetric } from '../../hooks/queries/useBenchmarkQuery'
 
@@ -43,8 +42,8 @@ export const BenchmarkCard = memo(function BenchmarkCard({
 
     // Memoize data to ensure stable reference for Recharts
     const data = React.useMemo(() => [
-        { name: displayName, value: metric.company_value, type: 'company' },
-        { name: 'Bransjesnitt', value: metric.industry_avg, type: 'industry' }
+        { name: displayName, value: metric.company_value, fill: '#2563eb' },
+        { name: 'Bransjesnitt', value: metric.industry_avg, fill: '#94a3b8' }
     ], [displayName, metric.company_value, metric.industry_avg])
 
     if (metric.industry_avg === null) return null
@@ -107,14 +106,7 @@ export const BenchmarkCard = memo(function BenchmarkCard({
                             ]}
                             cursor={{ fill: 'transparent' }}
                         />
-                        <Bar dataKey="value" radius={[0, 4, 4, 0]} barSize={20}>
-                            {data.map((entry, index) => (
-                                <Cell
-                                    key={`cell-${index}`}
-                                    fill={entry.type === 'company' ? '#2563eb' : '#94a3b8'}
-                                />
-                            ))}
-                        </Bar>
+                        <Bar dataKey="value" radius={[0, 4, 4, 0]} barSize={20} />
                     </BarChart>
                 </ResponsiveContainer>
             </div>
