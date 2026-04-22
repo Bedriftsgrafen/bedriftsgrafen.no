@@ -121,7 +121,7 @@ testpaths = ["tests"]
 python_files = ["test_*.py"]
 python_classes = ["Test*"]
 python_functions = ["test_*"]
-addopts = "-v --tb=short --cov=. --cov-report=term-missing --cov-config=backend/pyproject.toml"
+addopts = "-v --tb=short --cov=. --cov-report=term-missing --cov-config=pyproject.toml"
 filterwarnings = [
     "ignore::DeprecationWarning:slowapi",  # asyncio.iscoroutinefunction deprecated in 3.14, removed in 3.16; upstream slowapi issue
     "ignore:This AsyncLimiter instance:RuntimeWarning",
