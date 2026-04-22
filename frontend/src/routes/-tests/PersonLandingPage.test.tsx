@@ -1,4 +1,4 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
+import type { ReactNode } from 'react'
 import { render, screen, waitFor } from '@testing-library/react'
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
@@ -8,21 +8,25 @@ import { http, HttpResponse } from 'msw'
 // Capture navigation calls
 const mockNavigate = vi.fn()
 
+type MockLinkProps = { children: ReactNode } & Record<string, unknown>
+
 vi.mock('@tanstack/react-router', () => ({
     createLazyFileRoute: () => () => ({ component: null }),
     useNavigate: () => mockNavigate,
-    Link: ({ children, ...props }: any) => <a data-testid="person-link" {...props}>{children}</a>,
+    Link: ({ children, ...props }: MockLinkProps) => <a data-testid="person-link" {...(props as Record<string, unknown>)}>{children}</a>,
 }))
+
+type MockChartProps = { children?: ReactNode }
 
 // Mock recharts (avoids jsdom SVG measurement issues)
 vi.mock('recharts', () => ({
-    PieChart: ({ children }: any) => <div data-testid="pie-chart">{children}</div>,
+    PieChart: ({ children }: MockChartProps) => <div data-testid="pie-chart">{children}</div>,
     Pie: () => null,
-    BarChart: ({ children }: any) => <div data-testid="bar-chart">{children}</div>,
+    BarChart: ({ children }: MockChartProps) => <div data-testid="bar-chart">{children}</div>,
     Bar: () => null,
     XAxis: () => null,
     YAxis: () => null,
-    ResponsiveContainer: ({ children }: any) => <div>{children}</div>,
+    ResponsiveContainer: ({ children }: MockChartProps) => <div>{children}</div>,
     Tooltip: () => null,
     Legend: () => null,
 }))

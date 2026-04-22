@@ -62,7 +62,7 @@ export const CompanyListModal = ({
     const [sortField, setSortField] = useState<SortField>(() => getDefaultSort().field);
     const [sortOrder, setSortOrder] = useState<SortOrder>(() => getDefaultSort().order);
 
-    useBodyScrollLock()
+    useBodyScrollLock();
 
     const handleCompanyClick = useCallback((orgnr: string) => {
         const clean = cleanOrgnr(orgnr) || orgnr;
