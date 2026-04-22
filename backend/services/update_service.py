@@ -413,7 +413,11 @@ class UpdateService:
         since_iso = since_date.strftime("%Y-%m-%dT%H:%M:%S.000Z") if since_date else ""
         result = UpdateBatchResult(since_date=since_date or date.today(), since_iso=since_iso)
 
-        logger.info(f"Starting subunit update sync. Date: {since_iso}, startId: {start_id}")
+        logger.info(
+            "Starting subunit update sync. Date: %s, startId: %s",
+            sanitize_log(since_iso),
+            sanitize_log(start_id),
+        )
 
         next_url: str | None = (
             f"{BRREG_SUBUNIT_UPDATES_URL}?oppdateringsid={start_id}&size={min(page_size, 10000)}"

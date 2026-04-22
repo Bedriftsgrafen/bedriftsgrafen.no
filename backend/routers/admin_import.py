@@ -1,5 +1,6 @@
 import logging
 import os
+import re
 from datetime import date
 from pathlib import Path
 
@@ -20,6 +21,9 @@ logger = logging.getLogger(__name__)
 # Security: Whitelist directory for file imports
 # Only files in this directory (or its subdirectories) can be imported
 ALLOWED_IMPORT_DIR = Path(os.getenv("IMPORT_DATA_DIR", "/app/data")).resolve()
+
+# Allowlist for safe filename characters — prevents path traversal and injection
+_SAFE_FILENAME_RE = re.compile(r"^[a-zA-Z0-9][a-zA-Z0-9._-]*$")
 
 router: APIRouter = APIRouter(
     prefix="/admin/import", tags=["admin", "import"], dependencies=[Depends(verify_admin_key)]
@@ -87,20 +91,28 @@ async def populate_import_queue(
             )
             raise HTTPException(status_code=400, detail="Invalid file path - use filename only")
 
-        # 2. Construct full path within allowed directory
+        # 2. Allowlist: only alphanumeric, dots, underscores, hyphens (breaks CodeQL taint chain)
+        if not _SAFE_FILENAME_RE.match(safe_basename):
+            logger.warning(
+                "SECURITY: Invalid filename characters blocked - input: %s",
+                sanitize_log(queue_request.from_file),
+            )
+            raise HTTPException(status_code=400, detail="Invalid file name")
+
+        # 3. Construct full path within allowed directory
         requested_path = (ALLOWED_IMPORT_DIR / safe_basename).resolve()
 
-        # 3. Verify final path is still within allowed directory (defense in depth)
+        # 4. Verify final path is still within allowed directory (defense in depth)
         if not str(requested_path).startswith(str(ALLOWED_IMPORT_DIR)):
             logger.warning("SECURITY: Path escape attempt blocked - resolved: %s", sanitize_log(requested_path))
             raise HTTPException(status_code=400, detail="Invalid file path")
 
-        # 4. Reject symlinks (could point outside allowed directory)
+        # 5. Reject symlinks (could point outside allowed directory)
         if requested_path.is_symlink():
             logger.warning("SECURITY: Symlink rejected - path: %s", sanitize_log(requested_path))
             raise HTTPException(status_code=400, detail="Symlinks not allowed")
 
-        # 5. Verify file exists
+        # 6. Verify file exists
         if not requested_path.is_file():
             raise HTTPException(status_code=404, detail="File not found")
 

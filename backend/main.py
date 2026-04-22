@@ -105,10 +105,10 @@ async def lifespan(app):
     # Shutdown
     if cache_task and not cache_task.done():
         cache_task.cancel()
-        try:  # noqa: SIM105 — contextlib.suppress() with await is a CodeQL false positive
+        try:
             await cache_task
         except asyncio.CancelledError:
-            pass
+            logger.debug("Cache warm-up task cancelled during shutdown (expected)")
 
     if scheduler_service:
         logger.info("Shutting down scheduler service...")
