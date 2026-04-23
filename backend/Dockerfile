@@ -11,11 +11,11 @@ RUN apt-get update && \
 COPY backend/requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
-COPY backend/ .
+# Create non-root user before copying app code so --chown can set ownership
+# in a single pass — avoids a separate chown -R layer over the source files
+RUN useradd -m -u 1000 -s /bin/bash appuser
 
-# Create non-root user for parity with production
-RUN useradd -m -u 1000 -s /bin/bash appuser && \
-    chown -R appuser:appuser /app
+COPY --chown=appuser:appuser backend/ .
 
 USER appuser
 
