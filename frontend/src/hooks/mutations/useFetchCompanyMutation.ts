@@ -1,6 +1,5 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query'
-import axios from 'axios'
-import { useToastStore } from '../../store/toastStore'
+import { useToastStore, getErrorMessage } from '../../store/toastStore'
 import { apiClient } from '../../utils/apiClient'
 
 interface FetchCompanyParams {
@@ -51,11 +50,7 @@ export function useFetchCompanyMutation() {
       queryClient.invalidateQueries({ queryKey: ['stats'] })
     },
     onError: (error) => {
-      // Show error toast
-      const message = axios.isAxiosError(error)
-        ? error.response?.data?.detail || 'Kunne ikke hente data fra Brønnøysund'
-        : 'En ukjent feil oppsto'
-      addToast('error', message)
+      addToast('error', getErrorMessage(error))
     },
   })
 }

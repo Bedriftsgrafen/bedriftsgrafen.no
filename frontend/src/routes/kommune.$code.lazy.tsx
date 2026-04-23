@@ -28,6 +28,7 @@ export function MunicipalityDashboardPage() {
 
   // Extract the 4-digit code and a safe display name for loading state
   const code = slug.split('-')[0]
+  const isValidCode = /^\d{4}$/.test(code)
   const displayName = slug.split('-').slice(1).join(' ')
     .toLowerCase()
     .replace(/(^|\s)\S/g, (l: string) => l.toUpperCase()) || 'valgt kommune'
@@ -52,8 +53,8 @@ export function MunicipalityDashboardPage() {
     return (
       <div className="max-w-4xl mx-auto py-12 px-4">
         <ErrorMessage
-          message={`Kunne ikke finne data for kommunen ${code}`}
-          onRetry={() => refetch()}
+          message={isValidCode ? `Kunne ikke finne data for ${displayName}` : 'Kommunen finnes ikke'}
+          onRetry={isValidCode ? () => refetch() : undefined}
         />
       </div>
     )

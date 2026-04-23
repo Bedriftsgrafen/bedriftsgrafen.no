@@ -28,6 +28,7 @@ function CountyDashboardPage() {
 
   // Extract the 2-digit code and a safe display name for loading state
   const code = slug.split('-')[0]
+  const isValidCode = /^\d{2}$/.test(code)
   const displayName = slug.split('-').slice(1).join(' ')
     .toLowerCase()
     .replace(/(^|\s)\S/g, (l: string) => l.toUpperCase()) || 'valgt fylke'
@@ -52,8 +53,8 @@ function CountyDashboardPage() {
     return (
       <div className="max-w-4xl mx-auto py-12 px-4">
         <ErrorMessage
-          message={`Kunne ikke finne data for ${displayName}`}
-          onRetry={() => refetch()}
+          message={isValidCode ? `Kunne ikke finne data for ${displayName}` : 'Fylket finnes ikke'}
+          onRetry={isValidCode ? () => refetch() : undefined}
         />
       </div>
     )

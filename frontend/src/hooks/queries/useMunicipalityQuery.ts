@@ -25,7 +25,7 @@ export function getMunicipalityDashboardQueryOptions(
 export function useMunicipalityQuery(code: string | null) {
     return useQuery({
         ...getMunicipalityDashboardQueryOptions(code || ''),
-        enabled: !!code && code.length === 4,
+        enabled: !!code && /^\d{4}$/.test(code),
     })
 }
 

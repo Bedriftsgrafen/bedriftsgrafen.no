@@ -76,7 +76,7 @@ describe('useFetchCompanyMutation error handling', () => {
     // Local addToast called exactly once with 'error' type (the onMutate 'info' is expected)
     const errorCalls = (mockAddToast.mock.calls as [string, ...unknown[]][]).filter(([type]) => type === 'error')
     expect(errorCalls).toHaveLength(1)
-    expect(errorCalls[0]).toEqual(['error', 'Tjenesten er utilgjengelig'])
+    expect(errorCalls[0]).toEqual(['error', 'global error message'])
 
     // Global handler must NOT fire (meta.showErrorToast === false)
     expect(mockGlobalToast).not.toHaveBeenCalled()
@@ -98,7 +98,7 @@ describe('useFetchCompanyMutation error handling', () => {
 
     const errorCalls = (mockAddToast.mock.calls as [string, ...unknown[]][]).filter(([type]) => type === 'error')
     expect(errorCalls).toHaveLength(1)
-    expect(errorCalls[0]).toEqual(['error', 'Kunne ikke hente data fra Brønnøysund'])
+    expect(errorCalls[0]).toEqual(['error', 'global error message'])
     expect(mockGlobalToast).not.toHaveBeenCalled()
   })
 
@@ -117,7 +117,7 @@ describe('useFetchCompanyMutation error handling', () => {
 
     const errorCalls = (mockAddToast.mock.calls as [string, ...unknown[]][]).filter(([type]) => type === 'error')
     expect(errorCalls).toHaveLength(1)
-    expect(errorCalls[0]).toEqual(['error', 'En ukjent feil oppsto'])
+    expect(errorCalls[0]).toEqual(['error', 'global error message'])
     expect(mockGlobalToast).not.toHaveBeenCalled()
   })
 })
