@@ -265,7 +265,7 @@ async def test_fetch_and_store_company_not_found(service):
 
     # Assert
     assert result["company_fetched"] is False
-    assert "Not found" in result["errors"][0]
+    assert "Brønnøysund" in result["errors"][0]
 
 
 @pytest.mark.asyncio

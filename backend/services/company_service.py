@@ -284,7 +284,7 @@ class CompanyService:
         try:
             data = await self.brreg_api.fetch_company(orgnr)
             if not data:
-                result["errors"].append("Not found in Brreg")
+                result["errors"].append("Virksomheten finnes ikke i Brønnøysundregistrene")
                 return result
 
             company = await self.company_repo.create_or_update(data, autocommit=True)
@@ -308,7 +308,8 @@ class CompanyService:
             if geocode and company.latitude is None:
                 await self.ensure_geocoded(company)
         except Exception as e:
-            result["errors"].append(str(e))
+            logger.error("fetch_and_store_company failed for %s: %s", orgnr, e)
+            result["errors"].append("Noe gikk galt under henting av data. Prøv igjen.")
         return result
 
     async def ensure_geocoded(self, company: models.Company) -> None:
