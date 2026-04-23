@@ -34,6 +34,8 @@ from utils.caching import set_http_cache_headers
 from utils.logging_config import sanitize_log
 from utils.response_builders import build_response_metadata
 
+logger = logging.getLogger(__name__)
+
 router: APIRouter = APIRouter(prefix="/v1/companies", tags=["companies-v1"])
 
 
@@ -133,7 +135,7 @@ async def export_companies(
         )
 
     except Exception as e:
-        logging.error(f"Export failed: {e}", exc_info=True)
+        logger.error(f"Export failed: {e}", exc_info=True)
         raise HTTPException(status_code=500, detail="Export failed. Please try again later.")
 
 
@@ -425,8 +427,8 @@ async def get_company_roles(
         return RolesWithMetadata(data=role_responses, total=len(role_responses), metadata=build_response_metadata())
 
     except BrregApiException as e:
-        logging.warning("External API error fetching roles for %s: %s", sanitize_log(orgnr), e)
+        logger.warning("External API error fetching roles for %s: %s", sanitize_log(orgnr), e)
         raise HTTPException(status_code=502, detail="Failed to fetch roles from Brønnøysund")
     except Exception as e:
-        logging.exception("Unexpected error fetching roles for %s: %s", sanitize_log(orgnr), e)
+        logger.exception("Unexpected error fetching roles for %s: %s", sanitize_log(orgnr), e)
         raise HTTPException(status_code=500, detail="Internal server error")

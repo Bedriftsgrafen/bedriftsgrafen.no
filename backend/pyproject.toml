@@ -64,8 +64,9 @@ select = [
     "SIM",    # flake8-simplify
     "S",      # flake8-bandit (security)
     "T20",    # flake8-print
-    "RUF",    # ruff-specific rules
-    "FURB",   # refurb - catches deprecated stdlib and third-party API usage
+    "RUF",   # ruff-specific rules
+    "FURB",  # refurb - catches deprecated stdlib and third-party API usage
+    "LOG",   # flake8-logging (prevents root-logger use, LOG015)
 ]
 ignore = [
     "E501",   # line too long (handled by formatter)
