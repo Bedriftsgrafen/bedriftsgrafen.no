@@ -4,10 +4,11 @@ import { getMessageForCode } from '../utils/errorCodes'
 
 export type ToastType = 'success' | 'error' | 'warning' | 'info'
 
-interface Toast {
+export interface Toast {
   id: string
   type: ToastType
   message: string
+  duration: number
 }
 
 interface ToastStore {
@@ -25,14 +26,8 @@ export const useToastStore = create<ToastStore>((set, get) => ({
 
     const id = Math.random().toString(36).substring(7)
     set((state) => ({
-      toasts: [...state.toasts, { id, type, message }],
+      toasts: [...state.toasts, { id, type, message, duration }],
     }))
-    // Auto-remove after duration
-    setTimeout(() => {
-      set((state) => ({
-        toasts: state.toasts.filter((t) => t.id !== id),
-      }))
-    }, duration)
   },
   removeToast: (id) =>
     set((state) => ({
@@ -43,7 +38,7 @@ export const useToastStore = create<ToastStore>((set, get) => ({
 // Helper functions for common toast scenarios
 export const toast = {
   success: (message: string) => useToastStore.getState().addToast('success', message),
-  error: (message: string) => useToastStore.getState().addToast('error', message, 8000),
+  error: (message: string) => useToastStore.getState().addToast('error', message, 10000),
   warning: (message: string) => useToastStore.getState().addToast('warning', message, 6000),
   info: (message: string) => useToastStore.getState().addToast('info', message),
 }

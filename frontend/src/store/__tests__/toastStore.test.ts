@@ -54,15 +54,12 @@ describe('Add Toast', () => {
         expect(useToastStore.getState().toasts).toHaveLength(2)
     })
 
-    it('addToast should auto-remove after duration', () => {
+    it('addToast should store duration on the toast', () => {
         useToastStore.getState().addToast('info', 'Auto remove', 3000)
 
         expect(useToastStore.getState().toasts).toHaveLength(1)
-
-        // Fast-forward time
-        vi.advanceTimersByTime(3000)
-
-        expect(useToastStore.getState().toasts).toHaveLength(0)
+        expect(useToastStore.getState().toasts[0].duration).toBe(3000)
+        // Auto-remove timer is owned by ToastItem component, not the store
     })
 })
 
