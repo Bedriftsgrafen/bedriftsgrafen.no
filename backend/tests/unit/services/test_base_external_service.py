@@ -3,7 +3,13 @@ from unittest.mock import AsyncMock, MagicMock, patch
 import httpx
 import pytest
 
-from services.base_external_service import BaseExternalService, ExternalApiException
+from services.base_external_service import (
+    _CIRCUIT_COOLDOWN_SECONDS,
+    _CIRCUIT_FAILURE_THRESHOLD,
+    _CIRCUIT_WINDOW_SECONDS,
+    BaseExternalService,
+    ExternalApiException,
+)
 
 
 # Concrete implementation for testing (prefixed with _ to avoid pytest collection)
@@ -102,3 +108,113 @@ async def test_rate_limit_backoff(service, mock_httpx_client):
         response = await service.get_resource()
         assert response.status_code == 200
         assert mock_sleep.called
+
+
+# ---------------------------------------------------------------------------
+# Circuit breaker tests
+# ---------------------------------------------------------------------------
+
+
+@pytest.fixture
+def fresh_service(mock_httpx_client):
+    """Service with a clean circuit breaker state."""
+    svc = _MockExternalService(client=mock_httpx_client)
+    # Reset class-level circuit state
+    _MockExternalService._circuit_failure_count = 0
+    _MockExternalService._circuit_last_failure_time = 0.0
+    _MockExternalService._circuit_open_until = 0.0
+    return svc
+
+
+@pytest.mark.asyncio
+async def test_circuit_opens_after_threshold_failures(fresh_service, mock_httpx_client):
+    """Circuit should open after CIRCUIT_FAILURE_THRESHOLD consecutive failures."""
+    fail_response = MagicMock(spec=httpx.Response)
+    fail_response.status_code = 500
+    mock_httpx_client.get.return_value = fail_response
+
+    fresh_service.RETRY_DELAY = 0.0
+    fresh_service.RETRY_ATTEMPTS = 1
+
+    for _ in range(_CIRCUIT_FAILURE_THRESHOLD):
+        with pytest.raises(ExternalApiException):
+            await fresh_service.get_resource()
+
+    assert _MockExternalService._circuit_open_until > 0
+
+
+@pytest.mark.asyncio
+async def test_circuit_blocks_requests_when_open(fresh_service):
+    """Once the circuit is open, requests should fail immediately without hitting transport."""
+    import time
+
+    _MockExternalService._circuit_open_until = time.monotonic() + _CIRCUIT_COOLDOWN_SECONDS
+    _MockExternalService._circuit_failure_count = _CIRCUIT_FAILURE_THRESHOLD
+
+    with pytest.raises(ExternalApiException, match="Circuit open"):
+        await fresh_service.get_resource()
+
+
+@pytest.mark.asyncio
+async def test_circuit_resets_on_success(fresh_service, mock_httpx_client):
+    """A success after cooldown should close the circuit and reset the counter."""
+    import time
+
+    # Cooldown expired
+    _MockExternalService._circuit_open_until = time.monotonic() - 1.0
+    _MockExternalService._circuit_failure_count = _CIRCUIT_FAILURE_THRESHOLD
+
+    success_resp = MagicMock(spec=httpx.Response)
+    success_resp.status_code = 200
+    mock_httpx_client.get.return_value = success_resp
+
+    response = await fresh_service.get_resource()
+    assert response.status_code == 200
+    assert _MockExternalService._circuit_failure_count == 0
+    assert _MockExternalService._circuit_open_until == 0.0
+
+
+@pytest.mark.asyncio
+async def test_failure_counter_resets_outside_window(fresh_service, mock_httpx_client):
+    """Failures older than the window should not count toward the threshold."""
+    import time
+
+    # Simulate old failures (outside rolling window)
+    _MockExternalService._circuit_failure_count = _CIRCUIT_FAILURE_THRESHOLD - 1
+    _MockExternalService._circuit_last_failure_time = time.monotonic() - _CIRCUIT_WINDOW_SECONDS - 1
+
+    fail_response = MagicMock(spec=httpx.Response)
+    fail_response.status_code = 500
+    mock_httpx_client.get.return_value = fail_response
+    fresh_service.RETRY_DELAY = 0.0
+    fresh_service.RETRY_ATTEMPTS = 1
+
+    with pytest.raises(ExternalApiException):
+        await fresh_service.get_resource()
+
+    # Counter should have been reset to 1 (only the new failure)
+    assert _MockExternalService._circuit_failure_count == 1
+    assert _MockExternalService._circuit_open_until == 0.0
+
+
+@pytest.mark.asyncio
+async def test_jitter_applied_to_retry_delay(fresh_service, mock_httpx_client):
+    """Retry delay should include jitter (not be a fixed value)."""
+    fail_response = MagicMock(spec=httpx.Response)
+    fail_response.status_code = 500
+
+    success_resp = MagicMock(spec=httpx.Response)
+    success_resp.status_code = 200
+
+    mock_httpx_client.get.side_effect = [fail_response, success_resp]
+    fresh_service.RETRY_DELAY = 1.0
+    fresh_service.RETRY_ATTEMPTS = 2
+
+    sleep_calls = []
+    with patch("asyncio.sleep", new_callable=AsyncMock) as mock_sleep:
+        mock_sleep.side_effect = lambda t: sleep_calls.append(t)
+        await fresh_service.get_resource()
+
+    assert len(sleep_calls) == 1
+    # Jitter range: 0.8 * 1.0 to 1.2 * 1.0
+    assert 0.8 <= sleep_calls[0] <= 1.2

@@ -7,6 +7,8 @@ that can be inherited by specific API services (Brreg, SSB, etc.).
 
 import asyncio
 import logging
+import random
+import time
 from typing import Any
 
 import httpx
@@ -14,6 +16,11 @@ import httpx
 from constants.concurrency import CONNECT_TIMEOUT, DEFAULT_EXTERNAL_TIMEOUT
 
 logger = logging.getLogger(__name__)
+
+# Circuit breaker defaults
+_CIRCUIT_FAILURE_THRESHOLD = 20  # consecutive failures before opening
+_CIRCUIT_WINDOW_SECONDS = 60  # rolling window for failure counting
+_CIRCUIT_COOLDOWN_SECONDS = 300  # time the circuit stays open (5 min)
 
 
 class ExternalApiException(Exception):
@@ -69,6 +76,11 @@ class BaseExternalService:
     RETRY_DELAY: float = 1.0
     RATE_LIMIT_BACKOFF_MULTIPLIER: float = 2.0
     MAX_RATE_LIMIT_RETRIES: int = 2
+
+    # Circuit breaker state (per class, shared across instances of the same service)
+    _circuit_failure_count: int = 0
+    _circuit_last_failure_time: float = 0.0
+    _circuit_open_until: float = 0.0
 
     def __init__(self, client: httpx.AsyncClient | None = None):
         """
@@ -151,6 +163,44 @@ class BaseExternalService:
         else:
             raise ValueError(f"Unsupported HTTP method: {method}")
 
+    def _is_circuit_open(self) -> bool:
+        """Return True if the circuit breaker is currently open (requests blocked)."""
+        now = time.monotonic()
+        cls = type(self)
+        if cls._circuit_open_until > 0 and now < cls._circuit_open_until:
+            return True
+        if cls._circuit_open_until > 0 and now >= cls._circuit_open_until:
+            # Cooldown expired — reset so the next request can probe
+            cls._circuit_open_until = 0.0
+            cls._circuit_failure_count = 0
+        return False
+
+    def _record_success(self) -> None:
+        """Reset circuit breaker on a successful request."""
+        cls = type(self)
+        if cls._circuit_failure_count > 0 or cls._circuit_open_until > 0:
+            logger.info("%s: brreg.circuit_closed", self.SERVICE_NAME)
+        cls._circuit_failure_count = 0
+        cls._circuit_open_until = 0.0
+
+    def _record_failure(self) -> None:
+        """Track consecutive failures; open the circuit when threshold is reached."""
+        cls = type(self)
+        now = time.monotonic()
+        # Reset counter if the last failure is outside the rolling window
+        if now - cls._circuit_last_failure_time > _CIRCUIT_WINDOW_SECONDS:
+            cls._circuit_failure_count = 0
+        cls._circuit_failure_count += 1
+        cls._circuit_last_failure_time = now
+        if cls._circuit_failure_count >= _CIRCUIT_FAILURE_THRESHOLD and cls._circuit_open_until == 0.0:
+            cls._circuit_open_until = now + _CIRCUIT_COOLDOWN_SECONDS
+            logger.error(
+                "%s: brreg.circuit_opened — %d consecutive failures; blocking calls for %ds",
+                self.SERVICE_NAME,
+                cls._circuit_failure_count,
+                _CIRCUIT_COOLDOWN_SECONDS,
+            )
+
     async def _request_with_retry(
         self,
         method: str,
@@ -167,6 +217,13 @@ class BaseExternalService:
         Returns the response object for 2xx and 404 status codes.
         Raises exceptions for other errors after retries exhausted.
         """
+        if self._is_circuit_open():
+            raise ExternalApiException(
+                message=f"Circuit open — too many consecutive failures for {context}",
+                service=self.SERVICE_NAME,
+                details="Service temporarily unavailable; will retry automatically",
+            )
+
         rate_limit_attempts = 0
 
         for attempt in range(self.RETRY_ATTEMPTS):
@@ -181,22 +238,41 @@ class BaseExternalService:
                 # Success, Not Found, or Gone - return to caller to handle
                 # 410 (Gone) is common for deleted Brreg companies
                 if response.status_code in (200, 201, 204, 404, 410):
+                    self._record_success()
                     return response
 
-                # Rate limit - exponential backoff
+                # Rate limit - exponential backoff with jitter
                 if response.status_code == 429:
                     rate_limit_attempts += 1
                     if rate_limit_attempts >= self.MAX_RATE_LIMIT_RETRIES:
                         raise RateLimitException(self.SERVICE_NAME)
 
-                    backoff = self.RETRY_DELAY * (self.RATE_LIMIT_BACKOFF_MULTIPLIER ** (rate_limit_attempts - 1))
-                    logger.warning(f"{self.SERVICE_NAME}: Rate limit for {context}, backing off {backoff}s")
+                    backoff = (
+                        self.RETRY_DELAY
+                        * (self.RATE_LIMIT_BACKOFF_MULTIPLIER ** (rate_limit_attempts - 1))
+                        * random.uniform(0.8, 1.2)  # noqa: S311
+                    )
+                    logger.debug("%s: rate limited for %s, backoff %.2fs", self.SERVICE_NAME, context, backoff)
                     await asyncio.sleep(backoff)
                     continue
 
                 # Other errors
-                logger.error(f"{self.SERVICE_NAME}: API error for {context}: {response.status_code}")
+                self._record_failure()
+                logger.debug(
+                    "%s: API error for %s: %d (attempt %d/%d)",
+                    self.SERVICE_NAME,
+                    context,
+                    response.status_code,
+                    attempt + 1,
+                    self.RETRY_ATTEMPTS,
+                )
                 if attempt == self.RETRY_ATTEMPTS - 1:
+                    logger.error(
+                        "%s: exhausted retries for %s (last status %d)",
+                        self.SERVICE_NAME,
+                        context,
+                        response.status_code,
+                    )
                     raise ExternalApiException(
                         message=f"Failed to fetch {context}",
                         service=self.SERVICE_NAME,
@@ -207,12 +283,24 @@ class BaseExternalService:
                 raise
 
             except httpx.TimeoutException:
-                logger.warning(
-                    f"{self.SERVICE_NAME}: Timeout for {context}, attempt {attempt + 1}/{self.RETRY_ATTEMPTS}"
+                self._record_failure()
+                logger.debug(
+                    "%s: timeout for %s (attempt %d/%d)",
+                    self.SERVICE_NAME,
+                    context,
+                    attempt + 1,
+                    self.RETRY_ATTEMPTS,
                 )
                 if attempt < self.RETRY_ATTEMPTS - 1:
-                    await asyncio.sleep(self.RETRY_DELAY * (attempt + 1))
+                    delay = self.RETRY_DELAY * (attempt + 1) * random.uniform(0.8, 1.2)  # noqa: S311
+                    await asyncio.sleep(delay)
                 else:
+                    logger.warning(
+                        "%s: timeout fetching %s after %d attempts",
+                        self.SERVICE_NAME,
+                        context,
+                        self.RETRY_ATTEMPTS,
+                    )
                     raise ExternalApiException(
                         message=f"Timeout fetching {context}",
                         service=self.SERVICE_NAME,
@@ -220,15 +308,17 @@ class BaseExternalService:
                     )
 
             except Exception as e:
-                logger.error(f"{self.SERVICE_NAME}: Error fetching {context}: {e!s}")
+                self._record_failure()
+                logger.error("%s: error fetching %s: %s", self.SERVICE_NAME, context, e)
                 if attempt == self.RETRY_ATTEMPTS - 1:
                     raise ExternalApiException(
                         message=f"Failed to fetch {context}", service=self.SERVICE_NAME, details=str(e)
                     )
 
-            # Basic backoff between retries
+            # Jittered backoff between retries
             if attempt < self.RETRY_ATTEMPTS - 1:
-                await asyncio.sleep(self.RETRY_DELAY)
+                delay = self.RETRY_DELAY * random.uniform(0.8, 1.2)  # noqa: S311
+                await asyncio.sleep(delay)
 
         raise ExternalApiException(
             message=f"Failed to fetch {context} after {self.RETRY_ATTEMPTS} attempts", service=self.SERVICE_NAME
