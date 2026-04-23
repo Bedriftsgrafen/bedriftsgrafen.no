@@ -4,7 +4,22 @@ from unittest.mock import AsyncMock, patch
 
 import pytest
 
+import utils.redis_cache as redis_cache_module
 from utils.redis_cache import RedisCache
+
+
+@pytest.fixture(autouse=True)
+def reset_redis_circuit():
+    """Reset module-level circuit breaker state before each test."""
+    redis_cache_module._redis_failure_count = 0
+    redis_cache_module._redis_last_failure_time = 0.0
+    redis_cache_module._redis_circuit_open_until = 0.0
+    redis_cache_module._redis_unavailable_logged = False
+    yield
+    redis_cache_module._redis_failure_count = 0
+    redis_cache_module._redis_last_failure_time = 0.0
+    redis_cache_module._redis_circuit_open_until = 0.0
+    redis_cache_module._redis_unavailable_logged = False
 
 
 class TestRedisCache:
@@ -109,3 +124,75 @@ class TestRedisCache:
         """Test that keys are properly prefixed."""
         assert cache._key("foo") == "test:foo"
         assert cache._key("bar/baz") == "test:bar/baz"
+
+
+class TestRedisCacheCircuitBreaker:
+    """Test circuit breaker behaviour in RedisCache."""
+
+    @pytest.fixture
+    def cache(self) -> RedisCache:
+        return RedisCache(prefix="cb_test", ttl=60)
+
+    @pytest.mark.asyncio
+    async def test_circuit_opens_after_threshold_failures(self, cache: RedisCache):
+        """After FAILURE_THRESHOLD consecutive get errors the circuit opens."""
+        mock_redis = AsyncMock()
+        mock_redis.get = AsyncMock(side_effect=Exception("Connection refused"))
+
+        with patch("utils.redis_cache.get_redis", return_value=mock_redis):
+            for _ in range(redis_cache_module._REDIS_FAILURE_THRESHOLD):
+                await cache.get("key")
+
+        assert redis_cache_module._redis_circuit_open_until > 0
+
+    @pytest.mark.asyncio
+    async def test_circuit_open_skips_redis(self, cache: RedisCache):
+        """When circuit is open, get/set/clear return immediately without calling Redis."""
+        import time
+
+        redis_cache_module._redis_circuit_open_until = time.monotonic() + 30
+        mock_redis = AsyncMock()
+
+        with patch("utils.redis_cache.get_redis", return_value=mock_redis):
+            result = await cache.get("key")
+            await cache.set("key", "value")
+            await cache.clear()
+
+        assert result is None
+        mock_redis.get.assert_not_called()
+        mock_redis.setex.assert_not_called()
+
+    @pytest.mark.asyncio
+    async def test_redis_unavailable_logged_only_once(self, cache: RedisCache, caplog):
+        """The redis.unavailable warning should appear exactly once, not per-request."""
+        import logging
+
+        mock_redis = AsyncMock()
+        mock_redis.get = AsyncMock(side_effect=Exception("Connection refused"))
+
+        with patch("utils.redis_cache.get_redis", return_value=mock_redis):
+            with caplog.at_level(logging.WARNING, logger="utils.redis_cache"):
+                for _ in range(redis_cache_module._REDIS_FAILURE_THRESHOLD + 5):
+                    await cache.get("key")
+
+        unavailable_logs = [r for r in caplog.records if "redis.unavailable" in r.message]
+        assert len(unavailable_logs) == 1
+
+    @pytest.mark.asyncio
+    async def test_circuit_resets_on_success(self, cache: RedisCache):
+        """A successful Redis call after cooldown should reset the circuit."""
+        import time
+
+        redis_cache_module._redis_circuit_open_until = time.monotonic() - 1.0
+        redis_cache_module._redis_failure_count = redis_cache_module._REDIS_FAILURE_THRESHOLD
+        redis_cache_module._redis_unavailable_logged = True
+
+        mock_redis = AsyncMock()
+        mock_redis.get = AsyncMock(return_value='"hello"')
+
+        with patch("utils.redis_cache.get_redis", return_value=mock_redis):
+            result = await cache.get("key")
+
+        assert result == "hello"
+        assert redis_cache_module._redis_failure_count == 0
+        assert redis_cache_module._redis_circuit_open_until == 0.0
