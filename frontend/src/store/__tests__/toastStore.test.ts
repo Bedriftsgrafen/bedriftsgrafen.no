@@ -154,11 +154,11 @@ describe('getErrorMessage', () => {
         expect(result).toContain('ikke funnet')
     })
 
-    it('returns rate limit message for 429', () => {
+    it('returns rate limit message for 429 via RATE_LIMITED code', () => {
         const error = {
             isAxiosError: true,
             message: 'Too Many Requests',
-            response: { status: 429, data: {} },
+            response: { status: 429, data: { code: 'RATE_LIMITED', detail: 'Rate limit exceeded' } },
         }
 
         const result = getErrorMessage(error)

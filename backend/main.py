@@ -137,6 +137,7 @@ async def rate_limit_handler(request: Request, exc: RateLimitExceeded):
         status_code=429,
         content={
             "detail": "Rate limit exceeded. Maximum 100 requests per minute allowed.",
+            "code": "RATE_LIMITED",
             "retry_after": exc.headers.get("retry-after", "60") if exc.headers else "60",
         },
         headers=exc.headers or {},

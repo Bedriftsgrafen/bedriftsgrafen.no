@@ -72,9 +72,6 @@ export function getErrorMessage(error: unknown): string {
     if (status === 404) {
       return 'Ressursen ble ikke funnet.'
     }
-    if (status === 429) {
-      return 'For mange forespørsler. Vent litt og prøv igjen.'
-    }
     if (status >= 500) {
       return 'Serverfeil. Prøv igjen senere.'
     }
