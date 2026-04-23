@@ -61,6 +61,7 @@ export const queryClient = new QueryClient({
       refetchOnWindowFocus: false, // Reduce background requests
       refetchOnReconnect: true, // But do refetch on reconnect
       refetchOnMount: true, // Refetch on component mount
+      networkMode: 'offlineFirst', // Serve cached data when offline
     },
     mutations: {
       retry: (count, err) => shouldRetry(count, err) && count < 1, // one retry cap

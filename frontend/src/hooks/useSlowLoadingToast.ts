@@ -1,5 +1,6 @@
 import { useEffect, useRef } from 'react'
 import { toast } from '../store/toastStore'
+import { useOnlineStatus } from './useOnlineStatus'
 
 /**
  * Show a toast if loading takes longer than specified delay
@@ -12,8 +13,18 @@ export function useSlowLoadingToast(
 ) {
   const toastShownRef = useRef(false)
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const isOnline = useOnlineStatus()
 
   useEffect(() => {
+    // Don't fire a slow-loading toast when the network is down — it would be noise
+    if (!isOnline) {
+      if (timerRef.current) {
+        clearTimeout(timerRef.current)
+        timerRef.current = null
+      }
+      return
+    }
+
     // Start timer when loading begins
     if (isLoading && !toastShownRef.current) {
       timerRef.current = setTimeout(() => {
@@ -36,5 +47,5 @@ export function useSlowLoadingToast(
         clearTimeout(timerRef.current)
       }
     }
-  }, [isLoading, message, delayMs])
+  }, [isLoading, message, delayMs, isOnline])
 }
