@@ -26,6 +26,9 @@ export function useFetchCompanyMutation() {
       )
       return response.data
     },
+    // Local onError handles this mutation's toast — opt out of global handler
+    // to prevent the global mutationCache.onError from firing a second toast.
+    meta: { showErrorToast: false },
     onMutate: () => {
       addToast('info', 'Henter data fra Brønnøysundregistrene...')
     },
