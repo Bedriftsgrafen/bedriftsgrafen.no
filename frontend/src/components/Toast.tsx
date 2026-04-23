@@ -77,12 +77,19 @@ function ToastItem({ toast, onClose }: { toast: Toast; onClose: () => void }) {
     info: 'text-blue-600',
   }
 
+  const barColors: Record<ToastType, string> = {
+    success: 'bg-green-400',
+    error: 'bg-red-400',
+    warning: 'bg-amber-400',
+    info: 'bg-blue-400',
+  }
+
   const Icon = icons[toast.type]
 
   return (
     <div
       role={isAlert ? 'alert' : 'status'}
-      className={`${colors[toast.type]} border rounded-lg shadow-lg p-4 flex items-start gap-3 min-w-[280px] sm:min-w-[320px] animate-slide-in`}
+      className={`${colors[toast.type]} relative overflow-hidden border rounded-lg shadow-lg p-4 flex items-start gap-3 min-w-[280px] sm:min-w-[320px] animate-slide-in`}
       onMouseEnter={handleMouseEnter}
       onMouseLeave={handleMouseLeave}
       onFocus={handleMouseEnter}
@@ -100,6 +107,13 @@ function ToastItem({ toast, onClose }: { toast: Toast; onClose: () => void }) {
       >
         <X className="h-4 w-4" />
       </button>
+
+      {/* Countdown progress bar — shrinks from full width to zero */}
+      <div
+        aria-hidden="true"
+        className={`toast-progress absolute bottom-0 left-0 h-0.5 w-full ${barColors[toast.type]}`}
+        style={{ animationDuration: `${toast.duration}ms` }}
+      />
     </div>
   )
 }
