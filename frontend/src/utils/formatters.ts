@@ -5,6 +5,22 @@ export function formatNumber(num: number | null | undefined): string {
 }
 
 /**
+ * Normalizes a search query by stripping spaces, dots, and dashes.
+ * If the result is exactly 9 digits it's an org number — return the compact form.
+ * Otherwise return the original trimmed query unchanged.
+ *
+ * Examples:
+ *   "944 101 233"  → "944101233"
+ *   "944-101-233"  → "944101233"
+ *   "944.101.233"  → "944101233"
+ *   "Equinor AS"   → "Equinor AS"
+ */
+export function normalizeSearchQuery(query: string): string {
+  const compact = query.replace(/[\s.-]/g, '')
+  return /^\d{9}$/.test(compact) ? compact : query
+}
+
+/**
  * Strips any literal quote characters from an organization number.
  * Useful for handling URL parameters that might be serialized with quotes.
  */

@@ -11,6 +11,7 @@ import { useUiStore } from '../store/uiStore'
 import { useFilterStore } from '../store/filterStore'
 import { Search, User, Building2, ArrowRight } from 'lucide-react'
 import { usePersonSearchQuery } from '../hooks/queries/usePersonSearchQuery'
+import { normalizeSearchQuery } from '../utils/formatters'
 
 export const Route = createLazyFileRoute('/')(
     {
@@ -43,7 +44,7 @@ export function HomePage() {
 
     // Handle search - navigate to /utforsk with query param
     const handleSearch = useCallback((query: string) => {
-        const trimmed = query.trim()
+        const trimmed = normalizeSearchQuery(query.trim())
         if (!trimmed) return
 
         if (searchMode === 'person') {

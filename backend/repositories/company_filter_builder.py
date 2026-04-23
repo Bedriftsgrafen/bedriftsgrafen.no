@@ -276,6 +276,11 @@ class CompanyFilterBuilder:
         if not name:
             return self
 
+        # Normalize spaced/dashed/dotted org numbers: "944 101 233" → "944101233"
+        compact = name.replace(" ", "").replace("-", "").replace(".", "")
+        if compact.isdigit() and len(compact) <= 9:
+            name = compact
+
         if name.isdigit():
             # Org number search - prefix match
             self._clauses.append(models.Company.orgnr.like(f"{name}%"))

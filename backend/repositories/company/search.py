@@ -44,6 +44,11 @@ class SearchMixin:
 
     async def _search_by_name_impl(self, name: str, limit: int) -> list[CompanyWithFinancials]:
         """Implementation of search logic. Called under semaphore protection."""
+        # Normalize spaced/dashed/dotted org numbers: "944 101 233" → "944101233"
+        compact = name.replace(" ", "").replace("-", "").replace(".", "")
+        if compact.isdigit() and len(compact) == 9:
+            name = compact
+
         # For very short queries, use ILIKE for prefix matching
         if len(name) < 3:
             try:

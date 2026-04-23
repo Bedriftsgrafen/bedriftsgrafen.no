@@ -17,6 +17,7 @@ import { useFilterStore } from '../store/filterStore'
 import { useSlowLoadingToast } from '../hooks/useSlowLoadingToast'
 import { ExplorerSearchBar } from '../components/explorer/ExplorerSearchBar'
 import { ViewModeToggle } from '../components/explorer'
+import { normalizeSearchQuery } from '../utils/formatters'
 
 export const Route = createLazyFileRoute('/utforsk')({
     component: UtforskPage,
@@ -74,7 +75,7 @@ export function UtforskPage() {
 
     // Handlers
     const handleSearch = useCallback((query: string) => {
-        const trimmed = query.trim()
+        const trimmed = normalizeSearchQuery(query.trim())
 
         // If 9-digit number, navigate directly to company page
         if (/^\d{9}$/.test(trimmed)) {
