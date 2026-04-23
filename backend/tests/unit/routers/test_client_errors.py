@@ -72,8 +72,8 @@ class TestClientErrorsEndpoint:
                 },
             )
 
-        assert "abc123secret" not in logged_extra.get("message", "")
-        assert "[REDACTED]" in logged_extra.get("message", "")
+        assert "abc123secret" not in logged_extra.get("client_message", "")
+        assert "[REDACTED]" in logged_extra.get("client_message", "")
 
     def test_fnr_is_redacted(self):
         """11-digit Norwegian fødselsnummer should be redacted."""
@@ -93,8 +93,8 @@ class TestClientErrorsEndpoint:
                 },
             )
 
-        assert "12345678901" not in logged_extra.get("message", "")
-        assert "[FNR-REDACTED]" in logged_extra.get("message", "")
+        assert "12345678901" not in logged_extra.get("client_message", "")
+        assert "[FNR-REDACTED]" in logged_extra.get("client_message", "")
 
     def test_email_is_redacted(self):
         """Email addresses in stack traces should be redacted."""
@@ -114,8 +114,8 @@ class TestClientErrorsEndpoint:
                 },
             )
 
-        assert "test@example.com" not in logged_extra.get("message", "")
-        assert "[EMAIL-REDACTED]" in logged_extra.get("message", "")
+        assert "test@example.com" not in logged_extra.get("client_message", "")
+        assert "[EMAIL-REDACTED]" in logged_extra.get("client_message", "")
 
     @pytest.mark.parametrize("bad_input", ["not-json", b"\xff\xfe"])
     def test_invalid_body_returns_422(self, bad_input):

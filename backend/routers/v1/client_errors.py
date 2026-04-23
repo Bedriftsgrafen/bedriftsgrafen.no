@@ -55,14 +55,15 @@ async def report_client_error(
     payload: ClientErrorPayload,
 ) -> Response:
     """Receive a JavaScript error report from the frontend ErrorBoundary."""
+    # Avoid reserved LogRecord keys like "message" in the extra dict.
     client_error_logger.error(
         "client_error",
         extra={
-            "message": sanitize_log(_redact(payload.message) or ""),
-            "stack": sanitize_log(_redact(payload.stack) or ""),
-            "component_stack": sanitize_log(_redact(payload.component_stack) or ""),
-            "url": sanitize_log(_redact(payload.url) or ""),
-            "user_agent": sanitize_log(payload.user_agent or ""),
+            "client_message": sanitize_log(_redact(payload.message) or ""),
+            "client_stack": sanitize_log(_redact(payload.stack) or ""),
+            "client_component_stack": sanitize_log(_redact(payload.component_stack) or ""),
+            "client_url": sanitize_log(_redact(payload.url) or ""),
+            "client_user_agent": sanitize_log(payload.user_agent or ""),
         },
     )
     return Response(status_code=204)
