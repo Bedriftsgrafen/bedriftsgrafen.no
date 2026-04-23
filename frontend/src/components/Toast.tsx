@@ -40,7 +40,8 @@ function ToastItem({ toast, onClose }: { toast: Toast; onClose: () => void }) {
     if (timerRef.current) {
       clearTimeout(timerRef.current)
       timerRef.current = null
-      remainingRef.current -= Date.now() - startRef.current
+      // Clamp to 0 so rapid hover/unhover near the end doesn't go negative
+      remainingRef.current = Math.max(0, remainingRef.current - (Date.now() - startRef.current))
     }
   }
 
