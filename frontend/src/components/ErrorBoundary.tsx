@@ -11,6 +11,36 @@ interface State {
   error: Error | null
 }
 
+// PII redaction patterns mirrored from server-side (defence-in-depth)
+const PII_PATTERNS: Array<[RegExp, string]> = [
+  [/\b(token|key|password|secret|authorization|bearer)[\s=:][^\s&]*/gi, '$1=[REDACTED]'],
+  [/\b\d{11}\b/g, '[FNR-REDACTED]'],
+  [/\b[\w.+-]+@[\w.+-]+\.\w+\b/g, '[EMAIL-REDACTED]'],
+]
+
+function redactPii(text: string): string {
+  return PII_PATTERNS.reduce((s, [pattern, replacement]) => s.replace(pattern, replacement), text)
+}
+
+function reportToBackend(error: Error, errorInfo: ErrorInfo): void {
+  // Only report in production; skip during development to avoid noise
+  if (import.meta.env.DEV) return
+  const payload = {
+    message: redactPii(error.message ?? '').slice(0, 500),
+    stack: redactPii(error.stack ?? '').slice(0, 5000),
+    component_stack: redactPii(errorInfo.componentStack ?? '').slice(0, 5000),
+    url: window.location.href.slice(0, 500),
+    user_agent: navigator.userAgent.slice(0, 300),
+  }
+  fetch('/api/v1/client-errors', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload),
+  }).catch(() => {
+    // Fire-and-forget — never cascade a reporting failure
+  })
+}
+
 export class ErrorBoundary extends Component<Props, State> {
   public state: State = {
     hasError: false,
@@ -23,6 +53,7 @@ export class ErrorBoundary extends Component<Props, State> {
 
   public componentDidCatch(error: Error, errorInfo: ErrorInfo) {
     logger.error('ErrorBoundary caught an error:', error, errorInfo)
+    reportToBackend(error, errorInfo)
   }
 
   private handleReset = () => {

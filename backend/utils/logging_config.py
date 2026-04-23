@@ -1,8 +1,10 @@
 """Structured logging configuration for Bedriftsgrafen"""
 
 import logging
+import os
 import sys
 from contextvars import ContextVar
+from logging.handlers import RotatingFileHandler
 
 # Context variable for request ID
 request_id_ctx: ContextVar[str | None] = ContextVar("request_id", default=None)
@@ -64,8 +66,44 @@ def setup_logging(level: int = logging.INFO) -> None:
 
     root_logger.addHandler(console_handler)
 
+    # Dedicated rotating log for client-side errors
+    # Isolated from the main log so ops can tail/rotate separately.
+    _setup_client_error_logger()
+
     # Suppress noisy third-party loggers
     logging.getLogger("sqlalchemy.engine").setLevel(logging.WARNING)
     logging.getLogger("sqlalchemy.pool").setLevel(logging.WARNING)
     logging.getLogger("uvicorn.access").setLevel(logging.WARNING)
     logging.getLogger("httpx").setLevel(logging.WARNING)
+
+
+def _setup_client_error_logger() -> None:
+    """Configure a separate rotating file handler for client-side errors.
+
+    Writes to backend/logs/client_errors.log (10 MB max, 5 rotations = 50 MB).
+    Does NOT propagate to the root logger so client errors stay in their own file.
+    """
+    client_logger = logging.getLogger("bedriftsgrafen.client_errors")
+    if client_logger.handlers:
+        # Already configured (e.g. tests calling setup_logging twice)
+        return
+
+    log_dir = os.path.join(os.path.dirname(__file__), "..", "logs")
+    os.makedirs(log_dir, exist_ok=True)
+    log_path = os.path.join(log_dir, "client_errors.log")
+
+    try:
+        handler = RotatingFileHandler(
+            log_path,
+            maxBytes=10 * 1024 * 1024,  # 10 MB
+            backupCount=5,
+            encoding="utf-8",
+        )
+        handler.setFormatter(StructuredFormatter())
+        handler.addFilter(ContextFilter())
+        client_logger.addHandler(handler)
+        client_logger.setLevel(logging.ERROR)
+        client_logger.propagate = False  # keep client errors out of stdout
+    except OSError as e:
+        # Non-fatal: log to main logger and continue (e.g. read-only filesystem in tests)
+        logging.getLogger(__name__).warning("Could not create client_errors.log: %s", e)
