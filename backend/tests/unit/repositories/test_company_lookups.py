@@ -26,9 +26,9 @@ async def test_get_similar_companies_integration_flow(repo, mock_db):
     2. UNION ALL similarity query (returns orgnrs with priorities)
     3. Final select (fetch full company objects with financials)
     """
-    # 1. Mock source NACE guard: company has a valid naeringskode
+    # 1. Mock source NACE guard: company has a valid naeringskode, kommune, postnummer
     result_source = MagicMock()
-    result_source.fetchone.return_value = ("62.010",)
+    result_source.fetchone.return_value = ("62.010", "OSLO", "0150")
 
     # 2. Mock UNION ALL query: returns 4 similar orgnrs with priorities
     result_similar = MagicMock()

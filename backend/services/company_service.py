@@ -36,6 +36,9 @@ logger = logging.getLogger(__name__)
 # Module-level cache shared across service instances
 search_cache = AsyncLRUCache(maxsize=SEARCH_CACHE_SIZE, ttl=SEARCH_CACHE_TTL)
 similar_cache = AsyncLRUCache(maxsize=500, ttl=300)  # 5-min cache for similar companies
+# In-flight coalescing: if two coroutines request the same key simultaneously, the
+# second awaits the first's Task instead of firing a duplicate DB query.
+_similar_in_flight: dict[str, asyncio.Task[list[CompanyWithFinancials]]] = {}
 # Redis-backed caches: shared across all uvicorn workers, 5-min TTL
 stats_cache = RedisCache(prefix="stats:aggregate", ttl=300)
 count_cache = RedisCache(prefix="stats:count", ttl=300)
@@ -206,16 +209,32 @@ class CompanyService:
             self._syncing_orgnrs.discard(parent_orgnr)
 
     async def get_similar_companies(self, orgnr: str, limit: int = 5) -> list[CompanyWithFinancials]:
-        """Find similar companies in proximity. Results are cached for 5 minutes."""
+        """Find similar companies in proximity. Results are cached for 5 minutes.
+
+        Uses in-flight coalescing: concurrent requests for the same key within the
+        same worker share one DB query instead of each firing their own.
+        """
         cache_key = f"{orgnr}:{limit}"
         cached = await similar_cache.get(cache_key)
         if cached is not None:
             return cached
 
-        results = await self.company_repo.get_similar_companies(orgnr, limit)
-        await self.enrich_nace_codes(results)
-        await similar_cache.set(cache_key, results)
-        return results
+        # Coalesce concurrent requests for the same key within this worker.
+        if cache_key in _similar_in_flight:
+            return await _similar_in_flight[cache_key]
+
+        async def _fetch() -> list[CompanyWithFinancials]:
+            try:
+                results = await self.company_repo.get_similar_companies(orgnr, limit)
+                await self.enrich_nace_codes(results)
+                await similar_cache.set(cache_key, results)
+                return results
+            finally:
+                _similar_in_flight.pop(cache_key, None)
+
+        task: asyncio.Task[list[CompanyWithFinancials]] = asyncio.create_task(_fetch())
+        _similar_in_flight[cache_key] = task
+        return await task
 
     async def get_aggregate_stats(self, filters: CompanyFilterDTO) -> dict[str, Any]:
         """Fetch cached aggregate statistics."""

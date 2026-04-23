@@ -9,6 +9,7 @@ from typing import Any
 from sqlalchemy import and_, select, text
 from sqlalchemy.engine import Row
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.sql.elements import TextClause
 
 import models
 from exceptions import CompanyNotFoundException, DatabaseException
@@ -20,6 +21,96 @@ from repositories.company.base import (
 from repositories.company_filter_builder import FilterParams
 
 logger = logging.getLogger(__name__)
+
+
+def _build_similar_sql(*, has_postnummer: bool, has_kommune: bool) -> TextClause:
+    """Build the UNION ALL candidates query for get_similar_companies.
+
+    Builds only the sub-queries applicable to the source company's available
+    location fields. Omitting sub-queries that would use None bind params
+    prevents asyncpg type errors on '->>' equality comparisons.
+
+    Priorities included per combination:
+    - Both available:   1 (postnummer), 2 (naeringskode+kommune), 3 (prefix+kommune), 4 (prefix)
+    - Kommune only:     2, 3, 4
+    - Postnummer only:  1, 4
+    - Neither:          4
+    """
+    parts: list[str] = []
+
+    if has_postnummer:
+        parts.append(
+            """\n            (SELECT b.orgnr, 1 AS priority
+             FROM bedrifter b
+             WHERE b.naeringskode = :naeringskode
+               AND b.forretningsadresse->>'postnummer' = :postnummer
+               AND b.orgnr != :orgnr
+               AND b.konkurs = false
+               AND b.under_avvikling = false
+               AND b.under_tvangsavvikling = false
+             ORDER BY b.antall_ansatte DESC NULLS LAST
+             LIMIT :lim)"""
+        )
+
+    if has_kommune:
+        parts.append(
+            """\n            (SELECT b.orgnr, 2 AS priority
+             FROM bedrifter b
+             WHERE b.naeringskode = :naeringskode
+               AND upper(b.forretningsadresse->>'kommune') = :kommune
+               AND b.orgnr != :orgnr
+               AND b.konkurs = false
+               AND b.under_avvikling = false
+               AND b.under_tvangsavvikling = false
+             ORDER BY b.antall_ansatte DESC NULLS LAST
+             LIMIT :lim)"""
+        )
+        parts.append(
+            """\n            (SELECT b.orgnr, 3 AS priority
+             FROM bedrifter b
+             WHERE left(b.naeringskode, 3) = :nace_prefix
+               AND b.naeringskode != :naeringskode
+               AND upper(b.forretningsadresse->>'kommune') = :kommune
+               AND b.orgnr != :orgnr
+               AND b.konkurs = false
+               AND b.under_avvikling = false
+               AND b.under_tvangsavvikling = false
+             ORDER BY b.antall_ansatte DESC NULLS LAST
+             LIMIT :lim)"""
+        )
+
+    # Priority 4: always included
+    parts.append(
+        """\n            (SELECT b.orgnr, 4 AS priority
+             FROM bedrifter b
+             WHERE left(b.naeringskode, 3) = :nace_prefix
+               AND b.orgnr != :orgnr
+               AND b.konkurs = false
+               AND b.under_avvikling = false
+               AND b.under_tvangsavvikling = false
+             ORDER BY b.antall_ansatte DESC NULLS LAST
+             LIMIT :lim)"""
+    )
+
+    union_all = "\n                UNION ALL".join(parts)
+    sql = (
+        "\n        WITH candidates AS ("  # noqa: S608 - hardcoded SQL fragments only, no user input
+        + union_all
+        + "\n        ),"
+        "\n        ranked AS ("
+        "\n            SELECT orgnr, priority,"
+        "\n                   ROW_NUMBER() OVER ("
+        "\n                       PARTITION BY orgnr"
+        "\n                       ORDER BY priority"
+        "\n                   ) AS rn"
+        "\n            FROM candidates"
+        "\n        )"
+        "\n        SELECT orgnr FROM ranked"
+        "\n        WHERE rn = 1"
+        "\n        ORDER BY priority, orgnr"
+        "\n        LIMIT :lim"
+    )
+    return text(sql)
 
 
 class LookupsMixin:
@@ -84,7 +175,13 @@ class LookupsMixin:
     async def get_similar_companies(self, orgnr: str, limit: int = 5) -> list[CompanyWithFinancials]:
         """Find similar companies based on industry (naeringskode) and location.
 
-        Uses a single SQL query with prioritized UNION ALL for efficiency.
+        Uses a two-step approach for index-friendly query plans:
+        1. Fetch source company fields (naeringskode, kommune, postnummer) in Python.
+        2. Pass them as literal bind parameters to the candidates query so PostgreSQL
+           can use partial indexes directly (idx_similar_postnummer, idx_similar_kommune,
+           idx_similar_nace_prefix) rather than falling back to a full table scan via a
+           CTE join.
+
         Priority order:
         1. Exact NACE + same postal code
         2. Exact NACE + same kommune
@@ -92,133 +189,84 @@ class LookupsMixin:
         4. Same NACE prefix, any location
 
         IMPORTANT: Uses ``= false`` (not ``IS FALSE``) in WHERE clauses to match
-        the partial index predicates on idx_similar_postnummer, idx_similar_kommune,
-        and idx_similar_nace_prefix.
+        the partial index predicates.
         PostgreSQL requires exact predicate match for partial index eligibility.
 
         ORDER BY uses only ``antall_ansatte DESC NULLS LAST`` (no ``navn``) so
         PostgreSQL can satisfy the sort directly from the partial indexes without
         needing to fetch and sort additional columns.
         """
-        # Guard: companies without NACE code cannot have meaningful "similar" results
-        source_query = text("""
-            SELECT naeringskode
-            FROM bedrifter
-            WHERE orgnr = :orgnr
-        """)
-        source_result = await self.db.execute(source_query, {"orgnr": orgnr})
-        source_row = source_result.fetchone()
-        if not source_row or not source_row[0]:
-            return []
-
-        # Single query: get source company data + all similar candidates via UNION ALL
-        similar_query = text("""
-            WITH source AS (
+        try:
+            # Step 1: Fetch source company fields in Python so candidates query gets
+            # literal constants — this lets PostgreSQL pick the partial indexes.
+            source_query = text("""
                 SELECT
                     naeringskode,
-                    UPPER(forretningsadresse->>'kommune') as kommune,
-                    forretningsadresse->>'postnummer' as postnummer,
-                    left(naeringskode, 3) as nace_prefix
+                    UPPER(forretningsadresse->>'kommune') AS kommune,
+                    forretningsadresse->>'postnummer'      AS postnummer
                 FROM bedrifter
                 WHERE orgnr = :orgnr
-            ),
-            candidates AS (
-                -- Priority 1: Exact NACE + same postnummer (uses idx_similar_postnummer)
-                (SELECT b.orgnr, 1 as priority
-                 FROM bedrifter b, source s
-                 WHERE b.naeringskode = s.naeringskode
-                   AND b.forretningsadresse->>'postnummer' = s.postnummer
-                   AND b.orgnr != :orgnr
-                   AND b.konkurs = false
-                   AND b.under_avvikling = false
-                   AND b.under_tvangsavvikling = false
-                   AND s.postnummer IS NOT NULL AND s.postnummer != ''
-                 ORDER BY b.antall_ansatte DESC NULLS LAST
-                 LIMIT :lim)
-                UNION ALL
-                -- Priority 2: Exact NACE + same kommune (uses idx_similar_kommune)
-                (SELECT b.orgnr, 2 as priority
-                 FROM bedrifter b, source s
-                 WHERE b.naeringskode = s.naeringskode
-                   AND upper(b.forretningsadresse->>'kommune') = s.kommune
-                   AND b.orgnr != :orgnr
-                   AND b.konkurs = false
-                   AND b.under_avvikling = false
-                   AND b.under_tvangsavvikling = false
-                   AND s.kommune IS NOT NULL AND s.kommune != ''
-                 ORDER BY b.antall_ansatte DESC NULLS LAST
-                 LIMIT :lim)
-                UNION ALL
-                -- Priority 3: Same NACE prefix + same kommune (uses idx_similar_kommune)
-                (SELECT b.orgnr, 3 as priority
-                 FROM bedrifter b, source s
-                 WHERE left(b.naeringskode, 3) = s.nace_prefix
-                   AND b.naeringskode != s.naeringskode
-                   AND upper(b.forretningsadresse->>'kommune') = s.kommune
-                   AND b.orgnr != :orgnr
-                   AND b.konkurs = false
-                   AND b.under_avvikling = false
-                   AND b.under_tvangsavvikling = false
-                   AND s.kommune IS NOT NULL AND s.kommune != ''
-                 ORDER BY b.antall_ansatte DESC NULLS LAST
-                 LIMIT :lim)
-                UNION ALL
-                -- Priority 4: Same NACE prefix, any location (uses idx_similar_nace_prefix)
-                (SELECT b.orgnr, 4 as priority
-                 FROM bedrifter b, source s
-                 WHERE left(b.naeringskode, 3) = s.nace_prefix
-                   AND b.orgnr != :orgnr
-                   AND b.konkurs = false
-                   AND b.under_avvikling = false
-                   AND b.under_tvangsavvikling = false
-                 ORDER BY b.antall_ansatte DESC NULLS LAST
-                 LIMIT :lim)
-            ),
-            ranked AS (
-                SELECT orgnr, priority,
-                       ROW_NUMBER() OVER (
-                           PARTITION BY orgnr
-                           ORDER BY priority
-                       ) as rn
-                FROM candidates
+            """)
+            source_result = await self.db.execute(source_query, {"orgnr": orgnr})
+            source_row = source_result.fetchone()
+            if not source_row or not source_row[0]:
+                return []
+
+            naeringskode: str = source_row[0]
+            kommune: str | None = source_row[1] or None
+            postnummer: str | None = source_row[2] or None
+            nace_prefix: str = naeringskode[:3]
+
+            # Step 2: Build candidates query via helper — only includes sub-queries for
+            # available location fields so no None bind params reach asyncpg.
+            similar_query = _build_similar_sql(has_postnummer=bool(postnummer), has_kommune=bool(kommune))
+            params: dict[str, Any] = {
+                "orgnr": orgnr,
+                "naeringskode": naeringskode,
+                "nace_prefix": nace_prefix,
+                "lim": limit,
+            }
+            if postnummer:
+                params["postnummer"] = postnummer
+            if kommune:
+                params["kommune"] = kommune
+
+            result = await self.db.execute(similar_query, params)
+            similar_orgnrs = [row[0] for row in result.fetchall()]
+
+            if not similar_orgnrs:
+                return []
+
+            # Fetch full company objects with financials
+            companies_query = (
+                select(
+                    models.Company,
+                    *LATEST_FINANCIAL_COLUMNS,
+                )
+                .outerjoin(models.LatestFinancials, models.Company.orgnr == models.LatestFinancials.orgnr)
+                .filter(models.Company.orgnr.in_(similar_orgnrs))
             )
-            SELECT orgnr FROM ranked
-            WHERE rn = 1
-            ORDER BY priority, orgnr
-            LIMIT :lim
-        """)
 
-        result = await self.db.execute(similar_query, {"orgnr": orgnr, "lim": limit})
-        similar_orgnrs = [row[0] for row in result.fetchall()]
+            result = await self.db.execute(companies_query)
+            rows = result.all()
+            companies_dict = {
+                row[0].orgnr: CompanyWithFinancials(
+                    company=row[0],
+                    latest_revenue=row[1],
+                    latest_profit=row[2],
+                    latest_operating_profit=row[3],
+                    latest_operating_margin=row[4],
+                    latest_equity_ratio=row[5],
+                )
+                for row in rows
+            }
 
-        if not similar_orgnrs:
-            return []
-
-        # Fetch full company objects with financials
-        companies_query = (
-            select(
-                models.Company,
-                *LATEST_FINANCIAL_COLUMNS,
-            )
-            .outerjoin(models.LatestFinancials, models.Company.orgnr == models.LatestFinancials.orgnr)
-            .filter(models.Company.orgnr.in_(similar_orgnrs))
-        )
-
-        result = await self.db.execute(companies_query)
-        rows = result.all()
-        companies_dict = {
-            row[0].orgnr: CompanyWithFinancials(
-                company=row[0],
-                latest_revenue=row[1],
-                latest_profit=row[2],
-                latest_operating_profit=row[3],
-                latest_operating_margin=row[4],
-                latest_equity_ratio=row[5],
-            )
-            for row in rows
-        }
-
-        return [companies_dict[o] for o in similar_orgnrs if o in companies_dict]
+            return [companies_dict[o] for o in similar_orgnrs if o in companies_dict]
+        except DatabaseException:
+            raise
+        except Exception as e:
+            logger.error(f"Database error fetching similar companies for {orgnr}: {e}")
+            raise DatabaseException(f"Failed to fetch similar companies for {orgnr}", original_error=e)
 
     async def get_by_industry_code(
         self, nace_code: str, limit: int = 20, offset: int = 0, include_inactive: bool = False
