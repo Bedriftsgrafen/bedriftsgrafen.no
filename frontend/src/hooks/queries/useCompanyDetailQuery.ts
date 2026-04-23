@@ -27,9 +27,8 @@ export function getCompanyDetailQueryOptions(
       return response.data
     },
     staleTime: 10 * 60 * 1000, // 10 minutes for company details
-    retry: 3,
-    retryDelay: (attemptIndex) =>
-      Math.min(1000 * 2 ** attemptIndex, 30000),
+    // Suppress global queryCache toast — the route errorComponent handles 404 UX directly
+    meta: { showErrorToast: false },
   }
 }
 

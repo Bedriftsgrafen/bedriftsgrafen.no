@@ -8,6 +8,8 @@ and debugging compared to generic HTTP exceptions.
 class BedriftsgrafenException(Exception):
     """Base exception for all domain errors"""
 
+    code: str = "ERROR"
+
     def __init__(self, message: str, status_code: int = 500):
         self.message = message
         self.status_code = status_code
@@ -17,6 +19,8 @@ class BedriftsgrafenException(Exception):
 class CompanyNotFoundException(BedriftsgrafenException):
     """Company not found in database"""
 
+    code = "COMPANY_NOT_FOUND"
+
     def __init__(self, orgnr: str):
         super().__init__(f"Company with orgnr {orgnr} not found", status_code=404)
         self.orgnr = orgnr
@@ -24,6 +28,8 @@ class CompanyNotFoundException(BedriftsgrafenException):
 
 class AccountingNotFoundException(BedriftsgrafenException):
     """Accounting data not found"""
+
+    code = "ACCOUNTING_NOT_FOUND"
 
     def __init__(self, orgnr: str, year: int):
         super().__init__(f"Accounting data for {orgnr} in year {year} not found", status_code=404)
@@ -33,6 +39,8 @@ class AccountingNotFoundException(BedriftsgrafenException):
 
 class BrregApiException(BedriftsgrafenException):
     """External API error from Brønnøysundregistrene"""
+
+    code = "BRREG_API_ERROR"
 
     def __init__(self, message: str, details: str = ""):
         full_message = f"Brønnøysund API error: {message}"
@@ -45,6 +53,8 @@ class BrregApiException(BedriftsgrafenException):
 class ValidationException(BedriftsgrafenException):
     """Business logic validation error"""
 
+    code = "VALIDATION_ERROR"
+
     def __init__(self, message: str):
         super().__init__(message, status_code=400)
 
@@ -52,13 +62,18 @@ class ValidationException(BedriftsgrafenException):
 class DatabaseException(BedriftsgrafenException):
     """Database operation error"""
 
-    def __init__(self, message: str, original_error: Exception | None = None):
+    code = "DATABASE_ERROR"
+
+    def __init__(self, message: str, original_error: Exception | None = None, details: str = ""):
         super().__init__(f"Database error: {message}", status_code=500)
         self.original_error = original_error
+        self.details = details
 
 
 class RateLimitException(BedriftsgrafenException):
     """Rate limit exceeded for external API"""
+
+    code = "RATE_LIMITED"
 
     def __init__(self, message: str = "Rate limit exceeded. Please try again later."):
         super().__init__(message, status_code=429)
@@ -66,6 +81,8 @@ class RateLimitException(BedriftsgrafenException):
 
 class InvalidOrgnrException(ValidationException):
     """Invalid organization number format"""
+
+    code = "INVALID_ORGNR"
 
     def __init__(self, orgnr: str):
         super().__init__(f"Invalid organization number format: {orgnr}. Expected 9 digits.")

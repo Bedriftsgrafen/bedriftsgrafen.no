@@ -132,7 +132,8 @@ async def test_get_company_not_found(mock_company_service):
 
         # Assert
         assert response.status_code == 404
-        assert response.json()["detail"] == "Company not found"
+        assert response.json()["code"] == "COMPANY_NOT_FOUND"
+        assert "detail" in response.json()
 
 
 @pytest.mark.asyncio

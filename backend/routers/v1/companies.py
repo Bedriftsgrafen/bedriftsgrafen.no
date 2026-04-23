@@ -7,7 +7,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from database import get_db
 from dependencies.company_filters import CompanyQueryParams
-from exceptions import BrregApiException
+from exceptions import AccountingNotFoundException, BrregApiException, CompanyNotFoundException
 from limiter import limiter
 from repositories.company_filter_builder import FilterParams
 from schemas.companies import (
@@ -271,7 +271,7 @@ async def get_company(request: Request, orgnr: str, db: AsyncSession = Depends(g
     service = CompanyService(db)
     company = await service.get_company_detail(orgnr)
     if company is None:
-        raise HTTPException(status_code=404, detail="Company not found")
+        raise CompanyNotFoundException(orgnr)
 
     # Enrich with NACE descriptions (now handled by service.get_company_detail)
     response = CompanyWithAccounting.model_validate(company)
@@ -332,7 +332,7 @@ async def get_accounting_with_kpis(request: Request, orgnr: str, year: int, db: 
     result = await service.get_accounting_with_kpis(orgnr, year)
 
     if result is None:
-        raise HTTPException(status_code=404, detail="Accounting data not found")
+        raise AccountingNotFoundException(orgnr, year)
 
     return result
 

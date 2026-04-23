@@ -1,5 +1,6 @@
 import { create } from 'zustand'
 import axios from 'axios'
+import { getMessageForCode } from '../utils/errorCodes'
 
 export type ToastType = 'success' | 'error' | 'warning' | 'info'
 
@@ -60,6 +61,14 @@ export function getErrorMessage(error: unknown): string {
     }
     // Server errors
     const status = error.response.status
+    // Prefer stable error code from API response over generic status fallback
+    const responseCode = typeof error.response.data === 'object' && error.response.data !== null
+      ? (error.response.data as { code?: string }).code
+      : undefined
+    if (responseCode) {
+      const codeMessage = getMessageForCode(responseCode)
+      if (codeMessage) return codeMessage
+    }
     if (status === 404) {
       return 'Ressursen ble ikke funnet.'
     }

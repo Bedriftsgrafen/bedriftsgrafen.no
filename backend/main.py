@@ -171,7 +171,7 @@ async def bedriftsgrafen_exception_handler(request: Request, exc: Bedriftsgrafen
         extra={"status_code": exc.status_code, "path": request.url.path, "exception_type": exc.__class__.__name__},
     )
 
-    return JSONResponse(status_code=exc.status_code, content={"detail": exc.message, "type": exc.__class__.__name__})
+    return JSONResponse(status_code=exc.status_code, content={"detail": exc.message, "code": exc.code})
 
 
 # Global exception handler to prevent stack trace leakage in production

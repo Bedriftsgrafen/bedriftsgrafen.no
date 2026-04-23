@@ -191,4 +191,46 @@ describe('getErrorMessage', () => {
         const result = getErrorMessage(new Error('Random error'))
         expect(result).toContain('gikk galt')
     })
+
+    it('prefers stable error code over generic 404 status message', () => {
+        const error = {
+            isAxiosError: true,
+            message: 'Not Found',
+            response: { status: 404, data: { code: 'COMPANY_NOT_FOUND', detail: 'Company ... not found' } },
+        }
+        const result = getErrorMessage(error)
+        // Should use code-specific message, not the generic "Ressursen ble ikke funnet."
+        expect(result).toBe('Selskapet finnes ikke i databasen.')
+    })
+
+    it('prefers stable error code over generic 429 status message', () => {
+        const error = {
+            isAxiosError: true,
+            message: 'Too Many Requests',
+            response: { status: 429, data: { code: 'RATE_LIMITED', detail: 'Rate limit exceeded' } },
+        }
+        const result = getErrorMessage(error)
+        expect(result).toBe('For mange forespørsler. Vent litt og prøv igjen.')
+    })
+
+    it('falls back to status-based message when code is unknown', () => {
+        const error = {
+            isAxiosError: true,
+            message: 'Not Found',
+            response: { status: 404, data: { code: 'UNKNOWN_CODE', detail: 'Not found' } },
+        }
+        const result = getErrorMessage(error)
+        // Unknown code → falls through to status 404 handling
+        expect(result).toContain('ikke funnet')
+    })
+
+    it('falls back to status-based message when response has no code', () => {
+        const error = {
+            isAxiosError: true,
+            message: 'Not Found',
+            response: { status: 404, data: {} },
+        }
+        const result = getErrorMessage(error)
+        expect(result).toContain('ikke funnet')
+    })
 })
