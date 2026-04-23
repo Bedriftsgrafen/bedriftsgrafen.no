@@ -27,8 +27,6 @@ export function useSubUnitsQuery(orgnr: string | undefined) {
     enabled: !!orgnr,
     staleTime: 1000 * 60 * 60 * 24, // 24 hours (rarely changes)
     gcTime: 1000 * 60 * 60, // Keep in cache for 1 hour
-    retry: 1, // Reduce retries to avoid long waits on timeout
-    retryDelay: 1000, // Simple 1s delay
   })
 
   /**
