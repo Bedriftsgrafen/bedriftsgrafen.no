@@ -1,5 +1,6 @@
 import { useQuery, useQueryClient, UseQueryOptions } from '@tanstack/react-query'
 import { apiClient } from '../../utils/apiClient'
+import { logger } from '../../utils/logger'
 import { CompanyWithAccounting } from '../../types'
 import { useEffect } from 'react'
 import { companyQueryKeys } from '../../lib/queryKeys'
@@ -59,7 +60,7 @@ export function useCompanyDetailQuery(orgnr: string | null, autoFetch: boolean =
             queryClient.invalidateQueries({ queryKey: companyQueryKeys.detail(orgnr) })
           })
           .catch((error: unknown) => {
-            console.error('Auto-fetch failed:', error)
+            logger.error('Auto-fetch failed:', error)
           })
       }
     }

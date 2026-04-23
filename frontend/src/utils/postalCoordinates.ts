@@ -2,6 +2,7 @@
  * Norwegian postal code to coordinates lookup.
  * Uses complete official data from Kartverket/Geonorge (3375+ postal codes).
  */
+import { logger } from './logger'
 
 /** Coordinate tuple [latitude, longitude] */
 export type Coordinates = [number, number]
@@ -41,7 +42,7 @@ export async function loadPostalCoordinates(): Promise<Record<string, Coordinate
             return data
         })
         .catch(err => {
-            console.error('Failed to load postal coordinates:', err)
+            logger.error('Failed to load postal coordinates:', err)
             return {}
         })
 

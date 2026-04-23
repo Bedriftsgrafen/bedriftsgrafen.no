@@ -1,6 +1,7 @@
 import { useState, useCallback } from 'react'
 import { useToastStore } from '../store/toastStore'
 import { copyToClipboard } from '../utils/clipboard'
+import { logger } from '../utils/logger'
 
 interface UseCompanyModalOptions {
   company?: {
@@ -40,7 +41,7 @@ export function useCompanyModal({ company }: UseCompanyModalOptions = {}) {
       try {
         await navigator.share(shareData)
       } catch (err) {
-        console.error('Error sharing:', err)
+        logger.error('Error sharing:', err)
       }
     } else {
       const success = await copyToClipboard(window.location.href)

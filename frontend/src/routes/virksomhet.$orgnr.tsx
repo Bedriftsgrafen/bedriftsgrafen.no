@@ -2,6 +2,7 @@ import { createFileRoute, Link } from '@tanstack/react-router'
 import { z } from 'zod'
 import { getCompanyDetailQueryOptions } from '../hooks/queries/useCompanyDetailQuery'
 import { queryClient } from '../lib/queryClient'
+import { logger } from '../utils/logger'
 
 // Validation
 interface CompanySearchParams {
@@ -45,7 +46,7 @@ export const Route = createFileRoute('/virksomhet/$orgnr')({
       )
     } catch (error) {
       // Fail gracefully - component can handle loading/error states
-      console.error('Failed to preload company:', error)
+      logger.error('Failed to preload company:', error)
     }
 
     return { orgnr }

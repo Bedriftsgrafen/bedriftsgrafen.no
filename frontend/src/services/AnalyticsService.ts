@@ -1,4 +1,5 @@
 import { AnalyticsEvent } from '../utils/analytics'
+import { logger } from '../utils/logger'
 
 /**
  * Service for handling application-wide analytics
@@ -47,7 +48,7 @@ export class AnalyticsService {
             localStorage.setItem(this.storageKey, JSON.stringify(events))
         } catch (error) {
             // Silently fail if storage is full or unavailable
-            console.warn('[AnalyticsService] Failed to store event locally', error)
+            logger.warn('[AnalyticsService] Failed to store event locally', error)
         }
     }
 

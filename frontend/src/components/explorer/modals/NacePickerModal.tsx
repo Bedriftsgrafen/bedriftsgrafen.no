@@ -3,6 +3,7 @@ import { Check, Search, ChevronRight, ChevronDown, Loader2 } from 'lucide-react'
 import { PickerModalBase } from '../PickerModalBase'
 import { NACE_CODES, NACE_DIVISIONS } from '../../../constants/explorer'
 import type { NacePickerModalProps, NaceCode } from '../../../types/explorer'
+import { logger } from '../../../utils/logger'
 import { apiClient } from '../../../utils/apiClient'
 import { useSlowLoadingToast } from '../../../hooks/useSlowLoadingToast'
 
@@ -178,7 +179,7 @@ const NacePickerModalContent = memo(function NacePickerModalContent({
                 ssbHierarchyLoaded = true
                 setHierarchyLoaded(true)
             })
-            .catch(err => console.error('Failed to load NACE hierarchy:', err))
+            .catch(err => logger.error('Failed to load NACE hierarchy:', err))
     }, [])
 
     // Build searchable list of all codes (sections + divisions + SSB codes)
@@ -230,7 +231,7 @@ const NacePickerModalContent = memo(function NacePickerModalContent({
             const response = await apiClient.get<NaceSubclass[]>(`/v1/companies/nace/${prefix}/subclasses`)
             setSubclassCache(prev => ({ ...prev, [prefix]: response.data }))
         } catch (err) {
-            console.error('Failed to fetch NACE subclasses:', err)
+            logger.error('Failed to fetch NACE subclasses:', err)
             setSubclassCache(prev => ({ ...prev, [prefix]: [] }))
         } finally {
             setLoadingPrefix(null)

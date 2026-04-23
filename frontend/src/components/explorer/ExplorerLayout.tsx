@@ -3,6 +3,7 @@ import { useNavigate } from '@tanstack/react-router'
 import { Map } from 'lucide-react'
 import { ExplorerFilters } from './ExplorerFilters'
 import { ExplorerStats } from './ExplorerStats'
+import { logger } from '../../utils/logger'
 import { SortSelect } from './SortSelect'
 import { ExportButton } from './ExportButton'
 import { ViewModeToggle } from './ViewModeToggle'
@@ -67,7 +68,7 @@ export const ExplorerLayout = memo(function ExplorerLayout({ onSelectCompany }: 
                 // Clear after applying
                 sessionStorage.removeItem('mapFilter');
             } catch (e) {
-                console.error('Failed to parse mapFilter:', e);
+                logger.error('Failed to parse mapFilter:', e);
             }
         }
     }, [setMapFilters]);
@@ -119,7 +120,7 @@ export const ExplorerLayout = memo(function ExplorerLayout({ onSelectCompany }: 
             const clean = cleanOrgnr(orgnr)
             // Validate orgnr format (9 digits)
             if (!clean || !/^\d{9}$/.test(clean)) {
-                console.error('Invalid orgnr format:', orgnr)
+                logger.error('Invalid orgnr format:', orgnr)
                 return
             }
             // Use prop callback if provided (enables modal behavior), otherwise navigate
@@ -156,7 +157,7 @@ export const ExplorerLayout = memo(function ExplorerLayout({ onSelectCompany }: 
     // Log errors for debugging (in production, send to monitoring service)
     useEffect(() => {
         if (companiesError && companiesErrorData) {
-            console.error('Companies query error:', companiesErrorData)
+            logger.error('Companies query error:', companiesErrorData)
         }
     }, [companiesError, companiesErrorData])
 

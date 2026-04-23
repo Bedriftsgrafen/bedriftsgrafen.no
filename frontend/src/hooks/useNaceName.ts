@@ -1,5 +1,6 @@
 import { useState, useEffect, startTransition } from 'react'
 import { apiClient } from '../utils/apiClient'
+import { logger } from '../utils/logger'
 
 /** SSB NACE code from hierarchy API */
 interface SsbNaceCode {
@@ -32,7 +33,7 @@ async function loadSsbNaceCache(): Promise<void> {
             }
         })
         .catch(err => {
-            console.error('Failed to load NACE hierarchy:', err)
+            logger.error('Failed to load NACE hierarchy:', err)
         })
 
     return cachePromise

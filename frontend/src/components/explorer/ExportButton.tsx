@@ -3,6 +3,7 @@ import { Download, Loader2, Lock } from 'lucide-react'
 import { useFilterParams } from '../../hooks/useFilterParams'
 import { toast } from '../../store/toastStore'
 import { formatNumber } from '../../utils/formatters'
+import { logger } from '../../utils/logger'
 import { trackEvent } from '../../utils/analytics'
 import { ProFeatureModal } from '../modals'
 
@@ -80,7 +81,7 @@ function useExport(filterParams: Record<string, unknown>, sortBy: string, sortOr
             // Track successful export
             trackEvent('export_success', 'export', 'csv', exportedCount)
         } catch (error) {
-            console.error('Export error:', error)
+            logger.error('Export error:', error)
             toast.error('Eksport feilet. Prøv igjen.')
         } finally {
             setIsExporting(false)
