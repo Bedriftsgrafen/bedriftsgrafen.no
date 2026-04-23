@@ -121,6 +121,7 @@ class CompanyService:
             logger.warning("get_by_orgnr failed for %s, trying subunit fallback", sanitize_log(orgnr), exc_info=True)
             subunit = await self.subunit_repo.get_by_orgnr(orgnr)
             if not subunit:
+                logger.debug("company.get_detail.both_lookups_failed", extra={"orgnr": sanitize_log(orgnr)})
                 return None
 
             # Map SubUnit to a Company-compatible dictionary for Pydantic
@@ -147,6 +148,7 @@ class CompanyService:
             company = comp_dict
 
         if not company:
+            logger.debug("company.get_detail.not_found", extra={"orgnr": sanitize_log(orgnr)})
             return None
 
         # Fetch parent name efficiently if this is a subunit or a "promoted" subunit

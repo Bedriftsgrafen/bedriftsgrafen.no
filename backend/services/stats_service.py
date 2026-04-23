@@ -425,6 +425,10 @@ class StatsService:
         company_financials, company_employees = await self.company_repo.get_company_with_latest_financials(orgnr)
 
         if not industry_stats:
+            logger.debug(
+                "stats.company_context.no_industry_stats",
+                extra={"nace_division": str(nace_division)[:16] if nace_division else None},
+            )
             return None
 
         # 4. Calculate percentile rankings (simple estimation based on averages)

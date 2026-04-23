@@ -26,6 +26,7 @@ class AccountingRepository:
         try:
             return datetime.strptime(date_str[:10], "%Y-%m-%d").date()
         except ValueError, TypeError:
+            logger.debug("accounting.date_parse_failed", extra={"raw": str(date_str)[:64]})
             return None
 
     @staticmethod
@@ -37,9 +38,11 @@ class AccountingRepository:
             num = float(val)
             # Reject NaN and Infinity
             if not math.isfinite(num):
+                logger.debug("accounting.non_finite_value", extra={"raw": str(val)[:32]})
                 return None
             return num
         except ValueError, TypeError, OverflowError:
+            logger.debug("accounting.numeric_parse_failed", extra={"raw": str(val)[:32]})
             return None
 
     @staticmethod
