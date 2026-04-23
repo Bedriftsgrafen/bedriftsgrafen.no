@@ -2,6 +2,8 @@ import asyncio
 import contextlib
 import hashlib
 import logging
+import os
+import time
 from typing import Any
 
 from sqlalchemy import select
@@ -15,6 +17,7 @@ from constants.concurrency import (
     SEARCH_CACHE_TTL,
 )
 from database import AsyncSessionLocal
+from exceptions import ValidationException
 from repositories.accounting_repository import AccountingRepository
 from repositories.company import CompanyRepository, CompanyWithFinancials
 from repositories.company_filter_builder import FilterParams
@@ -33,6 +36,19 @@ from utils.redis_cache import RedisCache
 
 logger = logging.getLogger(__name__)
 
+
+def _read_similar_slow_threshold_ms() -> int:
+    """Read slow-log threshold for similar endpoint from env.
+
+    Falls back to 2000 ms for missing/invalid values.
+    """
+    raw = os.getenv("SIMILAR_SLOW_LOG_THRESHOLD_MS", "2000")
+    try:
+        return max(0, int(raw))
+    except ValueError:
+        return 2000
+
+
 # Module-level cache shared across service instances
 search_cache = AsyncLRUCache(maxsize=SEARCH_CACHE_SIZE, ttl=SEARCH_CACHE_TTL)
 similar_cache = AsyncLRUCache(maxsize=500, ttl=300)  # 5-min cache for similar companies
@@ -45,6 +61,7 @@ count_cache = RedisCache(prefix="stats:count", ttl=300)
 parent_name_cache = AsyncLRUCache(
     maxsize=PARENT_NAME_CACHE_SIZE, ttl=PARENT_NAME_CACHE_TTL
 )  # 1h cache for parent names
+SIMILAR_SLOW_LOG_THRESHOLD_MS = _read_similar_slow_threshold_ms()
 
 # Lock to prevent thundering herd on stats computation
 _stats_lock = asyncio.Lock()
@@ -214,27 +231,51 @@ class CompanyService:
         Uses in-flight coalescing: concurrent requests for the same key within the
         same worker share one DB query instead of each firing their own.
         """
+        started = time.perf_counter()
+        cache_hit = False
+        coalesced_inflight = False
+        result_count = 0
         cache_key = f"{orgnr}:{limit}"
-        cached = await similar_cache.get(cache_key)
-        if cached is not None:
-            return cached
+        try:
+            cached = await similar_cache.get(cache_key)
+            if cached is not None:
+                cache_hit = True
+                result_count = len(cached)
+                return cached
 
-        # Coalesce concurrent requests for the same key within this worker.
-        if cache_key in _similar_in_flight:
-            return await _similar_in_flight[cache_key]
+            # Coalesce concurrent requests for the same key within this worker.
+            if cache_key in _similar_in_flight:
+                coalesced_inflight = True
+                coalesced_results = await _similar_in_flight[cache_key]
+                result_count = len(coalesced_results)
+                return coalesced_results
 
-        async def _fetch() -> list[CompanyWithFinancials]:
-            try:
-                results = await self.company_repo.get_similar_companies(orgnr, limit)
-                await self.enrich_nace_codes(results)
-                await similar_cache.set(cache_key, results)
-                return results
-            finally:
-                _similar_in_flight.pop(cache_key, None)
+            async def _fetch() -> list[CompanyWithFinancials]:
+                try:
+                    results = await self.company_repo.get_similar_companies(orgnr, limit)
+                    await self.enrich_nace_codes(results)
+                    await similar_cache.set(cache_key, results)
+                    return results
+                finally:
+                    _similar_in_flight.pop(cache_key, None)
 
-        task: asyncio.Task[list[CompanyWithFinancials]] = asyncio.create_task(_fetch())
-        _similar_in_flight[cache_key] = task
-        return await task
+            task: asyncio.Task[list[CompanyWithFinancials]] = asyncio.create_task(_fetch())
+            _similar_in_flight[cache_key] = task
+            results = await task
+            result_count = len(results)
+            return results
+        finally:
+            elapsed_ms = int((time.perf_counter() - started) * 1000)
+            if elapsed_ms >= SIMILAR_SLOW_LOG_THRESHOLD_MS:
+                logger.warning(
+                    "similar.companies.slow orgnr=%s limit=%s duration_ms=%d cache_hit=%s coalesced_inflight=%s result_count=%d",
+                    sanitize_log(orgnr),
+                    limit,
+                    elapsed_ms,
+                    cache_hit,
+                    coalesced_inflight,
+                    result_count,
+                )
 
     async def get_aggregate_stats(self, filters: CompanyFilterDTO) -> dict[str, Any]:
         """Fetch cached aggregate statistics."""
@@ -301,11 +342,27 @@ class CompanyService:
         self, orgnr: str, fetch_financials: bool = True, geocode: bool = True
     ) -> dict[str, Any]:
         """Fetch from Brreg and upsert into database."""
-        result: dict[str, Any] = {"orgnr": orgnr, "company_fetched": False, "financials_fetched": 0, "errors": []}
+        result: dict[str, Any] = {
+            "orgnr": orgnr,
+            "company_fetched": False,
+            "financials_fetched": 0,
+            "financials_skipped": 0,
+            "errors": [],
+        }
+
+        def _append_error(message: str) -> None:
+            errors = result["errors"]
+            if len(errors) < 5:
+                errors.append(message)
+                return
+            overflow_message = "Flere feil oppstod under datainnhenting. Sjekk logger for detaljer."
+            if overflow_message not in errors:
+                errors.append(overflow_message)
+
         try:
             data = await self.brreg_api.fetch_company(orgnr)
             if not data:
-                result["errors"].append("Virksomheten finnes ikke i Brønnøysundregistrene")
+                _append_error("Virksomheten finnes ikke i Brønnøysundregistrene")
                 return result
 
             company = await self.company_repo.create_or_update(data, autocommit=True)
@@ -318,19 +375,44 @@ class CompanyService:
                 await RoleService(self.db).get_roles(orgnr, force_refresh=True)
 
             if fetch_financials:
-                statements = await self.brreg_api.fetch_financial_statements(orgnr)
-                if statements:
-                    for s in statements:
-                        await self.accounting_repo.create_or_update(orgnr, s, raw_data=s)
-                    await self.company_repo.update_last_polled_regnskap(orgnr)
-                    await self.db.commit()
-                    result["financials_fetched"] = len(statements)
+                try:
+                    statements = await self.brreg_api.fetch_financial_statements(orgnr)
+                except Exception as e:
+                    logger.error("financials.fetch_failed for %s: %s", orgnr, e)
+                    _append_error("Kunne ikke hente regnskap fra Brønnøysund akkurat nå.")
+                else:
+                    if statements:
+                        saved_count = 0
+                        skipped_count = 0
+                        for statement in statements:
+                            try:
+                                await self.accounting_repo.create_or_update(orgnr, statement, raw_data=statement)
+                                saved_count += 1
+                            except ValidationException as e:
+                                skipped_count += 1
+                                logger.warning(
+                                    "financials.statement_skipped orgnr=%s reason=%s",
+                                    sanitize_log(orgnr),
+                                    sanitize_log(e),
+                                )
+                                _append_error("Et regnskapspost manglet regnskapsår og ble hoppet over.")
+                            except Exception as e:
+                                skipped_count += 1
+                                logger.error("financials.statement_save_failed for %s: %s", orgnr, e)
+                                _append_error("Et regnskapspost kunne ikke lagres.")
+
+                        if saved_count > 0:
+                            await self.company_repo.update_last_polled_regnskap(orgnr)
+                            await self.db.commit()
+
+                        result["financials_fetched"] = saved_count
+                        result["financials_skipped"] = skipped_count
 
             if geocode and company.latitude is None:
                 await self.ensure_geocoded(company)
         except Exception as e:
             logger.error("fetch_and_store_company failed for %s: %s", orgnr, e)
-            result["errors"].append("Noe gikk galt under henting av data. Prøv igjen.")
+            _append_error("Noe gikk galt under henting av data. Prøv igjen.")
         return result
 
     async def ensure_geocoded(self, company: models.Company) -> None:

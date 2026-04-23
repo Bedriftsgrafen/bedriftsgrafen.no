@@ -7,6 +7,7 @@ from unittest.mock import AsyncMock, MagicMock, patch
 import pytest
 from sqlalchemy.ext.asyncio import AsyncSession
 
+import services.company_service as company_service_module
 from models import Company
 from services.company_service import CompanyService
 
@@ -116,6 +117,42 @@ async def test_get_similar_companies(service):
     # Assert
     service.company_repo.get_similar_companies.assert_called_once_with("123456789", 5)
     assert len(result) == 2
+
+
+@pytest.mark.asyncio
+async def test_get_similar_companies_logs_slow_request(service, monkeypatch, caplog):
+    """Should emit a warning when similar lookup exceeds slow threshold."""
+    mock_similar = [MagicMock()]
+    service.company_repo.get_similar_companies.return_value = mock_similar
+    monkeypatch.setattr(company_service_module, "SIMILAR_SLOW_LOG_THRESHOLD_MS", 0)
+
+    from services.company_service import _similar_in_flight, similar_cache
+
+    _similar_in_flight.clear()
+    await similar_cache.clear()
+
+    with caplog.at_level("WARNING"):
+        await service.get_similar_companies("123456789", limit=5)
+
+    assert any("similar.companies.slow" in rec.message for rec in caplog.records)
+
+
+@pytest.mark.asyncio
+async def test_get_similar_companies_does_not_log_when_fast(service, monkeypatch, caplog):
+    """Should not emit slow warning when threshold is high and request is fast."""
+    mock_similar = [MagicMock()]
+    service.company_repo.get_similar_companies.return_value = mock_similar
+    monkeypatch.setattr(company_service_module, "SIMILAR_SLOW_LOG_THRESHOLD_MS", 60_000)
+
+    from services.company_service import _similar_in_flight, similar_cache
+
+    _similar_in_flight.clear()
+    await similar_cache.clear()
+
+    with caplog.at_level("WARNING"):
+        await service.get_similar_companies("123456789", limit=5)
+
+    assert not any("similar.companies.slow" in rec.message for rec in caplog.records)
 
 
 @pytest.mark.asyncio
@@ -266,6 +303,43 @@ async def test_fetch_and_store_company_not_found(service):
     # Assert
     assert result["company_fetched"] is False
     assert "Brønnøysund" in result["errors"][0]
+
+
+@pytest.mark.asyncio
+@patch("services.role_service.RoleService")
+async def test_fetch_and_store_company_skips_invalid_financial_statements(MockRoleService, service):
+    """Should save valid financial statements and skip invalid ones (missing aar)."""
+    from exceptions import ValidationException
+
+    mock_company_data = {"organisasjonsnummer": "123456789", "navn": "Test AS"}
+    service.brreg_api.fetch_company.return_value = mock_company_data
+
+    mock_company = MagicMock()
+    mock_company.latitude = 59.9
+    service.company_repo.create_or_update.return_value = mock_company
+
+    service.brreg_api.fetch_subunits.return_value = []
+    service.brreg_api.fetch_financial_statements.return_value = [
+        {"aar": 2024, "aarsresultat": 1000},
+        {"aarsresultat": 500},
+    ]
+
+    service.accounting_repo.create_or_update.side_effect = [
+        None,
+        ValidationException("Financial data must include accounting year (aar)"),
+    ]
+
+    mock_role_instance = AsyncMock()
+    MockRoleService.return_value = mock_role_instance
+
+    result = await service.fetch_and_store_company("123456789")
+
+    assert result["company_fetched"] is True
+    assert result["financials_fetched"] == 1
+    assert result["financials_skipped"] == 1
+    assert any("manglet regnskapsår" in msg for msg in result["errors"])
+    service.company_repo.update_last_polled_regnskap.assert_called_once_with("123456789")
+    service.db.commit.assert_called_once()
 
 
 @pytest.mark.asyncio
