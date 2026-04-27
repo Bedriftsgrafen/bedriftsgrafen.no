@@ -89,7 +89,7 @@ packaging==26.1
     #   limits
     #   pytest
     #   wheel
-pathspec==1.0.4
+pathspec==1.1.1
     # via mypy
 pip-tools==7.5.3
     # via bedriftsgrafen-backend (pyproject.toml)
