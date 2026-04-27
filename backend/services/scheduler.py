@@ -1,5 +1,6 @@
 import logging
 import shutil
+import time
 from datetime import UTC, datetime, timedelta
 
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
@@ -40,14 +41,28 @@ class SchedulerService:
     def _setup_jobs(self) -> None:
         now = datetime.now(UTC)
 
-        # Refresh materialized views every 10 minutes (heavy views like industry_stats need time)
+        # Refresh light materialized views every 10 minutes
+        # (small/fast views: company_totals, stats, orgform, financials, etc.)
         self.scheduler.add_job(
-            self.refresh_materialized_views,
-            trigger=IntervalTrigger(minutes=10),
-            id="refresh_views",
+            self.refresh_views_light,
+            trigger=IntervalTrigger(minutes=10, start_date=now + timedelta(seconds=30)),
+            id="refresh_views_light",
             replace_existing=True,
             max_instances=1,
+            coalesce=True,
             misfire_grace_time=300,
+        )
+
+        # Refresh heavy materialized views every 60 minutes
+        # (large views: industry_stats 204MB, commercial_people_mv 57MB, person_toplist_mv 120MB)
+        self.scheduler.add_job(
+            self.refresh_views_heavy,
+            trigger=IntervalTrigger(minutes=60, start_date=now + timedelta(minutes=5)),
+            id="refresh_views_heavy",
+            replace_existing=True,
+            max_instances=1,
+            coalesce=True,
+            misfire_grace_time=600,
         )
 
         # Sync SSB population data weekly (Sundays at 03:00)
@@ -194,43 +209,60 @@ class SchedulerService:
         self.scheduler.shutdown()
         logger.info("Scheduler shutdown")
 
-    async def refresh_materialized_views(self) -> None:
-        """Refreshes all materialized views used for statistics and caching.
+    async def refresh_views_light(self) -> None:
+        """Refresh small/fast materialized views (every 10 min).
 
-        Uses CONCURRENTLY to prevent table locks so reads can continue.
-        Views must have unique indexes to support concurrent refresh.
-        Each view is refreshed in its own transaction so one slow view
-        (e.g. industry_stats at 71 MB) doesn't abort the entire batch
-        when it hits the statement timeout under I/O contention.
+        All MV refreshes are owned by this scheduler — no other code path
+        may issue REFRESH MATERIALIZED VIEW.
         """
-        logger.info("Starting materialized view refresh (CONCURRENTLY)...")
-
-        # Views to refresh, with optional ANALYZE for planner statistics
-        views_to_refresh = [
-            ("company_totals", True),
-            ("industry_stats", False),
-            ("industry_subclass_stats", False),
-            ("county_stats", False),
-            ("municipality_stats", False),
-            ("orgform_counts", False),
-            ("latest_financials", True),
-            ("latest_accountings", True),
-            ("commercial_people_mv", True),
-            ("person_toplist_mv", True),
-            ("person_landing_stats_mv", True),
+        views: list[tuple[str, bool, int]] = [
+            # (view_name, run_analyze, statement_timeout_ms)
+            ("company_totals", True, 30_000),
+            ("industry_subclass_stats", False, 30_000),
+            ("county_stats", False, 30_000),
+            ("municipality_stats", False, 30_000),
+            ("orgform_counts", False, 30_000),
+            ("latest_financials", True, 30_000),
+            ("latest_accountings", True, 30_000),
+            ("person_landing_stats_mv", True, 30_000),
         ]
+        await self._run_refresh_batch(views, kind="light")
 
+    async def refresh_views_heavy(self) -> None:
+        """Refresh large/slow materialized views (every 60 min).
+
+        All MV refreshes are owned by this scheduler — no other code path
+        may issue REFRESH MATERIALIZED VIEW.
+        """
+        views: list[tuple[str, bool, int]] = [
+            # (view_name, run_analyze, statement_timeout_ms)
+            ("industry_stats", False, 300_000),  # ~204MB, can take several minutes
+            ("commercial_people_mv", True, 300_000),  # ~57MB
+            ("person_toplist_mv", True, 600_000),  # ~120MB, needs up to 10 min
+        ]
+        await self._run_refresh_batch(views, kind="heavy")
+
+    async def _run_refresh_batch(self, views: list[tuple[str, bool, int]], kind: str) -> None:
+        """Refresh a batch of materialized views sequentially, each in its own transaction."""
+        logger.info("Starting materialized view refresh", extra={"kind": kind, "count": len(views)})
         refreshed = 0
         failed_views: list[str] = []
 
-        for view_name, run_analyze in views_to_refresh:
+        for view_name, run_analyze, timeout_ms in views:
+            t0 = time.monotonic()
             try:
                 async with engine.begin() as conn:
-                    # Override global timeout — heavy views (industry_stats) can take 12-51s
-                    await conn.execute(text("SET LOCAL statement_timeout = '180000'"))
-                    await conn.execute(text(f"REFRESH MATERIALIZED VIEW CONCURRENTLY {view_name}"))
+                    await conn.execute(text(f"SET LOCAL statement_timeout = '{timeout_ms}'"))
+                    await conn.execute(
+                        text(f"REFRESH MATERIALIZED VIEW CONCURRENTLY {view_name}")
+                    )  # view_name from allowlist
                     if run_analyze:
                         await conn.execute(text(f"ANALYZE {view_name}"))  # view_name from allowlist
+                duration_ms = int((time.monotonic() - t0) * 1000)
+                logger.info(
+                    "mv_refresh_done",
+                    extra={"view": view_name, "duration_ms": duration_ms, "kind": kind},
+                )
                 refreshed += 1
             except Exception:
                 failed_views.append(view_name)
@@ -239,12 +271,12 @@ class SchedulerService:
         if failed_views:
             logger.error(
                 "Materialized view refresh partially failed",
-                extra={"refreshed": refreshed, "failed": failed_views},
+                extra={"kind": kind, "refreshed": refreshed, "failed": failed_views},
             )
         else:
             logger.info(
-                "Materialized view refresh completed successfully",
-                extra={"views_refreshed": refreshed},
+                "Materialized view refresh completed",
+                extra={"kind": kind, "views_refreshed": refreshed},
             )
 
     async def sync_ssb_population(self) -> None:

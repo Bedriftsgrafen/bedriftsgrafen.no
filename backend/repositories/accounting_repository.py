@@ -367,18 +367,17 @@ class AccountingRepository:
                     else 0.0,
                     "avg_operating_margin": float(row.avg_operating_margin) if row.avg_operating_margin else 0.0,
                 }
+            # company_totals not yet populated — return zeros rather than raising
+            return {
+                "total_revenue": 0.0,
+                "total_ebitda": 0.0,
+                "profitable_percentage": 0.0,
+                "solid_company_percentage": 0.0,
+                "avg_operating_margin": 0.0,
+            }
         except Exception as e:
-            logger.warning(f"Failed to fetch aggregated stats from company_totals: {e}. Falling back to zero.")
+            logger.error("stats.fallback path=accounting_totals error=%s", e, exc_info=True)
+            raise DatabaseException("Failed to get accounting aggregate stats", original_error=e)
 
-        return {
-            "total_revenue": 0.0,
-            "total_ebitda": 0.0,
-            "profitable_percentage": 0.0,
-            "solid_company_percentage": 0.0,
-            "avg_operating_margin": 0.0,
-        }
-
-    async def refresh_materialized_view(self):
-        """Refresh the materialized view concurrently"""
-        await self.db.execute(text("REFRESH MATERIALIZED VIEW CONCURRENTLY latest_accountings"))
-        await self.db.commit()
+    # All materialized view refreshes are owned by SchedulerService.refresh_views_light/heavy.
+    # Do NOT add REFRESH MATERIALIZED VIEW calls here.

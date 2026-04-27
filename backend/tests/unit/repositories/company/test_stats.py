@@ -236,16 +236,15 @@ async def test_get_aggregate_stats_with_financial_sort(repo, mock_db_session):
 
 @pytest.mark.asyncio
 async def test_get_aggregate_stats_exception(repo, mock_db_session):
-    """Test aggregate stats returns defaults on error."""
+    """Test aggregate stats raises DatabaseException on error."""
+    from exceptions import DatabaseException
+
     filters = FilterParams(name="test")
 
     mock_db_session.execute.side_effect = Exception("DB error")
 
-    stats = await repo.get_aggregate_stats(filters)
-
-    assert stats["total_count"] == 0
-    assert stats["total_revenue"] == 0.0
-    assert stats["by_organisasjonsform"] == []
+    with pytest.raises(DatabaseException):
+        await repo.get_aggregate_stats(filters)
 
 
 @pytest.mark.asyncio

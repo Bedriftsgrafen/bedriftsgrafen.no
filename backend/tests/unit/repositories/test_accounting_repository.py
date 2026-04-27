@@ -99,14 +99,14 @@ async def test_get_aggregated_stats(accounting_repo, mock_db):
 
 
 @pytest.mark.asyncio
-async def test_get_aggregated_stats_error_fallback(accounting_repo, mock_db):
-    """Should return zeros on error."""
+async def test_get_aggregated_stats_error_raises(accounting_repo, mock_db):
+    """Should raise DatabaseException on error."""
+    from exceptions import DatabaseException
+
     mock_db.execute.side_effect = Exception("DB error")
 
-    stats = await accounting_repo.get_aggregated_stats()
-
-    assert stats["total_revenue"] == 0.0
-    assert stats["profitable_percentage"] == 0.0
+    with pytest.raises(DatabaseException):
+        await accounting_repo.get_aggregated_stats()
 
 
 @pytest.mark.asyncio
@@ -199,15 +199,6 @@ async def test_count_none(accounting_repo, mock_db):
     count = await accounting_repo.count()
 
     assert count == 0
-
-
-@pytest.mark.asyncio
-async def test_refresh_materialized_view(accounting_repo, mock_db):
-    """Should execute refresh and commit."""
-    await accounting_repo.refresh_materialized_view()
-
-    mock_db.execute.assert_called_once()
-    mock_db.commit.assert_called_once()
 
 
 @pytest.mark.asyncio

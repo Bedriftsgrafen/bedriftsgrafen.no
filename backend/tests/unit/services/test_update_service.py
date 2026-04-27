@@ -50,7 +50,6 @@ class TestFetchUpdates:
     @pytest.mark.asyncio
     async def test_fetch_updates_defaults_to_yesterday(self, update_service):
         update_service._process_single_page = AsyncMock(return_value=None)
-        update_service._refresh_materialized_view = AsyncMock()
 
         with patch("services.update_service.UpdateBatchResult") as mock_result_class:
             await update_service.fetch_updates()
@@ -62,7 +61,6 @@ class TestFetchUpdates:
     @pytest.mark.asyncio
     async def test_fetch_updates_processes_multiple_pages(self, update_service):
         update_service._process_single_page = AsyncMock(side_effect=["http://next", None])
-        update_service._refresh_materialized_view = AsyncMock()
 
         with patch("httpx.AsyncClient"):
             result = await update_service.fetch_updates(page_size=1)
@@ -387,42 +385,6 @@ class TestPersistChunk:
         update_service.company_repo.delete_by_orgnr.assert_called_once_with("123456789")
         assert result.companies_deleted == 1
         assert result.companies_processed == 1
-
-
-class TestRefreshMaterializedView:
-    """Tests for materialized view refresh."""
-
-    @pytest.mark.asyncio
-    async def test_refresh_materialized_view_executes_query(self, update_service, mock_db):
-        """Should execute REFRESH MATERIALIZED VIEW."""
-        result = UpdateBatchResult(
-            since_date=date.today(),
-            since_iso="2026-01-26T00:00:00.000Z",
-            companies_created=10,
-        )
-
-        await update_service._refresh_materialized_view(result)
-
-        # Should execute REFRESH MATERIALIZED VIEW
-        mock_db.execute.assert_called()
-        mock_db.commit.assert_called()
-
-    @pytest.mark.asyncio
-    async def test_refresh_materialized_view_handles_error(self, update_service, mock_db):
-        """Should handle errors gracefully and rollback."""
-        result = UpdateBatchResult(
-            since_date=date.today(),
-            since_iso="2026-01-26T00:00:00.000Z",
-            companies_updated=1,  # Set change to trigger refresh logic
-        )
-
-        mock_db.execute.side_effect = Exception("Database error")
-
-        await update_service._refresh_materialized_view(result)
-
-        # Should rollback on error
-        mock_db.rollback.assert_called()
-        assert len(result.errors) == 1
 
 
 class TestFetchAndPersistFinancials:

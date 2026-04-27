@@ -10,6 +10,7 @@ from sqlalchemy import bindparam, func, select, text
 from sqlalchemy.ext.asyncio import AsyncSession
 
 import models
+from exceptions import DatabaseException
 from repositories.company.base import logger
 from repositories.company_filter_builder import CompanyFilterBuilder, FilterParams
 
@@ -165,14 +166,8 @@ class StatsMixin:
             return total_stats
 
         except Exception as e:
-            logger.error(f"Error getting aggregate stats: {e}")
-            return {
-                "total_count": 0,
-                "total_revenue": 0.0,
-                "total_profit": 0.0,
-                "total_employees": 0,
-                "by_organisasjonsform": [],
-            }
+            logger.error("stats.fallback path=aggregate error=%s", e, exc_info=True)
+            raise DatabaseException("Failed to get aggregate stats", original_error=e)
 
     async def count(self, fast: bool = False) -> int:
         """

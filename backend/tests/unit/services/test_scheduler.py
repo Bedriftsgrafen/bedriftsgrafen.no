@@ -30,21 +30,32 @@ async def test_scheduler_init_and_jobs():
     jobs = scheduler_service.scheduler.get_jobs()
     job_ids = [job.id for job in jobs]
 
-    assert "refresh_views" in job_ids
+    assert "refresh_views_light" in job_ids
+    assert "refresh_views_heavy" in job_ids
     assert "sync_ssb_population" in job_ids
     assert "geocode_companies" in job_ids
 
 
 @pytest.mark.asyncio
-async def test_refresh_materialized_views(mock_engine_begin):
+async def test_refresh_views_light(mock_engine_begin):
     scheduler_service = SchedulerService()
 
-    await scheduler_service.refresh_materialized_views()
+    await scheduler_service.refresh_views_light()
 
-    # Verify SQL execution
-    # Getting the connection mock from the engine.begin context manager
     mock_conn = mock_engine_begin.return_value.__aenter__.return_value
-    assert mock_conn.execute.call_count >= 4
+    # 8 light views x (SET LOCAL + REFRESH + optional ANALYZE) — at least 8 REFRESH calls
+    assert mock_conn.execute.call_count >= 8
+
+
+@pytest.mark.asyncio
+async def test_refresh_views_heavy(mock_engine_begin):
+    scheduler_service = SchedulerService()
+
+    await scheduler_service.refresh_views_heavy()
+
+    mock_conn = mock_engine_begin.return_value.__aenter__.return_value
+    # 3 heavy views x (SET LOCAL + REFRESH + optional ANALYZE) — at least 3 REFRESH calls
+    assert mock_conn.execute.call_count >= 3
 
 
 @pytest.mark.asyncio

@@ -165,9 +165,6 @@ class UpdateService:
                     await self.db.rollback()
                     break
 
-        # Refresh materialized view after all updates
-        await self._refresh_materialized_view(result)
-
         logger.info(
             f"Update summary: {result.companies_processed} processed "
             f"({result.companies_created} new, {result.companies_updated} updated, "
@@ -382,22 +379,6 @@ class UpdateService:
                 await self.company_repo.update_last_polled_regnskap(orgnr)
             except Exception as e:
                 logger.error(f"Failed to update last_polled_regnskap for {orgnr}: {e}")
-                await self.db.rollback()
-
-    async def _refresh_materialized_view(self, result: Any) -> None:
-        """Helper to refresh materialized view after updates."""
-        # Only refresh if something actually changed
-        if (result.companies_created + result.companies_updated + result.companies_deleted) > 0:
-            logger.info("Refreshing industry statistics materialized view...")
-            try:
-                # Concurrent refresh allows reads while refreshing
-                await self.db.execute(text("REFRESH MATERIALIZED VIEW CONCURRENTLY industry_stats"))
-                await self.db.execute(text("REFRESH MATERIALIZED VIEW CONCURRENTLY industry_subclass_stats"))
-                await self.db.commit()
-            except Exception as e:
-                error_msg = f"Failed to refresh stats view: {e}"
-                logger.error(error_msg)
-                result.errors.append(error_msg)
                 await self.db.rollback()
 
     async def fetch_subunit_updates(
