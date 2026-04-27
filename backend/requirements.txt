@@ -25,7 +25,7 @@ asyncpg==0.31.0
     # via bedriftsgrafen-backend (pyproject.toml)
 build==1.4.3
     # via pip-tools
-certifi==2026.2.25
+certifi==2026.4.22
     # via
     #   httpcore
     #   httpx
