@@ -62,7 +62,7 @@ httptools==0.7.1
     # via uvicorn
 httpx==0.28.1
     # via bedriftsgrafen-backend (pyproject.toml)
-idna==3.11
+idna==3.13
     # via
     #   anyio
     #   httpx
