@@ -63,7 +63,7 @@ class RequestIdMiddleware(BaseHTTPMiddleware):
     async def dispatch(self, request: Request, call_next: Callable[[Request], Awaitable[Response]]) -> Response:
         # Generate unique request ID
         request_id = str(uuid.uuid4())[:8]  # Use short ID for clarity
-        request_id_ctx.set(request_id)
+        request_id_token = request_id_ctx.set(request_id)
 
         # Track request timing
         start_time = time.time()
@@ -91,3 +91,5 @@ class RequestIdMiddleware(BaseHTTPMiddleware):
             duration = time.time() - start_time
             logger.error(f"{request.method} {request.url.path} - Exception after {duration:.3f}s", exc_info=True)
             raise
+        finally:
+            request_id_ctx.reset(request_id_token)

@@ -195,6 +195,49 @@ class TestRequestIdMiddleware:
         assert len(result.headers["X-Request-ID"]) == 8
 
     @pytest.mark.asyncio
+    async def test_resets_request_id_context_after_success(self):
+        """Request context should be cleared after a successful request."""
+        from middleware import RequestIdMiddleware
+        from utils.logging_config import request_id_ctx
+
+        middleware = RequestIdMiddleware(app=MagicMock())
+        mock_request = MagicMock(spec=Request)
+        mock_request.method = "GET"
+        mock_request.url.path = "/test"
+
+        mock_response = MagicMock(spec=Response)
+        mock_response.headers = {}
+        mock_response.status_code = 200
+
+        async def call_next(request):
+            assert request_id_ctx.get() is not None
+            return mock_response
+
+        await middleware.dispatch(mock_request, call_next)
+
+        assert request_id_ctx.get() is None
+
+    @pytest.mark.asyncio
+    async def test_resets_request_id_context_after_exception(self):
+        """Request context should be cleared even when the handler raises."""
+        from middleware import RequestIdMiddleware
+        from utils.logging_config import request_id_ctx
+
+        middleware = RequestIdMiddleware(app=MagicMock())
+        mock_request = MagicMock(spec=Request)
+        mock_request.method = "GET"
+        mock_request.url.path = "/test"
+
+        async def call_next(request):
+            assert request_id_ctx.get() is not None
+            raise RuntimeError("boom")
+
+        with pytest.raises(RuntimeError, match="boom"):
+            await middleware.dispatch(mock_request, call_next)
+
+        assert request_id_ctx.get() is None
+
+    @pytest.mark.asyncio
     async def test_request_id_is_unique(self):
         """Each request should get a unique request ID."""
         from middleware import RequestIdMiddleware
