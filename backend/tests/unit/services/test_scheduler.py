@@ -2,18 +2,21 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
-from services.scheduler import SchedulerService
+from services.scheduler import MV_REFRESH_LOCK_NAMESPACE, MV_REFRESH_LOCK_RESOURCE, SchedulerService
 
 
 @pytest.fixture
-def mock_engine_begin():
-    # Patch the engine object in the scheduler module
+def mock_engine():
     with patch("services.scheduler.engine") as mock_engine:
-        # Configure begin to return an async context manager
-        conn_mock = AsyncMock()
-        mock_engine.begin.return_value.__aenter__.return_value = conn_mock
+        begin_conn_mock = AsyncMock()
+        mock_engine.begin.return_value.__aenter__.return_value = begin_conn_mock
         mock_engine.begin.return_value.__aexit__.return_value = None
-        yield mock_engine.begin
+
+        lock_conn_mock = AsyncMock()
+        lock_conn_mock.execution_options = AsyncMock(return_value=lock_conn_mock)
+        lock_conn_mock.close = AsyncMock()
+        mock_engine.connect = AsyncMock(return_value=lock_conn_mock)
+        yield mock_engine
 
 
 @pytest.fixture
@@ -37,25 +40,117 @@ async def test_scheduler_init_and_jobs():
 
 
 @pytest.mark.asyncio
-async def test_refresh_views_light(mock_engine_begin):
+async def test_refresh_views_light(mock_engine):
     scheduler_service = SchedulerService()
 
-    await scheduler_service.refresh_views_light()
+    lock_conn = AsyncMock()
+    with (
+        patch.object(
+            scheduler_service, "_try_acquire_refresh_lock", new=AsyncMock(return_value=lock_conn)
+        ) as mock_lock,
+        patch.object(scheduler_service, "_release_refresh_lock", new=AsyncMock()) as mock_release,
+    ):
+        await scheduler_service.refresh_views_light()
 
-    mock_conn = mock_engine_begin.return_value.__aenter__.return_value
+    mock_conn = mock_engine.begin.return_value.__aenter__.return_value
     # 8 light views x (SET LOCAL + REFRESH + optional ANALYZE) — at least 8 REFRESH calls
     assert mock_conn.execute.call_count >= 8
+    mock_lock.assert_awaited_once_with("light")
+    mock_release.assert_awaited_once_with(lock_conn, "light")
 
 
 @pytest.mark.asyncio
-async def test_refresh_views_heavy(mock_engine_begin):
+async def test_refresh_views_heavy(mock_engine):
     scheduler_service = SchedulerService()
 
-    await scheduler_service.refresh_views_heavy()
+    lock_conn = AsyncMock()
+    with (
+        patch.object(
+            scheduler_service, "_try_acquire_refresh_lock", new=AsyncMock(return_value=lock_conn)
+        ) as mock_lock,
+        patch.object(scheduler_service, "_release_refresh_lock", new=AsyncMock()) as mock_release,
+    ):
+        await scheduler_service.refresh_views_heavy()
 
-    mock_conn = mock_engine_begin.return_value.__aenter__.return_value
+    mock_conn = mock_engine.begin.return_value.__aenter__.return_value
     # 3 heavy views x (SET LOCAL + REFRESH + optional ANALYZE) — at least 3 REFRESH calls
     assert mock_conn.execute.call_count >= 3
+    mock_lock.assert_awaited_once_with("heavy")
+    mock_release.assert_awaited_once_with(lock_conn, "heavy")
+
+
+@pytest.mark.asyncio
+async def test_refresh_views_light_skips_when_lock_is_held(mock_engine):
+    scheduler_service = SchedulerService()
+
+    with (
+        patch.object(scheduler_service, "_try_acquire_refresh_lock", new=AsyncMock(return_value=None)) as mock_lock,
+        patch.object(scheduler_service, "_release_refresh_lock", new=AsyncMock()) as mock_release,
+    ):
+        await scheduler_service.refresh_views_light()
+
+    mock_lock.assert_awaited_once_with("light")
+    mock_engine.begin.assert_not_called()
+    mock_release.assert_not_called()
+
+
+@pytest.mark.asyncio
+async def test_try_acquire_refresh_lock_returns_none_when_held(mock_engine):
+    scheduler_service = SchedulerService()
+    lock_conn = mock_engine.connect.return_value
+    result = MagicMock()
+    result.scalar_one.return_value = False
+    lock_conn.execute = AsyncMock(return_value=result)
+
+    acquired = await scheduler_service._try_acquire_refresh_lock("light")
+
+    assert acquired is None
+    lock_conn.execution_options.assert_awaited_once_with(isolation_level="AUTOCOMMIT")
+    execute_args = lock_conn.execute.await_args_list[0]
+    assert "pg_try_advisory_lock(:namespace, :resource)" in str(execute_args.args[0])
+    assert execute_args.args[1] == {
+        "namespace": MV_REFRESH_LOCK_NAMESPACE,
+        "resource": MV_REFRESH_LOCK_RESOURCE,
+    }
+    lock_conn.close.assert_awaited_once()
+
+
+@pytest.mark.asyncio
+async def test_release_refresh_lock_uses_two_key_namespace(mock_engine):
+    scheduler_service = SchedulerService()
+    lock_conn = AsyncMock()
+    result = MagicMock()
+    result.scalar_one.return_value = True
+    lock_conn.execute = AsyncMock(return_value=result)
+    lock_conn.close = AsyncMock()
+
+    await scheduler_service._release_refresh_lock(lock_conn, "light")
+
+    execute_args = lock_conn.execute.await_args_list[0]
+    assert "pg_advisory_unlock(:namespace, :resource)" in str(execute_args.args[0])
+    assert execute_args.args[1] == {
+        "namespace": MV_REFRESH_LOCK_NAMESPACE,
+        "resource": MV_REFRESH_LOCK_RESOURCE,
+    }
+    lock_conn.close.assert_awaited_once()
+
+
+@pytest.mark.asyncio
+async def test_run_refresh_batch_releases_lock_when_refresh_fails(mock_engine):
+    scheduler_service = SchedulerService()
+    lock_conn = AsyncMock()
+    mock_conn = mock_engine.begin.return_value.__aenter__.return_value
+    mock_conn.execute = AsyncMock(side_effect=RuntimeError("boom"))
+
+    with (
+        patch.object(scheduler_service, "_try_acquire_refresh_lock", new=AsyncMock(return_value=lock_conn)),
+        patch.object(scheduler_service, "_release_refresh_lock", new=AsyncMock()) as mock_release,
+        patch.object(scheduler_service, "_log_refresh_failure_snapshot", new=AsyncMock()) as mock_diag,
+    ):
+        await scheduler_service._run_refresh_batch([("company_totals", False, 30_000)], kind="light")
+
+    mock_diag.assert_awaited_once()
+    mock_release.assert_awaited_once_with(lock_conn, "light")
 
 
 @pytest.mark.asyncio

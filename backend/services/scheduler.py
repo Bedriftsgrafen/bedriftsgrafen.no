@@ -7,12 +7,18 @@ from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from apscheduler.triggers.cron import CronTrigger
 from apscheduler.triggers.interval import IntervalTrigger
 from sqlalchemy import text
+from sqlalchemy.ext.asyncio import AsyncConnection
 
 from constants.concurrency import SUBUNIT_UPDATE_PAGE_SIZE
 from database import AsyncSessionLocal, engine
 from services.seo_service import SEOService
 
 logger = logging.getLogger(__name__)
+
+# Use PostgreSQL's two-key advisory lock space so refresh coordination cannot
+# collide with orgnr-based single-key locks used by write paths.
+MV_REFRESH_LOCK_NAMESPACE = 7_421
+MV_REFRESH_LOCK_RESOURCE = 1
 
 # Tables to vacuum during maintenance (allowlist for safety)
 # Regular tables that accumulate data and need periodic VACUUM ANALYZE
@@ -242,42 +248,209 @@ class SchedulerService:
         ]
         await self._run_refresh_batch(views, kind="heavy")
 
+    async def _try_acquire_refresh_lock(self, kind: str) -> AsyncConnection | None:
+        """Acquire a session advisory lock and keep its connection alive for the whole batch."""
+        lock_conn = await engine.connect()
+        try:
+            lock_conn = await lock_conn.execution_options(isolation_level="AUTOCOMMIT")
+            acquired = bool(
+                (
+                    await lock_conn.execute(
+                        text("SELECT pg_try_advisory_lock(:namespace, :resource)"),
+                        {
+                            "namespace": MV_REFRESH_LOCK_NAMESPACE,
+                            "resource": MV_REFRESH_LOCK_RESOURCE,
+                        },
+                    )
+                ).scalar_one()
+            )
+            if not acquired:
+                logger.info("mv_batch_skipped kind=%s reason=global_lock_held", kind)
+                await lock_conn.close()
+                return None
+
+            return lock_conn
+        except Exception:
+            logger.exception(
+                "mv_batch_lock_failed kind=%s lock_namespace=%s lock_resource=%s",
+                kind,
+                MV_REFRESH_LOCK_NAMESPACE,
+                MV_REFRESH_LOCK_RESOURCE,
+            )
+            await lock_conn.close()
+            raise
+
+    async def _release_refresh_lock(self, lock_conn: AsyncConnection, kind: str) -> None:
+        """Release the session advisory lock and close its owning connection."""
+        try:
+            released = bool(
+                (
+                    await lock_conn.execute(
+                        text("SELECT pg_advisory_unlock(:namespace, :resource)"),
+                        {
+                            "namespace": MV_REFRESH_LOCK_NAMESPACE,
+                            "resource": MV_REFRESH_LOCK_RESOURCE,
+                        },
+                    )
+                ).scalar_one()
+            )
+            if not released:
+                logger.warning(
+                    "mv_batch_unlock_mismatch kind=%s lock_namespace=%s lock_resource=%s",
+                    kind,
+                    MV_REFRESH_LOCK_NAMESPACE,
+                    MV_REFRESH_LOCK_RESOURCE,
+                )
+        except Exception:
+            logger.exception(
+                "mv_batch_unlock_failed kind=%s lock_namespace=%s lock_resource=%s",
+                kind,
+                MV_REFRESH_LOCK_NAMESPACE,
+                MV_REFRESH_LOCK_RESOURCE,
+            )
+        finally:
+            await lock_conn.close()
+
+    @staticmethod
+    def _compact_query(query: str, max_len: int = 120) -> str:
+        compact = " ".join(query.split())
+        if len(compact) <= max_len:
+            return compact
+        return compact[: max_len - 3] + "..."
+
+    async def _log_refresh_failure_snapshot(
+        self,
+        *,
+        kind: str,
+        view_name: str,
+        duration_ms: int,
+        timeout_ms: int,
+    ) -> None:
+        try:
+            async with engine.connect() as conn:
+                refresh_rows = (
+                    await conn.execute(
+                        text(
+                            """
+                            SELECT pid, query
+                            FROM pg_stat_activity
+                            WHERE state = 'active'
+                              AND query ILIKE 'REFRESH MATERIALIZED VIEW%'
+                            ORDER BY pid
+                            """
+                        )
+                    )
+                ).all()
+                parallel_workers = int(
+                    (
+                        await conn.execute(
+                            text(
+                                """
+                                WITH refreshes AS (
+                                    SELECT pid
+                                    FROM pg_stat_activity
+                                    WHERE state = 'active'
+                                      AND query ILIKE 'REFRESH MATERIALIZED VIEW%'
+                                )
+                                SELECT COUNT(*)
+                                FROM pg_stat_activity
+                                WHERE backend_type = 'parallel worker'
+                                  AND leader_pid IN (SELECT pid FROM refreshes)
+                                """
+                            )
+                        )
+                    ).scalar_one()
+                )
+        except Exception as exc:
+            logger.warning(
+                "mv_refresh_diag_unavailable kind=%s view=%s duration_ms=%s timeout_ms=%s error=%s",
+                kind,
+                view_name,
+                duration_ms,
+                timeout_ms,
+                exc,
+            )
+            return
+
+        active_refreshes = ";".join(f"{pid}:{self._compact_query(str(query))}" for pid, query in refresh_rows) or "none"
+        logger.warning(
+            "mv_refresh_diag kind=%s view=%s duration_ms=%s timeout_ms=%s active_refreshes=%s parallel_workers=%s",
+            kind,
+            view_name,
+            duration_ms,
+            timeout_ms,
+            active_refreshes,
+            parallel_workers,
+        )
+
     async def _run_refresh_batch(self, views: list[tuple[str, bool, int]], kind: str) -> None:
         """Refresh a batch of materialized views sequentially, each in its own transaction."""
-        logger.info("Starting materialized view refresh", extra={"kind": kind, "count": len(views)})
+        lock_conn = await self._try_acquire_refresh_lock(kind)
+        if lock_conn is None:
+            return
+
+        logger.info("mv_batch_start kind=%s views=%s", kind, len(views))
+        batch_t0 = time.monotonic()
         refreshed = 0
         failed_views: list[str] = []
 
-        for view_name, run_analyze, timeout_ms in views:
-            t0 = time.monotonic()
-            try:
-                async with engine.begin() as conn:
-                    await conn.execute(text(f"SET LOCAL statement_timeout = '{timeout_ms}'"))
-                    await conn.execute(
-                        text(f"REFRESH MATERIALIZED VIEW CONCURRENTLY {view_name}")
-                    )  # view_name from allowlist
-                    if run_analyze:
-                        await conn.execute(text(f"ANALYZE {view_name}"))  # view_name from allowlist
-                duration_ms = int((time.monotonic() - t0) * 1000)
-                logger.info(
-                    "mv_refresh_done",
-                    extra={"view": view_name, "duration_ms": duration_ms, "kind": kind},
-                )
-                refreshed += 1
-            except Exception:
-                failed_views.append(view_name)
-                logger.warning("Failed to refresh materialized view: %s", view_name, exc_info=True)
+        try:
+            for view_name, run_analyze, timeout_ms in views:
+                t0 = time.monotonic()
+                try:
+                    async with engine.begin() as conn:
+                        await conn.execute(text(f"SET LOCAL statement_timeout = '{timeout_ms}'"))
+                        await conn.execute(
+                            text(f"REFRESH MATERIALIZED VIEW CONCURRENTLY {view_name}")
+                        )  # view_name from allowlist
+                        if run_analyze:
+                            await conn.execute(text(f"ANALYZE {view_name}"))  # view_name from allowlist
+                    duration_ms = int((time.monotonic() - t0) * 1000)
+                    logger.info(
+                        "mv_refresh_done kind=%s view=%s duration_ms=%s timeout_ms=%s",
+                        kind,
+                        view_name,
+                        duration_ms,
+                        timeout_ms,
+                    )
+                    refreshed += 1
+                except Exception:
+                    duration_ms = int((time.monotonic() - t0) * 1000)
+                    failed_views.append(view_name)
+                    logger.warning(
+                        "mv_refresh_failed kind=%s view=%s duration_ms=%s timeout_ms=%s",
+                        kind,
+                        view_name,
+                        duration_ms,
+                        timeout_ms,
+                        exc_info=True,
+                    )
+                    await self._log_refresh_failure_snapshot(
+                        kind=kind,
+                        view_name=view_name,
+                        duration_ms=duration_ms,
+                        timeout_ms=timeout_ms,
+                    )
 
-        if failed_views:
-            logger.error(
-                "Materialized view refresh partially failed",
-                extra={"kind": kind, "refreshed": refreshed, "failed": failed_views},
-            )
-        else:
-            logger.info(
-                "Materialized view refresh completed",
-                extra={"kind": kind, "views_refreshed": refreshed},
-            )
+            batch_duration_ms = int((time.monotonic() - batch_t0) * 1000)
+            if failed_views:
+                logger.error(
+                    "mv_batch_partial kind=%s refreshed=%s failed=%s failed_views=%s duration_ms=%s",
+                    kind,
+                    refreshed,
+                    len(failed_views),
+                    ",".join(failed_views),
+                    batch_duration_ms,
+                )
+            else:
+                logger.info(
+                    "mv_batch_done kind=%s refreshed=%s failed=0 duration_ms=%s",
+                    kind,
+                    refreshed,
+                    batch_duration_ms,
+                )
+        finally:
+            await self._release_refresh_lock(lock_conn, kind)
 
     async def sync_ssb_population(self) -> None:
         """Sync municipality population data from SSB."""
