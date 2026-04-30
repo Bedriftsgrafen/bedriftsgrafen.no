@@ -1,4 +1,5 @@
 import logging
+import resource
 import shutil
 import time
 from datetime import UTC, datetime, timedelta
@@ -205,6 +206,75 @@ class SchedulerService:
             replace_existing=True,
             max_instances=1,
             misfire_grace_time=3600,
+        )
+
+    @staticmethod
+    def _read_memory_value(path: str) -> int | None:
+        """Read a numeric cgroup memory file if available."""
+        try:
+            with open(path, encoding="utf-8") as file_handle:
+                value = file_handle.read().strip()
+        except OSError:
+            return None
+
+        return int(value) if value.isdigit() else None
+
+    def _get_memory_snapshot(self) -> dict[str, int | None]:
+        """Capture current process and cgroup memory with minimal overhead."""
+        rss_kb = None
+        hwm_kb = None
+
+        try:
+            with open("/proc/self/status", encoding="utf-8") as status_file:
+                for line in status_file:
+                    if line.startswith("VmRSS:"):
+                        rss_value = line.split()[1]
+                        rss_kb = int(rss_value) if rss_value.isdigit() else None
+                    elif line.startswith("VmHWM:"):
+                        hwm_value = line.split()[1]
+                        hwm_kb = int(hwm_value) if hwm_value.isdigit() else None
+        except OSError:
+            pass
+
+        return {
+            "rss_kb": rss_kb,
+            "hwm_kb": hwm_kb,
+            "ru_maxrss_kb": resource.getrusage(resource.RUSAGE_SELF).ru_maxrss,
+            "cgroup_memory_current_bytes": self._read_memory_value("/sys/fs/cgroup/memory.current"),
+            "cgroup_memory_max_bytes": self._read_memory_value("/sys/fs/cgroup/memory.max"),
+            "cgroup_swap_current_bytes": self._read_memory_value("/sys/fs/cgroup/memory.swap.current"),
+            "cgroup_swap_max_bytes": self._read_memory_value("/sys/fs/cgroup/memory.swap.max"),
+        }
+
+    def _log_memory_snapshot(self, job: str, phase: str, **extra: object) -> None:
+        """Emit structured memory telemetry for worker OOM investigations."""
+        snapshot = self._get_memory_snapshot()
+        safe_extra = {f"metric_{key}": value for key, value in extra.items()}
+        extra_tokens = " ".join(
+            f"{key}={value}"
+            for key, value in extra.items()
+            if value is not None and (isinstance(value, int | bool) or (isinstance(value, str) and " " not in value))
+        )
+        message = (
+            "scheduler_memory job=%s phase=%s rss_kb=%s hwm_kb=%s ru_maxrss_kb=%s "
+            "cgroup_memory_current_bytes=%s cgroup_memory_max_bytes=%s "
+            "cgroup_swap_current_bytes=%s cgroup_swap_max_bytes=%s"
+        )
+        if extra_tokens:
+            message = f"{message} {extra_tokens}"
+
+        logger.info(
+            message,
+            job,
+            phase,
+            snapshot["rss_kb"],
+            snapshot["hwm_kb"],
+            snapshot["ru_maxrss_kb"],
+            snapshot["cgroup_memory_current_bytes"],
+            snapshot["cgroup_memory_max_bytes"],
+            snapshot["cgroup_swap_current_bytes"],
+            snapshot["cgroup_swap_max_bytes"],
+            extra={"job": job, "phase": phase, **snapshot, **safe_extra},
         )
 
     async def start(self) -> None:
@@ -508,6 +578,7 @@ class SchedulerService:
         from services.update_service import UpdateService
 
         logger.info("Starting incremental company updates...")
+        self._log_memory_snapshot("company_updates", "start")
         try:
             async with AsyncSessionLocal() as db:
                 service = UpdateService(db)
@@ -539,7 +610,15 @@ class SchedulerService:
                         "updated": result.get("companies_updated"),
                     },
                 )
+                self._log_memory_snapshot(
+                    "company_updates",
+                    "done",
+                    processed=result.get("companies_processed", 0),
+                    created=result.get("companies_created", 0),
+                    updated=result.get("companies_updated", 0),
+                )
         except Exception as e:
+            self._log_memory_snapshot("company_updates", "failed", error=str(e))
             logger.exception("Failed to run incremental company updates", extra={"error": str(e)})
 
     async def sync_accounting_batch(self) -> None:
@@ -549,6 +628,7 @@ class SchedulerService:
         from services.update_service import UpdateService
 
         logger.info("Starting accounting sync batch...")
+        self._log_memory_snapshot("accounting_sync", "start")
         try:
             async with AsyncSessionLocal() as db:
                 # 1. Selection logic: New companies first, then oldest polled ones
@@ -573,15 +653,19 @@ class SchedulerService:
 
                 result = await db.execute(union_stmt, {"cutoff": cutoff_date, "lim": limit})
                 orgnrs = [row[0] for row in result.all()]
+                total = len(orgnrs)
+
+                self._log_memory_snapshot("accounting_sync", "selected", selected=total, limit=limit)
 
                 if not orgnrs:
                     logger.info("No companies need accounting sync at this time.")
+                    self._log_memory_snapshot("accounting_sync", "empty")
                     return
 
                 # 2. Process batch
                 update_service = UpdateService(db)
                 processed = 0
-                for orgnr in orgnrs:
+                for attempt_index, orgnr in enumerate(orgnrs, start=1):
                     try:
                         from schemas.brreg import UpdateBatchResult
 
@@ -591,12 +675,28 @@ class SchedulerService:
                     except Exception as ex:
                         logger.warning("Failed to sync accounting", extra={"orgnr": orgnr, "error": str(ex)})
 
+                    if attempt_index % 10 == 0 or attempt_index == total:
+                        self._log_memory_snapshot(
+                            "accounting_sync",
+                            "progress",
+                            attempted=attempt_index,
+                            processed=processed,
+                            total=total,
+                        )
+
                 logger.info(
                     "Accounting sync batch completed",
-                    extra={"processed": processed, "total": len(orgnrs)},
+                    extra={"processed": processed, "total": total},
+                )
+                self._log_memory_snapshot(
+                    "accounting_sync",
+                    "done",
+                    processed=processed,
+                    total=total,
                 )
 
         except Exception as e:
+            self._log_memory_snapshot("accounting_sync", "failed", error=str(e))
             logger.exception("Failed to run accounting sync batch", extra={"error": str(e)})
 
     async def run_subunit_updates(self) -> None:
@@ -679,6 +779,7 @@ class SchedulerService:
         Note: VACUUM cannot run inside a transaction, so we use autocommit mode.
         """
         logger.info("Starting database maintenance (VACUUM ANALYZE)...")
+        self._log_memory_snapshot("db_maintenance", "start", tables=len(MAINTENANCE_TABLES))
         try:
             # VACUUM must run outside a transaction - use raw connection with autocommit
             async with engine.connect() as conn:
@@ -691,7 +792,9 @@ class SchedulerService:
                     "Database maintenance completed",
                     extra={"tables": len(MAINTENANCE_TABLES)},
                 )
+                self._log_memory_snapshot("db_maintenance", "done", tables=len(MAINTENANCE_TABLES))
         except Exception as e:
+            self._log_memory_snapshot("db_maintenance", "failed", error=str(e), tables=len(MAINTENANCE_TABLES))
             logger.exception("Database maintenance failed", extra={"error": str(e)})
 
     async def check_disk_usage(self) -> None:

@@ -203,6 +203,7 @@ async def test_run_company_updates(mock_session_local):
     scheduler_service = SchedulerService()
 
     with (
+        patch.object(scheduler_service, "_log_memory_snapshot") as mock_memory,
         patch("services.update_service.UpdateService") as MockUpdateService,
         patch("repositories.system_repository.SystemRepository") as MockSystemRepo,
     ):
@@ -224,6 +225,9 @@ async def test_run_company_updates(mock_session_local):
 
         assert mock_update.fetch_updates.called
         assert mock_system.set_state.called
+        phases = [call.args[:2] for call in mock_memory.call_args_list]
+        assert ("company_updates", "start") in phases
+        assert ("company_updates", "done") in phases
 
 
 @pytest.mark.asyncio
@@ -235,13 +239,21 @@ async def test_sync_accounting_batch(mock_session_local):
     mock_db.execute = AsyncMock(return_value=patch("sqlalchemy.engine.Result").start())
     mock_db.execute.return_value.all.return_value = [("123456789",), ("987654321",)]
 
-    with patch("services.update_service.UpdateService") as MockUpdateService:
+    with (
+        patch.object(scheduler_service, "_log_memory_snapshot") as mock_memory,
+        patch("services.update_service.UpdateService") as MockUpdateService,
+    ):
         mock_update = MockUpdateService.return_value
         mock_update._fetch_and_persist_financials = AsyncMock()
 
         await scheduler_service.sync_accounting_batch()
 
         assert mock_update._fetch_and_persist_financials.call_count == 2
+        phases = [call.args[:2] for call in mock_memory.call_args_list]
+        assert ("accounting_sync", "start") in phases
+        assert ("accounting_sync", "selected") in phases
+        assert ("accounting_sync", "progress") in phases
+        assert ("accounting_sync", "done") in phases
 
 
 @pytest.mark.asyncio
@@ -303,10 +315,23 @@ async def test_run_db_maintenance():
         mock_engine.connect.return_value.__aenter__.return_value = conn_mock
 
         scheduler_service = SchedulerService()
-        await scheduler_service.run_db_maintenance()
+        with patch.object(scheduler_service, "_log_memory_snapshot") as mock_memory:
+            await scheduler_service.run_db_maintenance()
 
         assert conn_mock.execution_options.called
         assert conn_options_mock.execute.called
+        phases = [call.args[:2] for call in mock_memory.call_args_list]
+        assert ("db_maintenance", "start") in phases
+        assert ("db_maintenance", "done") in phases
+
+
+def test_log_memory_snapshot_handles_reserved_logging_keys():
+    scheduler_service = SchedulerService()
+
+    with patch("services.scheduler.logger.info") as mock_info:
+        scheduler_service._log_memory_snapshot("company_updates", "done", created=1, updated=2)
+
+    assert mock_info.called
 
 
 @pytest.mark.asyncio
