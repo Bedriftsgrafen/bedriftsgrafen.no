@@ -3,6 +3,7 @@ import resource
 import shutil
 import time
 from datetime import UTC, datetime, timedelta
+from functools import wraps
 
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from apscheduler.triggers.cron import CronTrigger
@@ -43,7 +44,21 @@ class SchedulerService:
 
     def __init__(self) -> None:
         self.scheduler = AsyncIOScheduler()
+        self._active_jobs: set[str] = set()
         self._setup_jobs()
+
+    def _wrap_job(self, job_id: str, func):
+        """Track scheduler-owned job activity for lightweight diagnostics."""
+
+        @wraps(func)
+        async def runner(*args, **kwargs):
+            self._active_jobs.add(job_id)
+            try:
+                return await func(*args, **kwargs)
+            finally:
+                self._active_jobs.discard(job_id)
+
+        return runner
 
     def _setup_jobs(self) -> None:
         now = datetime.now(UTC)
@@ -51,7 +66,7 @@ class SchedulerService:
         # Refresh light materialized views every 10 minutes
         # (small/fast views: company_totals, stats, orgform, financials, etc.)
         self.scheduler.add_job(
-            self.refresh_views_light,
+            self._wrap_job("refresh_views_light", self.refresh_views_light),
             trigger=IntervalTrigger(minutes=10, start_date=now + timedelta(seconds=30)),
             id="refresh_views_light",
             replace_existing=True,
@@ -63,7 +78,7 @@ class SchedulerService:
         # Refresh heavy materialized views every 60 minutes
         # (large views: industry_stats 204MB, commercial_people_mv 57MB, person_toplist_mv 120MB)
         self.scheduler.add_job(
-            self.refresh_views_heavy,
+            self._wrap_job("refresh_views_heavy", self.refresh_views_heavy),
             trigger=IntervalTrigger(minutes=60, start_date=now + timedelta(minutes=5)),
             id="refresh_views_heavy",
             replace_existing=True,
@@ -74,7 +89,7 @@ class SchedulerService:
 
         # Sync SSB population data weekly (Sundays at 03:00)
         self.scheduler.add_job(
-            self.sync_ssb_population,
+            self._wrap_job("sync_ssb_population", self.sync_ssb_population),
             trigger=CronTrigger(day_of_week="sun", hour=3, minute=0),
             id="sync_ssb_population",
             replace_existing=True,
@@ -84,7 +99,7 @@ class SchedulerService:
 
         # Geocode companies without coordinates (every 15 minutes)
         self.scheduler.add_job(
-            self.geocode_companies_batch,
+            self._wrap_job("geocode_companies_batch", self.geocode_companies_batch),
             trigger=IntervalTrigger(minutes=15),
             id="geocode_companies",
             replace_existing=True,
@@ -95,7 +110,7 @@ class SchedulerService:
         # Update company metadata incrementally (every 15 minutes)
         # Replaces legacy bedriftsgrafen-company-updates.service
         self.scheduler.add_job(
-            self.run_company_updates,
+            self._wrap_job("run_company_updates", self.run_company_updates),
             trigger=IntervalTrigger(minutes=15),
             id="company_updates",
             replace_existing=True,
@@ -106,7 +121,7 @@ class SchedulerService:
         # Sync accounting data for companies (every 5 minutes)
         # Staggered: Start 2 minutes after launch
         self.scheduler.add_job(
-            self.sync_accounting_batch,
+            self._wrap_job("sync_accounting_batch", self.sync_accounting_batch),
             trigger=IntervalTrigger(minutes=5, start_date=now + timedelta(minutes=2)),
             id="accounting_sync",
             replace_existing=True,
@@ -117,7 +132,7 @@ class SchedulerService:
         # Update subunit metadata (every 15 minutes)
         # Staggered: Start 7 minutes after launch
         self.scheduler.add_job(
-            self.run_subunit_updates,
+            self._wrap_job("run_subunit_updates", self.run_subunit_updates),
             trigger=IntervalTrigger(minutes=15, start_date=now + timedelta(minutes=7)),
             id="subunit_updates",
             replace_existing=True,
@@ -128,7 +143,7 @@ class SchedulerService:
         # Update role metadata (every 30 minutes)
         # Staggered: Start 10 minutes after launch
         self.scheduler.add_job(
-            self.run_role_updates,
+            self._wrap_job("run_role_updates", self.run_role_updates),
             trigger=IntervalTrigger(minutes=30, start_date=now + timedelta(minutes=10)),
             id="role_updates",
             replace_existing=True,
@@ -138,7 +153,7 @@ class SchedulerService:
 
         # Database maintenance daily at 03:00 (VACUUM ANALYZE)
         self.scheduler.add_job(
-            self.run_db_maintenance,
+            self._wrap_job("run_db_maintenance", self.run_db_maintenance),
             trigger=CronTrigger(hour=3, minute=0),
             id="db_maintenance",
             replace_existing=True,
@@ -149,7 +164,7 @@ class SchedulerService:
         # Retry failed syncs every hour
         # Staggered: Start 20 minutes after launch
         self.scheduler.add_job(
-            self.retry_failed_syncs,
+            self._wrap_job("retry_failed_syncs", self.retry_failed_syncs),
             trigger=IntervalTrigger(hours=1, start_date=now + timedelta(minutes=20)),
             id="retry_syncs",
             replace_existing=True,
@@ -159,7 +174,7 @@ class SchedulerService:
 
         # Check disk usage daily at 06:01
         self.scheduler.add_job(
-            self.check_disk_usage,
+            self._wrap_job("disk_check", self.check_disk_usage),
             trigger=CronTrigger(hour=6, minute=1),
             id="disk_check",
             replace_existing=True,
@@ -169,7 +184,7 @@ class SchedulerService:
 
         # Run proactive repairs daily at 04:00
         self.scheduler.add_job(
-            self.run_ghost_repair,
+            self._wrap_job("run_ghost_repair", self.run_ghost_repair),
             trigger=CronTrigger(hour=4, minute=0),
             id="ghost_repair",
             replace_existing=True,
@@ -179,7 +194,7 @@ class SchedulerService:
 
         # Run role backfill weekly (Sundays at 04:30)
         self.scheduler.add_job(
-            self.run_role_backfill,
+            self._wrap_job("role_backfill", self.run_role_backfill),
             trigger=CronTrigger(day_of_week="sun", hour=4, minute=30),
             id="role_backfill",
             replace_existing=True,
@@ -189,7 +204,7 @@ class SchedulerService:
 
         # Warm sitemap cache every 6 hours
         self.scheduler.add_job(
-            self.warm_sitemap_cache,
+            self._wrap_job("warm_sitemap_cache", self.warm_sitemap_cache),
             trigger=IntervalTrigger(hours=6),
             id="warm_sitemap_cache",
             replace_existing=True,
@@ -200,7 +215,7 @@ class SchedulerService:
         # Purge deleted companies daily at 02:30
         # Removes companies with slettedato from Brønnøysund (GDPR compliance)
         self.scheduler.add_job(
-            self.purge_deleted_companies,
+            self._wrap_job("purge_deleted_companies", self.purge_deleted_companies),
             trigger=CronTrigger(hour=2, minute=30),
             id="purge_deleted",
             replace_existing=True,
@@ -442,15 +457,20 @@ class SchedulerService:
             )
             return
 
+        active_scheduler_jobs = (
+            ",".join(sorted(job_id for job_id in self._active_jobs if not job_id.startswith("refresh_views_")))
+            or "none"
+        )
         active_refreshes = ";".join(f"{pid}:{self._compact_query(str(query))}" for pid, query in refresh_rows) or "none"
         logger.warning(
-            "mv_refresh_diag kind=%s view=%s duration_ms=%s timeout_ms=%s active_refreshes=%s parallel_workers=%s",
+            "mv_refresh_diag kind=%s view=%s duration_ms=%s timeout_ms=%s active_refreshes=%s parallel_workers=%s active_scheduler_jobs=%s",
             kind,
             view_name,
             duration_ms,
             timeout_ms,
             active_refreshes,
             parallel_workers,
+            active_scheduler_jobs,
         )
 
     async def _run_refresh_batch(self, views: list[tuple[str, bool, int]], kind: str) -> None:

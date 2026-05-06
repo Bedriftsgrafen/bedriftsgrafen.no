@@ -154,6 +154,36 @@ async def test_run_refresh_batch_releases_lock_when_refresh_fails(mock_engine):
 
 
 @pytest.mark.asyncio
+async def test_log_refresh_failure_snapshot_includes_active_scheduler_jobs(mock_engine):
+    scheduler_service = SchedulerService()
+    scheduler_service._active_jobs.update({"run_company_updates", "sync_accounting_batch", "refresh_views_light"})
+
+    connect_ctx = AsyncMock()
+    lock_conn = AsyncMock()
+    connect_ctx.__aenter__.return_value = lock_conn
+    connect_ctx.__aexit__.return_value = None
+    mock_engine.connect = MagicMock(return_value=connect_ctx)
+
+    refresh_result = MagicMock()
+    refresh_result.all.return_value = []
+    parallel_result = MagicMock()
+    parallel_result.scalar_one.return_value = 0
+    lock_conn.execute = AsyncMock(side_effect=[refresh_result, parallel_result])
+
+    with patch("services.scheduler.logger.warning") as mock_warning:
+        await scheduler_service._log_refresh_failure_snapshot(
+            kind="light",
+            view_name="company_totals",
+            duration_ms=30_001,
+            timeout_ms=30_000,
+        )
+
+    logged_args = mock_warning.call_args.args
+    assert "active_scheduler_jobs=%s" in logged_args[0]
+    assert logged_args[-1] == "run_company_updates,sync_accounting_batch"
+
+
+@pytest.mark.asyncio
 async def test_sync_ssb_population(mock_session_local):
     scheduler_service = SchedulerService()
 
