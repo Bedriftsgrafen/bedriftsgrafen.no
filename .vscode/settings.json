@@ -1,0 +1,44 @@
+{
+  "python.analysis.extraPaths": [
+    "./backend"
+  ],
+  "python.defaultInterpreterPath": "${workspaceFolder}/backend/.venv/bin/python",
+  "python.testing.pytestEnabled": true,
+  "python.testing.unittestEnabled": false,
+  "python.testing.cwd": "${workspaceFolder}/backend",
+  "python.testing.pytestArgs": [
+    "tests"
+  ],
+  "eslint.workingDirectories": [
+    {
+      "directory": "./frontend",
+      "changeProcessCWD": true
+    }
+  ],
+  "editor.rulers": [
+    120
+  ],
+  "git.repositoryScanMaxDepth": 2,
+  "files.watcherExclude": {
+    "**/backend/.venv/**": true,
+    "**/backend/.mypy_cache/**": true,
+    "**/backend/.pytest_cache/**": true,
+    "**/backend/.ruff_cache/**": true,
+    "**/backend/__pycache__/**": true,
+    "**/frontend/node_modules/**": true,
+    "**/postgres_data/**": true,
+    "**/downloads/**": true,
+    "**/logs/archive/**": true
+  },
+  "search.exclude": {
+    "**/backend/.venv/**": true,
+    "**/backend/.mypy_cache/**": true,
+    "**/backend/.pytest_cache/**": true,
+    "**/backend/.ruff_cache/**": true,
+    "**/backend/__pycache__/**": true,
+    "**/frontend/node_modules/**": true,
+    "**/postgres_data/**": true,
+    "**/downloads/**": true,
+    "**/logs/archive/**": true
+  }
+}
