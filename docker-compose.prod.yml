@@ -81,7 +81,7 @@ services:
       resources:
         limits:
           cpus: '0.50'
-          memory: 1G
+          memory: 1280M
         reservations:
           memory: 128M
 
@@ -134,7 +134,7 @@ services:
       resources:
         limits:
           cpus: '1.0'
-          memory: 1536M
+          memory: 1792M
         reservations:
           memory: 256M
     healthcheck:
