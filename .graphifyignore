@@ -1,0 +1,42 @@
+# Canonical agent graph: prioritize production/runtime architecture.
+
+# Generated and local tooling state
+**/graphify-out/
+node_modules/
+.venv/
+venv/
+env/
+__pycache__/
+.mypy_cache/
+.pytest_cache/
+.ruff_cache/
+.lighthouseci/
+coverage/
+htmlcov/
+build/
+dist/
+.next/
+downloads/
+logs/
+postgres_data/
+data/
+
+# Local agent/editor state
+.agent/
+.agents/
+.claude/
+.gemini/
+.vscode/
+
+# Keep the canonical graph focused on runtime architecture first.
+backend/tests/
+frontend/src/**/__tests__/
+frontend/src/**/*.test.*
+frontend/src/**/*.spec.*
+backend/alembic/
+backend/maintenance/
+
+# Skip internal planning docs in the baseline graph.
+docs/internal/
+backend/docs/
+FUTURE_IDEAS.md

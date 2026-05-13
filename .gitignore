@@ -207,6 +207,14 @@ static/uploads/
 .gemini/
 .claude/
 .agent/legacy/
+.agents/
+
+# Graphify: keep one canonical root graph for agents, ignore the rest.
+**/graphify-out/
+!/graphify-out/
+graphify-out/**
+!graphify-out/graph.json
+!graphify-out/GRAPH_REPORT.md
 
 CLAUDE.md
 

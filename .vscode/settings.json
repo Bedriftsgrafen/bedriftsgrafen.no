@@ -26,6 +26,7 @@
     "**/backend/.ruff_cache/**": true,
     "**/backend/__pycache__/**": true,
     "**/frontend/node_modules/**": true,
+    "**/graphify-out/**": true,
     "**/postgres_data/**": true,
     "**/downloads/**": true,
     "**/logs/archive/**": true
@@ -37,6 +38,7 @@
     "**/backend/.ruff_cache/**": true,
     "**/backend/__pycache__/**": true,
     "**/frontend/node_modules/**": true,
+    "**/graphify-out/**": true,
     "**/postgres_data/**": true,
     "**/downloads/**": true,
     "**/logs/archive/**": true
