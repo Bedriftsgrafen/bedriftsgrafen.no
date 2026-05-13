@@ -173,8 +173,8 @@ async def test_get_paginated_orgnrs(repo, mock_db_session):
     mock_result = MagicMock()
     mock_result.__iter__ = lambda self: iter(
         [
-            MagicMock(orgnr="100000001", updated_at="2024-01-01"),
-            MagicMock(orgnr="100000002", updated_at="2024-01-02"),
+            MagicMock(orgnr="100000001"),
+            MagicMock(orgnr="100000002"),
         ]
     )
     mock_db_session.execute.return_value = mock_result
@@ -182,8 +182,8 @@ async def test_get_paginated_orgnrs(repo, mock_db_session):
     result = await repo.get_paginated_orgnrs(offset=0, limit=100)
 
     assert len(result) == 2
-    assert result[0] == ("100000001", "2024-01-01")
-    assert result[1] == ("100000002", "2024-01-02")
+    assert result[0] == "100000001"
+    assert result[1] == "100000002"
 
 
 @pytest.mark.asyncio
@@ -192,7 +192,7 @@ async def test_get_paginated_orgnrs_with_keyset(repo, mock_db_session):
     mock_result = MagicMock()
     mock_result.__iter__ = lambda self: iter(
         [
-            MagicMock(orgnr="100000003", updated_at="2024-01-03"),
+            MagicMock(orgnr="100000003"),
         ]
     )
     mock_db_session.execute.return_value = mock_result
@@ -200,7 +200,7 @@ async def test_get_paginated_orgnrs_with_keyset(repo, mock_db_session):
     result = await repo.get_paginated_orgnrs(after_orgnr="100000002", limit=100)
 
     assert len(result) == 1
-    assert result[0][0] == "100000003"
+    assert result[0] == "100000003"
 
 
 @pytest.mark.asyncio

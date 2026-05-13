@@ -171,10 +171,9 @@ async def get_paginated_sitemap(
 
         companies = await seo_service.get_paginated_orgnrs(offset=offset, limit=limit, after_orgnr=after_orgnr)
 
-        for orgnr, updated_at in companies:
+        for orgnr in companies:
             xml_content += "  <url>\n"
             xml_content += f"    <loc>{BASE_URL}/virksomhet/{orgnr}</loc>\n"
-            xml_content += f"    <lastmod>{format_date(updated_at)}</lastmod>\n"
             xml_content += "    <changefreq>weekly</changefreq>\n"
             xml_content += "    <priority>0.8</priority>\n"
             xml_content += "  </url>\n"

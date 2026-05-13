@@ -391,7 +391,7 @@ class SEOService:
         offset: int = 0,
         limit: int = 50000,
         after_orgnr: str | None = None,
-    ) -> list[tuple[str, Any]]:
+    ) -> list[str]:
         """Get paginated org numbers for sitemap generation."""
         return await self.company_repo.get_paginated_orgnrs(offset=offset, limit=limit, after_orgnr=after_orgnr)
 

@@ -210,21 +210,22 @@ class QueryMixin:
 
     async def get_paginated_orgnrs(
         self, offset: int = 0, limit: int = 50000, after_orgnr: str | None = None
-    ) -> list[tuple[str, str | None]]:
+    ) -> list[str]:
         """
-        Fetch paginated orgnrs and their update timestamps from raw_data.
-        Optimized for sitemap generation to avoid large object overhead.
+        Fetch paginated orgnrs for sitemap generation.
+
+        Keep this query orgnr-only so Postgres can stay on the primary-key path.
+        The JSON field previously used for company-level lastmod is not populated
+        in production and turns this into a much slower heap-heavy scan.
+
         Supports both OFFSET (slow) and Keyset (fast) pagination.
         """
-        stmt = select(
-            models.Company.orgnr,
-            models.Company.raw_data["oppdatert"].astext.label("updated_at"),
-        ).order_by(models.Company.orgnr)
+        stmt = select(models.Company.orgnr).order_by(models.Company.orgnr)
 
         stmt = stmt.where(models.Company.orgnr > after_orgnr) if after_orgnr else stmt.offset(offset)
         stmt = stmt.limit(limit)
         result = await self.db.execute(stmt)
-        return [(row.orgnr, row.updated_at) for row in result]
+        return [row.orgnr for row in result]
 
     async def get_sitemap_anchors(self, page_size: int = 50000, first_page_offset: int = 0) -> list[str]:
         """
