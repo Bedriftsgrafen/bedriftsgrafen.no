@@ -11,7 +11,7 @@ import { EmptyState } from '../EmptyState'
 import { YearSelector } from './YearSelector'
 import { CapitalInfoCard } from './CapitalInfoCard'
 import { AffiliateBanner } from '../ads/AffiliateBanner'
-import { CONTACT_EMAIL } from '../../constants/contact'
+import { getContactEmailHref } from '../../constants/contact'
 import { AFFILIATIONS } from '../../constants/affiliations'
 
 // Constants
@@ -41,11 +41,13 @@ function getAdConfig(company: CompanyWithAccounting) {
     return {
       id: "premium_banking_financials",
       title: "Tilbyr dere Private Banking?",
-      description: `Nå ut til virksomheter med høy omsetning. Denne plassen er ledig for samarbeid. Kontakt oss på ${CONTACT_EMAIL}.`,
-      buttonText: "Send e-post",
+      description: "Nå ut til virksomheter med høy omsetning. Denne plassen er ledig for samarbeid med Bedriftsgrafen.no.",
+      buttonText: "Kontakt Bedriftsgrafen",
       icon: Wallet,
       variant: "banking" as const,
-      link: `mailto:${CONTACT_EMAIL}`
+      link: getContactEmailHref('Partnerskap med Bedriftsgrafen.no'),
+      contactIntent: "partnership" as const,
+      requiresContactConfirmation: true,
     }
   }
 
@@ -54,7 +56,9 @@ function getAdConfig(company: CompanyWithAccounting) {
     const aff = AFFILIATIONS.TJENESTETORGET_ACCOUNTANT
     return {
       ...aff,
-      id: `financials_${aff.id}`
+      id: `financials_${aff.id}`,
+      contactIntent: undefined,
+      requiresContactConfirmation: undefined,
     }
   }
 
@@ -162,6 +166,8 @@ export const FinancialsTab = React.memo(function FinancialsTab({
                 link={adConfig.link}
                 icon={adConfig.icon}
                 variant={adConfig.variant}
+                contactIntent={adConfig.contactIntent}
+                requiresContactConfirmation={adConfig.requiresContactConfirmation}
                 isPlaceholder={adConfig.variant === 'banking'}
               />
             </div>

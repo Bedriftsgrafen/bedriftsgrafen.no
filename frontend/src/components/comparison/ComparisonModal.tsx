@@ -7,7 +7,7 @@ import { formatLargeNumber } from '../../utils/formatters'
 import { formatNace } from '../../utils/nace'
 import type { CompanyWithAccounting } from '../../types'
 import { AffiliateBanner } from '../ads/AffiliateBanner'
-import { CONTACT_EMAIL } from '../../constants/contact'
+import { getContactEmailHref } from '../../constants/contact'
 
 /** Fetched company data for comparison */
 interface ComparisonData {
@@ -239,11 +239,12 @@ export const ComparisonModal = memo(function ComparisonModal() {
                             bannerId="banking_comparison_modal"
                             placement="comparison_modal"
                             title="Vil du nå virksomheter i vekst?"
-                            description={`Denne plassen er ledig for en bankpartner. Kontakt oss på ${CONTACT_EMAIL} for samarbeid.`}
-                            buttonText="Send e-post"
-                            link={`mailto:${CONTACT_EMAIL}`}
+                            description="Denne plassen er ledig for en bankpartner på Bedriftsgrafen.no."
+                            buttonText="Kontakt Bedriftsgrafen"
+                            link={getContactEmailHref('Partnerskap med Bedriftsgrafen.no')}
                             icon={Wallet}
                             variant="banking"
+                            contactIntent="partnership"
                             isPlaceholder
                         />
                     </div>

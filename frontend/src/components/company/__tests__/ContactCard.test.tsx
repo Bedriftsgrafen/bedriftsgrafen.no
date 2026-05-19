@@ -48,9 +48,12 @@ describe('ContactCard', () => {
         expect(screen.queryByText('Nettside')).not.toBeInTheDocument()
     })
 
-    it('returns null when no contact info is provided', () => {
-        const { container } = render(<ContactCard />)
-        expect(container.firstChild).toBeNull()
+    it('shows an empty state when no contact info is provided', () => {
+        render(<ContactCard companyName="Test AS" />)
+
+        expect(screen.getByText('Kontaktinformasjon for virksomheten')).toBeInTheDocument()
+        expect(screen.getByText('Test AS')).toBeInTheDocument()
+        expect(screen.getByText('Ingen registrert e-post, telefon eller nettside for denne virksomheten.')).toBeInTheDocument()
     })
 
     it('renders all contact fields when provided', () => {

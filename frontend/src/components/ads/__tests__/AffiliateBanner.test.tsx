@@ -1,8 +1,9 @@
-import { describe, expect, it, vi, beforeEach } from 'vitest'
+import { describe, expect, it, vi, beforeEach, afterEach } from 'vitest'
 import { render, screen, fireEvent } from '@testing-library/react'
 import { AffiliateBanner } from '../AffiliateBanner'
 import { trackAffiliateClick } from '../../../utils/analytics'
 import { Calculator } from 'lucide-react'
+import { CONTACT_EMAIL } from '../../../constants/contact'
 
 // Mock analytics
 vi.mock('../../../utils/analytics', () => ({
@@ -23,6 +24,10 @@ describe('AffiliateBanner', () => {
 
     beforeEach(() => {
         vi.clearAllMocks()
+    })
+
+    afterEach(() => {
+        window.history.pushState({}, '', '/')
     })
 
     it('renders with correct content', () => {
@@ -67,5 +72,40 @@ describe('AffiliateBanner', () => {
         fireEvent.click(link)
         // Should still track the click (for internal placeholders to see interest)
         expect(trackAffiliateClick).toHaveBeenCalled()
+    })
+
+    it('opens confirmation modal for Bedriftsgrafen contact links', () => {
+        render(<AffiliateBanner {...defaultProps} link={`mailto:${CONTACT_EMAIL}`} buttonText="Kontakt Bedriftsgrafen" />)
+
+        const button = screen.getByRole('button', { name: 'Kontakt Bedriftsgrafen' })
+        fireEvent.click(button)
+
+        expect(trackAffiliateClick).toHaveBeenCalledWith(
+            'test_banner',
+            'accounting',
+            'test_placement'
+        )
+        expect(screen.getByRole('heading', { name: 'Partnerskap med Bedriftsgrafen.no' })).toBeInTheDocument()
+        expect(screen.getByText('Du kontakter Bedriftsgrafen.no, ikke en virksomhet eller person omtalt på siden.')).toBeInTheDocument()
+    })
+
+    it('recognizes Bedriftsgrafen contact links with subjects', () => {
+        render(<AffiliateBanner {...defaultProps} link={`mailto:${CONTACT_EMAIL}?subject=Partnerskap`} buttonText="Kontakt Bedriftsgrafen" />)
+
+        fireEvent.click(screen.getByRole('button', { name: 'Kontakt Bedriftsgrafen' }))
+
+        expect(screen.getByRole('heading', { name: 'Partnerskap med Bedriftsgrafen.no' })).toBeInTheDocument()
+    })
+
+    it('inherits company-page confirmation for Bedriftsgrafen contact links', () => {
+        window.history.pushState({}, '', '/virksomhet/123456789')
+        render(<AffiliateBanner {...defaultProps} link={`mailto:${CONTACT_EMAIL}`} buttonText="Kontakt Bedriftsgrafen" />)
+
+        fireEvent.click(screen.getByRole('button', { name: 'Kontakt Bedriftsgrafen' }))
+
+        expect(screen.getByText('Du kontakter Bedriftsgrafen.no, ikke virksomheten på siden.')).toBeInTheDocument()
+
+        const emailLink = screen.getByRole('link', { name: `Åpne e-post til ${CONTACT_EMAIL}` })
+        expect(emailLink).toHaveAttribute('aria-disabled', 'true')
     })
 })

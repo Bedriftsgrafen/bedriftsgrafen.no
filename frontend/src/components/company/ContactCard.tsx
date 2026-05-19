@@ -1,6 +1,7 @@
 import { Phone, Smartphone, Mail, Globe } from 'lucide-react'
 
 interface ContactCardProps {
+    companyName?: string
     telefon?: string
     mobil?: string
     epostadresse?: string
@@ -11,10 +12,8 @@ interface ContactCardProps {
  * ContactCard - Displays company contact information with clickable links.
  * Renders phone (tel:), mobile (tel:), email (mailto:), and website (https://) links.
  */
-export function ContactCard({ telefon, mobil, epostadresse, hjemmeside }: ContactCardProps) {
-    // Don't render if no contact info
+export function ContactCard({ companyName, telefon, mobil, epostadresse, hjemmeside }: ContactCardProps) {
     const hasContactInfo = telefon || mobil || epostadresse || hjemmeside
-    if (!hasContactInfo) return null
 
     // Clean phone number for tel: link (remove spaces)
     const formatPhoneHref = (phone: string) => `tel:${phone.replace(/\s/g, '')}`
@@ -25,11 +24,19 @@ export function ContactCard({ telefon, mobil, epostadresse, hjemmeside }: Contac
 
     return (
         <div className="bg-white rounded-lg border border-gray-200 p-6 shadow-sm">
-            <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
+            <h3 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
                 <Phone className="h-5 w-5 text-green-600" />
-                Kontaktinformasjon
+                Kontaktinformasjon for virksomheten
             </h3>
-            <div className="space-y-3">
+            {companyName && <p className="mt-1 text-sm text-gray-500">{companyName}</p>}
+
+            {!hasContactInfo && (
+                <div className="mt-4 rounded-lg border border-dashed border-gray-200 bg-gray-50 p-4 text-sm text-gray-600">
+                    Ingen registrert e-post, telefon eller nettside for denne virksomheten.
+                </div>
+            )}
+
+            <div className="mt-4 space-y-3">
                 {telefon && (
                     <div className="flex items-center gap-3">
                         <Phone className="h-4 w-4 text-gray-400" />

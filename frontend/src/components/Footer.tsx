@@ -1,5 +1,6 @@
 import { Database, Mail } from 'lucide-react'
 import { CONTACT_EMAIL } from '../constants/contact'
+import { BedriftsgrafenContactLink } from './contact'
 
 const CURRENT_YEAR = new Date().getFullYear()
 
@@ -12,12 +13,12 @@ export function Footer() {
           <div>
             <h2 className="text-white font-semibold mb-3">Samarbeid</h2>
             <div className="space-y-1 text-sm">
-              <a href={`mailto:${CONTACT_EMAIL}`} className="text-gray-400 hover:text-blue-400 flex items-center gap-2 transition-colors py-1.5">
+              <BedriftsgrafenContactLink intent="advertising" className="text-gray-400 hover:text-blue-400 flex items-center gap-2 transition-colors py-1.5">
                 Annonsere her?
-              </a>
-              <a href={`mailto:${CONTACT_EMAIL}`} className="text-gray-400 hover:text-blue-400 flex items-center gap-2 transition-colors py-1.5">
+              </BedriftsgrafenContactLink>
+              <BedriftsgrafenContactLink intent="partnership" className="text-gray-400 hover:text-blue-400 flex items-center gap-2 transition-colors py-1.5">
                 Bli partner
-              </a>
+              </BedriftsgrafenContactLink>
             </div>
           </div>
 
@@ -77,16 +78,15 @@ export function Footer() {
 
           {/* Contact */}
           <div>
-            <h2 className="text-white font-semibold mb-3">Kontakt Bedriftsgrafen</h2>
-            <p className="text-xs text-gray-500 mb-2">Spørsmål om nettsiden?</p>
+            <h2 className="text-white font-semibold mb-3">Kontakt Bedriftsgrafen.no</h2>
+            <p className="text-xs text-gray-500 mb-2">Kun spørsmål om nettsiden, data, feil, annonsering eller samarbeid.</p>
             <div className="space-y-1">
-              <a
-                href={`mailto:${CONTACT_EMAIL}`}
+              <BedriftsgrafenContactLink
                 className="text-sm text-gray-400 hover:text-blue-400 flex items-center gap-2 py-1.5"
               >
                 <Mail className="h-4 w-4" />
                 {CONTACT_EMAIL}
-              </a>
+              </BedriftsgrafenContactLink>
               <a
                 href="https://github.com/Bedriftsgrafen/bedriftsgrafen.no"
                 target="_blank"

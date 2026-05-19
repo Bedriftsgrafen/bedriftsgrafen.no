@@ -379,6 +379,7 @@ export function OverviewTab({ company, onOpenIndustry }: OverviewTabProps) {
             {/* Contact Card - below map */}
             <div className="mt-6">
               <ContactCard
+                companyName={company.navn ?? undefined}
                 telefon={company.telefon}
                 mobil={company.mobil}
                 epostadresse={company.epostadresse}

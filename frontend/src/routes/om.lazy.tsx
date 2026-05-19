@@ -3,6 +3,7 @@ import { createLazyFileRoute } from '@tanstack/react-router'
 import { CONTACT_EMAIL } from '../constants/contact'
 import { Database, TrendingUp, Shield, Heart, Layout, Server, Cloud } from 'lucide-react'
 import { SEOHead } from '../components/layout'
+import { BedriftsgrafenContactLink } from '../components/contact'
 
 export const Route = createLazyFileRoute('/om')({
     component: AboutPage,
@@ -185,9 +186,9 @@ function AboutPage() {
                         <div className="border-t border-gray-200 pt-6">
                             <p className="text-sm text-gray-700">
                                 Har du spørsmål eller tilbakemeldinger? Send en e-post til{' '}
-                                <a href={`mailto:${CONTACT_EMAIL}`} className="text-blue-600 hover:underline font-medium">
+                                <BedriftsgrafenContactLink className="inline text-blue-600 hover:underline font-medium">
                                     {CONTACT_EMAIL}
-                                </a>
+                                </BedriftsgrafenContactLink>
                             </p>
                         </div>
                     </div>

@@ -3,7 +3,7 @@ import { createLazyFileRoute } from '@tanstack/react-router'
 import { useCallback, useEffect } from 'react'
 import { SEOHead, Breadcrumbs } from '../components/layout'
 import { FilterPanel } from '../components/FilterPanel'
-import { CONTACT_EMAIL } from '../constants/contact'
+import { getContactEmailHref } from '../constants/contact'
 import { CompanyList } from '../components/CompanyList'
 import { Pagination } from '../components/common'
 import { ExportButton } from '../components/explorer'
@@ -189,10 +189,11 @@ export function UtforskPage() {
                 bannerId="utforsk_bottom_placeholder"
                 placement="utforsk_bottom"
                 title="Vil du nå ut til norske virksomheter?"
-                description="Vi åpner nå for utvalgte samarbeidspartnere. Ta kontakt for å vite mer om mulighetene."
-                buttonText="Bli partner"
-                link={`mailto:${CONTACT_EMAIL}`}
+                description="Vi åpner nå for utvalgte samarbeidspartnere på Bedriftsgrafen.no."
+                buttonText="Kontakt Bedriftsgrafen"
+                link={getContactEmailHref('Partnerskap med Bedriftsgrafen.no')}
                 variant="general"
+                contactIntent="partnership"
             />
         </>
     )

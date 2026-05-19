@@ -7,6 +7,8 @@
 import { memo, useCallback, type MouseEvent } from 'react'
 import { LucideIcon, ExternalLink, Lightbulb } from 'lucide-react'
 import { trackAffiliateClick } from '../../utils/analytics'
+import { isBedriftsgrafenContactHref } from '../../constants/contact'
+import { BedriftsgrafenContactLink, type BedriftsgrafenContactContext, type BedriftsgrafenContactIntent } from '../contact'
 
 type BannerVariant = 'accounting' | 'banking' | 'general'
 
@@ -25,6 +27,9 @@ interface AffiliateBannerProps {
     variant: BannerVariant
     /** If true, shows as a placeholder banner */
     isPlaceholder?: boolean
+    contactIntent?: BedriftsgrafenContactIntent
+    contactContext?: BedriftsgrafenContactContext
+    requiresContactConfirmation?: boolean
 }
 
 const VARIANT_STYLES: Record<BannerVariant, {
@@ -76,6 +81,9 @@ export const AffiliateBanner = memo(function AffiliateBanner({
     logo,
     variant,
     isPlaceholder = false,
+    contactIntent = 'partnership',
+    contactContext,
+    requiresContactConfirmation,
 }: AffiliateBannerProps) {
     const styles = VARIANT_STYLES[variant]
 
@@ -89,7 +97,13 @@ export const AffiliateBanner = memo(function AffiliateBanner({
         }
     }, [bannerId, variant, placement, isPlaceholder, link])
 
+    const handleContactClick = useCallback(() => {
+        trackAffiliateClick(bannerId, variant, placement)
+    }, [bannerId, variant, placement])
+
     const isInteractive = link !== '#'
+    const isBedriftsgrafenContact = isBedriftsgrafenContactHref(link)
+    const buttonClassName = `inline-flex items-center gap-1.5 px-4 py-2 text-sm font-medium text-white rounded-lg transition-colors ${styles.buttonBg} ${styles.buttonHover} ${!isInteractive ? 'cursor-default opacity-75' : ''}`
 
     return (
         <div
@@ -125,17 +139,28 @@ export const AffiliateBanner = memo(function AffiliateBanner({
                         {description}
                     </p>
 
-                    {/* CTA Button */}
-                    <a
-                        href={link}
-                        target={isInteractive && !link.startsWith('mailto:') ? '_blank' : undefined}
-                        rel={isInteractive ? 'noopener noreferrer sponsored' : undefined}
-                        onClick={handleClick}
-                        className={`inline-flex items-center gap-1.5 px-4 py-2 text-sm font-medium text-white rounded-lg transition-colors ${styles.buttonBg} ${styles.buttonHover} ${!isInteractive ? 'cursor-default opacity-75' : ''}`}
-                    >
-                        {buttonText}
-                        {isInteractive && !link.startsWith('mailto:') && <ExternalLink className="h-3.5 w-3.5" />}
-                    </a>
+                    {isBedriftsgrafenContact ? (
+                        <BedriftsgrafenContactLink
+                            className={buttonClassName}
+                            intent={contactIntent}
+                            context={contactContext}
+                            requiresConfirmation={requiresContactConfirmation}
+                            onClick={handleContactClick}
+                        >
+                            {buttonText}
+                        </BedriftsgrafenContactLink>
+                    ) : (
+                        <a
+                            href={link}
+                            target={isInteractive && !link.startsWith('mailto:') ? '_blank' : undefined}
+                            rel={isInteractive ? 'noopener noreferrer sponsored' : undefined}
+                            onClick={handleClick}
+                            className={buttonClassName}
+                        >
+                            {buttonText}
+                            {isInteractive && !link.startsWith('mailto:') && <ExternalLink className="h-3.5 w-3.5" />}
+                        </a>
+                    )}
                 </div>
             </div>
         </div>

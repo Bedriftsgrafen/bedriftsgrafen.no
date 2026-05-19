@@ -8,7 +8,7 @@ import { createRouteCode } from '../../utils/slugify';
 import { CompanyListModal } from './CompanyListModal';
 import { SummaryCard, SortableHeader, LoadingState, ErrorState } from '../common';
 import { AffiliateBanner } from '../ads/AffiliateBanner';
-import { CONTACT_EMAIL } from '../../constants/contact';
+import { getContactEmailHref } from '../../constants/contact';
 
 // ============================================================================
 // Types
@@ -475,11 +475,12 @@ export const IndustryDashboard = ({ initialNace, onSelectCompany }: IndustryDash
                     bannerId="banking_industry_dashboard"
                     placement="industry_dashboard"
                     title="Tilbyr dere virksomhetskonto?"
-                    description={`Nå ut til tusenvis av norske virksomheter. Denne annonseplassen er ledig for samarbeid. Kontakt oss på ${CONTACT_EMAIL}.`}
-                    buttonText="Send e-post"
-                    link={`mailto:${CONTACT_EMAIL}`}
+                    description="Nå ut til tusenvis av norske virksomheter. Denne annonseplassen er ledig for samarbeid med Bedriftsgrafen.no."
+                    buttonText="Kontakt Bedriftsgrafen"
+                    link={getContactEmailHref('Annonsering på Bedriftsgrafen.no')}
                     icon={Landmark}
                     variant="banking"
+                    contactIntent="advertising"
                     isPlaceholder
                 />
             </div>
