@@ -22,21 +22,23 @@ logger = logging.getLogger(__name__)
 MV_REFRESH_LOCK_NAMESPACE = 7_421
 MV_REFRESH_LOCK_RESOURCE = 1
 
-# Tables to vacuum during maintenance (allowlist for safety)
-# Regular tables that accumulate data and need periodic VACUUM ANALYZE
-MAINTENANCE_TABLES = frozenset(
-    [
-        "bedrifter",  # Companies
-        "underenheter",  # SubUnits
-        "roller",  # Roles
-        "regnskap",  # Accounting statements
-        "municipality_population",  # SSB population data
-        "system_state",  # System state tracking
-        "sync_errors",  # Sync error log
-        "bulk_import_queue",  # Bulk import queue
-        "import_batches",  # Import batch tracking (plural!)
-    ]
+# Tables to vacuum during maintenance (allowlist for safety).
+# Keep bedrifter separate so the large registry table cannot prevent smaller
+# tables from being maintained when it needs a larger maintenance budget.
+BEDRIFTER_MAINTENANCE_TABLE = "bedrifter"
+REGULAR_MAINTENANCE_TABLES = (
+    "underenheter",  # SubUnits
+    "roller",  # Roles
+    "regnskap",  # Accounting statements
+    "municipality_population",  # SSB population data
+    "system_state",  # System state tracking
+    "sync_errors",  # Sync error log
+    "bulk_import_queue",  # Bulk import queue
+    "import_batches",  # Import batch tracking (plural!)
 )
+MAINTENANCE_TABLES = (*REGULAR_MAINTENANCE_TABLES, BEDRIFTER_MAINTENANCE_TABLE)
+REGULAR_MAINTENANCE_STATEMENT_TIMEOUT_MS = 60_000
+BEDRIFTER_MAINTENANCE_STATEMENT_TIMEOUT_MS = 300_000
 
 
 class SchedulerService:
@@ -806,8 +808,22 @@ class SchedulerService:
                 # Set isolation level to autocommit for VACUUM
                 # execution_options is async on AsyncConnection (returns coroutine)
                 conn = await conn.execution_options(isolation_level="AUTOCOMMIT")
-                for table in MAINTENANCE_TABLES:
-                    await conn.execute(text(f"VACUUM ANALYZE {table}"))
+                try:
+                    for table in REGULAR_MAINTENANCE_TABLES:
+                        await self._vacuum_analyze_table(
+                            conn,
+                            table,
+                            REGULAR_MAINTENANCE_STATEMENT_TIMEOUT_MS,
+                        )
+
+                    await self._vacuum_analyze_table(
+                        conn,
+                        BEDRIFTER_MAINTENANCE_TABLE,
+                        BEDRIFTER_MAINTENANCE_STATEMENT_TIMEOUT_MS,
+                    )
+                finally:
+                    await conn.execute(text("RESET statement_timeout"))
+
                 logger.info(
                     "Database maintenance completed",
                     extra={"tables": len(MAINTENANCE_TABLES)},
@@ -816,6 +832,14 @@ class SchedulerService:
         except Exception as e:
             self._log_memory_snapshot("db_maintenance", "failed", error=str(e), tables=len(MAINTENANCE_TABLES))
             logger.exception("Database maintenance failed", extra={"error": str(e)})
+
+    async def _vacuum_analyze_table(self, conn: AsyncConnection, table: str, timeout_ms: int) -> None:
+        await conn.execute(text(f"SET statement_timeout = {timeout_ms}"))
+        await conn.execute(text(f"VACUUM ANALYZE {table}"))
+        logger.info(
+            f"db_maintenance_table_done table={table} timeout_ms={timeout_ms}",
+            extra={"table": table, "timeout_ms": timeout_ms},
+        )
 
     async def check_disk_usage(self) -> None:
         """Checks disk usage on the root partition and logs warnings if high."""
@@ -1003,20 +1027,9 @@ class SchedulerService:
         logger.info("Starting purge of deleted companies...")
         try:
             async with AsyncSessionLocal() as db:
-                # Count first
-                count_result = await db.execute(
-                    text("SELECT COUNT(*) FROM bedrifter WHERE (data->>'slettedato') IS NOT NULL")
-                )
-                total = count_result.scalar() or 0
-
-                if total == 0:
-                    logger.info("No deleted companies to purge.")
-                    return
-
-                logger.info(f"Found {total} deleted companies to purge.")
                 purged = 0
 
-                while purged < total:
+                while True:
                     batch_result = await db.execute(
                         text("SELECT orgnr FROM bedrifter WHERE (data->>'slettedato') IS NOT NULL LIMIT :limit"),
                         {"limit": BATCH_SIZE},
@@ -1026,6 +1039,8 @@ class SchedulerService:
                     if not batch_orgnrs:
                         break
 
+                    logger.info(f"Found {len(batch_orgnrs)} deleted companies to purge in next batch.")
+
                     # Cascade delete: roles -> subunits -> accounting -> company
                     await db.execute(delete(Role).where(Role.orgnr.in_(batch_orgnrs)))
                     await db.execute(delete(SubUnit).where(SubUnit.parent_orgnr.in_(batch_orgnrs)))
@@ -1034,8 +1049,11 @@ class SchedulerService:
                     await db.commit()
 
                     purged += len(batch_orgnrs)
-                    logger.info(f"Purged batch: {purged}/{total}")
+                    logger.info(f"Purged batch: {purged} deleted companies removed so far.")
 
-                logger.info(f"Purge complete: {purged} deleted companies removed.")
+                if purged == 0:
+                    logger.info("No deleted companies to purge.")
+                else:
+                    logger.info(f"Purge complete: {purged} deleted companies removed.")
         except Exception as e:
             logger.exception("Failed to purge deleted companies", extra={"error": str(e)})

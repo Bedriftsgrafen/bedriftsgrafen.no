@@ -2,7 +2,15 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
-from services.scheduler import MV_REFRESH_LOCK_NAMESPACE, MV_REFRESH_LOCK_RESOURCE, SchedulerService
+from services.scheduler import (
+    BEDRIFTER_MAINTENANCE_STATEMENT_TIMEOUT_MS,
+    BEDRIFTER_MAINTENANCE_TABLE,
+    MV_REFRESH_LOCK_NAMESPACE,
+    MV_REFRESH_LOCK_RESOURCE,
+    REGULAR_MAINTENANCE_STATEMENT_TIMEOUT_MS,
+    REGULAR_MAINTENANCE_TABLES,
+    SchedulerService,
+)
 
 
 @pytest.fixture
@@ -350,9 +358,37 @@ async def test_run_db_maintenance():
 
         assert conn_mock.execution_options.called
         assert conn_options_mock.execute.called
+        execute_sql = [str(call.args[0]) for call in conn_options_mock.execute.await_args_list]
+        vacuum_sql = [sql for sql in execute_sql if sql.startswith("VACUUM ANALYZE")]
+
+        assert vacuum_sql == [
+            *(f"VACUUM ANALYZE {table}" for table in REGULAR_MAINTENANCE_TABLES),
+            f"VACUUM ANALYZE {BEDRIFTER_MAINTENANCE_TABLE}",
+        ]
+        assert f"SET statement_timeout = {REGULAR_MAINTENANCE_STATEMENT_TIMEOUT_MS}" in execute_sql
+        assert f"SET statement_timeout = {BEDRIFTER_MAINTENANCE_STATEMENT_TIMEOUT_MS}" in execute_sql
+        assert execute_sql[-1] == "RESET statement_timeout"
         phases = [call.args[:2] for call in mock_memory.call_args_list]
         assert ("db_maintenance", "start") in phases
         assert ("db_maintenance", "done") in phases
+
+
+@pytest.mark.asyncio
+async def test_purge_deleted_companies_does_not_count_first(mock_session_local):
+    scheduler_service = SchedulerService()
+
+    mock_db = mock_session_local.return_value.__aenter__.return_value
+    empty_result = MagicMock()
+    empty_result.fetchall.return_value = []
+    mock_db.execute = AsyncMock(return_value=empty_result)
+    mock_db.commit = AsyncMock()
+
+    await scheduler_service.purge_deleted_companies()
+
+    execute_sql = [str(call.args[0]) for call in mock_db.execute.await_args_list]
+    assert not any("COUNT(*)" in sql for sql in execute_sql)
+    assert any("SELECT orgnr FROM bedrifter" in sql for sql in execute_sql)
+    mock_db.commit.assert_not_called()
 
 
 def test_log_memory_snapshot_handles_reserved_logging_keys():
