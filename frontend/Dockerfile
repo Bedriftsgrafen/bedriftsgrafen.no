@@ -47,7 +47,7 @@ RUN find /app/frontend/dist -type f \
   -exec gzip -9 -k {} \;
 
 # Production stage - for serving static files with nginx
-FROM nginx:1.29-alpine AS production
+FROM nginx:1.31-alpine AS production
 
 # OCI Image Labels
 LABEL org.opencontainers.image.title="Bedriftsgrafen Frontend"
