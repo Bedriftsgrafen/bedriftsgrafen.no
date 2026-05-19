@@ -4,7 +4,7 @@
     {
       "label": "Docker: Up (Dev)",
       "type": "shell",
-      "command": "docker compose -f docker-compose.yml -f docker-compose.dev.yml up -d --build",
+      "command": "docker compose -f docker-compose.dev.yml up -d --build",
       "presentation": {
         "reveal": "always",
         "panel": "dedicated"
@@ -14,7 +14,7 @@
     {
       "label": "Docker: Up (Prod)",
       "type": "shell",
-      "command": "docker compose up -d --build",
+      "command": "docker compose -f docker-compose.prod.yml up -d --build",
       "presentation": {
         "reveal": "always",
         "panel": "dedicated"
@@ -24,7 +24,7 @@
     {
       "label": "Docker: Up (Prod - Fast)",
       "type": "shell",
-      "command": "docker compose build frontend && docker compose up -d",
+      "command": "docker compose -f docker-compose.prod.yml build frontend && docker compose -f docker-compose.prod.yml up -d",
       "presentation": {
         "reveal": "always",
         "panel": "dedicated"
@@ -34,7 +34,7 @@
     {
       "label": "Docker: Down",
       "type": "shell",
-      "command": "docker compose down",
+      "command": "docker compose -f docker-compose.dev.yml down",
       "presentation": {
         "reveal": "always",
         "panel": "shared"

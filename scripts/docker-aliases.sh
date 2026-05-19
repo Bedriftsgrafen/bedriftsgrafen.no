@@ -33,11 +33,38 @@ alias prod-frontend-logs='docker logs -f bedriftsgrafen-frontend'
 # DEV COMMANDS
 # =============================================================================
 
+bg_open_dev_url() {
+    local url="http://localhost:5173"
+
+    if [[ -n "${SSH_CONNECTION:-}" || -n "${SSH_TTY:-}" ]]; then
+        local lan_ip
+        lan_ip="$(hostname -I 2>/dev/null | awk '{print $1}')"
+        echo ""
+        echo "Dev frontend is running on the server: $url"
+        if [[ -n "$lan_ip" ]]; then
+            echo "LAN URL from the same network: http://$lan_ip:5173"
+            echo "From your own machine, use VS Code port forwarding or:"
+            echo "  ssh -L 5173:localhost:5173 $USER@$lan_ip"
+        else
+            echo "From your own machine, use VS Code port forwarding or:"
+            echo "  ssh -L 5173:localhost:5173 $USER@<server-host>"
+        fi
+        echo "Then open http://localhost:5173 locally."
+        return 0
+    fi
+
+    if command -v xdg-open >/dev/null 2>&1; then
+        xdg-open "$url" >/dev/null 2>&1 &
+    else
+        echo "Dev frontend: $url"
+    fi
+}
+
 # Start/stop dev
-alias dev-up='docker compose -f $BEDRIFTSGRAFEN_DIR/docker-compose.dev.yml up -d --remove-orphans && (xdg-open http://localhost:5173 &>/dev/null &)'
+alias dev-up='docker compose -f $BEDRIFTSGRAFEN_DIR/docker-compose.dev.yml up -d --remove-orphans && bg_open_dev_url'
 alias dev-down='docker compose -f $BEDRIFTSGRAFEN_DIR/docker-compose.dev.yml down'
-alias dev-restart='docker compose -f $BEDRIFTSGRAFEN_DIR/docker-compose.dev.yml restart --remove-orphans'
-alias dev-build='docker compose -f $BEDRIFTSGRAFEN_DIR/docker-compose.dev.yml up -d --build --remove-orphans && (xdg-open http://localhost:5173 &>/dev/null &)'
+alias dev-restart='docker compose -f $BEDRIFTSGRAFEN_DIR/docker-compose.dev.yml restart'
+alias dev-build='docker compose -f $BEDRIFTSGRAFEN_DIR/docker-compose.dev.yml up -d --build --remove-orphans && bg_open_dev_url'
 alias dev-logs='docker compose -f $BEDRIFTSGRAFEN_DIR/docker-compose.dev.yml logs -f'
 alias dev-ps='docker compose -f $BEDRIFTSGRAFEN_DIR/docker-compose.dev.yml ps'
 
