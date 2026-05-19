@@ -1,4 +1,4 @@
-FROM postgres:18.3-alpine
+FROM postgres:18.4-alpine
 
 # Patch fixable OS-level CVEs in the base image
 RUN apk upgrade --no-cache
