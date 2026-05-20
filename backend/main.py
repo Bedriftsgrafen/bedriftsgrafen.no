@@ -31,6 +31,7 @@ from routers import (  # noqa: E402
     health,
     sitemap,
 )
+from routers.v1 import affiliates as v1_affiliates  # noqa: E402
 from routers.v1 import client_errors as v1_client_errors  # noqa: E402
 from routers.v1 import companies as v1_companies  # noqa: E402
 from routers.v1 import county as v1_county  # noqa: E402
@@ -255,6 +256,7 @@ app.include_router(v1_municipality.router)
 app.include_router(v1_county.router)
 app.include_router(v1_og_image.router)
 app.include_router(v1_client_errors.router)
+app.include_router(v1_affiliates.router)
 # Admin and utility routes
 app.include_router(admin_import.router)
 app.include_router(sitemap.router)
