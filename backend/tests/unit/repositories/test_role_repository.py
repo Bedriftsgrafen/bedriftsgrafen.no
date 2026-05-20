@@ -284,6 +284,16 @@ class TestSearchPeople:
         mock_db_session.execute.assert_called_once()
 
     @pytest.mark.asyncio
+    async def test_public_search_uses_person_toplist_mv(self, repo, mock_db_session):
+        """Public search reads from the pre-aggregated person search view."""
+        mock_db_session.execute.return_value = []
+
+        await repo.search_people("Ola")
+
+        statement = mock_db_session.execute.call_args.args[0]
+        assert "person_toplist_mv" in str(statement)
+
+    @pytest.mark.asyncio
     async def test_handles_null_birthdate(self, repo, mock_db_session):
         """Handles persons without birthdate."""
         mock_row = MagicMock()
@@ -313,6 +323,9 @@ class TestSearchPeople:
         result = await repo.search_people("Test", include_all=True)
         assert result == []
         mock_db_session.execute.assert_called_once()
+
+        statement = mock_db_session.execute.call_args.args[0]
+        assert "person_toplist_mv" not in str(statement)
 
 
 # ============================================================================
@@ -376,6 +389,17 @@ class TestSearchPeopleDetailed:
         assert result == []
 
     @pytest.mark.asyncio
+    async def test_public_detailed_search_uses_person_toplist_mv(self, repo, mock_db_session):
+        """Public detailed search starts from the pre-aggregated person search view."""
+        mock_db_session.execute.return_value = []
+
+        result = await repo.search_people_detailed("Ola")
+
+        assert result == []
+        statement = mock_db_session.execute.call_args.args[0]
+        assert "person_toplist_mv" in str(statement)
+
+    @pytest.mark.asyncio
     async def test_handles_database_error(self, repo, mock_db_session):
         """Returns empty list on database error."""
         mock_db_session.execute.side_effect = Exception("DB Error")
@@ -427,6 +451,26 @@ class TestCountPeopleSearch:
         result = await repo.count_people_search("Nordmann")
 
         assert result == 42
+
+    @pytest.mark.asyncio
+    async def test_public_count_uses_person_toplist_mv(self, repo, mock_db_session):
+        """Public count reads from the pre-aggregated person search view."""
+        mock_db_session.execute.return_value.scalar.return_value = 42
+
+        await repo.count_people_search("Nordmann")
+
+        statement = mock_db_session.execute.call_args.args[0]
+        assert "person_toplist_mv" in str(statement)
+
+    @pytest.mark.asyncio
+    async def test_include_all_count_uses_raw_roles_query(self, repo, mock_db_session):
+        """Admin count keeps the raw role/company query so non-public roles are included."""
+        mock_db_session.execute.return_value.scalar.return_value = 42
+
+        await repo.count_people_search("Nordmann", include_all=True)
+
+        statement = mock_db_session.execute.call_args.args[0]
+        assert "person_toplist_mv" not in str(statement)
 
     @pytest.mark.asyncio
     async def test_returns_zero_on_null(self, repo, mock_db_session):

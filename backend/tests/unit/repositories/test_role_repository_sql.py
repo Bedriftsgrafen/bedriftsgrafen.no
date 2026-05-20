@@ -76,7 +76,7 @@ def test_get_person_commercial_roles_admin_sql(repo):
 
 def test_search_people_admin_vs_public_sql(repo):
     """
-    MECE: search_people must also apply consistent filtering.
+    MECE: public search must use the pre-filtered MV; admin search must use raw roles.
     """
     # 1. Capture Public Search
     public_stmt = None
@@ -110,5 +110,8 @@ def test_search_people_admin_vs_public_sql(repo):
     public_where = public_sql.split("where")[-1]
     admin_where = admin_sql.split("where")[-1]
 
-    assert "registrert_i_foretaksregisteret" in public_where
+    assert "person_toplist_mv" in public_sql
+    assert "roller" not in public_sql
+    assert "registrert_i_foretaksregisteret" not in public_where
+    assert "roller" in admin_sql
     assert "registrert_i_foretaksregisteret" not in admin_where

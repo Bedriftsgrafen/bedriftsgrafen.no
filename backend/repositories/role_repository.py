@@ -25,6 +25,10 @@ def _escape_like(value: str) -> str:
     return value.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_")
 
 
+def _contains_like_pattern(value: str) -> str:
+    return f"%{_escape_like(value)}%"
+
+
 # Cache duration: roles are valid for 7 days before refresh
 ROLE_CACHE_DAYS = 7
 
@@ -225,6 +229,31 @@ class RoleRepository:
             return []
 
         try:
+            if not include_all:
+                stmt = (
+                    select(
+                        models.PersonToplist.person_navn,
+                        models.PersonToplist.foedselsdato,
+                        models.PersonToplist.total_roles.label("role_count"),
+                    )
+                    .where(models.PersonToplist.person_navn.ilike(_contains_like_pattern(query), escape="\\"))
+                    .order_by(
+                        models.PersonToplist.total_roles.desc(),
+                        models.PersonToplist.person_navn.asc(),
+                        models.PersonToplist.foedselsdato.asc(),
+                    )
+                    .limit(limit)
+                )
+                result = await self.db.execute(stmt)
+                return [
+                    {
+                        "name": row.person_navn,
+                        "birthdate": row.foedselsdato,
+                        "role_count": row.role_count,
+                    }
+                    for row in result
+                ]
+
             # We want unique combinations of name and birthdate
             stmt = (
                 select(
@@ -233,7 +262,7 @@ class RoleRepository:
                     func.count(models.Role.id).label("role_count"),
                 )
                 .join(models.Company, models.Role.orgnr == models.Company.orgnr)
-                .where(models.Role.person_navn.ilike(f"%{_escape_like(query)}%"))
+                .where(models.Role.person_navn.ilike(_contains_like_pattern(query)))
                 .where(models.Role.person_navn.is_not(None))
             )
 
@@ -276,41 +305,63 @@ class RoleRepository:
 
         try:
             # Step 1: Get paginated people with counts
-            role_count_expr = func.count(models.Role.id)
-            active_count_expr = func.count(models.Role.id).filter(models.Role.fratraadt.is_(False))
-
-            stmt = (
-                select(
-                    models.Role.person_navn,
-                    models.Role.foedselsdato,
-                    role_count_expr.label("role_count"),
-                    active_count_expr.label("active_role_count"),
-                )
-                .join(models.Company, models.Role.orgnr == models.Company.orgnr)
-                .where(models.Role.person_navn.ilike(f"%{_escape_like(query)}%"))
-                .where(models.Role.person_navn.is_not(None))
-            )
-
             if not include_all:
-                stmt = self._commercial_filter(stmt)
+                sort_column_map = {
+                    "role_count": models.PersonToplist.total_roles,
+                    "active_roles": models.PersonToplist.active_roles,
+                    "name": models.PersonToplist.person_navn,
+                }
+                sort_column = sort_column_map.get(sort_by, models.PersonToplist.total_roles)
+                order_clause = sort_column.asc() if sort_order == "asc" else sort_column.desc()
 
-            # Dynamic sort
-            sort_column_map = {
-                "role_count": role_count_expr,
-                "active_roles": active_count_expr,
-                "name": models.Role.person_navn,
-            }
-            sort_col = sort_column_map.get(sort_by, role_count_expr)
-            order_clause = sort_col.asc() if sort_order == "asc" else sort_col.desc()
+                stmt = (
+                    select(
+                        models.PersonToplist.person_navn,
+                        models.PersonToplist.foedselsdato,
+                        models.PersonToplist.total_roles.label("role_count"),
+                        models.PersonToplist.active_roles.label("active_role_count"),
+                    )
+                    .where(models.PersonToplist.person_navn.ilike(_contains_like_pattern(query), escape="\\"))
+                    .order_by(
+                        order_clause, models.PersonToplist.person_navn.asc(), models.PersonToplist.foedselsdato.asc()
+                    )
+                    .offset(offset)
+                    .limit(limit)
+                )
+                result = await self.db.execute(stmt)
+            else:
+                role_count_expr = func.count(models.Role.id)
+                active_count_expr = func.count(models.Role.id).filter(models.Role.fratraadt.is_(False))
 
-            stmt = (
-                stmt.group_by(models.Role.person_navn, models.Role.foedselsdato)
-                .order_by(order_clause)
-                .offset(offset)
-                .limit(limit)
-            )
+                stmt = (
+                    select(
+                        models.Role.person_navn,
+                        models.Role.foedselsdato,
+                        role_count_expr.label("role_count"),
+                        active_count_expr.label("active_role_count"),
+                    )
+                    .join(models.Company, models.Role.orgnr == models.Company.orgnr)
+                    .where(models.Role.person_navn.ilike(_contains_like_pattern(query)))
+                    .where(models.Role.person_navn.is_not(None))
+                )
 
-            result = await self.db.execute(stmt)
+                # Dynamic sort
+                sort_column_map = {
+                    "role_count": role_count_expr,
+                    "active_roles": active_count_expr,
+                    "name": models.Role.person_navn,
+                }
+                sort_col = sort_column_map.get(sort_by, role_count_expr)
+                order_clause = sort_col.asc() if sort_order == "asc" else sort_col.desc()
+
+                stmt = (
+                    stmt.group_by(models.Role.person_navn, models.Role.foedselsdato)
+                    .order_by(order_clause)
+                    .offset(offset)
+                    .limit(limit)
+                )
+
+                result = await self.db.execute(stmt)
             people = [
                 {
                     "name": row.person_navn,
@@ -400,10 +451,19 @@ class RoleRepository:
             return 0
 
         try:
+            if not include_all:
+                stmt = (
+                    select(func.count())
+                    .select_from(models.PersonToplist)
+                    .where(models.PersonToplist.person_navn.ilike(_contains_like_pattern(query), escape="\\"))
+                )
+                result = await self.db.execute(stmt)
+                return result.scalar() or 0
+
             sub = (
                 select(models.Role.person_navn, models.Role.foedselsdato)
                 .join(models.Company, models.Role.orgnr == models.Company.orgnr)
-                .where(models.Role.person_navn.ilike(f"%{_escape_like(query)}%"))
+                .where(models.Role.person_navn.ilike(_contains_like_pattern(query)))
                 .where(models.Role.person_navn.is_not(None))
             )
 

@@ -9,6 +9,8 @@ Scenario Coverage:
 4. Search vs Profile consistency
 """
 
+from datetime import date
+
 import pytest
 import pytest_asyncio
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
@@ -68,23 +70,47 @@ async def test_role_filtering_mece(db_session: AsyncSession):
     )
 
     person_name = "Ola Nordmann"
+    person_birthdate = date(1980, 5, 15)
     roles = [
         models.Role(
             orgnr="111111111",
             person_navn=person_name,
+            foedselsdato=person_birthdate,
             type_kode="DAGL",
             type_beskrivelse="Daglig Leder",
             fratraadt=False,
         ),
         models.Role(
-            orgnr="222222222", person_navn=person_name, type_kode="STYR", type_beskrivelse="Styreleder", fratraadt=False
+            orgnr="222222222",
+            person_navn=person_name,
+            foedselsdato=person_birthdate,
+            type_kode="STYR",
+            type_beskrivelse="Styreleder",
+            fratraadt=False,
         ),
         models.Role(
-            orgnr="333333333", person_navn=person_name, type_kode="MEDL", type_beskrivelse="Varamedlem", fratraadt=False
+            orgnr="333333333",
+            person_navn=person_name,
+            foedselsdato=person_birthdate,
+            type_kode="MEDL",
+            type_beskrivelse="Varamedlem",
+            fratraadt=False,
         ),
     ]
+    person_search_row = models.PersonToplist(
+        person_navn=person_name,
+        foedselsdato=person_birthdate,
+        total_roles=1,
+        active_roles=1,
+        styreleder_count=0,
+        ceo_count=1,
+        styremedlem_count=0,
+        active_companies=1,
+        industry_diversity=1,
+        total_revenue=0,
+    )
 
-    db_session.add_all([as_comp, brl_comp, fli_comp, *roles])
+    db_session.add_all([as_comp, brl_comp, fli_comp, *roles, person_search_row])
     await db_session.commit()
 
     repo = RoleRepository(db_session)
