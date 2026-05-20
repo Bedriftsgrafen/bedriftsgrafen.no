@@ -37,8 +37,8 @@ export const PersonGenerationChart = memo(function PersonGenerationChart({ data 
     if (chartData.length === 0) return null
 
     return (
-        <div className="bg-white rounded-xl border border-slate-200 p-4">
-            <h3 className="text-sm font-semibold text-slate-700 mb-4">Generasjonsfordeling</h3>
+        <div className="rounded-xl border border-slate-200 bg-white p-4 dark:border-slate-800 dark:bg-slate-900">
+            <h3 className="mb-4 text-sm font-semibold text-slate-700 dark:text-slate-200">Generasjonsfordeling</h3>
             <ResponsiveContainer width="100%" height={280}>
                 <PieChart>
                     <Pie

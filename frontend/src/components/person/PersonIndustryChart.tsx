@@ -41,11 +41,11 @@ export function PersonIndustryChart({ roles }: PersonIndustryChartProps) {
 
     return (
         <div className="mt-6">
-            <h3 className="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-3">
+            <h3 className="mb-3 text-sm font-semibold uppercase tracking-wider text-gray-500 dark:text-slate-400">
                 Bransjefordeling
             </h3>
             <div className="flex items-center gap-4">
-                <div className="w-32 h-32">
+                <div className="h-32 w-32">
                     <ResponsiveContainer width="100%" height="100%">
                         <PieChart>
                             <Pie
@@ -68,11 +68,11 @@ export function PersonIndustryChart({ roles }: PersonIndustryChartProps) {
                     {chartData.map((item, i) => (
                         <div key={item.name} className="flex items-center gap-2 text-sm">
                             <span
-                                className="w-2.5 h-2.5 rounded-full shrink-0"
+                                className="h-2.5 w-2.5 shrink-0 rounded-full"
                                 style={{ backgroundColor: COLORS[i % COLORS.length] }}
                             />
-                            <span className="text-gray-700 truncate">{item.name}</span>
-                            <span className="text-gray-400 ml-auto">{item.value}</span>
+                            <span className="truncate text-gray-700 dark:text-slate-300">{item.name}</span>
+                            <span className="ml-auto text-gray-400 dark:text-slate-500">{item.value}</span>
                         </div>
                     ))}
                 </div>

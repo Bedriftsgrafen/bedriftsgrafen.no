@@ -14,7 +14,7 @@ export const Route = createLazyFileRoute('/')(
 
 export function HomePage() {
     return (
-        <div className="-mx-4 -my-8 bg-[linear-gradient(180deg,#eef3f8_0%,#f6f8fb_24%,#edf2f7_100%)] px-4 py-8 [&>section:last-of-type]:mb-0">
+        <div className="-mx-4 -my-8 bg-[linear-gradient(180deg,#eef3f8_0%,#f6f8fb_24%,#edf2f7_100%)] px-4 py-8 transition-colors duration-300 dark:bg-[linear-gradient(180deg,#020617_0%,#0f172a_42%,#020617_100%)] [&>section:last-of-type]:mb-0">
             <SEOHead />
             <HeroSearch />
             <TrustMetrics />

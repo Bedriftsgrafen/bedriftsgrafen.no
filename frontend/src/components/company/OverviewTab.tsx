@@ -125,7 +125,7 @@ export function OverviewTab({ company, onOpenIndustry }: OverviewTabProps) {
                       className="mt-1 block p-3 rounded-lg border border-blue-100 bg-blue-50/30 hover:bg-blue-50 hover:border-blue-300 transition-all group"
                     >
                       <div className="text-sm text-blue-600 font-bold group-hover:text-blue-800 flex items-center justify-between">
-                        <span className="truncate max-w-[220px]" title={company.parent_navn}>
+                        <span className="max-w-55 truncate" title={company.parent_navn}>
                           {company.parent_navn || 'Gå til hovedenhet'}
                         </span>
                         <ChevronRight className="h-4 w-4 shrink-0 transition-transform group-hover:translate-x-0.5" />

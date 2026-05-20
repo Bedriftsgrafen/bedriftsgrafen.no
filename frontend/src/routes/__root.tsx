@@ -28,12 +28,12 @@ function RootComponent() {
   const isOnline = useOnlineStatus()
 
   return (
-    <div className="flex flex-col min-h-screen bg-gray-50 text-gray-900 font-sans overflow-x-hidden">
+    <div className="flex min-h-screen flex-col overflow-x-hidden bg-gray-50 font-sans text-gray-900 transition-colors duration-300 dark:bg-slate-950 dark:text-slate-100">
       {!isOnline && (
         <div
           role="status"
           aria-live="polite"
-          className="bg-yellow-400 text-yellow-900 text-sm font-medium text-center py-2 px-4"
+          className="bg-yellow-400 px-4 py-2 text-center text-sm font-medium text-yellow-950 dark:bg-amber-500 dark:text-slate-950"
         >
           Du er frakoblet. Endringer blir ikke lagret.
         </div>

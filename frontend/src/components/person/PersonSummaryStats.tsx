@@ -57,20 +57,20 @@ export const PersonSummaryStats = memo(function PersonSummaryStats({ roles }: Pe
 })
 
 const COLOR_MAP: Record<string, string> = {
-    blue: 'bg-blue-50 text-blue-600',
-    indigo: 'bg-indigo-50 text-indigo-600',
-    green: 'bg-green-50 text-green-600',
-    red: 'bg-red-50 text-red-600',
+    blue: 'bg-blue-50 text-blue-600 dark:bg-blue-500/15 dark:text-blue-200',
+    indigo: 'bg-indigo-50 text-indigo-600 dark:bg-indigo-500/15 dark:text-indigo-200',
+    green: 'bg-green-50 text-green-600 dark:bg-emerald-500/15 dark:text-emerald-200',
+    red: 'bg-red-50 text-red-600 dark:bg-red-500/15 dark:text-red-200',
 }
 
 function StatCard({ icon, label, value, color }: { icon: React.ReactNode; label: string; value: string; color: string }) {
     return (
-        <div className="bg-white rounded-xl border border-gray-100 p-4 hover:shadow-sm transition-shadow">
+        <div className="rounded-xl border border-gray-100 bg-white p-4 transition-shadow hover:shadow-sm dark:border-slate-800 dark:bg-slate-900 dark:hover:shadow-black/30">
             <div className={`inline-flex p-2 rounded-lg mb-2 ${COLOR_MAP[color] ?? COLOR_MAP.blue}`}>
                 {icon}
             </div>
-            <p className="text-xs text-gray-500 font-medium uppercase tracking-wider">{label}</p>
-            <p className="text-xl font-bold text-gray-900 mt-0.5">{value}</p>
+            <p className="text-xs font-medium uppercase tracking-wider text-gray-500 dark:text-slate-400">{label}</p>
+            <p className="mt-0.5 text-xl font-bold text-gray-900 dark:text-white">{value}</p>
         </div>
     )
 }

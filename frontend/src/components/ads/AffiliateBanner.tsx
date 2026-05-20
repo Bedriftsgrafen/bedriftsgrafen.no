@@ -44,31 +44,31 @@ const VARIANT_STYLES: Record<BannerVariant, {
     accent: string
 }> = {
     accounting: {
-        background: 'bg-white',
-        border: 'border-blue-200',
-        iconBg: 'bg-blue-50',
-        iconColor: 'text-blue-600',
-        buttonBg: 'bg-blue-900',
-        buttonHover: 'hover:bg-blue-800',
-        accent: 'text-gray-900',
+        background: 'bg-white dark:bg-slate-900',
+        border: 'border-blue-200 dark:border-blue-400/20',
+        iconBg: 'bg-blue-50 dark:bg-blue-500/15',
+        iconColor: 'text-blue-600 dark:text-blue-200',
+        buttonBg: 'bg-blue-900 dark:bg-blue-500 dark:text-slate-950',
+        buttonHover: 'hover:bg-blue-800 dark:hover:bg-blue-400',
+        accent: 'text-gray-900 dark:text-white',
     },
     banking: {
-        background: 'bg-white',
-        border: 'border-emerald-200',
-        iconBg: 'bg-emerald-50',
-        iconColor: 'text-emerald-600',
-        buttonBg: 'bg-blue-900',
-        buttonHover: 'hover:bg-blue-800',
-        accent: 'text-gray-900',
+        background: 'bg-white dark:bg-slate-900',
+        border: 'border-emerald-200 dark:border-emerald-400/20',
+        iconBg: 'bg-emerald-50 dark:bg-emerald-500/15',
+        iconColor: 'text-emerald-600 dark:text-emerald-200',
+        buttonBg: 'bg-blue-900 dark:bg-blue-500 dark:text-slate-950',
+        buttonHover: 'hover:bg-blue-800 dark:hover:bg-blue-400',
+        accent: 'text-gray-900 dark:text-white',
     },
     general: {
-        background: 'bg-white',
-        border: 'border-gray-200',
-        iconBg: 'bg-gray-100',
-        iconColor: 'text-gray-600',
-        buttonBg: 'bg-blue-900',
-        buttonHover: 'hover:bg-blue-800',
-        accent: 'text-gray-900',
+        background: 'bg-white dark:bg-slate-900',
+        border: 'border-gray-200 dark:border-slate-800',
+        iconBg: 'bg-gray-100 dark:bg-slate-800',
+        iconColor: 'text-gray-600 dark:text-slate-300',
+        buttonBg: 'bg-blue-900 dark:bg-blue-500 dark:text-slate-950',
+        buttonHover: 'hover:bg-blue-800 dark:hover:bg-blue-400',
+        accent: 'text-gray-900 dark:text-white',
     },
 }
 
@@ -110,12 +110,12 @@ export const AffiliateBanner = memo(function AffiliateBanner({
 
     return (
         <div
-            className={`relative flex h-full rounded-lg border p-4 ${styles.background} ${styles.border}`}
+            className={`relative flex h-full rounded-lg border p-4 transition-colors duration-300 ${styles.background} ${styles.border}`}
         >
             <div className="flex w-full flex-col">
                 {/* Disclosure label - Norwegian marketing law compliance */}
                 <div className="mb-2 flex justify-end">
-                    <span className="text-xs font-medium uppercase tracking-wide text-gray-500">
+                    <span className="text-xs font-medium uppercase tracking-wide text-gray-500 dark:text-slate-400">
                         Annonse
                     </span>
                 </div>
@@ -141,7 +141,7 @@ export const AffiliateBanner = memo(function AffiliateBanner({
                         <div className={`font-semibold ${styles.accent} mb-1 text-lg`}>
                             {title}
                         </div>
-                        <p className="text-sm text-gray-600 mb-3">
+                        <p className="mb-3 text-sm text-gray-600 dark:text-slate-300">
                             {description}
                         </p>
 
@@ -175,7 +175,7 @@ export const AffiliateBanner = memo(function AffiliateBanner({
                         </div>
 
                         {legalText && legalTextMode === 'inline' && (
-                            <p className="mt-3 border-t border-gray-100 pt-3 text-xs leading-5 text-gray-500">
+                            <p className="mt-3 border-t border-gray-100 pt-3 text-xs leading-5 text-gray-500 dark:border-slate-800 dark:text-slate-500">
                                 {legalText}
                             </p>
                         )}

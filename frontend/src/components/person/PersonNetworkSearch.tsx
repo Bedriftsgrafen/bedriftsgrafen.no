@@ -66,26 +66,26 @@ export function PersonNetworkSearch({ initialPersonA }: PersonNetworkSearchProps
 
     return (
         <div className="space-y-6">
-            <div className="bg-gray-50 rounded-xl p-5">
-                <h3 className="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-4">
+            <div className="rounded-xl bg-gray-50 p-5 dark:border dark:border-slate-800 dark:bg-slate-950">
+                <h3 className="mb-4 text-sm font-semibold uppercase tracking-wider text-gray-500 dark:text-slate-400">
                     Finn forbindelse mellom to personer
                 </h3>
 
                 {/* Person A (pre-filled) */}
                 <div className="mb-3">
-                    <label className="text-xs font-medium text-gray-500 mb-1 block">Person A</label>
-                    <div className="flex items-center gap-2 px-3 py-2.5 bg-white border border-gray-200 rounded-lg text-sm text-gray-700">
+                    <label className="mb-1 block text-xs font-medium text-gray-500 dark:text-slate-400">Person A</label>
+                    <div className="flex items-center gap-2 rounded-lg border border-gray-200 bg-white px-3 py-2.5 text-sm text-gray-700 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200">
                         <User className="h-4 w-4 text-blue-500" />
                         <span className="font-medium">{initialPersonA?.name ?? 'Ukjent'}</span>
                         {initialPersonA?.birthdate && (
-                            <span className="text-gray-400 text-xs">({initialPersonA.birthdate})</span>
+                            <span className="text-xs text-gray-400 dark:text-slate-500">({initialPersonA.birthdate})</span>
                         )}
                     </div>
                 </div>
 
                 {/* Person B (search) */}
                 <div className="mb-4" ref={wrapperRef}>
-                    <label className="text-xs font-medium text-gray-500 mb-1 block">Person B</label>
+                    <label className="mb-1 block text-xs font-medium text-gray-500 dark:text-slate-400">Person B</label>
                     <div className="relative">
                         <input
                             type="text"
@@ -97,27 +97,27 @@ export function PersonNetworkSearch({ initialPersonA }: PersonNetworkSearchProps
                             }}
                             onFocus={() => setShowDropdown(true)}
                             placeholder="Søk etter person..."
-                            className="w-full pl-9 pr-4 py-2.5 bg-white border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none"
+                            className="w-full rounded-lg border border-gray-200 bg-white py-2.5 pl-9 pr-4 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 dark:border-slate-700 dark:bg-slate-900 dark:text-white dark:placeholder:text-slate-500 dark:focus:border-blue-400 dark:focus:ring-blue-400/15"
                         />
-                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+                        <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400 dark:text-slate-500" />
 
                         {showDropdown && hasDropdownContent && (
-                            <div className="absolute top-full left-0 right-0 mt-1 bg-white border border-gray-200 rounded-lg shadow-lg z-50 overflow-hidden">
+                            <div className="absolute left-0 right-0 top-full z-50 mt-1 overflow-hidden rounded-lg border border-gray-200 bg-white shadow-lg dark:border-slate-700 dark:bg-slate-900 dark:shadow-black/40">
                                 {isFetching ? (
-                                    <div className="p-3 text-center text-gray-400 text-sm animate-pulse">Søker...</div>
+                                    <div className="animate-pulse p-3 text-center text-sm text-gray-400 dark:text-slate-400">Søker...</div>
                                 ) : (
                                     searchResults?.map((person, idx) => (
                                         <button
                                             key={`${person.name}-${idx}`}
                                             onClick={() => handleSelectPerson(person.name, person.birthdate)}
-                                            className="w-full flex items-center gap-2 px-3 py-2 hover:bg-blue-50 text-left text-sm transition-colors"
+                                            className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm transition-colors hover:bg-blue-50 dark:hover:bg-white/5"
                                         >
-                                            <User className="h-3.5 w-3.5 text-gray-400" />
-                                            <span className="font-medium text-gray-900">{person.name}</span>
+                                            <User className="h-3.5 w-3.5 text-gray-400 dark:text-slate-500" />
+                                            <span className="font-medium text-gray-900 dark:text-white">{person.name}</span>
                                             {person.birthdate && (
-                                                <span className="text-gray-400 text-xs">({person.birthdate.slice(0, 4)})</span>
+                                                <span className="text-xs text-gray-400 dark:text-slate-500">({person.birthdate.slice(0, 4)})</span>
                                             )}
-                                            <span className="ml-auto text-xs text-blue-600">
+                                            <span className="ml-auto text-xs text-blue-600 dark:text-blue-300">
                                                 {person.role_count} roller
                                             </span>
                                         </button>
@@ -131,7 +131,7 @@ export function PersonNetworkSearch({ initialPersonA }: PersonNetworkSearchProps
                 <button
                     onClick={handleSearch}
                     disabled={!selectedPersonB || mutation.isPending}
-                    className="w-full py-2.5 px-4 bg-blue-900 text-white rounded-lg font-medium text-sm hover:bg-blue-800 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center justify-center gap-2"
+                    className="flex w-full items-center justify-center gap-2 rounded-lg bg-blue-900 px-4 py-2.5 text-sm font-medium text-white transition-colors hover:bg-blue-800 disabled:cursor-not-allowed disabled:opacity-50 dark:bg-blue-500 dark:text-slate-950 dark:hover:bg-blue-400"
                 >
                     {mutation.isPending ? (
                         <>
@@ -153,7 +153,7 @@ export function PersonNetworkSearch({ initialPersonA }: PersonNetworkSearchProps
             )}
 
             {mutation.isError && (
-                <div className="p-4 bg-red-50 rounded-xl border border-red-100 text-sm text-red-700">
+                <div className="rounded-xl border border-red-100 bg-red-50 p-4 text-sm text-red-700 dark:border-red-400/20 dark:bg-red-500/10 dark:text-red-200">
                     Kunne ikke søke etter forbindelse. Prøv igjen senere.
                 </div>
             )}

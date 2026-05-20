@@ -13,13 +13,13 @@ export function AffiliateLegalNotes({ affiliations, className }: AffiliateLegalN
     return (
         <div
             aria-label="Renteeksempler og vilkår"
-            className={`rounded-lg border border-gray-200 bg-gray-50 px-4 py-3 text-xs leading-5 text-gray-600 ${className ?? ''}`}
+            className={`rounded-lg border border-gray-200 bg-gray-50 px-4 py-3 text-xs leading-5 text-gray-600 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-400 ${className ?? ''}`}
         >
-            <p className="mb-1 font-semibold text-gray-800">Renteeksempler og vilkår</p>
+            <p className="mb-1 font-semibold text-gray-800 dark:text-slate-200">Renteeksempler og vilkår</p>
             <div className="grid gap-2 lg:grid-cols-2">
                 {legalAffiliations.map((affiliation) => (
                     <p key={affiliation.id}>
-                        <span className="font-semibold text-gray-800">{affiliation.name}: </span>
+                        <span className="font-semibold text-gray-800 dark:text-slate-200">{affiliation.name}: </span>
                         {affiliation.legalText}
                     </p>
                 ))}

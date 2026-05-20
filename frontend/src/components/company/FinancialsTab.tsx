@@ -100,10 +100,10 @@ export const FinancialsTab = React.memo(function FinancialsTab({
     <div className="space-y-8 animate-fade-in pb-8">
       {/* Premium UX: Subunit Context Note - Always visible for subunits */}
       {company.parent_orgnr && (
-        <div className="bg-blue-50/40 border border-blue-100 rounded-lg p-4 flex items-start gap-3 shadow-sm">
+        <div className="flex items-start gap-3 rounded-lg border border-blue-100 bg-blue-50/40 p-4 shadow-sm dark:border-blue-400/20 dark:bg-blue-500/10">
           <Info className="h-5 w-5 text-blue-500 shrink-0 mt-0.5" />
-          <div className="text-sm text-blue-900/80">
-            <p className="font-bold text-blue-900 mb-0.5">Underenhet</p>
+          <div className="text-sm text-blue-900/80 dark:text-blue-100/85">
+            <p className="mb-0.5 font-bold text-blue-900 dark:text-blue-100">Underenhet</p>
             <p className="leading-relaxed">
               Dette er en underenhet. Offisielle regnskapstall rapporteres vanligvis konsolidert på hovedenhetens nivå.
               {validAccountings.length > 0 ? ' Spesifikke lokale tall for denne underenheten vises nedenfor.' : ''}
@@ -112,7 +112,7 @@ export const FinancialsTab = React.memo(function FinancialsTab({
               to="/virksomhet/$orgnr" 
               params={{ orgnr: company.parent_orgnr }}
               search={{ tab: 'okonomi' as const }}
-              className="mt-2 inline-flex items-center text-sm font-medium text-blue-700 hover:text-blue-800 bg-blue-100/50 hover:bg-blue-100 px-3 py-1.5 rounded-md transition-colors w-fit"
+              className="mt-2 inline-flex w-fit items-center rounded-md bg-blue-100/50 px-3 py-1.5 text-sm font-medium text-blue-700 transition-colors hover:bg-blue-100 hover:text-blue-800 dark:bg-blue-500/15 dark:text-blue-200 dark:hover:bg-blue-500/20"
             >
               <Home className="h-3.5 w-3.5" />
               Se hovedenhetens regnskap
@@ -179,12 +179,12 @@ export const FinancialsTab = React.memo(function FinancialsTab({
               <div className="flex flex-col sm:flex-row sm:items-baseline sm:justify-between gap-2">
                 <div className="flex items-center gap-2">
                   <TrendingUp className="h-5 w-5 text-blue-600 shrink-0" aria-hidden="true" />
-                  <h2 id="kpi-heading" className="text-xl font-semibold text-gray-900">
+                  <h2 id="kpi-heading" className="text-xl font-semibold text-gray-900 dark:text-white">
                     Nøkkeltall {selectedYear}
                   </h2>
                 </div>
                 {company.last_polled_regnskap && (
-                  <span className="text-xs text-gray-500">
+                  <span className="text-xs text-gray-500 dark:text-slate-400">
                     Oppdatert: {formatDate(company.last_polled_regnskap)}
                   </span>
                 )}
@@ -194,7 +194,7 @@ export const FinancialsTab = React.memo(function FinancialsTab({
                 {kpiLoading ? (
                   <KpiCardSkeleton />
                 ) : kpiError ? (
-                  <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 text-yellow-800 flex items-start gap-3">
+                  <div className="flex items-start gap-3 rounded-lg border border-yellow-200 bg-yellow-50 p-4 text-yellow-800 dark:border-amber-400/20 dark:bg-amber-500/10 dark:text-amber-100">
                     <Database className="h-5 w-5 shrink-0 mt-0.5" />
                     <div>
                       <h4 className="font-medium">Mangler detaljerte nøkkeltall</h4>
@@ -203,7 +203,7 @@ export const FinancialsTab = React.memo(function FinancialsTab({
                       </p>
                       <button
                         onClick={onRetryKpi}
-                        className="text-sm font-medium underline mt-2 hover:text-yellow-900"
+                        className="mt-2 text-sm font-medium underline hover:text-yellow-900 dark:hover:text-amber-50"
                       >
                         Prøv på nytt
                       </button>
@@ -212,7 +212,7 @@ export const FinancialsTab = React.memo(function FinancialsTab({
                 ) : kpiData ? (
                   <KpiDashboard data={kpiData} />
                 ) : (
-                  <div className="h-40 flex items-center justify-center text-gray-400 border border-dashed rounded-lg">
+                  <div className="flex h-40 items-center justify-center rounded-lg border border-dashed text-gray-400 dark:border-slate-700 dark:text-slate-500">
                     Laster nøkkeltall...
                   </div>
                 )}
@@ -223,7 +223,7 @@ export const FinancialsTab = React.memo(function FinancialsTab({
           {/* Charts */}
           {validAccountings.length > 0 && (
             <section aria-labelledby="charts-heading">
-              <h2 id="charts-heading" className="text-xl font-semibold text-gray-900 mb-4">
+              <h2 id="charts-heading" className="mb-4 text-xl font-semibold text-gray-900 dark:text-white">
                 Historisk Utvikling
               </h2>
               <div className="min-h-75">

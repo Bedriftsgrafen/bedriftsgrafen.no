@@ -19,14 +19,14 @@ export function Button({
     children,
     ...props
 }: ButtonProps) {
-    const baseStyles = "inline-flex items-center justify-center font-medium transition-all duration-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed active:scale-[0.98]"
+    const baseStyles = "inline-flex items-center justify-center font-medium transition-all duration-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed active:scale-[0.98] dark:focus:ring-offset-slate-950"
 
     const variants = {
-        primary: "bg-blue-900 text-white shadow-lg shadow-blue-950/20 hover:bg-blue-800 focus:ring-blue-200 border-none",
-        secondary: "bg-slate-100 text-slate-900 hover:bg-slate-200 focus:ring-slate-500 border border-transparent",
-        outline: "bg-white text-slate-700 border border-slate-200 hover:bg-slate-50 hover:border-slate-300 focus:ring-slate-400 shadow-sm",
-        ghost: "bg-transparent text-slate-600 hover:bg-slate-100/80 hover:text-slate-900 focus:ring-slate-200",
-        danger: "bg-red-600 text-white hover:bg-red-700 focus:ring-red-500 border-none shadow-lg shadow-red-500/20"
+        primary: "border-none bg-blue-900 text-white shadow-lg shadow-blue-950/20 hover:bg-blue-800 focus:ring-blue-200 dark:bg-blue-500 dark:text-slate-950 dark:hover:bg-blue-400 dark:focus:ring-blue-300",
+        secondary: "border border-transparent bg-slate-100 text-slate-900 hover:bg-slate-200 focus:ring-slate-500 dark:bg-slate-800 dark:text-slate-100 dark:hover:bg-slate-700",
+        outline: "border border-slate-200 bg-white text-slate-700 shadow-sm hover:border-slate-300 hover:bg-slate-50 focus:ring-slate-400 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200 dark:hover:border-slate-600 dark:hover:bg-slate-800",
+        ghost: "bg-transparent text-slate-600 hover:bg-slate-100/80 hover:text-slate-900 focus:ring-slate-200 dark:text-slate-300 dark:hover:bg-white/10 dark:hover:text-white",
+        danger: "border-none bg-red-600 text-white shadow-lg shadow-red-500/20 hover:bg-red-700 focus:ring-red-500 dark:bg-red-500 dark:text-white dark:hover:bg-red-400"
     }
 
     const sizes = {

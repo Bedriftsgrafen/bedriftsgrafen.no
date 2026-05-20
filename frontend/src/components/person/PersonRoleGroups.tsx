@@ -45,9 +45,9 @@ export const PersonRoleGroups = memo(function PersonRoleGroups({ roles, sparklin
         <div className="space-y-8">
             {groups.map(group => (
                 <section key={group.label}>
-                    <h3 className="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-3">
+                    <h3 className="mb-3 text-sm font-semibold uppercase tracking-wider text-gray-500 dark:text-slate-400">
                         {group.label}
-                        <span className="ml-2 text-gray-300 font-normal">({group.roles.length})</span>
+                        <span className="ml-2 font-normal text-gray-300 dark:text-slate-600">({group.roles.length})</span>
                     </h3>
                     <div className="grid gap-3">
                         {group.roles.map((role, idx) => (

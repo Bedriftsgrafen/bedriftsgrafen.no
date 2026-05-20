@@ -263,8 +263,8 @@ export function FilterPanel() {
 
   const headerSummary = useMemo(() => (
     <div className="flex items-center gap-3 min-w-0">
-      <Filter className="h-5 w-5 text-blue-600" aria-hidden="true" />
-      <span className="font-semibold text-lg text-gray-900 truncate">Filtrer virksomheter</span>
+      <Filter className="h-5 w-5 text-blue-600 dark:text-blue-300" aria-hidden="true" />
+      <span className="truncate text-lg font-semibold text-gray-900 dark:text-white">Filtrer virksomheter</span>
       {activeFilters > 0 && (
         <span
           className="px-2.5 py-0.5 bg-blue-900 text-white text-sm font-medium rounded-full"
@@ -277,10 +277,10 @@ export function FilterPanel() {
   ), [activeFilters, filterCountLabel])
 
   return (
-    <div className="bg-white rounded-xl shadow-md border border-gray-200 mb-8 overflow-hidden">
+    <div className="mb-8 overflow-hidden rounded-xl border border-gray-200 bg-white shadow-md transition-colors duration-300 dark:border-slate-800 dark:bg-slate-900 dark:shadow-black/20">
       {/* Header Toggle */}
       <div
-        className="w-full p-6 flex items-center justify-between gap-3 bg-linear-to-br from-slate-50 to-white hover:from-slate-100 hover:to-slate-50 transition-all duration-300 border-b border-transparent"
+        className="flex w-full items-center justify-between gap-3 border-b border-transparent bg-linear-to-br from-slate-50 to-white p-6 transition-all duration-300 hover:from-slate-100 hover:to-slate-50 dark:from-slate-900 dark:to-slate-950 dark:hover:from-slate-800 dark:hover:to-slate-900"
       >
         <button
           type="button"
@@ -292,7 +292,7 @@ export function FilterPanel() {
           {headerSummary}
           <span
             aria-hidden="true"
-            className={`shrink-0 p-1 rounded-full transition-all duration-300 ${isExpanded ? 'bg-blue-100 text-blue-600 rotate-180' : 'bg-slate-100 text-slate-400'}`}
+            className={`shrink-0 rounded-full p-1 transition-all duration-300 ${isExpanded ? 'rotate-180 bg-blue-100 text-blue-600 dark:bg-blue-500/15 dark:text-blue-200' : 'bg-slate-100 text-slate-400 dark:bg-slate-800 dark:text-slate-500'}`}
           >
             <ChevronDown className="h-4 w-4" aria-hidden="true" />
           </span>
@@ -301,7 +301,7 @@ export function FilterPanel() {
           <button
             type="button"
             onClick={resetFilters}
-            className="shrink-0 px-2 py-0.5 bg-gray-200 hover:bg-red-100 text-gray-600 hover:text-red-600 text-xs font-medium rounded-full transition-colors"
+            className="shrink-0 rounded-full bg-gray-200 px-2 py-0.5 text-xs font-medium text-gray-600 transition-colors hover:bg-red-100 hover:text-red-600 dark:bg-slate-800 dark:text-slate-300 dark:hover:bg-red-500/15 dark:hover:text-red-200"
             title="Nullstill alle filtre"
           >
             Nullstill
@@ -311,7 +311,7 @@ export function FilterPanel() {
 
       {/* Collapsible Content */}
       {isExpanded && (
-        <div id={panelId} className="p-6 space-y-8 border-t border-gray-100">
+        <div id={panelId} className="space-y-8 border-t border-gray-100 p-6 dark:border-slate-800">
           <SavedFiltersSection
             savedFilters={savedFilters}
             showSaveInput={showSaveInput}
@@ -357,20 +357,20 @@ export function FilterPanel() {
           )}
 
           {/* Footer Actions */}
-          <footer className="pt-6 border-t border-gray-100 flex items-center justify-between">
-            <div className="text-xs text-gray-400">
+          <footer className="flex items-center justify-between border-t border-gray-100 pt-6 dark:border-slate-800">
+            <div className="text-xs text-gray-400 dark:text-slate-500">
               Tips: Hold Shift + Enter for å lagre filteret direkte.
             </div>
             <div className="flex gap-3">
               <button
                 onClick={resetFilters}
-                className="px-5 py-2 text-sm font-medium text-gray-600 hover:text-red-700 hover:bg-red-50 rounded-lg transition-all"
+                className="rounded-lg px-5 py-2 text-sm font-medium text-gray-600 transition-all hover:bg-red-50 hover:text-red-700 dark:text-slate-300 dark:hover:bg-red-500/15 dark:hover:text-red-200"
               >
                 Nullstill alle
               </button>
               <button
                 onClick={applyFilters}
-                className="px-8 py-2.5 text-sm font-bold text-white bg-blue-900 hover:bg-blue-800 rounded-lg transition-all shadow-md hover:shadow-blue-950/20 flex items-center gap-2"
+                className="flex items-center gap-2 rounded-lg bg-blue-900 px-8 py-2.5 text-sm font-bold text-white shadow-md transition-all hover:bg-blue-800 hover:shadow-blue-950/20 dark:bg-blue-500 dark:text-slate-950 dark:hover:bg-blue-400"
               >
                 <Check className="h-4 w-4" aria-hidden="true" />
                 Bruk filter

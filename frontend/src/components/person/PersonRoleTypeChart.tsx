@@ -27,6 +27,25 @@ interface PersonRoleTypeChartProps {
     data: RoleTypeCount[]
 }
 
+interface RoleTypeTooltipProps {
+    active?: boolean
+    label?: string
+    payload?: Array<{ value?: number }>
+}
+
+function RoleTypeTooltip({ active, label, payload }: RoleTypeTooltipProps) {
+    if (!active || !payload?.length) return null
+
+    return (
+        <div className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm shadow-xl dark:border-slate-700 dark:bg-slate-950 dark:shadow-black/40">
+            <p className="font-semibold text-slate-900 dark:text-white">{label}</p>
+            <p className="mt-1 font-semibold text-blue-700 dark:text-blue-200">
+                count: {Number(payload[0].value ?? 0).toLocaleString('nb-NO')}
+            </p>
+        </div>
+    )
+}
+
 export const PersonRoleTypeChart = memo(function PersonRoleTypeChart({ data }: PersonRoleTypeChartProps) {
     const chartData = useMemo(
         () => data.slice(0, 10).map(r => ({
@@ -39,13 +58,29 @@ export const PersonRoleTypeChart = memo(function PersonRoleTypeChart({ data }: P
     if (chartData.length === 0) return null
 
     return (
-        <div className="bg-white rounded-xl border border-slate-200 p-4">
-            <h3 className="text-sm font-semibold text-slate-700 mb-4">Rolletyper</h3>
+        <div className="rounded-xl border border-slate-200 bg-white p-4 dark:border-slate-800 dark:bg-slate-900">
+            <h3 className="mb-4 text-sm font-semibold text-slate-700 dark:text-slate-200">Rolletyper</h3>
             <ResponsiveContainer width="100%" height={Math.max(200, chartData.length * 36)}>
                 <BarChart data={chartData} layout="vertical" margin={{ left: 100 }}>
-                    <XAxis type="number" tickFormatter={(v: number) => v.toLocaleString('nb-NO')} />
-                    <YAxis type="category" dataKey="name" width={100} tick={{ fontSize: 12 }} />
-                    <Tooltip formatter={(value) => Number(value).toLocaleString('nb-NO')} />
+                    <XAxis
+                        type="number"
+                        tickFormatter={(v: number) => v.toLocaleString('nb-NO')}
+                        tick={{ fill: 'var(--chart-axis)', fontSize: 12 }}
+                        axisLine={{ stroke: 'var(--chart-grid)' }}
+                        tickLine={{ stroke: 'var(--chart-grid)' }}
+                    />
+                    <YAxis
+                        type="category"
+                        dataKey="name"
+                        width={100}
+                        tick={{ fill: 'var(--chart-axis)', fontSize: 12 }}
+                        axisLine={{ stroke: 'var(--chart-grid)' }}
+                        tickLine={{ stroke: 'var(--chart-grid)' }}
+                    />
+                    <Tooltip
+                        cursor={{ fill: 'var(--chart-cursor)' }}
+                        content={<RoleTypeTooltip />}
+                    />
                     <Bar dataKey="count" fill="#3b82f6" radius={[0, 4, 4, 0]} />
                 </BarChart>
             </ResponsiveContainer>

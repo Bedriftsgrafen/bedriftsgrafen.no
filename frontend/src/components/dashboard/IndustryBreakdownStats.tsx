@@ -46,13 +46,28 @@ interface IndustryBreakdownStatsProps {
 // ============================================================================
 
 const BADGE_COLORS: Record<ColorScheme, string> = {
-    green: 'bg-green-100 text-green-700',
-    red: 'bg-red-100 text-red-700',
+    green: 'bg-green-100 text-green-700 dark:bg-emerald-500/15 dark:text-emerald-100 dark:ring-1 dark:ring-emerald-400/20',
+    red: 'bg-red-100 text-red-700 dark:bg-red-500/15 dark:text-red-100 dark:ring-1 dark:ring-red-400/20',
 };
 
 const HOVER_COLORS: Record<ColorScheme, string> = {
-    green: 'hover:bg-green-50',
-    red: 'hover:bg-red-50',
+    green: 'hover:bg-green-50 dark:hover:bg-emerald-500/12',
+    red: 'hover:bg-red-50 dark:hover:bg-red-500/12',
+};
+
+const ICON_COLORS: Record<ColorScheme, string> = {
+    green: 'text-green-600 dark:text-emerald-300',
+    red: 'text-red-600 dark:text-red-300',
+};
+
+const SPINNER_COLORS: Record<ColorScheme, string> = {
+    green: 'border-green-500 dark:border-emerald-300',
+    red: 'border-red-500 dark:border-red-300',
+};
+
+const INPUT_FOCUS_COLORS: Record<ColorScheme, string> = {
+    green: 'focus:border-green-500 focus:ring-green-500 dark:focus:border-emerald-300 dark:focus:ring-emerald-300',
+    red: 'focus:border-red-500 focus:ring-red-500 dark:focus:border-red-300 dark:focus:ring-red-300',
 };
 
 // ============================================================================
@@ -150,9 +165,9 @@ export const IndustryBreakdownStats = memo(function IndustryBreakdownStats({
     // Loading state
     if (isLoading) {
         return (
-            <div className="bg-white rounded-xl border border-gray-200 p-8 text-center">
-                <div className={`animate-spin w-8 h-8 border-2 border-${colorScheme === 'green' ? 'green' : 'red'}-500 border-t-transparent rounded-full mx-auto`} />
-                <p className="text-gray-500 mt-4">Laster statistikk...</p>
+            <div className="rounded-xl border border-gray-200 bg-white p-8 text-center dark:border-slate-800 dark:bg-slate-900">
+                <div className={`mx-auto h-8 w-8 animate-spin rounded-full border-2 border-t-transparent ${SPINNER_COLORS[colorScheme]}`} />
+                <p className="mt-4 text-gray-500 dark:text-slate-300">Laster statistikk...</p>
             </div>
         );
     }
@@ -160,8 +175,8 @@ export const IndustryBreakdownStats = memo(function IndustryBreakdownStats({
     // Error state
     if (error) {
         return (
-            <div className="bg-red-50 border border-red-200 rounded-xl p-6 text-center">
-                <p className="text-red-600">Kunne ikke laste statistikk</p>
+            <div className="rounded-xl border border-red-200 bg-red-50 p-6 text-center dark:border-red-400/30 dark:bg-red-500/10">
+                <p className="text-red-600 dark:text-red-200">Kunne ikke laste statistikk</p>
             </div>
         );
     }
@@ -169,21 +184,21 @@ export const IndustryBreakdownStats = memo(function IndustryBreakdownStats({
     const Icon = colorScheme === 'green' ? TrendingUp : TrendingDown;
 
     return (
-        <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
+        <div className="overflow-hidden rounded-xl border border-gray-200 bg-white dark:border-slate-800 dark:bg-slate-900">
             {/* Header with search */}
-            <div className="p-4 border-b border-gray-200 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+            <div className="flex flex-col justify-between gap-3 border-b border-gray-200 p-4 dark:border-slate-800 sm:flex-row sm:items-center">
                 <div className="flex items-center gap-2">
-                    <Icon className={`w-5 h-5 text-${colorScheme === 'green' ? 'green' : 'red'}-600`} aria-hidden="true" />
-                    <h2 className="text-lg font-semibold text-gray-900">{title}</h2>
+                    <Icon className={`h-5 w-5 ${ICON_COLORS[colorScheme]}`} aria-hidden="true" />
+                    <h2 className="text-lg font-semibold text-gray-900 dark:text-white">{title}</h2>
                 </div>
                 <div className="relative">
-                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" aria-hidden="true" />
+                    <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400 dark:text-slate-500" aria-hidden="true" />
                     <input
                         type="text"
                         placeholder="Søk i bransjer..."
                         value={searchQuery}
                         onChange={(e) => setSearchQuery(e.target.value)}
-                        className={`pl-9 pr-4 py-2 w-full sm:w-64 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-${colorScheme === 'green' ? 'green' : 'red'}-500 focus:border-${colorScheme === 'green' ? 'green' : 'red'}-500`}
+                        className={`w-full rounded-lg border border-gray-300 bg-white py-2 pr-4 pl-9 text-sm text-gray-900 placeholder:text-gray-400 focus:ring-2 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-100 dark:placeholder:text-slate-500 sm:w-64 ${INPUT_FOCUS_COLORS[colorScheme]}`}
                         aria-label="Søk i bransjer"
                     />
                 </div>
@@ -192,7 +207,7 @@ export const IndustryBreakdownStats = memo(function IndustryBreakdownStats({
             {/* Table */}
             <div className="overflow-x-auto">
                 <table className="w-full">
-                    <thead className="bg-gray-50">
+                    <thead className="bg-gray-50 dark:bg-slate-950">
                         <tr>
                             <SortableHeader
                                 label="Bransje"
@@ -228,10 +243,10 @@ export const IndustryBreakdownStats = memo(function IndustryBreakdownStats({
                             />
                         </tr>
                     </thead>
-                    <tbody className="divide-y divide-gray-100">
+                    <tbody className="divide-y divide-gray-100 dark:divide-slate-800">
                         {sortedIndustries.length === 0 && searchQuery ? (
                             <tr>
-                                <td colSpan={4} className="px-4 py-8 text-center text-gray-500">
+                                <td colSpan={4} className="px-4 py-8 text-center text-gray-500 dark:text-slate-300">
                                     Ingen bransjer funnet for «{searchQuery}»
                                 </td>
                             </tr>
@@ -243,7 +258,7 @@ export const IndustryBreakdownStats = memo(function IndustryBreakdownStats({
                                 return (
                                     <tr
                                         key={ind.nace_division}
-                                        className={`${HOVER_COLORS[colorScheme]} ${onIndustryClick ? 'cursor-pointer' : ''} transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-blue-500`}
+                                        className={`${HOVER_COLORS[colorScheme]} ${onIndustryClick ? 'cursor-pointer' : ''} transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-blue-500 dark:focus-visible:ring-blue-300`}
                                         onClick={() => onIndustryClick?.(ind.nace_division, ind.nace_name)}
                                         onKeyDown={(event) => {
                                             if (!onIndustryClick) return;
@@ -257,10 +272,10 @@ export const IndustryBreakdownStats = memo(function IndustryBreakdownStats({
                                     >
                                         <td className="px-4 py-3">
                                             <div className="flex items-center gap-2">
-                                                <span className="text-xs font-mono bg-gray-100 text-gray-700 px-1.5 py-0.5 rounded">
+                                                <span className="rounded bg-gray-100 px-1.5 py-0.5 font-mono text-xs text-gray-700 dark:bg-slate-800 dark:text-slate-100">
                                                     {ind.nace_division}
                                                 </span>
-                                                <span className="text-sm text-gray-900 truncate max-w-[300px]" title={ind.nace_name}>
+                                                <span className="max-w-75 truncate text-sm text-gray-900 dark:text-white" title={ind.nace_name}>
                                                     {ind.nace_name}
                                                 </span>
                                             </div>
@@ -270,10 +285,10 @@ export const IndustryBreakdownStats = memo(function IndustryBreakdownStats({
                                                 {formatNumber(value)}
                                             </span>
                                         </td>
-                                        <td className="px-4 py-3 text-right text-sm text-gray-600">
+                                        <td className="px-4 py-3 text-right text-sm text-gray-600 dark:text-slate-200">
                                             {percentage}%
                                         </td>
-                                        <td className="px-4 py-3 text-right text-sm text-gray-500">
+                                        <td className="px-4 py-3 text-right text-sm text-gray-500 dark:text-slate-300">
                                             {formatNumber(ind.company_count)}
                                         </td>
                                     </tr>
@@ -285,7 +300,7 @@ export const IndustryBreakdownStats = memo(function IndustryBreakdownStats({
             </div>
 
             {/* Footer with total */}
-            <div className="p-4 border-t border-gray-200 bg-gray-50 text-sm text-gray-600">
+            <div className="border-t border-gray-200 bg-gray-50 p-4 text-sm text-gray-600 dark:border-slate-800 dark:bg-slate-950 dark:text-slate-300">
                 Totalt: <span className="font-semibold">{formatNumber(total)}</span> {metric === 'new_last_year' ? 'nyetableringer' : 'konkurser'} fordelt på {industries?.length ?? 0} bransjer
             </div>
         </div>

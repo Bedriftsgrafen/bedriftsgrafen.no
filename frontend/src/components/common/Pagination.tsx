@@ -115,12 +115,12 @@ export function Pagination({
   return (
     <nav className="mt-6 space-y-3" aria-label={`Paginering for ${itemLabel}`}>
       {/* Info text */}
-      <p className="text-sm text-gray-600 text-center" aria-live="polite">
+      <p className="text-center text-sm text-gray-600 dark:text-slate-400" aria-live="polite">
         {totalCount !== undefined ? (
           <>Viser {start}-{end} av {formatNumber(totalCount)} {itemLabel}</>
         ) : (
           <span className="flex items-center justify-center gap-2">
-            <span className="inline-block w-3 h-3 border-2 border-gray-400 border-t-transparent rounded-full animate-spin" aria-hidden="true"></span>
+            <span className="inline-block h-3 w-3 animate-spin rounded-full border-2 border-gray-400 border-t-transparent dark:border-slate-400 dark:border-t-transparent" aria-hidden="true"></span>
             Teller {itemLabel}...
           </span>
         )}
@@ -132,7 +132,7 @@ export function Pagination({
         <button
           onClick={handleFirstPage}
           disabled={isFirstPage}
-          className="p-2.5 sm:p-2 rounded-lg border border-gray-300 bg-white text-gray-700 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+          className="rounded-lg border border-gray-300 bg-white p-2.5 text-gray-700 transition-colors hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-300 dark:hover:bg-slate-800 sm:p-2"
           aria-label="Første side"
           title="Første side"
         >
@@ -143,7 +143,7 @@ export function Pagination({
         <button
           onClick={onPreviousPage}
           disabled={isFirstPage}
-          className="p-2.5 sm:p-2 rounded-lg border border-gray-300 bg-white text-gray-700 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+          className="rounded-lg border border-gray-300 bg-white p-2.5 text-gray-700 transition-colors hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-300 dark:hover:bg-slate-800 sm:p-2"
           aria-label="Forrige side"
           title="Forrige side"
         >
@@ -157,7 +157,7 @@ export function Pagination({
               return (
                 <span
                   key={`ellipsis-${page}`}
-                  className="px-3 py-2 text-gray-500"
+                  className="px-3 py-2 text-gray-500 dark:text-slate-500"
                   aria-hidden="true"
                 >
                   ...
@@ -174,8 +174,8 @@ export function Pagination({
                 className={`
                   min-w-11 sm:min-w-10 min-h-11 sm:min-h-0 px-3 py-2.5 sm:py-2 rounded-lg border transition-colors
                   ${isActive
-                    ? 'bg-blue-900 text-white border-blue-900 font-medium hover:bg-blue-800'
-                    : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'
+                    ? 'bg-blue-900 text-white border-blue-900 font-medium hover:bg-blue-800 dark:bg-blue-500 dark:text-slate-950 dark:border-blue-500 dark:hover:bg-blue-400'
+                    : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50 dark:bg-slate-900 dark:text-slate-300 dark:border-slate-700 dark:hover:bg-slate-800'
                   }
                 `}
                 aria-label={`Side ${page}`}
@@ -191,7 +191,7 @@ export function Pagination({
         <button
           onClick={onNextPage}
           disabled={isLastPage}
-          className="p-2.5 sm:p-2 rounded-lg border border-gray-300 bg-white text-gray-700 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+          className="rounded-lg border border-gray-300 bg-white p-2.5 text-gray-700 transition-colors hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-300 dark:hover:bg-slate-800 sm:p-2"
           aria-label="Neste side"
           title="Neste side"
         >
@@ -202,7 +202,7 @@ export function Pagination({
         <button
           onClick={handleLastPage}
           disabled={isLastPage}
-          className="p-2.5 sm:p-2 rounded-lg border border-gray-300 bg-white text-gray-700 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+          className="rounded-lg border border-gray-300 bg-white p-2.5 text-gray-700 transition-colors hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-300 dark:hover:bg-slate-800 sm:p-2"
           aria-label="Siste side"
           title="Siste side"
         >

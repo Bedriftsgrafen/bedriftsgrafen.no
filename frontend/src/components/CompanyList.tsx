@@ -52,8 +52,8 @@ const SmartBadgesList = ({ company }: { company: Company }) => {
 
 // Extract rendering logic to pure functions
 const renderMargin = (margin: number | null | undefined) => {
-    if (margin == null) return <span className="text-gray-400">—</span>
-    const colorClass = margin > 0 ? 'text-green-700' : margin < 0 ? 'text-red-700' : 'text-gray-600'
+    if (margin == null) return <span className="text-gray-400 dark:text-slate-500">—</span>
+    const colorClass = margin > 0 ? 'text-green-700 dark:text-emerald-300' : margin < 0 ? 'text-red-700 dark:text-red-300' : 'text-gray-600 dark:text-slate-400'
     return <span className={clsx("font-medium", colorClass)}>{margin.toFixed(1)}%</span>
 }
 
@@ -71,7 +71,7 @@ const getCellValue = (company: Company, column: CompanyColumn): React.ReactNode 
             return <span title={getOrganizationFormLabel(company.organisasjonsform)}>{company.organisasjonsform}</span>
         case 'naeringskode':
             return (
-                <div className="max-w-[200px] truncate" title={company.naeringskoder?.[0] && typeof company.naeringskoder[0] === 'object'
+                <div className="max-w-50 truncate" title={company.naeringskoder?.[0] && typeof company.naeringskoder[0] === 'object'
                     ? `${company.naeringskoder[0].kode} - ${company.naeringskoder[0].beskrivelse}`
                     : formatNace(company.naeringskode) || '-'}>
                     {company.naeringskoder?.[0] && typeof company.naeringskoder[0] === 'object'
@@ -88,7 +88,7 @@ const getCellValue = (company: Company, column: CompanyColumn): React.ReactNode 
         case 'vedtektsfestet_formaal':
             return (
                 <div className="max-w-md truncate" title={normalizeText(company.vedtektsfestet_formaal) || ''}>
-                    {normalizeText(company.vedtektsfestet_formaal) || <span className="text-gray-400">—</span>}
+                    {normalizeText(company.vedtektsfestet_formaal) || <span className="text-gray-400 dark:text-slate-500">—</span>}
                 </div>
             )
         default: {
@@ -145,8 +145,8 @@ const ColumnPicker: React.FC<ColumnPickerProps> = ({ className }) => {
                 onClick={() => setIsOpen(!isOpen)}
                 className={clsx(
                     "p-2 rounded-xl transition-all duration-200 active:scale-90",
-                    "text-slate-600 hover:text-blue-600 hover:bg-slate-100",
-                    isOpen ? "bg-slate-100 text-blue-600 shadow-inner" : ""
+                    "text-slate-600 hover:bg-slate-100 hover:text-blue-600 dark:text-slate-300 dark:hover:bg-white/10 dark:hover:text-blue-300",
+                    isOpen ? "bg-slate-100 text-blue-600 shadow-inner dark:bg-white/10 dark:text-blue-300" : ""
                 )}
                 title="Velg kolonner"
                 aria-label="Velg kolonner"
@@ -157,30 +157,30 @@ const ColumnPicker: React.FC<ColumnPickerProps> = ({ className }) => {
             </button>
 
             {isOpen && (
-                <div className="absolute right-0 top-full mt-2 backdrop-blur-md bg-white/80 rounded-xl shadow-xl border border-slate-200/50 py-2 z-50 min-w-[220px] animate-fade-in overflow-hidden">
-                    <div className="px-3 py-1.5 border-b border-gray-100 flex items-center justify-between">
-                        <span className="text-xs font-medium text-gray-500 uppercase">Kolonner</span>
+                <div className="animate-fade-in absolute right-0 top-full z-50 mt-2 min-w-55 overflow-hidden rounded-xl border border-slate-200/50 bg-white/80 py-2 shadow-xl backdrop-blur-md dark:border-slate-700 dark:bg-slate-900/92 dark:shadow-black/40">
+                    <div className="flex items-center justify-between border-b border-gray-100 px-3 py-1.5 dark:border-slate-800">
+                        <span className="text-xs font-medium uppercase text-gray-500 dark:text-slate-400">Kolonner</span>
                         <button
                             onClick={() => resetColumns()}
-                            className="text-xs text-blue-600 hover:text-blue-800 flex items-center gap-1 px-1 py-0.5 rounded hover:bg-blue-50 transition-colors"
+                            className="flex items-center gap-1 rounded px-1 py-0.5 text-xs text-blue-600 transition-colors hover:bg-blue-50 hover:text-blue-800 dark:text-blue-300 dark:hover:bg-blue-500/15 dark:hover:text-blue-200"
                         >
                             <RotateCcw className="h-3 w-3" />
                             Nullstill
                         </button>
                     </div>
-                    <div className="max-h-[300px] overflow-y-auto py-1">
+                    <div className="max-h-75 overflow-y-auto py-1">
                         {(Object.entries(COLUMN_CONFIG) as [CompanyColumn, typeof COLUMN_CONFIG[CompanyColumn]][]).map(([key, config]) => (
                             <label
                                 key={key}
-                                className="flex items-center gap-2 px-3 py-1.5 hover:bg-gray-50 cursor-pointer transition-colors"
+                                className="flex cursor-pointer items-center gap-2 px-3 py-1.5 transition-colors hover:bg-gray-50 dark:hover:bg-white/5"
                             >
                                 <input
                                     type="checkbox"
                                     checked={visibleColumns.includes(key)}
                                     onChange={() => toggleColumn(key)}
-                                    className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                                    className="rounded border-gray-300 text-blue-600 focus:ring-blue-500 dark:border-slate-700 dark:bg-slate-900"
                                 />
-                                <span className={clsx("text-sm", visibleColumns.includes(key) ? "text-gray-900" : "text-gray-500")}>
+                                <span className={clsx("text-sm", visibleColumns.includes(key) ? "text-gray-900 dark:text-slate-100" : "text-gray-500 dark:text-slate-500")}>
                                     {config.label}
                                 </span>
                             </label>
@@ -235,7 +235,7 @@ const CompanyTableBody = React.memo(({
     }
 
     return (
-        <tbody className="divide-y divide-gray-100 bg-white">
+        <tbody className="divide-y divide-gray-100 bg-white dark:divide-slate-800 dark:bg-slate-900">
             {companies.map((company) => (
                 <tr
                     key={company.orgnr}
@@ -247,14 +247,14 @@ const CompanyTableBody = React.memo(({
                         }
                     }}
                     tabIndex={0}
-                    className="hover:bg-blue-50 transition-colors cursor-pointer group focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-blue-500"
+                    className="group cursor-pointer transition-colors hover:bg-blue-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-blue-500 dark:hover:bg-white/5 dark:focus-visible:ring-blue-300"
                 >
                     {visibleColumns.map((column) => (
                         <td
                             key={column}
                             className={clsx(
                                 "px-5 py-3 text-sm whitespace-nowrap",
-                                column === 'navn' ? "font-medium text-gray-900" : "text-gray-500",
+                                column === 'navn' ? "font-medium text-gray-900 dark:text-slate-100" : "text-gray-500 dark:text-slate-400",
                                 column === 'naeringskode' ? "text-xs" : "",
                                 ['antall_ansatte', 'revenue', 'profit'].includes(column) ? "tabular-nums text-right" : ""
                             )}
@@ -333,23 +333,23 @@ export function CompanyList({
 
     if (isError) {
         return (
-            <div className="bg-white rounded-xl shadow-md overflow-hidden border border-gray-200 p-6 text-center">
-                <p className="text-red-700 mb-3 font-medium">Kunne ikke laste virksomheter</p>
+            <div className="overflow-hidden rounded-xl border border-gray-200 bg-white p-6 text-center shadow-md dark:border-slate-800 dark:bg-slate-900">
+                <p className="mb-3 font-medium text-red-700 dark:text-red-300">Kunne ikke laste virksomheter</p>
                 <Button onClick={onRetry} variant="primary">Prøv igjen</Button>
             </div>
         )
     }
 
     return (
-        <div className="bg-white rounded-xl shadow-md overflow-hidden border border-gray-200 flex flex-col h-full">
+        <div className="flex h-full flex-col overflow-hidden rounded-xl border border-gray-200 bg-white shadow-md dark:border-slate-800 dark:bg-slate-900 dark:shadow-black/20">
             {/* Header */}
-            <div className="px-5 py-4 border-b border-slate-200 bg-linear-to-br from-slate-50 to-white flex justify-between items-center shrink-0">
-                <h2 className="font-semibold text-lg text-slate-900">Virksomheter</h2>
+            <div className="flex shrink-0 items-center justify-between border-b border-slate-200 bg-linear-to-br from-slate-50 to-white px-5 py-4 dark:border-slate-800 dark:from-slate-900 dark:to-slate-950">
+                <h2 className="text-lg font-semibold text-slate-900 dark:text-white">Virksomheter</h2>
                 <div className="flex items-center gap-3">
-                    <span className="text-sm text-gray-600" aria-live="polite" aria-busy={countLoading}>
+                    <span className="text-sm text-gray-600 dark:text-slate-400" aria-live="polite" aria-busy={countLoading}>
                         {countLoading ? (
                             <span className="flex items-center gap-2">
-                                <span className="w-4 h-4 border-2 border-blue-600 border-t-transparent rounded-full animate-spin" aria-hidden="true" />
+                                <span className="h-4 w-4 animate-spin rounded-full border-2 border-blue-600 border-t-transparent dark:border-blue-300 dark:border-t-transparent" aria-hidden="true" />
                                 <span className="sr-only">Laster antall virksomheter</span>
                                 Teller...
                             </span>
@@ -366,7 +366,7 @@ export function CompanyList({
                 <div className="p-4 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
                     {isLoading ? (
                         Array.from({ length: itemsPerPage }).map((_, i) => (
-                            <div key={i} className="bg-gray-100 rounded-lg h-44 animate-pulse" />
+                            <div key={i} className="h-44 animate-pulse rounded-lg bg-gray-100 dark:bg-slate-800" />
                         ))
                     ) : companies.length > 0 ? (
                         companies.map(c => <CompanyCard key={c.orgnr} company={c} onClick={() => onSelectCompany(c.orgnr)} />)
@@ -379,7 +379,7 @@ export function CompanyList({
             ) : (
                 <div className="overflow-x-auto">
                     <table className="w-full text-left text-sm">
-                        <thead className="bg-slate-50/50 text-slate-600 font-medium">
+                        <thead className="bg-slate-50/50 font-medium text-slate-600 dark:bg-slate-950/80 dark:text-slate-400">
                             <tr>
                                 {visibleColumns.map((column, index) => (
                                     <SortableHeader

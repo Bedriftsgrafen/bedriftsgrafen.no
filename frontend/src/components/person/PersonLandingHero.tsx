@@ -12,10 +12,10 @@ interface PersonLandingHeroProps {
 export const PersonLandingHero = memo(function PersonLandingHero({ stats, loading }: PersonLandingHeroProps) {
     return (
         <div className="mb-8">
-            <h1 className="text-3xl font-bold text-slate-900 mb-2">
+            <h1 className="mb-2 text-3xl font-bold text-slate-900 dark:text-white">
                 Personer
             </h1>
-            <p className="text-slate-600 mb-6">
+            <p className="mb-6 text-slate-600 dark:text-slate-300">
                 Utforsk {stats ? formatNumber(stats.total_persons) : '...'} personer med roller i norsk næringsliv
             </p>
 

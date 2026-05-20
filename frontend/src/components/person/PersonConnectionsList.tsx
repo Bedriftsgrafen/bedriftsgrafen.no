@@ -11,14 +11,14 @@ interface PersonConnectionsListProps {
 
 function LoadingSkeleton() {
     return (
-        <div className="space-y-3 animate-pulse">
+        <div className="animate-pulse space-y-3">
             {[1, 2, 3].map((i) => (
-                <div key={i} className="rounded-xl border border-gray-100 p-5">
+                <div key={i} className="rounded-xl border border-gray-100 p-5 dark:border-slate-800">
                     <div className="flex items-start gap-4">
-                        <div className="w-11 h-11 rounded-lg bg-gray-100" />
+                        <div className="h-11 w-11 rounded-lg bg-gray-100 dark:bg-slate-800" />
                         <div className="flex-1">
-                            <div className="h-4 w-40 bg-gray-100 rounded" />
-                            <div className="h-3 w-24 bg-gray-50 rounded mt-2" />
+                            <div className="h-4 w-40 rounded bg-gray-100 dark:bg-slate-800" />
+                            <div className="mt-2 h-3 w-24 rounded bg-gray-50 dark:bg-slate-900" />
                         </div>
                     </div>
                 </div>
@@ -34,10 +34,10 @@ export function PersonConnectionsList({ connections, isLoading, personName }: Pe
 
     if (connections.length === 0) {
         return (
-            <div className="text-center py-12 text-gray-400">
-                <Users className="h-12 w-12 mx-auto mb-3 opacity-50" />
+            <div className="py-12 text-center text-gray-400 dark:text-slate-500">
+                <Users className="mx-auto mb-3 h-12 w-12 opacity-50" />
                 <p className="text-lg font-medium">Ingen direkte forbindelser funnet</p>
-                <p className="text-sm mt-1">Denne personen deler ingen aktive selskaper med andre</p>
+                <p className="mt-1 text-sm">Denne personen deler ingen aktive selskaper med andre</p>
             </div>
         )
     }
@@ -45,12 +45,12 @@ export function PersonConnectionsList({ connections, isLoading, personName }: Pe
     return (
         <div>
             <div className="flex items-center justify-between mb-4">
-                <p className="text-sm text-gray-500">
+                <p className="text-sm text-gray-500 dark:text-slate-400">
                     {connections.length} {connections.length === 1 ? 'forbindelse' : 'forbindelser'}
                 </p>
                 <button
                     onClick={() => setExpandAll(!expandAll)}
-                    className="text-sm text-blue-600 hover:text-blue-700 font-medium transition-colors"
+                    className="text-sm font-medium text-blue-600 transition-colors hover:text-blue-700 dark:text-blue-300 dark:hover:text-blue-200"
                 >
                     {expandAll ? 'Lukk alle' : 'Ekspander alle'}
                 </button>

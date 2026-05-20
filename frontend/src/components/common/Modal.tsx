@@ -121,12 +121,12 @@ export function Modal({
 
     return (
         <div
-            className="fixed inset-0 bg-black/50 z-2000 flex items-start justify-center p-2 sm:p-4 overflow-y-auto overflow-x-hidden pt-4 sm:pt-10"
+            className="fixed inset-0 z-2000 flex items-start justify-center overflow-y-auto overflow-x-hidden bg-black/50 p-2 pt-4 sm:p-4 sm:pt-10 dark:bg-black/70"
             onMouseDown={handleOverlayMouseDown}
         >
             <div
                 ref={dialogRef}
-                className={`relative bg-white rounded-lg sm:rounded-xl shadow-2xl ${width} ${maxWidth} flex flex-col my-auto overflow-hidden`}
+                className={`relative my-auto flex flex-col overflow-hidden rounded-lg bg-white shadow-2xl dark:border dark:border-slate-800 dark:bg-slate-900 sm:rounded-xl ${width} ${maxWidth}`}
                 role="dialog"
                 aria-modal="true"
                 aria-label={resolvedTitleId ? undefined : ariaLabel}
@@ -138,15 +138,15 @@ export function Modal({
                 <button
                     ref={closeButtonRef}
                     onClick={preserveScrollAndClose}
-                    className="absolute right-2 top-2 sm:right-4 sm:top-4 p-3 sm:p-2 rounded-lg hover:bg-gray-100 text-gray-500 transition-colors z-10"
+                    className="absolute right-2 top-2 z-10 rounded-lg p-3 text-gray-500 transition-colors hover:bg-gray-100 dark:text-slate-400 dark:hover:bg-white/10 dark:hover:text-white sm:right-4 sm:top-4 sm:p-2"
                     aria-label="Lukk"
                 >
                     <X className="w-5 h-5" aria-hidden="true" />
                 </button>
 
                 {title && (
-                    <div className="px-4 sm:px-6 py-4 border-b border-gray-200 pr-14 sm:pr-12">
-                        <h2 id={generatedTitleId} className="text-lg sm:text-xl font-bold text-gray-900">{title}</h2>
+                    <div className="border-b border-gray-200 px-4 py-4 pr-14 dark:border-slate-800 sm:px-6 sm:pr-12">
+                        <h2 id={generatedTitleId} className="text-lg font-bold text-gray-900 dark:text-white sm:text-xl">{title}</h2>
                     </div>
                 )}
 

@@ -11,7 +11,7 @@ export const ViewModeToggle = memo(function ViewModeToggle() {
 
     return (
         <div
-            className="flex items-center border border-gray-300 rounded-lg overflow-hidden"
+            className="flex items-center overflow-hidden rounded-lg border border-gray-300 dark:border-slate-700"
             role="group"
             aria-label="Velg visning"
         >
@@ -19,8 +19,8 @@ export const ViewModeToggle = memo(function ViewModeToggle() {
                 type="button"
                 onClick={() => setViewMode('list')}
                 className={`flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium transition-colors ${viewMode === 'list'
-                    ? 'bg-blue-900 text-white'
-                    : 'bg-white text-gray-600 hover:bg-gray-50'
+                    ? 'bg-blue-900 text-white dark:bg-blue-500 dark:text-slate-950'
+                    : 'bg-white text-gray-600 hover:bg-gray-50 dark:bg-slate-900 dark:text-slate-300 dark:hover:bg-slate-800'
                     }`}
                 aria-pressed={viewMode === 'list'}
                 aria-label="Listevisning"
@@ -33,8 +33,8 @@ export const ViewModeToggle = memo(function ViewModeToggle() {
                 type="button"
                 onClick={() => setViewMode('cards')}
                 className={`flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium transition-colors ${viewMode === 'cards'
-                    ? 'bg-blue-900 text-white'
-                    : 'bg-white text-gray-600 hover:bg-gray-50'
+                    ? 'bg-blue-900 text-white dark:bg-blue-500 dark:text-slate-950'
+                    : 'bg-white text-gray-600 hover:bg-gray-50 dark:bg-slate-900 dark:text-slate-300 dark:hover:bg-slate-800'
                     }`}
                 aria-pressed={viewMode === 'cards'}
                 aria-label="Kortvisning"

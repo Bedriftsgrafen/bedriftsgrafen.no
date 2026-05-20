@@ -59,11 +59,11 @@ export function PersonRoleFilters({ roles, onFilteredRoles }: PersonRoleFiltersP
         <div className="flex flex-wrap items-center gap-3 text-sm">
             {/* Sort control */}
             <div className="flex items-center gap-1.5">
-                <ArrowUpDown className="h-4 w-4 text-gray-400" />
+                <ArrowUpDown className="h-4 w-4 text-gray-400 dark:text-slate-500" />
                 <select
                     value={sortField}
                     onChange={(e) => setSortField(e.target.value as SortField)}
-                    className="text-sm border border-gray-200 rounded-lg px-2 py-1.5 text-gray-600 bg-white"
+                    className="rounded-lg border border-gray-200 bg-white px-2 py-1.5 text-sm text-gray-600 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200"
                 >
                     {SORT_OPTIONS.map((opt) => (
                         <option key={opt.value} value={opt.value}>{opt.label}</option>
@@ -71,7 +71,7 @@ export function PersonRoleFilters({ roles, onFilteredRoles }: PersonRoleFiltersP
                 </select>
                 <button
                     onClick={() => setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc')}
-                    className="px-2 py-1.5 text-gray-500 hover:text-blue-600 border border-gray-200 rounded-lg transition-colors"
+                    className="rounded-lg border border-gray-200 px-2 py-1.5 text-gray-500 transition-colors hover:text-blue-600 dark:border-slate-700 dark:text-slate-400 dark:hover:text-blue-300"
                     title={sortOrder === 'asc' ? 'Stigende' : 'Synkende'}
                 >
                     {sortOrder === 'asc' ? '↑' : '↓'}
@@ -80,11 +80,11 @@ export function PersonRoleFilters({ roles, onFilteredRoles }: PersonRoleFiltersP
 
             {/* Status filter */}
             <div className="flex items-center gap-1.5">
-                <Filter className="h-4 w-4 text-gray-400" />
+                <Filter className="h-4 w-4 text-gray-400 dark:text-slate-500" />
                 <select
                     value={statusFilter}
                     onChange={(e) => setStatusFilter(e.target.value as StatusFilter)}
-                    className="text-sm border border-gray-200 rounded-lg px-2 py-1.5 text-gray-600 bg-white"
+                    className="rounded-lg border border-gray-200 bg-white px-2 py-1.5 text-sm text-gray-600 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200"
                 >
                     <option value="all">Alle roller</option>
                     <option value="active">Aktive</option>
@@ -97,7 +97,7 @@ export function PersonRoleFilters({ roles, onFilteredRoles }: PersonRoleFiltersP
                 <select
                     value={orgFormFilter}
                     onChange={(e) => setOrgFormFilter(e.target.value)}
-                    className="text-sm border border-gray-200 rounded-lg px-2 py-1.5 text-gray-600 bg-white"
+                    className="rounded-lg border border-gray-200 bg-white px-2 py-1.5 text-sm text-gray-600 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200"
                 >
                     <option value="all">Alle selskapsformer</option>
                     {orgForms.map((form) => (

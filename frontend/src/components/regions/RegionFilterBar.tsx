@@ -21,8 +21,8 @@ export const RegionFilterBar = memo(function RegionFilterBar({
   const segmentBtnClass = (s: Segment) =>
     `px-5 py-2 rounded-xl text-sm font-bold transition-all ${
       segment === s
-        ? 'bg-blue-900 text-white shadow-md'
-        : 'bg-white text-slate-600 border border-slate-200 hover:border-blue-300 hover:text-blue-600'
+        ? 'bg-blue-900 text-white shadow-md dark:bg-blue-500 dark:text-slate-950'
+        : 'bg-white text-slate-600 border border-slate-200 hover:border-blue-300 hover:text-blue-600 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-300 dark:hover:border-blue-400/60 dark:hover:text-blue-200'
     }`
 
   return (
@@ -37,9 +37,9 @@ export const RegionFilterBar = memo(function RegionFilterBar({
           onChange={e => onSearchChange(e.target.value)}
           aria-label="Søk etter region"
           data-testid="region-search-input"
-          className="w-full pl-14 pr-6 py-4 bg-white border border-slate-200 rounded-2xl focus:ring-4 focus:ring-blue-500/5 focus:border-blue-500 outline-none shadow-sm transition-all text-lg font-medium"
+          className="w-full rounded-2xl border border-slate-200 bg-white py-4 pl-14 pr-6 text-lg font-medium text-slate-900 shadow-sm outline-none transition-all placeholder:text-slate-400 focus:border-blue-500 focus:ring-4 focus:ring-blue-500/5 dark:border-slate-700 dark:bg-slate-900 dark:text-white dark:placeholder:text-slate-500 dark:focus:border-blue-400 dark:focus:ring-blue-400/15"
         />
-        <Search className="absolute left-5 top-1/2 -translate-y-1/2 h-6 w-6 text-slate-400 group-focus-within:text-blue-600 transition-colors" aria-hidden="true" />
+        <Search className="absolute left-5 top-1/2 h-6 w-6 -translate-y-1/2 text-slate-400 transition-colors group-focus-within:text-blue-600 dark:text-slate-500 dark:group-focus-within:text-blue-300" aria-hidden="true" />
       </div>
 
       {/* Segment toggle – desktop */}
@@ -75,7 +75,7 @@ export const RegionFilterBar = memo(function RegionFilterBar({
 
       {/* Segment toggle – mobile */}
       <select
-        className="md:hidden w-full pl-6 pr-12 py-4 bg-white border border-slate-200 rounded-2xl focus:ring-4 focus:ring-blue-500/5 focus:border-blue-500 outline-none shadow-sm text-lg font-medium appearance-none"
+        className="w-full appearance-none rounded-2xl border border-slate-200 bg-white py-4 pl-6 pr-12 text-lg font-medium text-slate-900 shadow-sm outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-500/5 dark:border-slate-700 dark:bg-slate-900 dark:text-white dark:focus:border-blue-400 dark:focus:ring-blue-400/15 md:hidden"
         value={segment}
         onChange={e => onSegmentChange(e.target.value as Segment)}
         aria-label="Vis type"

@@ -21,14 +21,14 @@ function TabButton({ tab, label, isActive, onChange }: TabButtonProps) {
       role="tab"
       aria-selected={isActive}
       onClick={() => onChange(tab)}
-      className={`px-6 py-3 font-medium text-sm transition-colors relative whitespace-nowrap ${isActive
-        ? 'text-blue-600'
-        : 'text-gray-500 hover:text-gray-700'
+      className={`relative whitespace-nowrap px-6 py-3 text-sm font-medium transition-colors ${isActive
+        ? 'text-blue-600 dark:text-blue-300'
+        : 'text-gray-500 hover:text-gray-700 dark:text-slate-400 dark:hover:text-slate-200'
         }`}
     >
       {label}
       {isActive && (
-        <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-blue-900" />
+        <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-blue-900 dark:bg-blue-300" />
       )}
     </button>
   )

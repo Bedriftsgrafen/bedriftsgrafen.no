@@ -14,7 +14,7 @@ export function Footer() {
             <h2 className="mt-3 text-2xl font-semibold tracking-tight text-white sm:text-3xl">
               Innsikt i norske virksomheter, bygget på åpne data.
             </h2>
-            <p className="mt-3 text-sm leading-7 text-slate-400 sm:text-base">
+            <p className="mt-3 text-sm leading-7 text-slate-300 sm:text-base">
               Gratis analyse av norske virksomheter basert på åpne data fra Brønnøysundregistrene, SSB og Kartverket.
             </p>
           </div>
@@ -25,7 +25,7 @@ export function Footer() {
               <kbd className="rounded-md border border-white/10 bg-white/5 px-2 py-1 text-xs text-slate-200">/</kbd>
               <span>for søk</span>
             </span>
-            <span className="text-white/20">•</span>
+            <span className="text-slate-300">•</span>
             <span className="inline-flex items-center gap-2">
               <kbd className="rounded-md border border-white/10 bg-white/5 px-2 py-1 text-xs text-slate-200">Esc</kbd>
               <span>for å lukke</span>
@@ -36,7 +36,7 @@ export function Footer() {
         <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
           <section className="rounded-2xl border border-white/10 bg-white/5 p-5">
             <h2 className="text-base font-semibold text-white">Om Bedriftsgrafen</h2>
-            <p className="mt-4 text-sm leading-7 text-slate-400">
+            <p className="mt-4 text-sm leading-7 text-slate-300">
               Gratis analyse av norske virksomheter basert på åpne data fra Brønnøysundregistrene.
             </p>
             <a
@@ -56,7 +56,7 @@ export function Footer() {
               <Database className="h-4 w-4 text-blue-300" aria-hidden="true" />
               Datakilde
             </h2>
-            <p className="mt-4 text-sm leading-7 text-slate-400">
+            <p className="mt-4 text-sm leading-7 text-slate-300">
               Data hentet fra{' '}
               <a
                 href="https://data.brreg.no"
@@ -90,7 +90,7 @@ export function Footer() {
 
           <section className="rounded-2xl border border-white/10 bg-white/5 p-5">
             <h2 className="text-base font-semibold text-white">Kontakt Bedriftsgrafen.no</h2>
-            <p className="mt-3 text-sm leading-6 text-slate-400">Kun spørsmål om nettsiden, data eller feil i tjenesten.</p>
+            <p className="mt-3 text-sm leading-6 text-slate-300">Kun spørsmål om nettsiden, data eller feil i tjenesten.</p>
             <div className="mt-4 space-y-3">
               <BedriftsgrafenContactLink
                 className="inline-flex w-full items-center justify-between gap-3 rounded-xl border border-white/10 bg-white/5 px-4 py-3 text-left text-sm font-medium text-slate-200 transition-colors hover:border-white/20 hover:bg-white/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-200 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-950"
@@ -133,7 +133,7 @@ export function Footer() {
           </section>
         </div>
 
-        <div className="mt-8 border-t border-white/10 pt-6 text-sm text-slate-400 sm:flex sm:items-center sm:justify-between">
+        <div className="mt-8 border-t border-white/10 pt-6 text-sm text-slate-300 sm:flex sm:items-center sm:justify-between">
           <p>© {CURRENT_YEAR} Bedriftsgrafen.no. Alle rettigheter reservert.</p>
           <p className="mt-2 sm:mt-0">Bygget for raske søk, sammenligning og innsikt i norske virksomheter.</p>
         </div>

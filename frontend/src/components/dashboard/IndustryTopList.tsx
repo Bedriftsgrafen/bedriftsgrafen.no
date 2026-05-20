@@ -62,7 +62,7 @@ export function IndustryTopList({ naceCode, onSelectCompany }: IndustryTopListPr
                         <Award className="h-6 w-6 text-yellow-400" />
                         <h2 className="text-xl font-bold">Topp 100 - {naceCode || 'Hele Norge'}</h2>
                     </div>
-                    <p className="text-blue-100 max-w-2xl">
+                    <p className="max-w-2xl text-blue-100">
                         Oversikt over de største aktørene sortert etter omsetning.
                         Klikk på kolonnene for å endre sortering eller velg en virksomhet for detaljer.
                     </p>
@@ -70,12 +70,12 @@ export function IndustryTopList({ naceCode, onSelectCompany }: IndustryTopListPr
             </div>
 
             {/* Table Container */}
-            <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
+            <div className="overflow-hidden rounded-xl border border-gray-200 bg-white shadow-sm dark:border-slate-800 dark:bg-slate-900 dark:shadow-black/20">
                 <div className="overflow-x-auto">
                     <table className="w-full text-sm text-left border-collapse">
                         <thead>
-                            <tr className="bg-gray-50 border-b border-gray-200">
-                                <th className="px-5 py-4 font-semibold text-gray-900 w-16 text-center">#</th>
+                            <tr className="border-b border-gray-200 bg-gray-50 dark:border-slate-800 dark:bg-slate-950">
+                                <th className="w-16 px-5 py-4 text-center font-semibold text-gray-900 dark:text-slate-200">#</th>
                                 <SortableHeader
                                     field="navn"
                                     label="Virksomhet"
@@ -119,44 +119,44 @@ export function IndustryTopList({ naceCode, onSelectCompany }: IndustryTopListPr
                                 <th className="px-5 py-4"></th>
                             </tr>
                         </thead>
-                        <tbody className="divide-y divide-gray-100">
+                        <tbody className="divide-y divide-gray-100 dark:divide-slate-800">
                             {companies?.map((company, index) => (
                                 <tr
                                     key={company.orgnr}
                                     onClick={() => onSelectCompany(company.orgnr)}
-                                    className="hover:bg-blue-50/50 transition-colors cursor-pointer group"
+                                    className="group cursor-pointer transition-colors hover:bg-blue-50/50 dark:hover:bg-blue-500/12"
                                 >
-                                    <td className="px-5 py-4 text-gray-400 font-mono text-center">
+                                    <td className="px-5 py-4 text-center font-mono text-gray-400 dark:text-slate-500">
                                         {index + 1}
                                     </td>
                                     <td className="px-5 py-4">
-                                        <div className="font-semibold text-gray-900 group-hover:text-blue-600 transition-colors truncate max-w-xs sm:max-w-md">
+                                        <div className="max-w-xs truncate font-semibold text-gray-900 transition-colors group-hover:text-blue-600 dark:text-white dark:group-hover:text-blue-200 sm:max-w-md">
                                             {company.navn}
                                         </div>
-                                        <div className="text-xs text-gray-500 font-mono">
+                                        <div className="font-mono text-xs text-gray-500 dark:text-slate-400">
                                             {company.orgnr}
                                         </div>
                                     </td>
-                                    <td className="px-5 py-4 text-right font-medium text-gray-900 tabular-nums">
+                                    <td className="px-5 py-4 text-right font-medium tabular-nums text-gray-900 dark:text-slate-100">
                                         {formatCurrency(company.latest_revenue)}
                                     </td>
                                     <td className={clsx(
                                         "px-5 py-4 text-right tabular-nums font-medium",
-                                        (company.latest_profit ?? 0) > 0 ? "text-green-600" : (company.latest_profit ?? 0) < 0 ? "text-red-600" : "text-gray-900"
+                                        (company.latest_profit ?? 0) > 0 ? "text-green-600 dark:text-emerald-300" : (company.latest_profit ?? 0) < 0 ? "text-red-600 dark:text-red-300" : "text-gray-900 dark:text-slate-100"
                                     )}>
                                         {formatCurrency(company.latest_profit)}
                                     </td>
-                                    <td className="px-5 py-4 text-right tabular-nums">
+                                    <td className="px-5 py-4 text-right tabular-nums text-gray-700 dark:text-slate-300">
                                         {company.latest_operating_margin != null
                                             ? formatPercentValue(company.latest_operating_margin)
                                             : '—'
                                         }
                                     </td>
-                                    <td className="px-5 py-4 text-right text-gray-600 tabular-nums">
+                                    <td className="px-5 py-4 text-right tabular-nums text-gray-600 dark:text-slate-300">
                                         {company.antall_ansatte ?? '—'}
                                     </td>
                                     <td className="px-5 py-4 text-right">
-                                        <ArrowRight className="h-4 w-4 text-gray-300 group-hover:text-blue-500 group-hover:translate-x-1 transition-all inline-block" />
+                                        <ArrowRight className="inline-block h-4 w-4 text-gray-300 transition-all group-hover:translate-x-1 group-hover:text-blue-500 dark:text-slate-600 dark:group-hover:text-blue-300" />
                                     </td>
                                 </tr>
                             ))}
@@ -165,14 +165,14 @@ export function IndustryTopList({ naceCode, onSelectCompany }: IndustryTopListPr
                 </div>
                 {companies?.length === 0 && (
                     <div className="p-8 md:p-12 text-center">
-                        <Building2 className="h-12 w-12 text-gray-200 mx-auto mb-4" />
-                        <p className="text-gray-500">Ingen virksomheter funnet i topplisten.</p>
+                        <Building2 className="mx-auto mb-4 h-12 w-12 text-gray-200 dark:text-slate-600" />
+                        <p className="text-gray-500 dark:text-slate-400">Ingen virksomheter funnet i topplisten.</p>
                     </div>
                 )}
             </div>
 
             {/* Footnote */}
-            <p className="text-xs text-gray-400 px-4">
+            <p className="px-4 text-xs text-gray-400 dark:text-slate-500">
                 * Topplisten er basert på sist innsendte årsregnskap fra Brønnøysundregistrene.
             </p>
         </div>

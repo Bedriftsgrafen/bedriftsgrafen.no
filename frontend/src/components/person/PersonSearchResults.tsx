@@ -67,15 +67,15 @@ export function PersonSearchResults({
         <div className="mb-8">
             {/* Toolbar: count, sort, view mode */}
             <div className="px-1 py-3 flex flex-wrap items-center justify-between gap-3">
-                <h2 className="font-semibold text-lg text-slate-900 flex items-center gap-2">
-                    <User className="h-5 w-5 text-blue-600" aria-hidden="true" />
+                <h2 className="flex items-center gap-2 text-lg font-semibold text-slate-900 dark:text-white">
+                    <User className="h-5 w-5 text-blue-600 dark:text-blue-300" aria-hidden="true" />
                     Resultater
                 </h2>
                 <div className="flex items-center gap-3">
-                    <span className="text-sm text-gray-600" aria-live="polite" aria-busy={isLoading}>
+                    <span className="text-sm text-gray-600 dark:text-slate-400" aria-live="polite" aria-busy={isLoading}>
                         {isLoading ? (
                             <span className="flex items-center gap-2">
-                                <span className="w-4 h-4 border-2 border-blue-600 border-t-transparent rounded-full animate-spin" aria-hidden="true" />
+                                <span className="h-4 w-4 animate-spin rounded-full border-2 border-blue-600 border-t-transparent dark:border-blue-300 dark:border-t-transparent" aria-hidden="true" />
                                 Søker...
                             </span>
                         ) : (
@@ -85,11 +85,11 @@ export function PersonSearchResults({
 
                     {/* Sort dropdown */}
                     <div className="flex items-center gap-1.5" role="group" aria-label="Sorter resultater">
-                        <ArrowUpDown className="h-4 w-4 text-gray-400" aria-hidden="true" />
+                        <ArrowUpDown className="h-4 w-4 text-gray-400 dark:text-slate-500" aria-hidden="true" />
                         <select
                             value={sortBy}
                             onChange={(e) => onSortChange(e.target.value as SortField)}
-                            className="text-sm border border-gray-300 rounded-lg px-2 py-1.5 bg-white text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                            className="rounded-lg border border-gray-300 bg-white px-2 py-1.5 text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200 dark:focus:ring-blue-300"
                             aria-label="Sortering"
                         >
                             {SORT_OPTIONS.map((opt) => (
@@ -101,14 +101,14 @@ export function PersonSearchResults({
                     </div>
 
                     {/* View mode toggle */}
-                    <div className="flex items-center border border-gray-300 rounded-lg overflow-hidden" role="group" aria-label="Velg visning">
+                    <div className="flex items-center overflow-hidden rounded-lg border border-gray-300 dark:border-slate-700" role="group" aria-label="Velg visning">
                         <button
                             type="button"
                             onClick={() => onViewModeChange('list')}
                             className={`flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium transition-colors ${
                                 viewMode === 'list'
-                                    ? 'bg-blue-900 text-white'
-                                    : 'bg-white text-gray-600 hover:bg-gray-50'
+                                    ? 'bg-blue-900 text-white dark:bg-blue-500 dark:text-slate-950'
+                                    : 'bg-white text-gray-600 hover:bg-gray-50 dark:bg-slate-900 dark:text-slate-300 dark:hover:bg-slate-800'
                             }`}
                             aria-pressed={viewMode === 'list'}
                             aria-label="Listevisning"
@@ -122,8 +122,8 @@ export function PersonSearchResults({
                             onClick={() => onViewModeChange('cards')}
                             className={`flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium transition-colors ${
                                 viewMode === 'cards'
-                                    ? 'bg-blue-900 text-white'
-                                    : 'bg-white text-gray-600 hover:bg-gray-50'
+                                    ? 'bg-blue-900 text-white dark:bg-blue-500 dark:text-slate-950'
+                                    : 'bg-white text-gray-600 hover:bg-gray-50 dark:bg-slate-900 dark:text-slate-300 dark:hover:bg-slate-800'
                             }`}
                             aria-pressed={viewMode === 'cards'}
                             aria-label="Kortvisning"
@@ -140,26 +140,26 @@ export function PersonSearchResults({
             {isLoading && (
                 <div className="space-y-3">
                     {Array.from({ length: 5 }).map((_, i) => (
-                        <div key={i} className="h-24 bg-gray-100 rounded-xl animate-pulse" />
+                        <div key={i} className="h-24 animate-pulse rounded-xl bg-gray-100 dark:bg-slate-800" />
                     ))}
                 </div>
             )}
 
             {/* Error state */}
             {isError && !isLoading && (
-                <div className="text-center py-12 bg-red-50 rounded-xl border border-red-100">
-                    <p className="text-red-600 font-medium">Kunne ikke utføre søket. Prøv igjen.</p>
+                <div className="rounded-xl border border-red-100 bg-red-50 py-12 text-center dark:border-red-400/20 dark:bg-red-500/10">
+                    <p className="font-medium text-red-600 dark:text-red-200">Kunne ikke utføre søket. Prøv igjen.</p>
                 </div>
             )}
 
             {/* Empty state */}
             {!isLoading && !isError && results.length === 0 && (
-                <div className="text-center py-12 bg-gray-50 rounded-xl border border-gray-100">
-                    <User className="h-10 w-10 text-gray-300 mx-auto mb-3" aria-hidden="true" />
-                    <p className="text-gray-500 font-medium">
+                <div className="rounded-xl border border-gray-100 bg-gray-50 py-12 text-center dark:border-slate-800 dark:bg-slate-900">
+                    <User className="mx-auto mb-3 h-10 w-10 text-gray-300 dark:text-slate-600" aria-hidden="true" />
+                    <p className="font-medium text-gray-500 dark:text-slate-300">
                         Ingen personer funnet for &ldquo;{query}&rdquo;
                     </p>
-                    <p className="text-gray-400 text-sm mt-2">
+                    <p className="mt-2 text-sm text-gray-400 dark:text-slate-500">
                         Prøv et annet søkeord, eller sjekk at du har stavet navnet riktig.
                     </p>
                 </div>
@@ -179,19 +179,19 @@ export function PersonSearchResults({
 
             {/* List view */}
             {!isLoading && !isError && results.length > 0 && viewMode === 'list' && (
-                <div className="overflow-x-auto rounded-xl border border-gray-100 bg-white">
+                <div className="overflow-x-auto rounded-xl border border-gray-100 bg-white dark:border-slate-800 dark:bg-slate-900">
                     <table className="w-full">
                         <thead>
-                            <tr className="border-b border-gray-100 bg-gray-50/50">
-                                <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase">Navn</th>
-                                <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase hidden sm:table-cell">Fødselsår</th>
-                                <th className="px-4 py-3 text-center text-xs font-semibold text-gray-500 uppercase">Aktive</th>
-                                <th className="px-4 py-3 text-center text-xs font-semibold text-gray-500 uppercase hidden md:table-cell">Totalt</th>
-                                <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase hidden lg:table-cell">Topp rolle</th>
-                                <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase hidden lg:table-cell">Virksomhet</th>
+                            <tr className="border-b border-gray-100 bg-gray-50/50 dark:border-slate-800 dark:bg-slate-950">
+                                <th className="px-4 py-3 text-left text-xs font-semibold uppercase text-gray-500 dark:text-slate-400">Navn</th>
+                                <th className="hidden px-4 py-3 text-left text-xs font-semibold uppercase text-gray-500 dark:text-slate-400 sm:table-cell">Fødselsår</th>
+                                <th className="px-4 py-3 text-center text-xs font-semibold uppercase text-gray-500 dark:text-slate-400">Aktive</th>
+                                <th className="hidden px-4 py-3 text-center text-xs font-semibold uppercase text-gray-500 dark:text-slate-400 md:table-cell">Totalt</th>
+                                <th className="hidden px-4 py-3 text-left text-xs font-semibold uppercase text-gray-500 dark:text-slate-400 lg:table-cell">Topp rolle</th>
+                                <th className="hidden px-4 py-3 text-left text-xs font-semibold uppercase text-gray-500 dark:text-slate-400 lg:table-cell">Virksomhet</th>
                             </tr>
                         </thead>
-                        <tbody className="divide-y divide-gray-50">
+                        <tbody className="divide-y divide-gray-50 dark:divide-slate-800">
                             {results.map((person, idx) => (
                                 <PersonResultRow
                                     key={`${person.name}-${person.birthdate}-${idx}`}

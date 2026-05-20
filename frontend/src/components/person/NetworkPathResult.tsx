@@ -13,9 +13,9 @@ interface NetworkPathResultProps {
 export function NetworkPathResult({ result }: NetworkPathResultProps) {
     if (!result.found) {
         return (
-            <div className="text-center py-8 bg-gray-50 rounded-xl border border-gray-100">
-                <p className="text-gray-500 font-medium">Ingen forbindelse funnet innen 3 steg.</p>
-                <p className="text-gray-400 text-sm mt-1">
+            <div className="rounded-xl border border-gray-100 bg-gray-50 py-8 text-center dark:border-slate-800 dark:bg-slate-950">
+                <p className="font-medium text-gray-500 dark:text-slate-300">Ingen forbindelse funnet innen 3 steg.</p>
+                <p className="mt-1 text-sm text-gray-400 dark:text-slate-500">
                     Personene deler ingen felles selskaper gjennom sitt rollenetteverk.
                 </p>
             </div>
@@ -23,12 +23,12 @@ export function NetworkPathResult({ result }: NetworkPathResultProps) {
     }
 
     return (
-        <div className="bg-white rounded-xl border border-gray-200 p-5">
+        <div className="rounded-xl border border-gray-200 bg-white p-5 dark:border-slate-800 dark:bg-slate-900">
             <div className="flex items-center gap-2 mb-4">
-                <span className="text-sm font-semibold text-gray-700">
+                <span className="text-sm font-semibold text-gray-700 dark:text-slate-200">
                     Forbindelse funnet
                 </span>
-                <span className="px-2 py-0.5 text-xs font-medium rounded-full bg-green-100 text-green-700">
+                <span className="rounded-full bg-green-100 px-2 py-0.5 text-xs font-medium text-green-700 dark:bg-emerald-500/15 dark:text-emerald-200">
                     {result.depth} steg
                 </span>
             </div>
@@ -37,7 +37,7 @@ export function NetworkPathResult({ result }: NetworkPathResultProps) {
                 {result.path.map((node, i) => (
                     <div key={i} className="flex items-center gap-2">
                         {i > 0 && (
-                            <ArrowRight className="h-4 w-4 text-gray-300 shrink-0" />
+                            <ArrowRight className="h-4 w-4 shrink-0 text-gray-300 dark:text-slate-600" />
                         )}
                         {node.type === 'person' ? (
                             <PersonNode name={node.name} identifier={node.identifier} />
@@ -60,10 +60,10 @@ function PersonNode({ name, identifier }: { name: string; identifier: string }) 
         <Link
             to="/person/$name/$birthdate"
             params={{ name, birthdate: birthYear ?? 'unknown' }}
-            className="flex items-center gap-1.5 px-3 py-1.5 bg-blue-50 border border-blue-200 rounded-lg hover:bg-blue-100 transition-colors"
+            className="flex items-center gap-1.5 rounded-lg border border-blue-200 bg-blue-50 px-3 py-1.5 transition-colors hover:bg-blue-100 dark:border-blue-400/20 dark:bg-blue-500/15 dark:hover:bg-blue-500/20"
         >
-            <User className="h-3.5 w-3.5 text-blue-600" />
-            <span className="text-sm font-medium text-blue-800">{name}</span>
+            <User className="h-3.5 w-3.5 text-blue-600 dark:text-blue-200" />
+            <span className="text-sm font-medium text-blue-800 dark:text-blue-100">{name}</span>
         </Link>
     )
 }
@@ -73,14 +73,14 @@ function CompanyNode({ name, orgnr, role }: { name: string; orgnr: string; role:
         <Link
             to="/virksomhet/$orgnr"
             params={{ orgnr }}
-            className="flex flex-col items-center px-3 py-1.5 bg-purple-50 border border-purple-200 rounded-lg hover:bg-purple-100 transition-colors"
+            className="flex flex-col items-center rounded-lg border border-purple-200 bg-purple-50 px-3 py-1.5 transition-colors hover:bg-purple-100 dark:border-violet-400/20 dark:bg-violet-500/15 dark:hover:bg-violet-500/20"
         >
             <div className="flex items-center gap-1.5">
-                <Building2 className="h-3.5 w-3.5 text-purple-600" />
-                <span className="text-sm font-medium text-purple-800">{name}</span>
+                <Building2 className="h-3.5 w-3.5 text-purple-600 dark:text-violet-200" />
+                <span className="text-sm font-medium text-purple-800 dark:text-violet-100">{name}</span>
             </div>
             {role && (
-                <span className="text-[10px] text-purple-500 mt-0.5">{role}</span>
+                <span className="mt-0.5 text-[10px] text-purple-500 dark:text-violet-300">{role}</span>
             )}
         </Link>
     )

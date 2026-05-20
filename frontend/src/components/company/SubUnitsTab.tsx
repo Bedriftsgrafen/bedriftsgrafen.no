@@ -106,7 +106,7 @@ function SubUnitCard({
           </span>
           {unit.naeringskode && (
             <span
-              className="bg-gray-100 px-2 py-1 rounded truncate max-w-[150px]"
+              className="max-w-37.5 truncate rounded bg-gray-100 px-2 py-1"
               title={typeof unit.naeringskode === 'object' ? `${unit.naeringskode.kode} - ${unit.naeringskode.beskrivelse}` : unit.naeringskode}
             >
               {typeof unit.naeringskode === 'object' ? unit.naeringskode.kode : unit.naeringskode}

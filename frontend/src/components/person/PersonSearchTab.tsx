@@ -80,18 +80,18 @@ export const PersonSearchTab = memo(function PersonSearchTab() {
                         onViewModeChange={handleViewModeChange}
                     />
 
-                    <div className="mb-4 p-4 bg-amber-50 rounded-xl border border-amber-100 flex gap-3">
+                    <div className="mb-4 flex gap-3 rounded-xl border border-amber-100 bg-amber-50 p-4 dark:border-amber-400/20 dark:bg-amber-500/10">
                         <AlertTriangle className="h-5 w-5 text-amber-500 shrink-0 mt-0.5" aria-hidden="true" />
-                        <p className="text-sm text-amber-800 leading-relaxed">
+                        <p className="text-sm leading-relaxed text-amber-800 dark:text-amber-100">
                             <strong>Viktig informasjon:</strong> I tråd med Enhetsregisterloven § 22 viser vi kun roller knyttet til næringsvirksomhet.
                             Roller i frivillige organisasjoner, borettslag og andre ikke-næringsdrivende enheter er utelatt fra denne oversikten for å ivareta personvern og regelverk.
                         </p>
                     </div>
                 </>
             ) : (
-                <div className="text-center py-16 bg-gray-50 rounded-xl border border-gray-100">
-                    <p className="text-gray-500 font-medium text-lg">Skriv inn et navn for å søke</p>
-                    <p className="text-gray-400 text-sm mt-2">
+                <div className="rounded-xl border border-gray-100 bg-gray-50 py-16 text-center dark:border-slate-800 dark:bg-slate-900">
+                    <p className="text-lg font-medium text-gray-500 dark:text-slate-300">Skriv inn et navn for å søke</p>
+                    <p className="mt-2 text-sm text-gray-400 dark:text-slate-500">
                         Søk på hele eller deler av navnet (minimum 3 tegn).
                     </p>
                 </div>

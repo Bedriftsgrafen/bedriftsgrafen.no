@@ -68,13 +68,13 @@ export function RegionerPage() {
   const isEmpty = visibleFylkerCount === 0 && visibleKommunerCount === 0
 
   return (
-    <div className="min-h-screen bg-slate-50 pb-20 font-sans">
+    <div className="min-h-screen bg-slate-50 pb-20 font-sans dark:bg-slate-950">
       <SEOHead
         title="Regioner – Norske fylker og kommuner | Bedriftsgrafen.no"
         description="Finn og utforsk alle norske fylker og kommuner. Søk direkte etter navn eller kommunenummer for å gå rett til regionen du vil utforske."
       />
 
-      <div className="bg-white border-b border-slate-200">
+      <div className="border-b border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-950">
         <Breadcrumbs
           items={[
             { label: 'Hjem', to: '/' },
@@ -85,10 +85,10 @@ export function RegionerPage() {
 
       <main className="max-w-7xl mx-auto px-4 py-16">
         <header className="max-w-3xl mb-12">
-          <h1 className="text-6xl md:text-7xl font-black text-slate-900 tracking-tight mb-8">
-            Utforsk norske <span className="text-blue-600">Regioner</span>
+          <h1 className="mb-8 text-6xl font-black tracking-tight text-slate-900 dark:text-white md:text-7xl">
+            Utforsk norske <span className="text-blue-600 dark:text-blue-300">Regioner</span>
           </h1>
-          <p className="text-slate-600 text-xl font-medium leading-relaxed">
+          <p className="text-xl font-medium leading-relaxed text-slate-600 dark:text-slate-300">
             Finn fylket eller kommunen du leter etter. Naviger direkte til dashbord for
             detaljert statistikk, trender og topplister.
           </p>
@@ -112,17 +112,17 @@ export function RegionerPage() {
         ) : isEmpty ? (
           /* Empty state */
           <div
-            className="text-center py-24 bg-white rounded-3xl border border-dashed border-slate-200"
+            className="rounded-3xl border border-dashed border-slate-200 bg-white py-24 text-center dark:border-slate-800 dark:bg-slate-900"
             data-testid="empty-state"
           >
-            <MapPin className="h-12 w-12 text-slate-200 mx-auto mb-4" />
-            <p className="text-slate-700 font-bold text-lg mb-2">Ingen regioner funnet.</p>
-            <p className="text-slate-500 mb-6">
+            <MapPin className="mx-auto mb-4 h-12 w-12 text-slate-200 dark:text-slate-600" />
+            <p className="mb-2 text-lg font-bold text-slate-700 dark:text-slate-200">Ingen regioner funnet.</p>
+            <p className="mb-6 text-slate-500 dark:text-slate-400">
               Prøv et annet søk, eller utforsk alle virksomheter.
             </p>
             <Link
               to="/utforsk"
-              className="inline-flex items-center gap-2 px-6 py-3 bg-blue-900 text-white rounded-2xl font-bold hover:bg-blue-800 transition-colors"
+              className="inline-flex items-center gap-2 rounded-2xl bg-blue-900 px-6 py-3 font-bold text-white transition-colors hover:bg-blue-800 dark:bg-blue-500 dark:text-slate-950 dark:hover:bg-blue-400"
             >
               Utforsk alle virksomheter
             </Link>
@@ -135,17 +135,17 @@ export function RegionerPage() {
                 <div className="flex items-baseline justify-between mb-8">
                   <h2
                     id="fylker-heading"
-                    className="text-2xl md:text-3xl font-black text-slate-900 tracking-tight"
+                    className="text-2xl font-black tracking-tight text-slate-900 dark:text-white md:text-3xl"
                   >
                     Fylker{' '}
-                    <span className="text-slate-400 font-semibold text-lg">
+                    <span className="text-lg font-semibold text-slate-400 dark:text-slate-500">
                       · {filteredFylker.length}
                     </span>
                   </h2>
                   {!q && (
                     <Link
                       to="/fylker"
-                      className="text-blue-600 font-bold hover:text-blue-700 text-sm"
+                      className="text-sm font-bold text-blue-600 hover:text-blue-700 dark:text-blue-300 dark:hover:text-blue-200"
                     >
                       Fylkeoversikt →
                     </Link>
@@ -176,10 +176,10 @@ export function RegionerPage() {
                 <div className="flex items-baseline justify-between mb-8">
                   <h2
                     id="kommuner-heading"
-                    className="text-2xl md:text-3xl font-black text-slate-900 tracking-tight"
+                    className="text-2xl font-black tracking-tight text-slate-900 dark:text-white md:text-3xl"
                   >
                     Kommuner{' '}
-                    <span className="text-slate-400 font-semibold text-lg">
+                    <span className="text-lg font-semibold text-slate-400 dark:text-slate-500">
                       {q
                         ? `· ${filteredKommuner.length} treff`
                         : `· topp ${filteredKommuner.length} av ${totalKommuner}`}
@@ -188,7 +188,7 @@ export function RegionerPage() {
                   {!q && (
                     <Link
                       to="/kommuner"
-                      className="text-blue-600 font-bold hover:text-blue-700 text-sm"
+                      className="text-sm font-bold text-blue-600 hover:text-blue-700 dark:text-blue-300 dark:hover:text-blue-200"
                       data-testid="vis-alle-link"
                     >
                       Vis alle {totalKommuner} kommuner →

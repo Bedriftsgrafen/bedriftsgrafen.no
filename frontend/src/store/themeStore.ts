@@ -11,6 +11,9 @@ interface ThemeState {
 /** Get the actual theme based on system preference */
 export function getResolvedTheme(theme: Theme): 'light' | 'dark' {
     if (theme === 'system') {
+        if (typeof window === 'undefined' || typeof window.matchMedia !== 'function') {
+            return 'light'
+        }
         return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light'
     }
     return theme
@@ -18,6 +21,10 @@ export function getResolvedTheme(theme: Theme): 'light' | 'dark' {
 
 /** Apply theme class to document root */
 export function applyTheme(theme: Theme): void {
+    if (typeof document === 'undefined') {
+        return
+    }
+
     const resolved = getResolvedTheme(theme)
     const root = document.documentElement
 
@@ -26,6 +33,9 @@ export function applyTheme(theme: Theme): void {
     } else {
         root.classList.remove('dark')
     }
+
+    root.dataset.theme = resolved
+    root.style.colorScheme = resolved
 }
 
 export const useThemeStore = create<ThemeState>()(
@@ -50,7 +60,7 @@ export const useThemeStore = create<ThemeState>()(
 )
 
 // Listen for system preference changes
-if (typeof window !== 'undefined') {
+if (typeof window !== 'undefined' && typeof window.matchMedia === 'function') {
     window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', () => {
         const { theme } = useThemeStore.getState()
         if (theme === 'system') {

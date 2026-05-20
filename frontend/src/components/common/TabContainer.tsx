@@ -19,7 +19,7 @@ export function TabContainer({ children, className = '', ariaLabel = 'Seksjoner'
         <div
             role="tablist"
             aria-label={ariaLabel}
-            className={`flex gap-2 mb-6 border-b border-gray-200 overflow-x-auto whitespace-nowrap no-scrollbar -mx-4 px-4 sm:mx-0 sm:px-0 ${className}`}
+            className={`no-scrollbar -mx-4 mb-6 flex gap-2 overflow-x-auto whitespace-nowrap border-b border-gray-200 px-4 dark:border-slate-800 sm:mx-0 sm:px-0 ${className}`}
         >
             {children}
         </div>

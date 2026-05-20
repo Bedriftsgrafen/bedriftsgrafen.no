@@ -195,11 +195,11 @@ function NyetableringerPage() {
 
             {/* Page header */}
             <div className="mb-6">
-                <h1 className="text-2xl md:text-3xl font-bold text-black mb-2 flex items-center gap-3">
+                <h1 className="mb-2 flex items-center gap-3 text-2xl font-bold text-black dark:text-white md:text-3xl">
                     <Sparkles className="h-7 w-7 md:h-8 md:w-8 text-green-500" />
                     Nyetableringer
                 </h1>
-                <p className="text-gray-700 text-lg">
+                <p className="text-lg text-gray-700 dark:text-slate-300">
                     Oversikt over nye virksomheter etablert {periodLabel.toLowerCase()}.
                 </p>
             </div>
@@ -228,7 +228,7 @@ function NyetableringerPage() {
                     icon={<Calendar className="w-5 h-5" />}
                     label="Periode"
                     color="blue"
-                    className="sm:col-span-1 lg:col-span-2 shadow-md border-blue-100/50"
+                    className="border-blue-100/50 shadow-md dark:border-blue-400/20"
                 >
                     <PeriodSelector activePeriod={period} route="/nyetableringer" variant="compact" />
                 </SummaryCard>
@@ -298,7 +298,7 @@ function NyetableringerPage() {
             {activeTab === 'map' && (
                 <Suspense fallback={<div className="flex h-200 items-center justify-center"><Loader2 className="h-8 w-8 animate-spin text-green-500" /></div>}>
                     <div className="space-y-4">
-                        <div className="relative h-225 overflow-hidden rounded-2xl border border-gray-100 shadow-sm md:h-200">
+                        <div className="relative h-225 overflow-hidden rounded-2xl border border-gray-100 shadow-sm dark:border-slate-800 md:h-200">
                             <IndustryMap
                                 filters={mapFilters}
                                 onFilterChange={handleFilterChange}

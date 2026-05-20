@@ -18,32 +18,32 @@ export function PersonalSection() {
         <section aria-labelledby="personal-section-title" className="mb-10 px-4 sm:px-6 md:mb-14">
             <div className="mx-auto max-w-6xl">
                 <div className="mb-6">
-                    <h2 id="personal-section-title" className="text-2xl font-semibold tracking-tight text-slate-950 sm:text-3xl">
+                    <h2 id="personal-section-title" className="text-2xl font-semibold tracking-tight text-slate-950 dark:text-white sm:text-3xl">
                         Fortsett der du slapp
                     </h2>
-                    <p className="mt-3 max-w-2xl text-base leading-7 text-slate-600 sm:text-lg">
+                    <p className="mt-3 max-w-2xl text-base leading-7 text-slate-600 dark:text-slate-300 sm:text-lg">
                         Personlige snarveier vises bare når du faktisk har lagret eller besøkt noe.
                     </p>
                 </div>
 
                 <div className="grid gap-5 lg:grid-cols-2">
                     {favorites.length > 0 && (
-                        <section aria-labelledby="favorites-title" className="rounded-[28px] border border-slate-300 bg-white p-6 shadow-[0_18px_45px_-36px_rgba(15,23,42,0.3)] md:p-7">
-                            <div className="flex items-center justify-between gap-4 border-b border-slate-200 pb-5">
+                        <section aria-labelledby="favorites-title" className="rounded-[28px] border border-slate-300 bg-white p-6 shadow-[0_18px_45px_-36px_rgba(15,23,42,0.3)] dark:border-slate-700 dark:bg-slate-900 dark:shadow-[0_18px_45px_-36px_rgba(0,0,0,0.9)] md:p-7">
+                            <div className="flex items-center justify-between gap-4 border-b border-slate-200 pb-5 dark:border-slate-800">
                                 <div className="flex items-center gap-3">
-                                    <div className="rounded-xl bg-slate-100 p-2.5 text-blue-950 ring-1 ring-slate-200">
+                                    <div className="rounded-xl bg-slate-100 p-2.5 text-blue-950 ring-1 ring-slate-200 dark:bg-blue-500/15 dark:text-blue-200 dark:ring-blue-400/20">
                                         <Star aria-hidden="true" className="h-4 w-4" />
                                     </div>
                                     <div>
-                                        <h3 id="favorites-title" className="text-xl font-semibold text-slate-950">Dine favoritter</h3>
-                                        <p className="text-sm text-slate-500">Hurtig tilgang til virksomheter du følger.</p>
+                                        <h3 id="favorites-title" className="text-xl font-semibold text-slate-950 dark:text-white">Dine favoritter</h3>
+                                        <p className="text-sm text-slate-500 dark:text-slate-400">Hurtig tilgang til virksomheter du følger.</p>
                                     </div>
                                 </div>
                                 <button
                                     type="button"
                                     onClick={clearFavorites}
                                     aria-label="Tøm favoritter"
-                                    className="text-sm font-semibold text-slate-500 transition-colors hover:text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-200 focus:ring-offset-2"
+                                    className="text-sm font-semibold text-slate-500 transition-colors hover:text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-200 focus:ring-offset-2 dark:text-slate-400 dark:hover:text-white dark:focus:ring-blue-300 dark:focus:ring-offset-slate-900"
                                 >
                                     Tøm favoritter
                                 </button>
@@ -55,15 +55,15 @@ export function PersonalSection() {
                                         <Link
                                             to="/virksomhet/$orgnr"
                                             params={{ orgnr: company.orgnr }}
-                                            className="flex items-start justify-between gap-4 rounded-2xl border border-slate-200 bg-slate-50/50 px-4 py-3.5 transition-colors hover:border-slate-400 hover:bg-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-200 focus-visible:ring-offset-2"
+                                            className="flex items-start justify-between gap-4 rounded-2xl border border-slate-200 bg-slate-50/50 px-4 py-3.5 transition-colors hover:border-slate-400 hover:bg-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-200 focus-visible:ring-offset-2 dark:border-slate-800 dark:bg-slate-950/60 dark:hover:border-slate-700 dark:hover:bg-slate-800 dark:focus-visible:ring-blue-300 dark:focus-visible:ring-offset-slate-900"
                                         >
                                             <div className="min-w-0">
-                                                <div className="truncate text-base font-semibold text-slate-950">{company.navn}</div>
-                                                <div className="mt-1 text-sm text-slate-500">
+                                                <div className="truncate text-base font-semibold text-slate-950 dark:text-white">{company.navn}</div>
+                                                <div className="mt-1 text-sm text-slate-500 dark:text-slate-400">
                                                     {company.organisasjonsform || 'Virksomhet'} • {company.orgnr}
                                                 </div>
                                             </div>
-                                            <div className="shrink-0 text-xs font-medium text-slate-400">
+                                            <div className="shrink-0 text-xs font-medium text-slate-400 dark:text-slate-500">
                                                 {formatDistanceToNow(company.addedAt)}
                                             </div>
                                         </Link>
@@ -74,22 +74,22 @@ export function PersonalSection() {
                     )}
 
                     {recentCompanies.length > 0 && (
-                        <section aria-labelledby="recent-companies-title" className="rounded-[28px] border border-slate-300 bg-white p-6 shadow-[0_18px_45px_-36px_rgba(15,23,42,0.3)] md:p-7">
-                            <div className="flex items-center justify-between gap-4 border-b border-slate-200 pb-5">
+                        <section aria-labelledby="recent-companies-title" className="rounded-[28px] border border-slate-300 bg-white p-6 shadow-[0_18px_45px_-36px_rgba(15,23,42,0.3)] dark:border-slate-700 dark:bg-slate-900 dark:shadow-[0_18px_45px_-36px_rgba(0,0,0,0.9)] md:p-7">
+                            <div className="flex items-center justify-between gap-4 border-b border-slate-200 pb-5 dark:border-slate-800">
                                 <div className="flex items-center gap-3">
-                                    <div className="rounded-xl bg-slate-100 p-2.5 text-blue-950 ring-1 ring-slate-200">
+                                    <div className="rounded-xl bg-slate-100 p-2.5 text-blue-950 ring-1 ring-slate-200 dark:bg-blue-500/15 dark:text-blue-200 dark:ring-blue-400/20">
                                         <Clock3 aria-hidden="true" className="h-4 w-4" />
                                     </div>
                                     <div>
-                                        <h3 id="recent-companies-title" className="text-xl font-semibold text-slate-950">Nylig besøkte virksomheter</h3>
-                                        <p className="text-sm text-slate-500">Bruk historikken for å gå raskt tilbake.</p>
+                                        <h3 id="recent-companies-title" className="text-xl font-semibold text-slate-950 dark:text-white">Nylig besøkte virksomheter</h3>
+                                        <p className="text-sm text-slate-500 dark:text-slate-400">Bruk historikken for å gå raskt tilbake.</p>
                                     </div>
                                 </div>
                                 <button
                                     type="button"
                                     onClick={clearRecentCompanies}
                                     aria-label="Tøm historikk"
-                                    className="text-sm font-semibold text-slate-500 transition-colors hover:text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-200 focus:ring-offset-2"
+                                    className="text-sm font-semibold text-slate-500 transition-colors hover:text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-200 focus:ring-offset-2 dark:text-slate-400 dark:hover:text-white dark:focus:ring-blue-300 dark:focus:ring-offset-slate-900"
                                 >
                                     Tøm historikk
                                 </button>
@@ -101,15 +101,15 @@ export function PersonalSection() {
                                         <Link
                                             to="/virksomhet/$orgnr"
                                             params={{ orgnr: company.orgnr }}
-                                            className="flex items-start justify-between gap-4 rounded-2xl border border-slate-200 bg-slate-50/50 px-4 py-3.5 transition-colors hover:border-slate-400 hover:bg-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-200 focus-visible:ring-offset-2"
+                                            className="flex items-start justify-between gap-4 rounded-2xl border border-slate-200 bg-slate-50/50 px-4 py-3.5 transition-colors hover:border-slate-400 hover:bg-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-200 focus-visible:ring-offset-2 dark:border-slate-800 dark:bg-slate-950/60 dark:hover:border-slate-700 dark:hover:bg-slate-800 dark:focus-visible:ring-blue-300 dark:focus-visible:ring-offset-slate-900"
                                         >
                                             <div className="min-w-0">
-                                                <div className="truncate text-base font-semibold text-slate-950">{company.navn}</div>
-                                                <div className="mt-1 text-sm text-slate-500">
+                                                <div className="truncate text-base font-semibold text-slate-950 dark:text-white">{company.navn}</div>
+                                                <div className="mt-1 text-sm text-slate-500 dark:text-slate-400">
                                                     {company.organisasjonsform || 'Virksomhet'} • {company.orgnr}
                                                 </div>
                                             </div>
-                                            <div className="shrink-0 text-xs font-medium text-slate-400">
+                                            <div className="shrink-0 text-xs font-medium text-slate-400 dark:text-slate-500">
                                                 {formatDistanceToNow(company.timestamp)}
                                             </div>
                                         </Link>

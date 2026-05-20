@@ -6,6 +6,27 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
   <title>Bedriftsgrafen.no</title>
 
+  <script>
+    (function () {
+      try {
+        var stored = localStorage.getItem('bedriftsgrafen-theme');
+        var theme = 'system';
+
+        if (stored) {
+          var parsed = JSON.parse(stored);
+          theme = (parsed && parsed.state && parsed.state.theme) || parsed.theme || 'system';
+        }
+
+        var prefersDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+        var isDark = theme === 'dark' || (theme === 'system' && prefersDark);
+        document.documentElement.classList.toggle('dark', isDark);
+        document.documentElement.style.colorScheme = isDark ? 'dark' : 'light';
+      } catch (error) {
+        document.documentElement.style.colorScheme = 'light';
+      }
+    }());
+  </script>
+
   <!-- Preconnect to third-party origins (saves ~300ms) -->
   <link rel="preconnect" href="https://www.googletagmanager.com" crossorigin>
   <link rel="preconnect" href="https://www.google-analytics.com" crossorigin>

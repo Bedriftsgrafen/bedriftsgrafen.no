@@ -1,5 +1,39 @@
 @import "tailwindcss";
 
+@custom-variant dark (&:where(.dark, .dark *));
+
+:root {
+  color-scheme: light;
+  background: #f8fafc;
+  --chart-axis: #64748b;
+  --chart-grid: #cbd5e1;
+  --chart-tooltip-bg: #ffffff;
+  --chart-tooltip-border: #cbd5e1;
+  --chart-tooltip-text: #0f172a;
+  --chart-tooltip-accent: #1d4ed8;
+  --chart-cursor: rgba(37, 99, 235, 0.08);
+}
+
+:root.dark {
+  color-scheme: dark;
+  background: #020617;
+  --chart-axis: #cbd5e1;
+  --chart-grid: #475569;
+  --chart-tooltip-bg: #0f172a;
+  --chart-tooltip-border: #334155;
+  --chart-tooltip-text: #f8fafc;
+  --chart-tooltip-accent: #93c5fd;
+  --chart-cursor: rgba(59, 130, 246, 0.16);
+}
+
+::selection {
+  background: rgba(37, 99, 235, 0.22);
+}
+
+:root.dark ::selection {
+  background: rgba(96, 165, 250, 0.35);
+}
+
 /* Premium mobile experience */
 html {
   scroll-behavior: smooth;
@@ -18,6 +52,88 @@ body {
   -moz-osx-font-smoothing: grayscale;
   overscroll-behavior-y: none;
   overflow-x: clip;
+  background: #f8fafc;
+  color: #0f172a;
+}
+
+:root.dark body {
+  background: #020617;
+  color: #e2e8f0;
+}
+
+:root.dark .bg-white:not([class*="dark:bg-"]) {
+  background-color: #0f172a;
+}
+
+:root.dark .bg-gray-50:not([class*="dark:bg-"]),
+:root.dark .bg-slate-50:not([class*="dark:bg-"]) {
+  background-color: #111827;
+}
+
+:root.dark .bg-gray-100:not([class*="dark:bg-"]),
+:root.dark .bg-slate-100:not([class*="dark:bg-"]) {
+  background-color: #1e293b;
+}
+
+:root.dark .bg-gray-200:not([class*="dark:bg-"]),
+:root.dark .bg-slate-200:not([class*="dark:bg-"]) {
+  background-color: #334155;
+}
+
+:root.dark .text-black:not([class*="dark:text-"]),
+:root.dark .text-gray-900:not([class*="dark:text-"]),
+:root.dark .text-slate-900:not([class*="dark:text-"]),
+:root.dark .text-slate-950:not([class*="dark:text-"]) {
+  color: #f8fafc;
+}
+
+:root.dark .text-gray-800:not([class*="dark:text-"]),
+:root.dark .text-slate-800:not([class*="dark:text-"]),
+:root.dark .text-gray-700:not([class*="dark:text-"]),
+:root.dark .text-slate-700:not([class*="dark:text-"]) {
+  color: #e2e8f0;
+}
+
+:root.dark .text-gray-600:not([class*="dark:text-"]),
+:root.dark .text-slate-600:not([class*="dark:text-"]) {
+  color: #cbd5e1;
+}
+
+:root.dark .text-gray-500:not([class*="dark:text-"]),
+:root.dark .text-slate-500:not([class*="dark:text-"]) {
+  color: #94a3b8;
+}
+
+:root.dark .text-gray-400:not([class*="dark:text-"]),
+:root.dark .text-slate-400:not([class*="dark:text-"]) {
+  color: #64748b;
+}
+
+:root.dark .border-gray-50:not([class*="dark:border-"]),
+:root.dark .border-slate-50:not([class*="dark:border-"]),
+:root.dark .border-gray-100:not([class*="dark:border-"]),
+:root.dark .border-slate-100:not([class*="dark:border-"]),
+:root.dark .border-gray-200:not([class*="dark:border-"]),
+:root.dark .border-slate-200:not([class*="dark:border-"]) {
+  border-color: #1e293b;
+}
+
+:root.dark .border-gray-300:not([class*="dark:border-"]),
+:root.dark .border-slate-300:not([class*="dark:border-"]) {
+  border-color: #334155;
+}
+
+:root.dark input:not([class*="dark:bg-"]),
+:root.dark select:not([class*="dark:bg-"]),
+:root.dark textarea:not([class*="dark:bg-"]) {
+  background-color: #0f172a;
+  color: #f8fafc;
+  border-color: #334155;
+}
+
+:root.dark input::placeholder,
+:root.dark textarea::placeholder {
+  color: #64748b;
 }
 
 @font-face {

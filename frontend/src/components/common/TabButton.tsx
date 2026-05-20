@@ -16,9 +16,9 @@ interface TabButtonProps {
 }
 
 const BADGE_COLORS = {
-    red: 'bg-red-100 text-red-700',
-    green: 'bg-green-100 text-green-700',
-    blue: 'bg-blue-100 text-blue-700',
+    red: 'bg-red-100 text-red-700 dark:bg-red-500/15 dark:text-red-200',
+    green: 'bg-green-100 text-green-700 dark:bg-emerald-500/15 dark:text-emerald-200',
+    blue: 'bg-blue-100 text-blue-700 dark:bg-blue-500/15 dark:text-blue-200',
 }
 
 export const TabButton = memo(function TabButton({
@@ -35,9 +35,9 @@ export const TabButton = memo(function TabButton({
             role="tab"
             aria-selected={active}
             onClick={onClick}
-            className={`flex items-center gap-2 px-4 py-2 text-sm font-medium transition-colors ${active
-                    ? 'text-blue-900 border-b-2 border-blue-900'
-                    : 'text-gray-500 hover:text-gray-700'
+                className={`flex items-center gap-2 px-4 py-2 text-sm font-medium transition-colors ${active
+                    ? 'border-b-2 border-blue-900 text-blue-900 dark:border-blue-300 dark:text-blue-200'
+                    : 'text-gray-500 hover:text-gray-700 dark:text-slate-400 dark:hover:text-slate-200'
                 }`}
         >
             <span aria-hidden="true">{icon}</span>

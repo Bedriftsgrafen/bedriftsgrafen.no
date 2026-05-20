@@ -43,11 +43,11 @@ export const ComparisonButton = memo(function ComparisonButton({
                 disabled={isMaxReached}
                 aria-label={isSelected ? 'Fjern fra sammenligning' : isMaxReached ? 'Maks 3 virksomheter' : 'Legg til sammenligning'}
                 aria-pressed={isSelected}
-                className={`p-1 rounded transition-colors ${isSelected
-                    ? 'bg-blue-100 text-blue-600 hover:bg-blue-200'
+                className={`rounded p-1 transition-colors ${isSelected
+                    ? 'bg-blue-100 text-blue-600 hover:bg-blue-200 dark:bg-blue-500/15 dark:text-blue-200 dark:hover:bg-blue-500/20'
                     : isMaxReached
-                        ? 'text-gray-300 cursor-not-allowed'
-                        : 'text-gray-400 hover:bg-gray-100 hover:text-gray-600'
+                        ? 'cursor-not-allowed text-gray-300 dark:text-slate-700'
+                        : 'text-gray-400 hover:bg-gray-100 hover:text-gray-600 dark:text-slate-500 dark:hover:bg-white/10 dark:hover:text-slate-300'
                     }`}
                 title={isSelected ? 'Fjern fra sammenligning' : isMaxReached ? 'Maks 3 virksomheter' : 'Legg til sammenligning'}
             >
@@ -66,11 +66,11 @@ export const ComparisonButton = memo(function ComparisonButton({
             onClick={handleClick}
             disabled={isMaxReached}
             aria-pressed={isSelected}
-            className={`flex items-center gap-1.5 px-2.5 py-1.5 text-sm rounded-lg transition-colors ${isSelected
-                ? 'bg-blue-100 text-blue-700 hover:bg-blue-200'
+            className={`flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-sm transition-colors ${isSelected
+                ? 'bg-blue-100 text-blue-700 hover:bg-blue-200 dark:bg-blue-500/15 dark:text-blue-200 dark:hover:bg-blue-500/20'
                 : isMaxReached
-                    ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
-                    : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                    ? 'cursor-not-allowed bg-gray-100 text-gray-400 dark:bg-slate-800 dark:text-slate-600'
+                    : 'bg-gray-100 text-gray-600 hover:bg-gray-200 dark:bg-slate-800 dark:text-slate-300 dark:hover:bg-slate-700'
                 }`}
             title={isSelected ? 'Fjern fra sammenligning' : isMaxReached ? 'Maks 3 virksomheter' : 'Legg til sammenligning'}
         >

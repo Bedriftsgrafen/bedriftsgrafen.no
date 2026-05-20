@@ -127,10 +127,10 @@ export function UtforskPage() {
             <div className="mb-6">
                 <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
                     <div className="w-full sm:w-auto flex-1 max-w-2xl">
-                        <h1 className="text-2xl md:text-3xl font-bold text-black mb-2">
+                        <h1 className="mb-2 text-2xl font-bold text-black dark:text-white md:text-3xl">
                             Utforsk virksomheter
                         </h1>
-                        <p className="text-gray-700 text-lg mb-4">
+                        <p className="mb-4 text-lg text-gray-700 dark:text-slate-300">
                             Søk, filtrer og analyser norske virksomheter.
                         </p>
 

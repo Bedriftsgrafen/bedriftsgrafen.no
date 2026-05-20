@@ -54,31 +54,31 @@ export function LiveDataPanel() {
 
     return (
         <section aria-labelledby="live-data-title" className="mb-10 px-4 sm:px-6 md:mb-14">
-            <div className="mx-auto max-w-6xl rounded-[30px] border border-slate-200 bg-white p-6 shadow-[0_30px_80px_-48px_rgba(15,23,42,0.42)] md:p-8">
-                <div className="flex flex-col gap-4 border-b border-slate-200 pb-6 md:flex-row md:items-end md:justify-between">
+            <div className="mx-auto max-w-6xl rounded-[30px] border border-slate-200 bg-white p-6 shadow-[0_30px_80px_-48px_rgba(15,23,42,0.42)] transition-colors duration-300 dark:border-slate-800 dark:bg-slate-900 dark:shadow-[0_30px_80px_-48px_rgba(0,0,0,0.95)] md:p-8">
+                <div className="flex flex-col gap-4 border-b border-slate-200 pb-6 dark:border-slate-800 md:flex-row md:items-end md:justify-between">
                     <div>
-                        <div className="inline-flex items-center gap-2 rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1 text-xs font-semibold uppercase tracking-[0.16em] text-emerald-700">
+                        <div className="inline-flex items-center gap-2 rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1 text-xs font-semibold uppercase tracking-[0.16em] text-emerald-700 dark:border-emerald-400/20 dark:bg-emerald-500/15 dark:text-emerald-200">
                             <CircleDot aria-hidden="true" className="h-3.5 w-3.5" />
                             Løpende datapuls
                         </div>
-                        <h2 id="live-data-title" className="mt-4 text-2xl font-semibold tracking-tight text-slate-950 sm:text-3xl">
+                        <h2 id="live-data-title" className="mt-4 text-2xl font-semibold tracking-tight text-slate-950 dark:text-white sm:text-3xl">
                             Følg bevegelsen i norske virksomheter
                         </h2>
-                        <p className="mt-3 max-w-2xl text-base leading-7 text-slate-600 sm:text-lg">
+                        <p className="mt-3 max-w-2xl text-base leading-7 text-slate-600 dark:text-slate-300 sm:text-lg">
                             Nøkkeltallene under viser aktivitet, dekning og oppdatering i datagrunnlaget.
                         </p>
                     </div>
                     <div className="flex flex-col items-start gap-2 md:items-end">
                         <Link
                             to="/konkurser"
-                            className="inline-flex items-center gap-2 text-sm font-semibold text-slate-700 transition-colors hover:text-blue-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 focus-visible:ring-offset-white"
+                            className="inline-flex items-center gap-2 text-sm font-semibold text-slate-700 transition-colors hover:text-blue-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 focus-visible:ring-offset-white dark:text-slate-300 dark:hover:text-blue-300 dark:focus-visible:ring-blue-300 dark:focus-visible:ring-offset-slate-900"
                         >
                             Se konkurser
                             <ArrowRight aria-hidden="true" className="h-4 w-4" />
                         </Link>
                         <Link
                             to="/nyetableringer"
-                            className="inline-flex items-center gap-2 text-sm font-semibold text-slate-700 transition-colors hover:text-blue-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 focus-visible:ring-offset-white"
+                            className="inline-flex items-center gap-2 text-sm font-semibold text-slate-700 transition-colors hover:text-blue-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 focus-visible:ring-offset-white dark:text-slate-300 dark:hover:text-blue-300 dark:focus-visible:ring-blue-300 dark:focus-visible:ring-offset-slate-900"
                         >
                             Se nyetableringer
                             <ArrowRight aria-hidden="true" className="h-4 w-4" />
@@ -89,19 +89,19 @@ export function LiveDataPanel() {
                 <div aria-busy={isLoading} className="mt-5 grid gap-4 md:grid-cols-3">
                     {isLoading
                         ? SKELETON_ROWS.map((row) => (
-                            <div key={row} className="rounded-2xl border border-slate-200 bg-slate-50 p-5 sm:p-6">
+                            <div key={row} className="rounded-2xl border border-slate-200 bg-slate-50 p-5 dark:border-slate-800 dark:bg-slate-950 sm:p-6">
                                 <span className="sr-only">Laster datapunkter</span>
-                                <div className="h-3 w-28 animate-pulse rounded bg-slate-200" />
-                                <div className="mt-4 h-8 w-20 animate-pulse rounded bg-slate-200" />
-                                <div className="mt-3 h-3 w-full animate-pulse rounded bg-slate-200" />
+                                <div className="h-3 w-28 animate-pulse rounded bg-slate-200 dark:bg-slate-800" />
+                                <div className="mt-4 h-8 w-20 animate-pulse rounded bg-slate-200 dark:bg-slate-800" />
+                                <div className="mt-3 h-3 w-full animate-pulse rounded bg-slate-200 dark:bg-slate-800" />
                             </div>
                         ))
                         : metrics.map((metric) => (
-                            <dl key={metric.label} className="rounded-2xl border border-slate-200 bg-slate-50 p-5 shadow-[inset_0_1px_0_rgba(255,255,255,0.65)] sm:p-6">
+                            <dl key={metric.label} className="rounded-2xl border border-slate-200 bg-slate-50 p-5 shadow-[inset_0_1px_0_rgba(255,255,255,0.65)] dark:border-slate-800 dark:bg-slate-950 dark:shadow-[inset_0_1px_0_rgba(255,255,255,0.04)] sm:p-6">
                                 <div>
-                                    <dt className="text-sm font-medium text-slate-700">{metric.label}</dt>
-                                    <dd className="mt-3 text-3xl font-semibold tabular-nums text-slate-950">{metric.value}</dd>
-                                    <dd className="mt-3 text-sm leading-6 text-slate-600">{metric.helper}</dd>
+                                    <dt className="text-sm font-medium text-slate-700 dark:text-slate-300">{metric.label}</dt>
+                                    <dd className="mt-3 text-3xl font-semibold tabular-nums text-slate-950 dark:text-white">{metric.value}</dd>
+                                    <dd className="mt-3 text-sm leading-6 text-slate-600 dark:text-slate-400">{metric.helper}</dd>
                                 </div>
                             </dl>
                         ))}

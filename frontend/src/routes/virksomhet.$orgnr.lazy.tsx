@@ -152,7 +152,7 @@ export function CompanyPage() {
                 } : undefined}
             />
 
-            <div className="max-w-7xl mx-auto px-4 lg:px-6 pb-8">
+            <div className="mx-auto max-w-7xl px-4 pb-8 lg:px-6">
                 <Breadcrumbs
                     items={[
                         { label: 'Hjem', to: '/' },
@@ -160,7 +160,7 @@ export function CompanyPage() {
                     ]}
                 />
 
-                <div className="bg-white rounded-xl shadow-sm border border-gray-200 mt-2">
+                <div className="mt-2 rounded-xl border border-gray-200 bg-white shadow-sm dark:border-slate-800 dark:bg-slate-900 dark:shadow-black/20">
                     <CompanyDetailContent
                         company={company}
                         companyLoading={companyLoading}

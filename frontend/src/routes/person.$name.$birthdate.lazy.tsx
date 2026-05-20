@@ -44,7 +44,7 @@ function TopCompaniesByRevenue({ roles }: { roles: PersonRole[] }) {
 
     return (
         <div className="mt-6">
-            <h3 className="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-3">
+            <h3 className="mb-3 text-sm font-semibold uppercase tracking-wider text-gray-500 dark:text-slate-400">
                 Største selskaper etter omsetning
             </h3>
             <div className="space-y-2">
@@ -54,16 +54,16 @@ function TopCompaniesByRevenue({ roles }: { roles: PersonRole[] }) {
                             <Link
                                 to="/virksomhet/$orgnr"
                                 params={{ orgnr: r.orgnr }}
-                                className="block truncate rounded-sm font-medium text-gray-900 hover:text-blue-700 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2"
+                                className="block truncate rounded-sm font-medium text-gray-900 hover:text-blue-700 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 dark:text-slate-100 dark:hover:text-blue-300 dark:focus-visible:ring-blue-300 dark:focus-visible:ring-offset-slate-900"
                                 title={`Åpne ${r.enhet_navn}`}
                             >
                                 {r.enhet_navn}
                             </Link>
                             {r.organisasjonsform && (
-                                <span className="text-xs text-gray-400 ml-1.5">{r.organisasjonsform}</span>
+                                <span className="ml-1.5 text-xs text-gray-400 dark:text-slate-500">{r.organisasjonsform}</span>
                             )}
                         </div>
-                        <span className="text-gray-500 font-medium shrink-0 ml-3">
+                        <span className="ml-3 shrink-0 font-medium text-gray-500 dark:text-slate-400">
                             {formatLargeCurrency(r.latest_salgsinntekter)}
                         </span>
                     </div>
@@ -130,7 +130,7 @@ export function PersonProfilePage() {
             />
 
             <div className="max-w-4xl mx-auto py-8 px-4">
-                <div className="bg-white rounded-2xl shadow-xl overflow-hidden mb-8">
+                <div className="mb-8 overflow-hidden rounded-2xl bg-white shadow-xl dark:border dark:border-slate-800 dark:bg-slate-900 dark:shadow-black/40">
                     <div className="bg-linear-to-br from-blue-900 via-blue-800 to-indigo-900 p-5 md:p-8 text-white">
                         <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
                             <div className="flex items-center gap-6">
@@ -181,18 +181,18 @@ export function PersonProfilePage() {
                         {isLoading ? (
                             <div className="space-y-4">
                                 {[1, 2, 3].map(i => (
-                                    <div key={i} className="h-24 bg-gray-100 rounded-xl animate-pulse" />
+                                    <div key={i} className="h-24 animate-pulse rounded-xl bg-gray-100 dark:bg-slate-800" />
                                 ))}
                             </div>
                         ) : isError ? (
-                            <div className="text-center py-12 bg-red-50 rounded-xl border border-red-100">
-                                <p className="text-red-600 font-medium">Kunne ikke hente roller for denne personen.</p>
+                            <div className="rounded-xl border border-red-100 bg-red-50 py-12 text-center dark:border-red-400/20 dark:bg-red-500/10">
+                                <p className="font-medium text-red-600 dark:text-red-200">Kunne ikke hente roller for denne personen.</p>
                             </div>
                         ) : roles?.length === 0 ? (
-                            <div className="text-center py-12 bg-gray-50 rounded-xl border border-gray-100">
-                                <User className="h-10 w-10 text-gray-300 mx-auto mb-3" />
-                                <p className="text-gray-500 font-medium">Denne personen har ingen registrerte roller i næringsvirksomhet.</p>
-                                <p className="text-gray-400 text-sm mt-2">
+                            <div className="rounded-xl border border-gray-100 bg-gray-50 py-12 text-center dark:border-slate-800 dark:bg-slate-950">
+                                <User className="mx-auto mb-3 h-10 w-10 text-gray-300 dark:text-slate-600" />
+                                <p className="font-medium text-gray-500 dark:text-slate-300">Denne personen har ingen registrerte roller i næringsvirksomhet.</p>
+                                <p className="mt-2 text-sm text-gray-400 dark:text-slate-500">
                                     Informasjonen kan ha blitt fjernet etter forespørsel, eller personen har kun roller i ikke-næringsdrivende enheter.
                                 </p>
                             </div>
@@ -267,9 +267,9 @@ export function PersonProfilePage() {
                             </>
                         )}
 
-                        <div className="mt-8 p-4 bg-amber-50 rounded-xl border border-amber-100 flex gap-3">
+                        <div className="mt-8 flex gap-3 rounded-xl border border-amber-100 bg-amber-50 p-4 dark:border-amber-400/20 dark:bg-amber-500/10">
                             <AlertTriangle className="h-5 w-5 text-amber-500 shrink-0 mt-0.5" aria-hidden="true" />
-                            <p className="text-sm text-amber-800 leading-relaxed">
+                            <p className="text-sm leading-relaxed text-amber-800 dark:text-amber-100">
                                 <strong>Viktig informasjon:</strong> I tråd med Enhetsregisterloven § 22 viser vi kun roller knyttet til næringsvirksomhet.
                                 Roller i frivillige organisasjoner, borettslag og andre ikke-næringsdrivende enheter er utelatt fra denne oversikten for å ivareta personvern og regelverk.
                             </p>

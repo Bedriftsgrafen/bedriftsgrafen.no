@@ -108,8 +108,8 @@ export function CompanyDetailContent({
       {/* Content Area */}
       <div className={constrainHeight ? 'flex-1 flex flex-col min-h-0' : 'flex flex-col'}>
         {companyLoading ? (
-          <div className="flex-1 overflow-y-auto p-4 md:p-6 space-y-4" role="status" aria-busy="true" aria-label="Laster virksomhetsdata">
-            <div className="h-32 bg-gray-200 rounded animate-pulse" aria-hidden="true" />
+          <div className="flex-1 space-y-4 overflow-y-auto p-4 md:p-6" role="status" aria-busy="true" aria-label="Laster virksomhetsdata">
+            <div className="h-32 animate-pulse rounded bg-gray-200 dark:bg-slate-800" aria-hidden="true" />
             <ChartSkeleton />
           </div>
         ) : companyError ? (
@@ -122,7 +122,7 @@ export function CompanyDetailContent({
         ) : company ? (
           <>
             {/* Tabs */}
-            <div className={`px-4 md:px-6 ${constrainHeight ? 'pt-4 md:pt-6 bg-white z-10' : 'pt-2 md:pt-3'}`}>
+            <div className={`px-4 md:px-6 ${constrainHeight ? 'z-10 bg-white pt-4 dark:bg-slate-900 md:pt-6' : 'pt-2 md:pt-3'}`}>
               <ModalTabs
                 activeTab={activeTab}
                 onTabChange={onTabChange}

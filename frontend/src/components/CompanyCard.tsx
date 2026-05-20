@@ -46,7 +46,7 @@ export const CompanyCard = memo(function CompanyCard({ company, onClick }: Compa
                     id: 'solid',
                     label: 'Solid',
                     icon: Gem,
-                    className: 'bg-emerald-50 text-emerald-700 border-emerald-100',
+                    className: 'bg-emerald-50 text-emerald-700 border-emerald-100 dark:bg-emerald-500/15 dark:text-emerald-200 dark:border-emerald-400/20',
                     title: `Solid økonomi (Egenkapitalandel: ${(company.latest_equity_ratio * 100).toFixed(1)}%)`
                 })
             }
@@ -63,7 +63,7 @@ export const CompanyCard = memo(function CompanyCard({ company, onClick }: Compa
                     id: 'new',
                     label: 'Ny',
                     icon: Calendar,
-                    className: 'bg-blue-50 text-blue-700 border-blue-100',
+                    className: 'bg-blue-50 text-blue-700 border-blue-100 dark:bg-blue-500/15 dark:text-blue-200 dark:border-blue-400/20',
                     title: `Nyetablert (Stiftet: ${new Intl.DateTimeFormat('nb-NO').format(stiftelse)})`
                 })
             }
@@ -76,7 +76,7 @@ export const CompanyCard = memo(function CompanyCard({ company, onClick }: Compa
                     id: 'veteran',
                     label: 'Etablert',
                     icon: History,
-                    className: 'bg-slate-50 text-slate-700 border-slate-100',
+                    className: 'bg-slate-50 text-slate-700 border-slate-100 dark:bg-slate-800 dark:text-slate-300 dark:border-slate-700',
                     title: `Veletablert virksomhet (Stiftet: ${stiftelse.getFullYear()})`
                 })
             }
@@ -88,20 +88,20 @@ export const CompanyCard = memo(function CompanyCard({ company, onClick }: Compa
     const openCompanyLabel = `Åpne ${company.navn || 'Ukjent navn'} (${company.orgnr})`
 
     return (
-        <div className="bg-white rounded-xl border border-slate-200 p-4 hover:shadow-xl hover:border-blue-200 transition-all duration-300 group min-w-0">
+        <div className="group min-w-0 rounded-xl border border-slate-200 bg-white p-4 transition-all duration-300 hover:border-blue-200 hover:shadow-xl dark:border-slate-800 dark:bg-slate-900 dark:hover:border-blue-400/30 dark:hover:shadow-black/30">
             <div className="flex items-start justify-between gap-2">
                 <button
                     type="button"
                     onClick={onClick}
                     aria-label={openCompanyLabel}
-                    className="min-w-0 flex-1 rounded-lg text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 active:scale-[0.98]"
+                    className="min-w-0 flex-1 rounded-lg text-left active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 dark:focus-visible:ring-blue-300 dark:focus-visible:ring-offset-slate-900"
                 >
                     {/* Header */}
                     <div className="mb-2 min-w-0">
-                        <h3 className="font-semibold text-gray-900 truncate group-hover:text-blue-600 transition-colors">
+                        <h3 className="truncate font-semibold text-gray-900 transition-colors group-hover:text-blue-600 dark:text-white dark:group-hover:text-blue-300">
                             {company.navn || 'Ukjent navn'}
                         </h3>
-                        <p className="text-xs text-gray-500 mt-0.5">
+                        <p className="mt-0.5 text-xs text-gray-500 dark:text-slate-400">
                             Org.nr: {company.orgnr}
                         </p>
                     </div>
@@ -124,54 +124,54 @@ export const CompanyCard = memo(function CompanyCard({ company, onClick }: Compa
 
                     {/* Industry */}
                     {industry && (
-                        <p className="text-[11px] font-medium text-slate-500 line-clamp-2 mb-3 leading-snug" title={industry}>
+                        <p className="mb-3 line-clamp-2 text-[11px] font-medium leading-snug text-slate-500 dark:text-slate-400" title={industry}>
                             {industry}
                         </p>
                     )}
 
                     {/* Purpose snippet if available - Important for search discovery */}
                     {company.vedtektsfestet_formaal && (
-                        <p className="text-[11px] text-slate-500 line-clamp-2 mb-3 leading-relaxed italic border-l-2 border-slate-100 pl-2">
+                        <p className="mb-3 line-clamp-2 border-l-2 border-slate-100 pl-2 text-[11px] italic leading-relaxed text-slate-500 dark:border-slate-800 dark:text-slate-400">
                             {normalizeText(company.vedtektsfestet_formaal)}
                         </p>
                     )}
 
                     {/* Location */}
                     {kommune && (
-                        <div className="flex items-center gap-1 text-xs text-gray-500 mb-3">
+                        <div className="mb-3 flex items-center gap-1 text-xs text-gray-500 dark:text-slate-400">
                             <MapPin className="h-3 w-3" aria-hidden="true" />
                             {kommune}
                         </div>
                     )}
 
                     {/* Metrics Grid */}
-                    <div className="grid grid-cols-3 gap-2 pt-3 border-t border-gray-100">
+                    <div className="grid grid-cols-3 gap-2 border-t border-gray-100 pt-3 dark:border-slate-800">
                         <div className="text-center">
                             <div className="flex items-center justify-center mb-1">
                                 <TrendingUp className="h-3.5 w-3.5 text-green-500" aria-hidden="true" />
                             </div>
-                            <p className="text-xs font-medium text-gray-900 tabular-nums">
+                            <p className="text-xs font-medium tabular-nums text-gray-900 dark:text-slate-100">
                                 {formatMillions(company.latest_revenue)}
                             </p>
-                            <p className="text-[10px] text-gray-500">Omsetning</p>
+                            <p className="text-[10px] text-gray-500 dark:text-slate-500">Omsetning</p>
                         </div>
                         <div className="text-center">
                             <div className="flex items-center justify-center mb-1">
                                 <PiggyBank className="h-3.5 w-3.5 text-purple-500" aria-hidden="true" />
                             </div>
-                            <p className="text-xs font-medium text-gray-900 tabular-nums">
+                            <p className="text-xs font-medium tabular-nums text-gray-900 dark:text-slate-100">
                                 {formatMillions(company.latest_profit)}
                             </p>
-                            <p className="text-[10px] text-gray-500">Resultat</p>
+                            <p className="text-[10px] text-gray-500 dark:text-slate-500">Resultat</p>
                         </div>
                         <div className="text-center">
                             <div className="flex items-center justify-center mb-1">
                                 <Users className="h-3.5 w-3.5 text-orange-500" aria-hidden="true" />
                             </div>
-                            <p className="text-xs font-medium text-gray-900 tabular-nums">
+                            <p className="text-xs font-medium tabular-nums text-gray-900 dark:text-slate-100">
                                 {company.antall_ansatte ?? '-'}
                             </p>
-                            <p className="text-[10px] text-gray-500">Ansatte</p>
+                            <p className="text-[10px] text-gray-500 dark:text-slate-500">Ansatte</p>
                         </div>
                     </div>
                 </button>
@@ -185,7 +185,7 @@ export const CompanyCard = memo(function CompanyCard({ company, onClick }: Compa
                     />
                     <ComparisonButton orgnr={company.orgnr} navn={company.navn ?? 'Ukjent'} compact />
                     <span
-                        className="px-2 py-0.5 text-[10px] font-bold bg-slate-100 text-slate-600 rounded-lg group-hover:bg-blue-100 group-hover:text-blue-700 transition-colors uppercase tracking-wider"
+                        className="rounded-lg bg-slate-100 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-slate-600 transition-colors group-hover:bg-blue-100 group-hover:text-blue-700 dark:bg-slate-800 dark:text-slate-300 dark:group-hover:bg-blue-500/15 dark:group-hover:text-blue-200"
                         title={orgFormLabel}
                     >
                         {company.organisasjonsform}

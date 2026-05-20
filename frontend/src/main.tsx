@@ -6,9 +6,12 @@ import './index.css'
 import { queryClient } from './lib/queryClient'
 import { ErrorBoundary } from './components/ErrorBoundary'
 import { ToastContainer } from './components/Toast'
+import { applyTheme, useThemeStore } from './store/themeStore'
 
 // Import the generated route tree
 import { routeTree } from './routeTree.gen'
+
+applyTheme(useThemeStore.getState().theme)
 
 // Create a new router instance
 const router = createRouter({
