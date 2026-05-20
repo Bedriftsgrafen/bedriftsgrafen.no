@@ -183,7 +183,7 @@ export function IndustryDashboardPage() {
                 <Link
                   to="/bransjer"
                   search={{ tab: 'search', nace: dashboard.nace_division }}
-                  className="w-full bg-blue-600 text-white py-5 rounded-2xl font-black uppercase text-[10px] tracking-[0.2em] flex items-center justify-center gap-3 hover:bg-blue-500 transition-all shadow-xl shadow-blue-900/20"
+                  className="w-full bg-blue-900 text-white py-5 rounded-2xl font-black uppercase text-[10px] tracking-[0.2em] flex items-center justify-center gap-3 hover:bg-blue-800 transition-all shadow-xl shadow-blue-950/20"
                 >
                   Utforsk virksomheter
                   <ChevronRight className="h-4 w-4" />
@@ -262,7 +262,7 @@ export function IndustryDashboardPage() {
           {dashboard.subclasses.length > 0 && (
             <section className="bg-white rounded-2xl md:rounded-[2.5rem] p-6 md:p-12 border border-slate-100 shadow-sm mb-16">
               <h2 className="text-2xl md:text-3xl font-black text-slate-900 mb-8 md:mb-12 flex items-center gap-4 tracking-tight">
-                <div className="h-10 w-2 bg-blue-600 rounded-full" />
+                <div className="h-10 w-2 bg-blue-900 rounded-full" />
                 Underbransjer
               </h2>
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">

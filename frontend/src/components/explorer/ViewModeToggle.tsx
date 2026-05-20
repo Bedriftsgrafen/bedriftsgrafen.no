@@ -10,12 +10,16 @@ export const ViewModeToggle = memo(function ViewModeToggle() {
     const setViewMode = useExplorerStore((s) => s.setViewMode)
 
     return (
-        <div className="flex items-center border border-gray-300 rounded-lg overflow-hidden">
+        <div
+            className="flex items-center border border-gray-300 rounded-lg overflow-hidden"
+            role="group"
+            aria-label="Velg visning"
+        >
             <button
                 type="button"
                 onClick={() => setViewMode('list')}
                 className={`flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium transition-colors ${viewMode === 'list'
-                    ? 'bg-blue-600 text-white'
+                    ? 'bg-blue-900 text-white'
                     : 'bg-white text-gray-600 hover:bg-gray-50'
                     }`}
                 aria-pressed={viewMode === 'list'}
@@ -29,7 +33,7 @@ export const ViewModeToggle = memo(function ViewModeToggle() {
                 type="button"
                 onClick={() => setViewMode('cards')}
                 className={`flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium transition-colors ${viewMode === 'cards'
-                    ? 'bg-blue-600 text-white'
+                    ? 'bg-blue-900 text-white'
                     : 'bg-white text-gray-600 hover:bg-gray-50'
                     }`}
                 aria-pressed={viewMode === 'cards'}

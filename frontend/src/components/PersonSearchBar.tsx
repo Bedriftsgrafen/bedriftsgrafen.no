@@ -98,7 +98,7 @@ export function PersonSearchBar({ initialValue, onSearch, isLoading = false }: P
                                     LUKK
                                 </button>
                             </div>
-                            <div className="max-h-[320px] overflow-y-auto">
+                            <div className="max-h-80 overflow-y-auto">
                                 {previewLoading ? (
                                     <div className="p-4 text-center text-gray-500 animate-pulse text-sm">Søker...</div>
                                 ) : (
@@ -114,7 +114,7 @@ export function PersonSearchBar({ initialValue, onSearch, isLoading = false }: P
                                             className="flex items-center justify-between px-4 py-3 hover:bg-blue-50 transition-colors border-b border-gray-50 last:border-0 group/item"
                                         >
                                             <div className="flex items-center gap-3">
-                                                <div className="h-8 w-8 rounded-lg bg-blue-100 text-blue-600 flex items-center justify-center group-hover/item:bg-blue-600 group-hover/item:text-white transition-colors">
+                                                <div className="h-8 w-8 rounded-lg bg-blue-100 text-blue-900 flex items-center justify-center group-hover/item:bg-blue-900 group-hover/item:text-white transition-colors">
                                                     <User className="h-4 w-4" />
                                                 </div>
                                                 <div>
@@ -150,8 +150,8 @@ export function PersonSearchBar({ initialValue, onSearch, isLoading = false }: P
                     onClick={handleAction}
                     disabled={isLoading}
                     className={clsx(
-                        "px-6 py-3 bg-blue-600 text-white rounded-xl font-bold shadow-lg shadow-blue-500/20",
-                        "hover:bg-blue-700 active:scale-95 transition-all text-sm flex items-center gap-2",
+                        "px-6 py-3 bg-blue-900 text-white rounded-xl font-bold shadow-lg shadow-blue-950/20",
+                        "hover:bg-blue-800 active:scale-95 transition-all text-sm flex items-center gap-2",
                         "disabled:opacity-50 disabled:cursor-not-allowed disabled:active:scale-100"
                     )}
                 >

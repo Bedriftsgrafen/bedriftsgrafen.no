@@ -161,4 +161,19 @@ describe('CompanyList', () => {
         // Ensure table is not rendered
         expect(screen.queryByRole('table')).not.toBeInTheDocument()
     })
+
+    it('supports keyboard activation for a company row', () => {
+        render(<CompanyList {...defaultProps} />)
+
+        const row = screen.getByText('Test Company AS').closest('tr') as HTMLElement
+
+        expect(row).toHaveAttribute('tabindex', '0')
+
+        row.focus()
+        fireEvent.keyDown(row, { key: 'Enter' })
+        fireEvent.keyDown(row, { key: ' ' })
+
+        expect(defaultProps.onSelectCompany).toHaveBeenNthCalledWith(1, '111111111')
+        expect(defaultProps.onSelectCompany).toHaveBeenNthCalledWith(2, '111111111')
+    })
 })

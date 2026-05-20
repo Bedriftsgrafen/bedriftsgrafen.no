@@ -48,7 +48,7 @@ export function SearchSection({ value, onChange, onSearch }: SearchSectionProps)
           <Search className="absolute left-5 top-1/2 -translate-y-1/2 h-6 w-6 text-slate-300 group-focus-within:text-blue-500 transition-colors" />
           <button
             onClick={handleSearchClick}
-            className="absolute right-2 top-1/2 -translate-y-1/2 px-8 py-2.5 bg-linear-to-br from-blue-600 to-blue-700 text-white rounded-xl hover:from-blue-700 hover:to-blue-800 transition-all font-bold shadow-lg shadow-blue-500/20 active:scale-95"
+            className="absolute right-2 top-1/2 -translate-y-1/2 px-8 py-2.5 bg-blue-900 text-white rounded-xl hover:bg-blue-800 transition-all font-bold shadow-lg shadow-blue-950/20 active:scale-95"
           >
             Søk
           </button>

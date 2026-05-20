@@ -43,7 +43,7 @@ export const GeoControls: React.FC<GeoControlsProps> = ({
                         onClick={() => setLevel('county')}
                         className={clsx(
                             "flex-1 flex items-center justify-center gap-2 py-2 text-xs font-semibold rounded-md transition-all",
-                            level === 'county' ? "bg-blue-600 text-white shadow-md" : "text-slate-600 hover:bg-slate-50"
+                            level === 'county' ? "bg-blue-900 text-white shadow-md" : "text-slate-600 hover:bg-slate-50"
                         )}
                     >
                         <Layout className="w-3.5 h-3.5" />
@@ -53,7 +53,7 @@ export const GeoControls: React.FC<GeoControlsProps> = ({
                         onClick={() => setLevel('municipality')}
                         className={clsx(
                             "flex-1 flex items-center justify-center gap-2 py-2 text-xs font-semibold rounded-md transition-all",
-                            level === 'municipality' ? "bg-blue-600 text-white shadow-md" : "text-slate-600 hover:bg-slate-50"
+                            level === 'municipality' ? "bg-blue-900 text-white shadow-md" : "text-slate-600 hover:bg-slate-50"
                         )}
                     >
                         <MapIcon className="w-3.5 h-3.5" />

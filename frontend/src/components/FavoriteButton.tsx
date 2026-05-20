@@ -34,6 +34,7 @@ export const FavoriteButton = memo(function FavoriteButton({
             <button
                 type="button"
                 onClick={handleClick}
+                aria-pressed={isFavorite}
                 className={`p-1 rounded transition-colors ${isFavorite
                         ? 'text-yellow-500 hover:text-yellow-600'
                         : 'text-gray-300 hover:text-yellow-400'
@@ -43,6 +44,7 @@ export const FavoriteButton = memo(function FavoriteButton({
             >
                 <Star
                     className="h-4 w-4"
+                    aria-hidden="true"
                     fill={isFavorite ? 'currentColor' : 'none'}
                 />
             </button>
@@ -53,6 +55,7 @@ export const FavoriteButton = memo(function FavoriteButton({
         <button
             type="button"
             onClick={handleClick}
+            aria-pressed={isFavorite}
             className={`flex items-center gap-1.5 px-2.5 py-1.5 text-sm rounded-lg transition-colors ${isFavorite
                     ? 'bg-yellow-50 text-yellow-700 hover:bg-yellow-100'
                     : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
@@ -61,6 +64,7 @@ export const FavoriteButton = memo(function FavoriteButton({
         >
             <Star
                 className="h-4 w-4"
+                aria-hidden="true"
                 fill={isFavorite ? 'currentColor' : 'none'}
             />
             <span>{isFavorite ? 'Favoritt' : 'Legg til'}</span>

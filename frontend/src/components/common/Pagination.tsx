@@ -88,7 +88,7 @@ export function Pagination({
       start: startIdx,
       end: endIdx,
       isFirstPage: currentPage === 1,
-      isLastPage: currentItemsCount < itemsPerPage,
+      isLastPage: currentPage >= total,
       totalPages: total,
       pageNumbers: generatePageNumbers(currentPage, total)
     }
@@ -113,14 +113,14 @@ export function Pagination({
   }
 
   return (
-    <div className="mt-6 space-y-3">
+    <nav className="mt-6 space-y-3" aria-label={`Paginering for ${itemLabel}`}>
       {/* Info text */}
-      <p className="text-sm text-gray-600 text-center">
+      <p className="text-sm text-gray-600 text-center" aria-live="polite">
         {totalCount !== undefined ? (
           <>Viser {start}-{end} av {formatNumber(totalCount)} {itemLabel}</>
         ) : (
           <span className="flex items-center justify-center gap-2">
-            <span className="inline-block w-3 h-3 border-2 border-gray-400 border-t-transparent rounded-full animate-spin"></span>
+            <span className="inline-block w-3 h-3 border-2 border-gray-400 border-t-transparent rounded-full animate-spin" aria-hidden="true"></span>
             Teller {itemLabel}...
           </span>
         )}
@@ -136,7 +136,7 @@ export function Pagination({
           aria-label="Første side"
           title="Første side"
         >
-          <ChevronsLeft className="h-4 w-4" />
+          <ChevronsLeft className="h-4 w-4" aria-hidden="true" />
         </button>
 
         {/* Previous button */}
@@ -147,7 +147,7 @@ export function Pagination({
           aria-label="Forrige side"
           title="Forrige side"
         >
-          <ChevronLeft className="h-4 w-4" />
+          <ChevronLeft className="h-4 w-4" aria-hidden="true" />
         </button>
 
         {/* Page numbers */}
@@ -158,6 +158,7 @@ export function Pagination({
                 <span
                   key={`ellipsis-${page}`}
                   className="px-3 py-2 text-gray-500"
+                  aria-hidden="true"
                 >
                   ...
                 </span>
@@ -171,9 +172,9 @@ export function Pagination({
                 key={page}
                 onClick={() => handlePageClick(page)}
                 className={`
-                  min-w-[44px] sm:min-w-[40px] min-h-[44px] sm:min-h-0 px-3 py-2.5 sm:py-2 rounded-lg border transition-colors
+                  min-w-11 sm:min-w-10 min-h-11 sm:min-h-0 px-3 py-2.5 sm:py-2 rounded-lg border transition-colors
                   ${isActive
-                    ? 'bg-blue-600 text-white border-blue-600 font-medium'
+                    ? 'bg-blue-900 text-white border-blue-900 font-medium hover:bg-blue-800'
                     : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'
                   }
                 `}
@@ -194,7 +195,7 @@ export function Pagination({
           aria-label="Neste side"
           title="Neste side"
         >
-          <ChevronRight className="h-4 w-4" />
+          <ChevronRight className="h-4 w-4" aria-hidden="true" />
         </button>
 
         {/* Last page button */}
@@ -205,9 +206,9 @@ export function Pagination({
           aria-label="Siste side"
           title="Siste side"
         >
-          <ChevronsRight className="h-4 w-4" />
+          <ChevronsRight className="h-4 w-4" aria-hidden="true" />
         </button>
       </div>
-    </div>
+    </nav>
   )
 }

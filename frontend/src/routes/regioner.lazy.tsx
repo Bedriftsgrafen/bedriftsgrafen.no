@@ -122,7 +122,7 @@ export function RegionerPage() {
             </p>
             <Link
               to="/utforsk"
-              className="inline-flex items-center gap-2 px-6 py-3 bg-blue-600 text-white rounded-2xl font-bold hover:bg-blue-700 transition-colors"
+              className="inline-flex items-center gap-2 px-6 py-3 bg-blue-900 text-white rounded-2xl font-bold hover:bg-blue-800 transition-colors"
             >
               Utforsk alle virksomheter
             </Link>

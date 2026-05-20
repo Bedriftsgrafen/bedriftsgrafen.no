@@ -15,6 +15,7 @@
       "changeProcessCWD": true
     }
   ],
+  "vitest.rootConfig": "${workspaceFolder}/frontend/vite.config.ts",
   "editor.rulers": [
     120
   ],

@@ -32,7 +32,7 @@ export function GlobalErrorComponent({ error }: { error: Error }) {
                         router.invalidate()
                         window.location.reload()
                     }}
-                    className="flex items-center gap-2 px-6 py-2.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium shadow-sm"
+                    className="flex items-center gap-2 px-6 py-2.5 bg-blue-900 text-white rounded-lg hover:bg-blue-800 transition-colors font-medium shadow-sm"
                 >
                     <RotateCcw className="h-4 w-4" />
                     Last siden på nytt

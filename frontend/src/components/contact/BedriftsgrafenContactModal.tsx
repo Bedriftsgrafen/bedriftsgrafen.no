@@ -1,7 +1,7 @@
 import { useId, useState } from 'react'
 import { AlertTriangle, CheckCircle2, Mail } from 'lucide-react'
 import { Modal } from '../common'
-import { CONTACT_EMAIL, getContactEmailHref } from '../../constants/contact'
+import { CONTACT_EMAIL, getContactGmailComposeHref } from '../../constants/contact'
 
 export type BedriftsgrafenContactIntent = 'general' | 'advertising' | 'partnership'
 export type BedriftsgrafenContactContext = 'general' | 'company' | 'person'
@@ -70,91 +70,118 @@ export function BedriftsgrafenContactModal({
     requiresConfirmation = false,
 }: BedriftsgrafenContactModalProps) {
     const [confirmed, setConfirmed] = useState(false)
+    const modalId = useId()
     const checkboxId = useId()
     const copy = CONTACT_COPY[intent]
     const contextCopy = CONTEXT_COPY[context]
     const canOpenEmail = !requiresConfirmation || confirmed
-    const emailHref = getContactEmailHref(copy.subject)
+    const emailHref = intent === 'general'
+        ? getContactGmailComposeHref()
+        : getContactGmailComposeHref(copy.subject)
+    const titleId = `${modalId}-title`
+    const descriptionId = `${modalId}-description`
 
     return (
-        <Modal isOpen={isOpen} onClose={onClose} maxWidth="max-w-xl">
-            <div className="space-y-5">
-                <div className="flex items-start gap-3 pr-8">
-                    <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg bg-blue-50 text-blue-600">
-                        <Mail className="h-5 w-5" />
+        <Modal
+            isOpen={isOpen}
+            onClose={onClose}
+            maxWidth="max-w-2xl"
+            ariaLabelledBy={titleId}
+            ariaDescribedBy={descriptionId}
+        >
+            <div className="space-y-6">
+                <div className="flex items-start gap-4 pr-8">
+                    <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-slate-100 text-blue-700 ring-1 ring-slate-200 shadow-[0_16px_32px_-24px_rgba(15,23,42,0.3)]">
+                        <Mail className="h-6 w-6" aria-hidden="true" />
                     </div>
                     <div>
-                        <h2 className="text-xl font-bold text-gray-900">{copy.title}</h2>
-                        <p className="mt-1 text-sm text-gray-600">{copy.lead}</p>
+                        <p className="text-xs font-semibold uppercase tracking-[0.18em] text-blue-700">Kontakt</p>
+                        <h2 id={titleId} className="mt-1 text-2xl font-semibold tracking-tight text-slate-950">{copy.title}</h2>
+                        <p id={descriptionId} className="mt-2 text-base leading-7 text-slate-600">{copy.lead}</p>
                     </div>
                 </div>
 
-                <div className="rounded-lg border border-amber-200 bg-amber-50 p-4 text-amber-950">
+                <div className="rounded-2xl border border-amber-300/80 bg-[linear-gradient(180deg,rgba(255,251,235,1),rgba(255,247,237,1))] p-5 text-amber-950 shadow-[inset_0_1px_0_rgba(255,255,255,0.7)]">
                     <div className="flex items-start gap-3">
-                        <AlertTriangle className="mt-0.5 h-5 w-5 shrink-0 text-amber-600" />
+                        <div className="mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-white/70 text-amber-600 ring-1 ring-amber-200/80">
+                            <AlertTriangle className="h-5 w-5" aria-hidden="true" />
+                        </div>
                         <div>
-                            <p className="font-semibold">{contextCopy.warningTitle}</p>
-                            <p className="mt-1 text-sm leading-relaxed">
+                            <p className="text-lg font-semibold tracking-tight">{contextCopy.warningTitle}</p>
+                            <p className="mt-2 text-sm leading-7 text-amber-900/90">
                                 {contextCopy.warningBody}
                             </p>
                         </div>
                     </div>
                 </div>
 
-                <div className="grid gap-3 text-sm text-gray-700 sm:grid-cols-2">
-                    <div className="rounded-lg border border-gray-200 p-3">
-                        <div className="mb-2 flex items-center gap-2 font-semibold text-gray-900">
-                            <CheckCircle2 className="h-4 w-4 text-green-600" />
+                <div className="grid gap-4 text-sm text-slate-700 sm:grid-cols-2">
+                    <div className="rounded-2xl border border-slate-200 bg-slate-50/80 p-4 shadow-[0_12px_32px_-28px_rgba(15,23,42,0.24)]">
+                        <div className="mb-3 flex items-center gap-2 font-semibold text-slate-950">
+                            <CheckCircle2 className="h-4 w-4 text-green-600" aria-hidden="true" />
                             Send gjerne
                         </div>
-                        <ul className="space-y-1 text-gray-600">
-                            {contextCopy.sendItems.map((item) => <li key={item}>{item}</li>)}
+                        <ul role="list" className="space-y-2 text-slate-600">
+                            {contextCopy.sendItems.map((item) => (
+                                <li key={item} className="flex items-start gap-2">
+                                    <span aria-hidden="true" className="mt-2.25 h-1.5 w-1.5 rounded-full bg-green-500" />
+                                    <span>{item}</span>
+                                </li>
+                            ))}
                         </ul>
                     </div>
-                    <div className="rounded-lg border border-gray-200 p-3">
-                        <div className="mb-2 flex items-center gap-2 font-semibold text-gray-900">
-                            <AlertTriangle className="h-4 w-4 text-amber-600" />
+                    <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-[0_12px_32px_-28px_rgba(15,23,42,0.2)]">
+                        <div className="mb-3 flex items-center gap-2 font-semibold text-slate-950">
+                            <AlertTriangle className="h-4 w-4 text-amber-600" aria-hidden="true" />
                             Send ikke
                         </div>
-                        <ul className="space-y-1 text-gray-600">
-                            {contextCopy.dontSendItems.map((item) => <li key={item}>{item}</li>)}
+                        <ul role="list" className="space-y-2 text-slate-600">
+                            {contextCopy.dontSendItems.map((item) => (
+                                <li key={item} className="flex items-start gap-2">
+                                    <span aria-hidden="true" className="mt-2.25 h-1.5 w-1.5 rounded-full bg-amber-500" />
+                                    <span>{item}</span>
+                                </li>
+                            ))}
                         </ul>
                     </div>
                 </div>
 
                 {requiresConfirmation && (
-                    <label htmlFor={checkboxId} className="flex items-start gap-3 rounded-lg border border-gray-200 bg-gray-50 p-3 text-sm text-gray-700">
+                    <label htmlFor={checkboxId} className="flex items-start gap-3 rounded-2xl border border-slate-200 bg-slate-50/80 p-4 text-sm leading-6 text-slate-700 shadow-[0_12px_32px_-28px_rgba(15,23,42,0.24)]">
                         <input
                             id={checkboxId}
                             type="checkbox"
                             checked={confirmed}
                             onChange={(event) => setConfirmed(event.target.checked)}
-                            className="mt-1 h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                            className="mt-1 h-4 w-4 rounded border-slate-300 text-blue-700 focus:ring-blue-500"
                         />
                         <span>{contextCopy.confirmation}</span>
                     </label>
                 )}
 
-                <div className="flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
+                <div className="flex flex-col-reverse gap-3 border-t border-slate-200 pt-2 sm:flex-row sm:justify-end">
                     <button
                         type="button"
                         onClick={onClose}
-                        className="inline-flex items-center justify-center rounded-lg border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-50"
+                        className="inline-flex items-center justify-center rounded-xl border border-slate-300 px-5 py-2.5 text-sm font-semibold text-slate-700 transition-colors hover:bg-slate-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-200 focus-visible:ring-offset-2"
                     >
                         Avbryt
                     </button>
                     <a
                         href={emailHref}
+                        target="_blank"
+                        rel="noreferrer"
                         onClick={(event) => {
                             if (!canOpenEmail) {
                                 event.preventDefault()
                                 return
                             }
+
                             onClose()
                         }}
                         aria-disabled={!canOpenEmail}
                         tabIndex={canOpenEmail ? undefined : -1}
-                        className={`inline-flex items-center justify-center rounded-lg px-4 py-2 text-sm font-semibold text-white transition-colors ${canOpenEmail ? 'bg-blue-600 hover:bg-blue-700' : 'cursor-not-allowed bg-gray-400'}`}
+                        className={`inline-flex items-center justify-center rounded-xl px-5 py-2.5 text-sm font-semibold text-white shadow-[0_16px_32px_-20px_rgba(30,58,138,0.8)] transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-200 focus-visible:ring-offset-2 ${canOpenEmail ? 'bg-blue-900 hover:bg-blue-800' : 'cursor-not-allowed bg-slate-400 shadow-none'}`}
                     >
                         Åpne e-post til {CONTACT_EMAIL}
                     </a>

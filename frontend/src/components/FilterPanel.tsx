@@ -1,5 +1,5 @@
 import { Filter, ChevronDown, Check } from 'lucide-react'
-import { useState, useMemo, useRef, useEffect, useCallback } from 'react'
+import { useState, useMemo, useRef, useEffect, useCallback, useId } from 'react'
 import { useFilterStore } from '../store/filterStore'
 import { useResetPagination } from '../hooks/useResetPagination'
 import { useSavedFiltersStore, type SavedFilter } from '../store/savedFiltersStore'
@@ -21,6 +21,7 @@ export function FilterPanel() {
   // Refs for DOM access
   const searchInputRef = useRef<HTMLInputElement>(null)
   const tableRef = useRef<HTMLElement | null>(null)
+  const panelId = useId()
 
   // Get actions from store (stable)
   const setAllFilters = useFilterStore(s => s.setAllFilters)
@@ -254,52 +255,63 @@ export function FilterPanel() {
     })
   }, [draftFilters.sortBy, draftFilters.sortOrder])
 
-  const headerControls = useMemo(() => (
-    <div className="flex items-center gap-3">
-      <Filter className="h-5 w-5 text-blue-600" />
-      <h2 className="font-semibold text-lg text-gray-900">Filtrer virksomheter</h2>
+  const toggleExpanded = useCallback(() => {
+    setIsExpanded((prev) => !prev)
+  }, [])
+
+  const filterCountLabel = activeFilters === 1 ? '1 aktivt filter' : `${activeFilters} aktive filtre`
+
+  const headerSummary = useMemo(() => (
+    <div className="flex items-center gap-3 min-w-0">
+      <Filter className="h-5 w-5 text-blue-600" aria-hidden="true" />
+      <span className="font-semibold text-lg text-gray-900 truncate">Filtrer virksomheter</span>
       {activeFilters > 0 && (
-        <>
-          <span className="px-2.5 py-0.5 bg-blue-600 text-white text-sm font-medium rounded-full">
-            {activeFilters}
-          </span>
-          <button
-            onClick={(e) => { e.stopPropagation(); resetFilters() }}
-            className="px-2 py-0.5 bg-gray-200 hover:bg-red-100 text-gray-600 hover:text-red-600 text-xs font-medium rounded-full transition-colors"
-            title="Nullstill alle filtre"
-          >
-            Nullstill
-          </button>
-        </>
+        <span
+          className="px-2.5 py-0.5 bg-blue-900 text-white text-sm font-medium rounded-full"
+          aria-label={filterCountLabel}
+        >
+          {activeFilters}
+        </span>
       )}
     </div>
-  ), [activeFilters, resetFilters])
+  ), [activeFilters, filterCountLabel])
 
   return (
     <div className="bg-white rounded-xl shadow-md border border-gray-200 mb-8 overflow-hidden">
       {/* Header Toggle */}
       <div
-        role="button"
-        tabIndex={0}
-        onClick={() => setIsExpanded(!isExpanded)}
-        onKeyDown={(e) => {
-          if (e.key === 'Enter' || e.key === ' ') {
-            e.preventDefault()
-            setIsExpanded(!isExpanded)
-          }
-        }}
-        className="w-full p-6 flex items-center justify-between bg-linear-to-br from-slate-50 to-white hover:from-slate-100 hover:to-slate-50 transition-all duration-300 cursor-pointer select-none border-b border-transparent"
-        aria-expanded={isExpanded}
+        className="w-full p-6 flex items-center justify-between gap-3 bg-linear-to-br from-slate-50 to-white hover:from-slate-100 hover:to-slate-50 transition-all duration-300 border-b border-transparent"
       >
-        {headerControls}
-        <div className={`p-1 rounded-full transition-all duration-300 ${isExpanded ? 'bg-blue-100 text-blue-600 rotate-180' : 'bg-slate-100 text-slate-400'}`}>
-          <ChevronDown className="h-4 w-4" />
-        </div>
+        <button
+          type="button"
+          onClick={toggleExpanded}
+          className="min-w-0 flex flex-1 items-center justify-between gap-3 rounded-lg text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2"
+          aria-expanded={isExpanded}
+          aria-controls={panelId}
+        >
+          {headerSummary}
+          <span
+            aria-hidden="true"
+            className={`shrink-0 p-1 rounded-full transition-all duration-300 ${isExpanded ? 'bg-blue-100 text-blue-600 rotate-180' : 'bg-slate-100 text-slate-400'}`}
+          >
+            <ChevronDown className="h-4 w-4" aria-hidden="true" />
+          </span>
+        </button>
+        {activeFilters > 0 && (
+          <button
+            type="button"
+            onClick={resetFilters}
+            className="shrink-0 px-2 py-0.5 bg-gray-200 hover:bg-red-100 text-gray-600 hover:text-red-600 text-xs font-medium rounded-full transition-colors"
+            title="Nullstill alle filtre"
+          >
+            Nullstill
+          </button>
+        )}
       </div>
 
       {/* Collapsible Content */}
       {isExpanded && (
-        <div className="p-6 space-y-8 border-t border-gray-100">
+        <div id={panelId} className="p-6 space-y-8 border-t border-gray-100">
           <SavedFiltersSection
             savedFilters={savedFilters}
             showSaveInput={showSaveInput}
@@ -358,9 +370,9 @@ export function FilterPanel() {
               </button>
               <button
                 onClick={applyFilters}
-                className="px-8 py-2.5 text-sm font-bold text-white bg-blue-600 hover:bg-blue-700 rounded-lg transition-all shadow-md hover:shadow-blue-200 flex items-center gap-2"
+                className="px-8 py-2.5 text-sm font-bold text-white bg-blue-900 hover:bg-blue-800 rounded-lg transition-all shadow-md hover:shadow-blue-950/20 flex items-center gap-2"
               >
-                <Check className="h-4 w-4" />
+                <Check className="h-4 w-4" aria-hidden="true" />
                 Bruk filter
               </button>
             </div>

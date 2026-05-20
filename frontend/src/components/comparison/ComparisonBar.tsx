@@ -33,7 +33,7 @@ export const ComparisonBar = memo(function ComparisonBar() {
     if (companies.length === 0) return null
 
     return (
-        <div className="fixed bottom-0 left-0 right-0 z-50 bg-white border-t border-gray-200 shadow-lg px-4 py-3">
+        <div className="fixed bottom-0 left-0 right-0 z-1500 bg-white border-t border-gray-200 shadow-lg px-4 py-3">
             <div className="container mx-auto flex items-center justify-between gap-4">
                 {/* Selected companies */}
                 <div className="flex items-center gap-2 flex-1 min-w-0">
@@ -54,7 +54,7 @@ export const ComparisonBar = memo(function ComparisonBar() {
                                     title="Fjern"
                                     aria-label={`Fjern ${company.navn} fra sammenligning`}
                                 >
-                                    <X className="h-3.5 w-3.5" />
+                                    <X className="h-3.5 w-3.5" aria-hidden="true" />
                                 </button>
                             </div>
                         ))}
@@ -75,11 +75,11 @@ export const ComparisonBar = memo(function ComparisonBar() {
                         onClick={handleCompare}
                         disabled={companies.length < 2}
                         className={`flex items-center gap-2 px-4 py-1.5 text-sm font-medium rounded-lg transition-colors ${companies.length >= 2
-                            ? 'bg-blue-600 text-white hover:bg-blue-700'
+                            ? 'bg-blue-900 text-white hover:bg-blue-800'
                             : 'bg-gray-200 text-gray-400 cursor-not-allowed'
                             }`}
                     >
-                        <BarChart3 className="h-4 w-4" />
+                        <BarChart3 className="h-4 w-4" aria-hidden="true" />
                         Sammenlign
                     </button>
                 </div>

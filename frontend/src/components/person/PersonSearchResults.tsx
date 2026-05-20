@@ -68,7 +68,7 @@ export function PersonSearchResults({
             {/* Toolbar: count, sort, view mode */}
             <div className="px-1 py-3 flex flex-wrap items-center justify-between gap-3">
                 <h2 className="font-semibold text-lg text-slate-900 flex items-center gap-2">
-                    <User className="h-5 w-5 text-blue-600" />
+                    <User className="h-5 w-5 text-blue-600" aria-hidden="true" />
                     Resultater
                 </h2>
                 <div className="flex items-center gap-3">
@@ -84,7 +84,7 @@ export function PersonSearchResults({
                     </span>
 
                     {/* Sort dropdown */}
-                    <div className="flex items-center gap-1.5">
+                    <div className="flex items-center gap-1.5" role="group" aria-label="Sorter resultater">
                         <ArrowUpDown className="h-4 w-4 text-gray-400" aria-hidden="true" />
                         <select
                             value={sortBy}
@@ -101,13 +101,13 @@ export function PersonSearchResults({
                     </div>
 
                     {/* View mode toggle */}
-                    <div className="flex items-center border border-gray-300 rounded-lg overflow-hidden">
+                    <div className="flex items-center border border-gray-300 rounded-lg overflow-hidden" role="group" aria-label="Velg visning">
                         <button
                             type="button"
                             onClick={() => onViewModeChange('list')}
                             className={`flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium transition-colors ${
                                 viewMode === 'list'
-                                    ? 'bg-blue-600 text-white'
+                                    ? 'bg-blue-900 text-white'
                                     : 'bg-white text-gray-600 hover:bg-gray-50'
                             }`}
                             aria-pressed={viewMode === 'list'}
@@ -122,7 +122,7 @@ export function PersonSearchResults({
                             onClick={() => onViewModeChange('cards')}
                             className={`flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium transition-colors ${
                                 viewMode === 'cards'
-                                    ? 'bg-blue-600 text-white'
+                                    ? 'bg-blue-900 text-white'
                                     : 'bg-white text-gray-600 hover:bg-gray-50'
                             }`}
                             aria-pressed={viewMode === 'cards'}
@@ -155,7 +155,7 @@ export function PersonSearchResults({
             {/* Empty state */}
             {!isLoading && !isError && results.length === 0 && (
                 <div className="text-center py-12 bg-gray-50 rounded-xl border border-gray-100">
-                    <User className="h-10 w-10 text-gray-300 mx-auto mb-3" />
+                    <User className="h-10 w-10 text-gray-300 mx-auto mb-3" aria-hidden="true" />
                     <p className="text-gray-500 font-medium">
                         Ingen personer funnet for &ldquo;{query}&rdquo;
                     </p>

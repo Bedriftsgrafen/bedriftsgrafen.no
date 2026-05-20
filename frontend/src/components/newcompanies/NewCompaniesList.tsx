@@ -96,6 +96,7 @@ export function NewCompaniesList({
     const totalPages = totalCount ? Math.ceil(totalCount / itemsPerPage) : 1
 
     const [copiedOrgnr, setCopiedOrgnr] = useState<string | null>(null)
+    const filterPanelId = 'new-companies-filters'
 
     const handleCopyOrgnr = useCallback((orgnr: string, e: MouseEvent) => {
         e.stopPropagation()
@@ -143,27 +144,31 @@ export function NewCompaniesList({
                 <div className="flex items-center gap-3">
                     {/* Filter button */}
                     <button
+                        type="button"
                         onClick={() => setShowFilters(!showFilters)}
+                        aria-expanded={showFilters}
+                        aria-controls={filterPanelId}
                         className={`flex items-center gap-1 px-3 py-1.5 text-sm rounded-lg border transition-colors ${hasActiveFilters
-                            ? 'bg-green-50 border-green-300 text-green-700'
+                            ? 'bg-blue-50 border-blue-300 text-blue-900'
                             : 'border-gray-300 text-gray-600 hover:bg-gray-50'
                             }`}
                     >
-                        <Filter className="w-4 h-4" />
+                        <Filter className="w-4 h-4" aria-hidden="true" />
                         Filtrer
                         {activeFilterCount > 0 && (
-                            <span className="bg-green-500 text-white text-xs rounded-full px-1.5">{activeFilterCount}</span>
+                            <span className="bg-blue-900 text-white text-xs rounded-full px-1.5">{activeFilterCount}</span>
                         )}
                     </button>
 
                     <div className="relative">
-                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" aria-hidden="true" />
                         <input
                             type="text"
                             placeholder="Søk i listen..."
                             value={searchQuery}
                             onChange={(e) => setSearchQuery(e.target.value)}
                             className="pl-9 pr-4 py-1.5 w-48 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500"
+                            aria-label="Søk i nyetableringer"
                         />
                     </div>
                     <div className="flex items-center gap-2">
@@ -173,7 +178,7 @@ export function NewCompaniesList({
                             className="p-1 rounded hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed"
                             aria-label="Forrige side"
                         >
-                            <ChevronLeft className="h-5 w-5" />
+                            <ChevronLeft className="h-5 w-5" aria-hidden="true" />
                         </button>
                         <span className="text-sm text-gray-600">
                             Side {page} av {totalPages}
@@ -184,7 +189,7 @@ export function NewCompaniesList({
                             className="p-1 rounded hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed"
                             aria-label="Neste side"
                         >
-                            <ChevronRight className="h-5 w-5" />
+                            <ChevronRight className="h-5 w-5" aria-hidden="true" />
                         </button>
                     </div>
                 </div>
@@ -192,7 +197,7 @@ export function NewCompaniesList({
 
             {/* Filter panel */}
             {showFilters && (
-                <div className="px-4 py-3 border-b border-gray-200 bg-gray-50 flex flex-wrap items-center gap-4">
+                <div id={filterPanelId} className="px-4 py-3 border-b border-gray-200 bg-gray-50 flex flex-wrap items-center gap-4">
                     <div className="flex items-center gap-2">
                         <label className="text-sm text-gray-600">Bransje:</label>
                         <input
@@ -201,6 +206,7 @@ export function NewCompaniesList({
                             value={filters.nace}
                             onChange={(e) => setFilter('nace', e.target.value)}
                             className="w-24 px-2 py-1 text-sm border border-gray-300 rounded focus:ring-2 focus:ring-green-500"
+                            aria-label="Filtrer nyetableringer etter bransjekode"
                         />
                     </div>
                     <div className="flex items-center gap-2">
@@ -229,10 +235,11 @@ export function NewCompaniesList({
                     </div>
                     {hasActiveFilters && (
                         <button
+                            type="button"
                             onClick={resetFilters}
                             className="flex items-center gap-1 text-sm text-green-600 hover:text-green-800"
                         >
-                            <X className="w-4 h-4" />
+                            <X className="w-4 h-4" aria-hidden="true" />
                             Nullstill
                         </button>
                     )}
@@ -293,7 +300,15 @@ export function NewCompaniesList({
                                 <tr
                                     key={company.orgnr}
                                     onClick={() => onSelectCompany(company.orgnr)}
-                                    className="hover:bg-green-50 cursor-pointer transition-colors"
+                                    onKeyDown={(event) => {
+                                        if (event.key === 'Enter' || event.key === ' ') {
+                                            event.preventDefault()
+                                            onSelectCompany(company.orgnr)
+                                        }
+                                    }}
+                                    tabIndex={0}
+                                    className="hover:bg-blue-50 cursor-pointer transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-blue-900"
+                                    aria-label={`Åpne ${company.navn || 'virksomhet'} (${company.orgnr})`}
                                 >
                                     <td className="px-4 py-3">
                                         <span className="font-medium text-gray-900">{company.navn}</span>
@@ -302,14 +317,16 @@ export function NewCompaniesList({
                                         <div className="flex items-center gap-2 group/copy">
                                             {company.orgnr}
                                             <button
+                                                type="button"
                                                 onClick={(e) => handleCopyOrgnr(company.orgnr, e)}
                                                 className={`p-1 rounded hover:bg-white transition-all ${copiedOrgnr === company.orgnr ? 'opacity-100 text-green-600' : 'opacity-0 group-hover/copy:opacity-100 text-gray-400'}`}
                                                 title="Kopier org.nr"
+                                                aria-label={`Kopier organisasjonsnummer ${company.orgnr}`}
                                             >
                                                 {copiedOrgnr === company.orgnr ? (
-                                                    <Check className="h-3 w-3" />
+                                                    <Check className="h-3 w-3" aria-hidden="true" />
                                                 ) : (
-                                                    <Copy className="h-3 w-3" />
+                                                    <Copy className="h-3 w-3" aria-hidden="true" />
                                                 )}
                                             </button>
                                         </div>

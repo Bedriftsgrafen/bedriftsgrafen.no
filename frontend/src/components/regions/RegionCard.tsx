@@ -65,8 +65,8 @@ export const RegionCard = memo(function RegionCard({
           <div
             className={
               isFylke
-                ? 'h-12 w-12 md:h-16 md:w-16 bg-slate-50/90 backdrop-blur-sm border border-slate-200/50 text-slate-400 rounded-xl md:rounded-2xl flex items-center justify-center group-hover:bg-blue-600 group-hover:text-white group-hover:border-blue-500 transition-all duration-300 shadow-sm'
-                : 'h-14 w-14 bg-slate-50 border border-slate-100 text-slate-400 rounded-2xl flex items-center justify-center group-hover:bg-blue-600 group-hover:text-white group-hover:border-blue-500 transition-all duration-300'
+                ? 'h-12 w-12 md:h-16 md:w-16 bg-slate-50/90 backdrop-blur-sm border border-slate-200/50 text-slate-400 rounded-xl md:rounded-2xl flex items-center justify-center group-hover:bg-blue-900 group-hover:text-white group-hover:border-blue-800 transition-all duration-300 shadow-sm'
+                : 'h-14 w-14 bg-slate-50 border border-slate-100 text-slate-400 rounded-2xl flex items-center justify-center group-hover:bg-blue-900 group-hover:text-white group-hover:border-blue-800 transition-all duration-300'
             }
           >
             {isFylke ? (
@@ -110,8 +110,8 @@ export const RegionCard = memo(function RegionCard({
         <div
           className={
             isFylke
-              ? 'h-1 w-8 bg-slate-200/80 rounded-full group-hover:w-12 group-hover:bg-blue-500 transition-all duration-300 mt-4'
-              : 'h-1 w-8 bg-slate-100 rounded-full group-hover:w-12 group-hover:bg-blue-500 transition-all duration-300 mb-4'
+              ? 'h-1 w-8 bg-slate-200/80 rounded-full group-hover:w-12 group-hover:bg-blue-900 transition-all duration-300 mt-4'
+              : 'h-1 w-8 bg-slate-100 rounded-full group-hover:w-12 group-hover:bg-blue-900 transition-all duration-300 mb-4'
           }
         />
       </div>

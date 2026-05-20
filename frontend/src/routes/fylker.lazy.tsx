@@ -52,7 +52,7 @@ export function FylkerPage() {
             <p className="text-slate-600 font-bold text-lg mb-4">Kunne ikke laste fylkesoversikten.</p>
             <button
               onClick={() => refetch()}
-              className="px-6 py-3 bg-blue-600 text-white rounded-xl font-bold text-sm hover:bg-blue-700 transition-colors"
+              className="px-6 py-3 bg-blue-900 text-white rounded-xl font-bold text-sm hover:bg-blue-800 transition-colors"
             >
               Prøv igjen
             </button>

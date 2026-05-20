@@ -73,33 +73,37 @@ export function NacePicker({ value, onChange, placeholder = 'Alle bransjer', cla
             <button
                 type="button"
                 onClick={() => setIsOpen(!isOpen)}
-                className="w-full flex items-center justify-between gap-2 px-4 py-2.5 bg-white/80 backdrop-blur-md border border-gray-200 rounded-xl hover:bg-white hover:border-gray-300 transition-all active:scale-[0.98] text-sm text-left shadow-sm"
+                className="w-full flex items-center justify-between gap-2 px-4 py-2.5 pr-12 bg-white/80 backdrop-blur-md border border-gray-200 rounded-xl hover:bg-white hover:border-gray-300 transition-all active:scale-[0.98] text-sm text-left shadow-sm"
+                aria-expanded={isOpen}
+                aria-haspopup="listbox"
             >
                 <span className={`block truncate ${!value ? 'text-gray-500' : 'text-gray-900 font-medium'}`}>
                     {selectedName || placeholder}
                 </span>
-                <div className="flex items-center gap-1 text-gray-400">
-                    {value && (
-                        <div
-                            onClick={(e) => {
-                                e.stopPropagation();
-                                onChange(null);
-                            }}
-                            className="p-1 hover:bg-gray-100 rounded-md hover:text-gray-600 transition-colors"
-                        >
-                            <X size={14} />
-                        </div>
-                    )}
-                    <ChevronDown size={16} className={`transition-transform duration-200 ${isOpen ? 'rotate-180' : ''}`} />
-                </div>
+                <span className="flex items-center gap-1 text-gray-400" aria-hidden="true">
+                    <ChevronDown size={16} className={`transition-transform duration-200 ${isOpen ? 'rotate-180' : ''}`} aria-hidden="true" />
+                </span>
             </button>
+            {value && (
+                <button
+                    type="button"
+                    onClick={(e) => {
+                        e.stopPropagation();
+                        onChange(null);
+                    }}
+                    className="absolute right-9 top-1/2 -translate-y-1/2 p-1 text-gray-400 hover:bg-gray-100 rounded-md hover:text-gray-600 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500"
+                    aria-label="Fjern valgt bransje"
+                >
+                    <X size={14} aria-hidden="true" />
+                </button>
+            )}
 
             {isOpen && (
                 <div className="absolute z-1000 mt-2 w-full min-w-[320px] bg-white rounded-xl shadow-xl border border-gray-100 overflow-hidden animate-in fade-in zoom-in duration-200 origin-top">
                     {/* Search bar */}
                     <div className="p-3 border-b border-gray-100 bg-gray-50/50">
                         <div className="relative">
-                            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={16} />
+                            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={16} aria-hidden="true" />
                             <input
                                 autoFocus
                                 type="text"
@@ -107,12 +111,13 @@ export function NacePicker({ value, onChange, placeholder = 'Alle bransjer', cla
                                 value={searchTerm}
                                 onChange={(e) => setSearchTerm(e.target.value)}
                                 className="w-full pl-9 pr-4 py-2 bg-white border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all"
+                                aria-label="Søk i bransjer"
                             />
                         </div>
                     </div>
 
                     {/* List */}
-                    <div className="max-h-[400px] overflow-y-auto overscroll-contain pb-2">
+                    <div className="max-h-100 overflow-y-auto overscroll-contain pb-2">
                         {groupedOptions.length === 0 ? (
                             <div className="p-8 text-center text-gray-500 text-sm">
                                 Ingen bransjer funnet for "{searchTerm}"
@@ -133,7 +138,7 @@ export function NacePicker({ value, onChange, placeholder = 'Alle bransjer', cla
                                         <span className={`text-sm ${value === group.section ? 'text-blue-700 font-semibold' : 'text-gray-900 font-bold'}`}>
                                             {group.section} - {group.sectionName}
                                         </span>
-                                        {value === group.section && <Check size={16} className="text-blue-600" />}
+                                        {value === group.section && <Check size={16} className="text-blue-600" aria-hidden="true" />}
                                     </button>
 
                                     {/* Divisions */}
@@ -151,7 +156,7 @@ export function NacePicker({ value, onChange, placeholder = 'Alle bransjer', cla
                                             <span className={`text-sm ${value === div.code ? 'text-blue-700 font-medium' : 'text-gray-600'}`}>
                                                 {div.code} - {div.name}
                                             </span>
-                                            {value === div.code && <Check size={16} className="text-blue-600" />}
+                                            {value === div.code && <Check size={16} className="text-blue-600" aria-hidden="true" />}
                                         </button>
                                     ))}
                                 </div>

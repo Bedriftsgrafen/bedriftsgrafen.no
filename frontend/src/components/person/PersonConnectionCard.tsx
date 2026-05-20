@@ -20,12 +20,14 @@ export const PersonConnectionCard = memo(function PersonConnectionCard({
     return (
         <div className="rounded-xl border border-gray-100 bg-white hover:shadow-md transition-all">
             <button
+                type="button"
                 onClick={() => setExpanded(!expanded)}
+                aria-expanded={expanded}
                 className="w-full p-5 flex items-start justify-between gap-4 text-left"
             >
                 <div className="flex items-start gap-4 min-w-0 flex-1">
                     <div className="p-3 rounded-lg shrink-0 bg-purple-50 text-purple-600">
-                        <Users className="h-5 w-5" />
+                        <Users className="h-5 w-5" aria-hidden="true" />
                     </div>
                     <div className="min-w-0">
                         <h3 className="font-bold text-gray-900 truncate">{connection.name}</h3>
@@ -43,7 +45,7 @@ export const PersonConnectionCard = memo(function PersonConnectionCard({
                     </div>
                 </div>
                 <div className="p-2 text-gray-400 shrink-0">
-                    {expanded ? <ChevronDown className="h-5 w-5" /> : <ChevronRight className="h-5 w-5" />}
+                    {expanded ? <ChevronDown className="h-5 w-5" aria-hidden="true" /> : <ChevronRight className="h-5 w-5" aria-hidden="true" />}
                 </div>
             </button>
 
@@ -69,8 +71,9 @@ export const PersonConnectionCard = memo(function PersonConnectionCard({
                                     params={{ orgnr: sc.orgnr }}
                                     className="p-1.5 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-all shrink-0"
                                     title="Se virksomhetsprofil"
+                                    aria-label={`Se virksomhetsprofil for ${sc.navn}`}
                                 >
-                                    <ExternalLink className="h-4 w-4" />
+                                    <ExternalLink className="h-4 w-4" aria-hidden="true" />
                                 </Link>
                             </div>
                         ))}

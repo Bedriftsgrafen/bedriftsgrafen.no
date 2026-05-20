@@ -131,16 +131,19 @@ describe('FilterPanel', () => {
 
     it('opens dialog when header is clicked', () => {
         render(<FilterPanel />)
-        const filterHeader = screen.getByText('Filtrer virksomheter')
+        const filterHeader = screen.getByRole('button', { name: /Filtrer virksomheter/i })
+        expect(filterHeader).toHaveAttribute('aria-expanded', 'false')
+
         fireEvent.click(filterHeader)
 
         // Check for "Basis" which is a header in the expanded panel
+        expect(filterHeader).toHaveAttribute('aria-expanded', 'true')
         expect(screen.getByText('Basis')).toBeDefined()
     })
 
     it('updates specific filter value when changed', () => {
         render(<FilterPanel />)
-        const filterHeader = screen.getByText('Filtrer virksomheter')
+        const filterHeader = screen.getByRole('button', { name: /Filtrer virksomheter/i })
         fireEvent.click(filterHeader)
 
         // Find an input, e.g., naeringskode (placeholder "F.eks. 62.100")

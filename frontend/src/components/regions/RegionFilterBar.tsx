@@ -21,7 +21,7 @@ export const RegionFilterBar = memo(function RegionFilterBar({
   const segmentBtnClass = (s: Segment) =>
     `px-5 py-2 rounded-xl text-sm font-bold transition-all ${
       segment === s
-        ? 'bg-blue-600 text-white shadow-md'
+        ? 'bg-blue-900 text-white shadow-md'
         : 'bg-white text-slate-600 border border-slate-200 hover:border-blue-300 hover:text-blue-600'
     }`
 
@@ -39,28 +39,34 @@ export const RegionFilterBar = memo(function RegionFilterBar({
           data-testid="region-search-input"
           className="w-full pl-14 pr-6 py-4 bg-white border border-slate-200 rounded-2xl focus:ring-4 focus:ring-blue-500/5 focus:border-blue-500 outline-none shadow-sm transition-all text-lg font-medium"
         />
-        <Search className="absolute left-5 top-1/2 -translate-y-1/2 h-6 w-6 text-slate-400 group-focus-within:text-blue-600 transition-colors" />
+        <Search className="absolute left-5 top-1/2 -translate-y-1/2 h-6 w-6 text-slate-400 group-focus-within:text-blue-600 transition-colors" aria-hidden="true" />
       </div>
 
       {/* Segment toggle – desktop */}
       <div className="hidden md:flex gap-2 items-center" role="group" aria-label="Vis type">
         <button
+          type="button"
           className={segmentBtnClass('all')}
           onClick={() => onSegmentChange('all')}
+          aria-pressed={segment === 'all'}
           data-testid="segment-all"
         >
           Alle
         </button>
         <button
+          type="button"
           className={segmentBtnClass('fylker')}
           onClick={() => onSegmentChange('fylker')}
+          aria-pressed={segment === 'fylker'}
           data-testid="segment-fylker"
         >
           Fylker
         </button>
         <button
+          type="button"
           className={segmentBtnClass('kommuner')}
           onClick={() => onSegmentChange('kommuner')}
+          aria-pressed={segment === 'kommuner'}
           data-testid="segment-kommuner"
         >
           Kommuner

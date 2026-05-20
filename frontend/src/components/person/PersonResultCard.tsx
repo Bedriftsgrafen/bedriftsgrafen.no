@@ -17,7 +17,7 @@ export function PersonResultCard({ person }: { person: PersonSearchResultDetaile
         >
             <div className="flex items-start justify-between gap-4">
                 <div className="flex items-start gap-4 min-w-0">
-                    <div className="p-3 bg-blue-50 rounded-lg text-blue-600 group-hover:bg-blue-600 group-hover:text-white transition-colors shrink-0">
+                    <div className="p-3 bg-blue-50 rounded-lg text-blue-900 group-hover:bg-blue-900 group-hover:text-white transition-colors shrink-0">
                         <User className="h-5 w-5" />
                     </div>
                     <div className="min-w-0">

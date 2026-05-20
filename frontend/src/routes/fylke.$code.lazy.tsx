@@ -166,7 +166,7 @@ function CountyDashboardPage() {
                 <Link
                   to="/kart"
                   search={{ county: dashboard.code }}
-                  className="w-full bg-blue-600 text-white py-5 rounded-2xl font-black uppercase text-[10px] tracking-[0.2em] flex items-center justify-center gap-3 hover:bg-blue-500 transition-all shadow-xl shadow-blue-900/20"
+                  className="w-full bg-blue-900 text-white py-5 rounded-2xl font-black uppercase text-[10px] tracking-[0.2em] flex items-center justify-center gap-3 hover:bg-blue-800 transition-all shadow-xl shadow-blue-950/20"
                 >
                   Utforsk i kartet
                   <ChevronRight className="h-4 w-4" />
@@ -224,7 +224,7 @@ function CountyDashboardPage() {
           {/* Municipalities Drill-down */}
           <section className="bg-white rounded-2xl md:rounded-[2.5rem] p-6 md:p-12 border border-slate-100 shadow-sm mb-10 md:mb-16">
             <h2 className="text-xl md:text-3xl font-black text-slate-900 mb-6 md:mb-12 flex items-center gap-3 md:gap-4 tracking-tight">
-              <div className="h-10 w-2 bg-blue-600 rounded-full" />
+              <div className="h-10 w-2 bg-blue-900 rounded-full" />
               Kommuner i {dashboard.name}
             </h2>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
@@ -236,7 +236,7 @@ function CountyDashboardPage() {
                   className="flex items-center justify-between p-5 bg-slate-50 hover:bg-blue-50 border border-slate-100 hover:border-blue-200 rounded-2xl transition-all group focus-visible:ring-2 focus-visible:ring-blue-600 outline-none hover:scale-[1.02]"
                 >
                   <div className="flex items-center gap-4 min-w-0">
-                    <div className="h-10 w-10 rounded-xl bg-white border border-slate-100 text-slate-400 flex items-center justify-center font-black text-xs group-hover:bg-blue-600 group-hover:text-white group-hover:border-blue-500 transition-all">
+                    <div className="h-10 w-10 rounded-xl bg-white border border-slate-100 text-slate-400 flex items-center justify-center font-black text-xs group-hover:bg-blue-900 group-hover:text-white group-hover:border-blue-800 transition-all">
                       <Building2 className="h-4 w-4" aria-hidden="true" />
                     </div>
                     <div className="truncate">

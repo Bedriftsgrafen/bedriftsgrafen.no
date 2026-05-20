@@ -22,7 +22,7 @@ export function Button({
     const baseStyles = "inline-flex items-center justify-center font-medium transition-all duration-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed active:scale-[0.98]"
 
     const variants = {
-        primary: "bg-linear-to-br from-blue-600 to-blue-700 text-white shadow-lg shadow-blue-500/20 hover:from-blue-700 hover:to-blue-800 focus:ring-blue-500 border-none",
+        primary: "bg-blue-900 text-white shadow-lg shadow-blue-950/20 hover:bg-blue-800 focus:ring-blue-200 border-none",
         secondary: "bg-slate-100 text-slate-900 hover:bg-slate-200 focus:ring-slate-500 border border-transparent",
         outline: "bg-white text-slate-700 border border-slate-200 hover:bg-slate-50 hover:border-slate-300 focus:ring-slate-400 shadow-sm",
         ghost: "bg-transparent text-slate-600 hover:bg-slate-100/80 hover:text-slate-900 focus:ring-slate-200",

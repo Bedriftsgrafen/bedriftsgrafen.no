@@ -34,6 +34,8 @@ export interface CompanyDetailContentProps {
   onTabChange: (tab: TabType) => void
   /** When true, uses fixed height with inner scroll (modal). When false, grows naturally (page). Default: true */
   constrainHeight?: boolean
+  headingId?: string
+  descriptionId?: string
 }
 
 export function CompanyDetailContent({
@@ -57,7 +59,9 @@ export function CompanyDetailContent({
   onSelectCompany,
   activeTab,
   onTabChange,
-  constrainHeight = true
+  constrainHeight = true,
+  headingId,
+  descriptionId,
 }: CompanyDetailContentProps) {
   const scrollContainerRef = useRef<HTMLDivElement>(null)
 
@@ -97,6 +101,8 @@ export function CompanyDetailContent({
         onCopyOrgnr={onCopyOrgnr}
         onShare={onShare}
         showCloseOverlap={constrainHeight}
+        headingId={headingId}
+        descriptionId={descriptionId}
       />
 
       {/* Content Area */}

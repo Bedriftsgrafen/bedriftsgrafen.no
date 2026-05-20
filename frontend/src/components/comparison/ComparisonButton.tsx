@@ -41,6 +41,8 @@ export const ComparisonButton = memo(function ComparisonButton({
                 type="button"
                 onClick={handleClick}
                 disabled={isMaxReached}
+                aria-label={isSelected ? 'Fjern fra sammenligning' : isMaxReached ? 'Maks 3 virksomheter' : 'Legg til sammenligning'}
+                aria-pressed={isSelected}
                 className={`p-1 rounded transition-colors ${isSelected
                     ? 'bg-blue-100 text-blue-600 hover:bg-blue-200'
                     : isMaxReached
@@ -50,9 +52,9 @@ export const ComparisonButton = memo(function ComparisonButton({
                 title={isSelected ? 'Fjern fra sammenligning' : isMaxReached ? 'Maks 3 virksomheter' : 'Legg til sammenligning'}
             >
                 {isSelected ? (
-                    <Check className="h-4 w-4" />
+                    <Check className="h-4 w-4" aria-hidden="true" />
                 ) : (
-                    <Plus className="h-4 w-4" />
+                    <Plus className="h-4 w-4" aria-hidden="true" />
                 )}
             </button>
         )
@@ -63,6 +65,7 @@ export const ComparisonButton = memo(function ComparisonButton({
             type="button"
             onClick={handleClick}
             disabled={isMaxReached}
+            aria-pressed={isSelected}
             className={`flex items-center gap-1.5 px-2.5 py-1.5 text-sm rounded-lg transition-colors ${isSelected
                 ? 'bg-blue-100 text-blue-700 hover:bg-blue-200'
                 : isMaxReached
@@ -73,12 +76,12 @@ export const ComparisonButton = memo(function ComparisonButton({
         >
             {isSelected ? (
                 <>
-                    <Check className="h-4 w-4" />
+                    <Check className="h-4 w-4" aria-hidden="true" />
                     <span>Valgt</span>
                 </>
             ) : (
                 <>
-                    <Plus className="h-4 w-4" />
+                    <Plus className="h-4 w-4" aria-hidden="true" />
                     <span>Sammenlign</span>
                 </>
             )}

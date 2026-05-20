@@ -75,7 +75,7 @@ const ModeToggle = memo(function ModeToggle({
     onModeChange: (mode: PickerMode) => void
 }) {
     return (
-        <div className="flex gap-1 p-1 bg-gray-100 rounded-lg mb-3">
+        <div className="flex gap-1 p-1 bg-gray-100 rounded-lg mb-3" role="group" aria-label="Velg områdenivå">
             <button
                 type="button"
                 onClick={() => onModeChange('county')}
@@ -83,6 +83,7 @@ const ModeToggle = memo(function ModeToggle({
                     ? 'bg-white text-gray-900 shadow-sm'
                     : 'text-gray-600 hover:text-gray-900'
                     }`}
+                aria-pressed={mode === 'county'}
             >
                 <Building className="h-4 w-4" aria-hidden="true" />
                 Fylke
@@ -94,6 +95,7 @@ const ModeToggle = memo(function ModeToggle({
                     ? 'bg-white text-gray-900 shadow-sm'
                     : 'text-gray-600 hover:text-gray-900'
                     }`}
+                aria-pressed={mode === 'municipality'}
             >
                 <MapPin className="h-4 w-4" aria-hidden="true" />
                 Kommune
@@ -132,7 +134,7 @@ const LocationItem = memo(function LocationItem({
                 }`}
         >
             <span
-                className={`flex items-center justify-center h-8 w-8 rounded-lg shrink-0 ${isSelected ? 'bg-blue-600 text-white' : 'bg-gray-100 text-gray-500'
+                className={`flex items-center justify-center h-8 w-8 rounded-lg shrink-0 ${isSelected ? 'bg-blue-900 text-white' : 'bg-gray-100 text-gray-500'
                     }`}
                 aria-hidden="true"
             >

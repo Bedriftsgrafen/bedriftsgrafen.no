@@ -15,6 +15,11 @@ declare module '*.jpg' {
   export default value;
 }
 
+declare module '*.svg' {
+  const value: string;
+  export default value;
+}
+
 interface Window {
   gtag: (
     command: 'config' | 'event' | 'js',

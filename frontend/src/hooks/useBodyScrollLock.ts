@@ -1,5 +1,14 @@
 import { useEffect } from 'react'
 
+function restoreScrollPosition(scrollY: number) {
+  const root = document.documentElement
+  const originalScrollBehavior = root.style.scrollBehavior
+
+  root.style.scrollBehavior = 'auto'
+  window.scrollTo(0, scrollY)
+  root.style.scrollBehavior = originalScrollBehavior
+}
+
 /**
  * Locks body scroll when active using the position:fixed pattern.
  * This is the most reliable approach for iOS Safari, which ignores
@@ -39,7 +48,9 @@ export function useBodyScrollLock(active: boolean = true) {
       body.style.width = originalWidth
 
       // Restore scroll position
-      window.scrollTo(0, scrollY)
+      requestAnimationFrame(() => {
+        restoreScrollPosition(scrollY)
+      })
     }
   }, [active])
 }

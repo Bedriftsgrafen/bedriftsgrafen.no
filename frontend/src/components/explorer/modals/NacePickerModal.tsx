@@ -31,10 +31,12 @@ const SearchInput = memo(function SearchInput({
     value,
     onChange,
     placeholder,
+    ariaLabel,
 }: {
     value: string
     onChange: (value: string) => void
     placeholder: string
+    ariaLabel: string
 }) {
     return (
         <div className="relative">
@@ -49,6 +51,7 @@ const SearchInput = memo(function SearchInput({
                 onChange={(e) => onChange(e.target.value)}
                 className="w-full pl-10 pr-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
                 autoFocus
+                aria-label={ariaLabel}
             />
         </div>
     )
@@ -89,6 +92,8 @@ const NaceNode = memo(function NaceNode({
 }: NaceNodeProps) {
     // Better indentation: 24px base + 20px per level
     const indent = level * 24
+    const childrenId = `nace-node-children-${code.replace(/[^a-zA-Z0-9]+/g, '-')}`
+    const toggleLabel = isExpanded ? `Skjul ${code} ${name}` : `Utvid ${code} ${name}`
 
     return (
         <div>
@@ -103,17 +108,20 @@ const NaceNode = memo(function NaceNode({
                     className={`flex items-center justify-center h-6 w-6 rounded shrink-0 ${hasChildren ? 'hover:bg-gray-200 cursor-pointer' : ''
                         }`}
                     disabled={!hasChildren}
+                    aria-label={hasChildren ? toggleLabel : undefined}
+                    aria-expanded={hasChildren ? isExpanded : undefined}
+                    aria-controls={hasChildren ? childrenId : undefined}
                 >
                     {isLoading ? (
-                        <Loader2 className="h-4 w-4 text-blue-500 animate-spin" />
+                        <Loader2 className="h-4 w-4 text-blue-500 animate-spin" aria-hidden="true" />
                     ) : hasChildren ? (
                         isExpanded ? (
-                            <ChevronDown className="h-4 w-4 text-gray-500" />
+                            <ChevronDown className="h-4 w-4 text-gray-500" aria-hidden="true" />
                         ) : (
-                            <ChevronRight className="h-4 w-4 text-gray-500" />
+                            <ChevronRight className="h-4 w-4 text-gray-500" aria-hidden="true" />
                         )
                     ) : (
-                        <span className="w-4" />
+                        <span className="w-4" aria-hidden="true" />
                     )}
                 </button>
 
@@ -125,10 +133,11 @@ const NaceNode = memo(function NaceNode({
                         ? 'bg-blue-50 border border-blue-300'
                         : 'hover:bg-gray-50 border border-transparent'
                         }`}
+                    aria-pressed={isSelected}
                 >
                     <span
                         className={`flex items-center justify-center px-1.5 py-0.5 rounded font-mono text-xs shrink-0 ${isSelected
-                            ? 'bg-blue-600 text-white'
+                            ? 'bg-blue-900 text-white'
                             : 'bg-gray-100 text-gray-600'
                             }`}
                     >
@@ -141,13 +150,17 @@ const NaceNode = memo(function NaceNode({
                         </span>
                     )}
                     {isSelected && (
-                        <Check className="h-4 w-4 text-blue-600 shrink-0" />
+                        <Check className="h-4 w-4 text-blue-600 shrink-0" aria-hidden="true" />
                     )}
                 </button>
             </div>
 
             {/* Children */}
-            {isExpanded && children}
+            {isExpanded && (
+                <div id={childrenId}>
+                    {children}
+                </div>
+            )}
         </div>
     )
 })
@@ -430,6 +443,7 @@ const NacePickerModalContent = memo(function NacePickerModalContent({
                     value={search}
                     onChange={setSearch}
                     placeholder="Søk etter bransje eller kode..."
+                    ariaLabel="Søk etter bransje eller kode"
                 />
             }
         >

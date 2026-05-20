@@ -72,7 +72,7 @@ export const MapSidebar: React.FC<MapSidebarProps> = ({
 
     return (
         <div className={clsx(
-            "w-full md:w-85 bg-slate-50 border-t md:border-t-0 md:border-r border-slate-200 flex flex-col h-[500px] md:h-full overflow-hidden shrink-0 shadow-inner",
+            "w-full md:w-85 bg-slate-50 border-t md:border-t-0 md:border-r border-slate-200 flex flex-col h-125 md:h-full overflow-hidden shrink-0 shadow-inner",
             className
         )}>
             {/* Sidebar Header */}
@@ -134,7 +134,7 @@ export const MapSidebar: React.FC<MapSidebarProps> = ({
                             <div className="flex flex-col gap-2">
                                 <button
                                     onClick={() => onShowCompanies?.(selectedRegionData.name, selectedRegionData.code)}
-                                    className="w-full bg-blue-600 hover:bg-blue-700 text-white py-2.5 rounded-lg text-xs font-black transition-all shadow-md active:scale-95 flex items-center justify-center gap-2"
+                                    className="w-full bg-blue-900 hover:bg-blue-800 text-white py-2.5 rounded-lg text-xs font-black transition-all shadow-md active:scale-95 flex items-center justify-center gap-2"
                                 >
                                     Se virksomheter
                                     <ChevronRight className="w-4 h-4" />

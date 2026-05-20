@@ -47,35 +47,28 @@
 <body>
   <div id="root">
     <div class="min-h-screen bg-gray-50 text-gray-900 font-sans"
-      style="min-height: 100vh; display: flex; flex-direction: column;">
-      <header style="height: 72px; border-bottom: 1px solid #e5e7eb; background: #1e3a8a"></header>
-      <main style="flex-grow: 1; padding: 2rem 1rem; margin: 0 auto; max-width: 1280px; width: 100%;">
-        <!-- Statistics cards skeleton -->
-        <div style="display: grid; grid-template-columns: repeat(6, 1fr); gap: 0.75rem; margin-bottom: 2rem;">
-          <div style="background: white; padding: 1rem; border-radius: 0.75rem; box-shadow: 0 1px 2px rgba(0,0,0,0.05); height: 88px;"></div>
-          <div style="background: white; padding: 1rem; border-radius: 0.75rem; box-shadow: 0 1px 2px rgba(0,0,0,0.05); height: 88px;"></div>
-          <div style="background: white; padding: 1rem; border-radius: 0.75rem; box-shadow: 0 1px 2px rgba(0,0,0,0.05); height: 88px;"></div>
-          <div style="background: white; padding: 1rem; border-radius: 0.75rem; box-shadow: 0 1px 2px rgba(0,0,0,0.05); height: 88px;"></div>
-          <div style="background: white; padding: 1rem; border-radius: 0.75rem; box-shadow: 0 1px 2px rgba(0,0,0,0.05); height: 88px;"></div>
-          <div style="background: white; padding: 1rem; border-radius: 0.75rem; box-shadow: 0 1px 2px rgba(0,0,0,0.05); height: 88px;"></div>
-        </div>
-        <!-- Search section skeleton (matches actual mobile height ~410px) -->
-        <div style="margin-bottom: 1rem; border-radius: 1rem; overflow: hidden; position: relative; min-height: 410px; box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1);">
-          <div style="position: absolute; inset: 0; background: radial-gradient(ellipse at center top, #4a6fc7 0%, #2952a3 30%, #1e3a8a 60%, #152a66 100%); z-index: 0;"></div>
-          <div style="position: relative; z-index: 10; padding: 2rem; text-align: center;">
-            <!-- Mode toggle skeleton -->
-            <div style="display: flex; justify-content: center; gap: 0.5rem; margin-bottom: 2rem;">
-              <div style="background: white; border-radius: 9999px; width: 100px; height: 36px;"></div>
-              <div style="background: rgba(255,255,255,0.1); border-radius: 9999px; width: 100px; height: 36px;"></div>
+      style="min-height: 100vh; display: flex; flex-direction: column; background: linear-gradient(180deg,#eef3f8 0%,#f6f8fb 24%,#edf2f7 100%);">
+      <header style="height: 80px; border-bottom: 1px solid rgba(203,213,225,.9); background: linear-gradient(180deg,rgba(255,255,255,.98),rgba(248,250,252,.94)); box-shadow: 0 18px 40px -32px rgba(15,23,42,.24);"></header>
+      <main style="flex-grow: 1; padding: 3.5rem 1rem 2rem; margin: 0 auto; max-width: 1280px; width: 100%;">
+        <section style="margin: 0 auto 3.5rem; max-width: 64rem; padding: 0 1rem;">
+          <div style="border: 1px solid #cbd5e1; background: rgba(248,250,252,.96); border-radius: 32px; padding: 2.5rem; box-shadow: 0 28px 70px -42px rgba(15,23,42,.44);">
+            <div style="margin: 0 auto; max-width: 48rem; text-align: center;">
+              <div style="height: 14px; width: 260px; max-width: 70%; margin: 0 auto 1.25rem; border-radius: 999px; background: #dbe4ef;"></div>
+              <div style="height: 54px; width: 78%; margin: 0 auto 1rem; border-radius: 18px; background: #e6edf5;"></div>
+              <div style="height: 22px; width: 62%; margin: 0 auto 2.25rem; border-radius: 999px; background: #edf2f7;"></div>
             </div>
-            <h2 style="color: white; font-size: 1.5rem; font-weight: 700; margin-bottom: 0.5rem;">Søk i norske virksomheter</h2>
-            <p style="color: rgba(255,255,255,0.9); margin-bottom: 1.5rem; font-size: 0.875rem;">Søk på virksomhetsnavn, organisasjonsnummer, bransje, sted eller formål</p>
-            <div style="max-width: 42rem; margin: 0 auto; display: flex; gap: 0.75rem;">
-              <div style="flex: 1; background: white; height: 48px; border-radius: 0.5rem;"></div>
-              <div style="background: white; height: 48px; width: 80px; border-radius: 0.5rem;"></div>
+            <div style="margin: 0 auto; max-width: 48rem; border: 1px solid #cbd5e1; border-radius: 28px; background: rgba(241,245,249,.86); padding: 1.25rem; box-shadow: 0 20px 45px -34px rgba(15,23,42,.38);">
+              <div style="display: flex; justify-content: center; gap: .4rem; margin: 0 auto 1rem; width: max-content; max-width: 100%; border-radius: 999px; background: #fff; padding: .35rem; box-shadow: 0 0 0 1px #e2e8f0 inset;">
+                <div style="width: 132px; height: 40px; border-radius: 999px; background: #1e3a8a;"></div>
+                <div style="width: 108px; height: 40px; border-radius: 999px; background: #f1f5f9;"></div>
+              </div>
+              <div style="display: flex; gap: .75rem; border: 1px solid #cbd5e1; border-radius: 18px; background: #f8fafc; padding: .75rem;">
+                <div style="flex: 1; min-width: 0; height: 50px; border-radius: 12px; background: #fff;"></div>
+                <div style="width: 136px; height: 50px; border-radius: 12px; background: #1e3a8a;"></div>
+              </div>
             </div>
           </div>
-        </div>
+        </section>
       </main>
       <footer style="background: #f9fafb; border-top: 1px solid #e5e7eb; padding: 3rem 1rem; color: #4b5563; font-size: 0.875rem;">
         <div style="max-width: 1280px; margin: 0 auto; display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 2rem;">

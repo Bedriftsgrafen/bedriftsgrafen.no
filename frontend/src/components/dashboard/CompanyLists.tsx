@@ -114,7 +114,7 @@ export function NewestCompaniesList({
               aria-label={`${company.navn}, stiftet ${new Date(company.stiftelsesdato || '').toLocaleDateString('no-NO', { day: '2-digit', month: 'long', year: 'numeric' })}`}
             >
               <div className="flex items-center gap-4 md:gap-8 min-w-0">
-                <div className="h-12 w-12 rounded-2xl bg-slate-50 border border-slate-100 text-slate-400 flex items-center justify-center font-black text-xs group-hover:bg-blue-600 group-hover:text-white group-hover:border-blue-500 transition-all">
+                <div className="h-12 w-12 rounded-2xl bg-slate-50 border border-slate-100 text-slate-400 flex items-center justify-center font-black text-xs group-hover:bg-blue-900 group-hover:text-white group-hover:border-blue-800 transition-all">
                   <MapPin className="h-5 w-5" aria-hidden="true" />
                 </div>
                 <div className="truncate">

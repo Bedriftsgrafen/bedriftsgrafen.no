@@ -54,7 +54,7 @@ function CompanyNotFoundPage() {
         <button
           onClick={handleFetch}
           disabled={fetchMutation.isPending}
-          className="inline-block px-5 py-2 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 disabled:opacity-50 mr-4 mb-4"
+          className="inline-block px-5 py-2 bg-blue-900 text-white rounded-lg font-medium hover:bg-blue-800 disabled:opacity-50 mr-4 mb-4"
         >
           {fetchMutation.isPending ? 'Henter...' : 'Hent fra Brønnøysund'}
         </button>

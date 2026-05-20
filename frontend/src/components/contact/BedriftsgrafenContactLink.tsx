@@ -32,6 +32,7 @@ export function BedriftsgrafenContactLink({
 
     const handleClick = (event: MouseEvent<HTMLButtonElement>) => {
         event.preventDefault()
+        event.currentTarget.focus()
         onClick?.()
         setActiveContext(context ?? getInferredContactContext())
         setIsOpen(true)

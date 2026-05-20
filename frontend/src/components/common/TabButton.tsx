@@ -31,13 +31,16 @@ export const TabButton = memo(function TabButton({
 }: TabButtonProps) {
     return (
         <button
+            type="button"
+            role="tab"
+            aria-selected={active}
             onClick={onClick}
             className={`flex items-center gap-2 px-4 py-2 text-sm font-medium transition-colors ${active
-                    ? 'text-blue-600 border-b-2 border-blue-600'
+                    ? 'text-blue-900 border-b-2 border-blue-900'
                     : 'text-gray-500 hover:text-gray-700'
                 }`}
         >
-            {icon}
+            <span aria-hidden="true">{icon}</span>
             {label}
             {badge !== undefined && badge > 0 && (
                 <span className={`ml-1 px-2 py-0.5 text-xs rounded-full ${BADGE_COLORS[badgeColor]}`}>

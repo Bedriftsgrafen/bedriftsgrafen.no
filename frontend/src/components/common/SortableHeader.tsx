@@ -30,24 +30,32 @@ export function SortableHeader<T extends string>({
         );
     }
 
+    const isCurrentSort = currentSort === field;
+    const nextSortOrder = isCurrentSort && sortOrder === 'asc' ? 'synkende' : 'stigende';
+
     return (
         <th
-            className={`px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100 transition-colors select-none ${className}`}
-            onClick={() => onSort(field)}
+            className={`px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider ${className}`}
+            aria-sort={isCurrentSort ? (sortOrder === 'asc' ? 'ascending' : 'descending') : undefined}
             {...props}
         >
-            <div className="flex items-center gap-1">
+            <button
+                type="button"
+                onClick={() => onSort(field)}
+                className="flex items-center gap-1 rounded text-left uppercase tracking-wider hover:text-gray-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2"
+                aria-label={`Sorter etter ${label}, ${nextSortOrder}`}
+            >
                 {label}
-                {currentSort === field ? (
+                {isCurrentSort ? (
                     sortOrder === 'desc' ? (
-                        <ChevronDown className="w-3 h-3 text-blue-600" />
+                        <ChevronDown className="w-3 h-3 text-blue-600" aria-hidden="true" />
                     ) : (
-                        <ChevronUp className="w-3 h-3 text-blue-600" />
+                        <ChevronUp className="w-3 h-3 text-blue-600" aria-hidden="true" />
                     )
                 ) : (
-                    <ArrowUpDown className="w-3 h-3 text-gray-300" />
+                    <ArrowUpDown className="w-3 h-3 text-gray-300" aria-hidden="true" />
                 )}
-            </div>
+            </button>
         </th>
     );
 }

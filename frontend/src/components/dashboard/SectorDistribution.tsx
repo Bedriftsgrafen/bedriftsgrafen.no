@@ -21,7 +21,7 @@ export function SectorDistribution({
         id="sector-distribution-title"
         className="text-xl md:text-3xl font-black text-slate-900 mb-6 md:mb-12 flex items-center gap-3 md:gap-4 tracking-tight"
       >
-        <div className="h-10 w-2 bg-blue-600 rounded-full" aria-hidden="true" />
+        <div className="h-10 w-2 bg-blue-900 rounded-full" aria-hidden="true" />
         {title}
       </h2>
       <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 md:gap-x-12 gap-y-6 md:gap-y-8">
@@ -49,7 +49,7 @@ export function SectorDistribution({
                 aria-labelledby={`sector-${sector.nace_division}-label`}
               >
                 <div
-                  className="bg-blue-600 h-full rounded-full transition-all duration-1000 ease-out"
+                  className="bg-blue-900 h-full rounded-full transition-all duration-1000 ease-out"
                   style={{ width: `${percentValue}%` }}
                 />
               </div>

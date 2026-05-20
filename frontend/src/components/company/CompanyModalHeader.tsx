@@ -13,6 +13,8 @@ interface CompanyModalHeaderProps {
   onShare: () => void
   /** When true, adds right padding to avoid overlapping with a close button. Default: true */
   showCloseOverlap?: boolean
+  headingId?: string
+  descriptionId?: string
 }
 
 export function CompanyModalHeader({
@@ -21,7 +23,9 @@ export function CompanyModalHeader({
   copiedOrgnr,
   onCopyOrgnr,
   onShare,
-  showCloseOverlap = true
+  showCloseOverlap = true,
+  headingId,
+  descriptionId,
 }: CompanyModalHeaderProps) {
   // Favorites
   const isFavorite = useFavoritesStore((s) => company ? s.isFavorite(company.orgnr) : false)
@@ -70,7 +74,7 @@ export function CompanyModalHeader({
           title={isFavorite ? 'Fjern fra favoritter' : 'Legg til favoritter'}
           aria-label={isFavorite ? 'Fjern fra favoritter' : 'Legg til favoritter'}
         >
-          <Star className="h-5 w-5" fill={isFavorite ? 'currentColor' : 'none'} />
+          <Star className="h-5 w-5" fill={isFavorite ? 'currentColor' : 'none'} aria-hidden="true" />
         </button>
       )}
 
@@ -88,7 +92,7 @@ export function CompanyModalHeader({
           title={isSelected ? 'Fjern fra sammenligning' : canAddMore ? 'Legg til sammenligning' : 'Maks 3 virksomheter'}
           aria-label={isSelected ? 'Fjern fra sammenligning' : canAddMore ? 'Legg til sammenligning' : 'Maks 3 virksomheter'}
         >
-          <GitCompareArrows className="h-5 w-5" />
+          <GitCompareArrows className="h-5 w-5" aria-hidden="true" />
         </button>
       )}
 
@@ -98,7 +102,7 @@ export function CompanyModalHeader({
         title="Del virksomhetsprofil"
         aria-label="Del virksomhetsprofil"
       >
-        <Share2 className="h-5 w-5" />
+        <Share2 className="h-5 w-5" aria-hidden="true" />
       </button>
 
       {company && (
@@ -110,7 +114,7 @@ export function CompanyModalHeader({
           title="Se i Enhetsregisteret (Brreg)"
           aria-label="Se i Enhetsregisteret (Brreg)"
         >
-          <svg className="h-5 w-5" viewBox="0 0 38 32" fill="currentColor" xmlns="http://www.w3.org/2000/svg">
+          <svg className="h-5 w-5" viewBox="0 0 38 32" fill="currentColor" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
             <rect y="0" width="10.36" height="3.453" />
             <rect x="13.816" y="0" width="10.362" height="3.453" />
             <rect x="27.632" y="0" width="10.362" height="3.453" />
@@ -136,7 +140,7 @@ export function CompanyModalHeader({
           title={`Søk etter ${company.navn} på LinkedIn`}
           aria-label={`Søk etter ${company.navn} på LinkedIn`}
         >
-          <svg className="h-5 w-5 fill-current" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+          <svg className="h-5 w-5 fill-current" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
             <path d="M19 0h-14c-2.76 0-5 2.24-5 5v14c0 2.76 2.24 5 5 5h14c2.76 0 5-2.24 5-5v-14c0-2.76-2.24-5-5-5zM8 19H5V10h3v9zM6.5 8.25c-.97 0-1.75-.78-1.75-1.75s.78-1.75 1.75-1.75 1.75.78 1.75 1.75-.78 1.75-1.75 1.75zM19 19h-3v-4.74c0-1.42-.6-1.93-1.38-1.93-.73 0-1.27.35-1.62 1.03V19h-3V10h2.76v1.23h.04c.38-.72 1.17-1.47 2.52-1.47 1.86 0 3.08 1.17 3.08 3.56V19z" />
           </svg>
         </a>
@@ -155,11 +159,11 @@ export function CompanyModalHeader({
             </div>
           ) : company ? (
             <>
-              <h1 className="text-xl md:text-2xl font-bold text-gray-900 flex items-center gap-2 wrap-break-word">
-                <Building2 className="h-6 w-6 text-blue-600 shrink-0" />
+              <h1 id={headingId} className="text-xl md:text-2xl font-bold text-gray-900 flex items-center gap-2 wrap-break-word">
+                <Building2 className="h-6 w-6 text-blue-600 shrink-0" aria-hidden="true" />
                 <span>{company.navn}</span>
               </h1>
-              <div className="flex flex-wrap items-center gap-x-3 gap-y-1 mt-1">
+              <div id={descriptionId} className="flex flex-wrap items-center gap-x-3 gap-y-1 mt-1">
                 <div className="text-sm text-gray-600 flex items-center gap-2">
                   <span>Org.nr: {company.orgnr}</span>
                   <button
@@ -169,9 +173,9 @@ export function CompanyModalHeader({
                     aria-label="Kopier organisasjonsnummer"
                   >
                     {copiedOrgnr ? (
-                      <Check className="h-4 w-4 text-green-600" />
+                      <Check className="h-4 w-4 text-green-600" aria-hidden="true" />
                     ) : (
-                      <Copy className="h-4 w-4 text-gray-500" />
+                      <Copy className="h-4 w-4 text-gray-500" aria-hidden="true" />
                     )}
                   </button>
                 </div>

@@ -73,7 +73,7 @@ export const YearSelector = memo(
               key={accounting.id}
               onClick={() => onSelectAccounting(accounting.aar, accounting.id)}
               className={`px-4 py-2 rounded-lg border transition-colors ${selectedAccountingId === accounting.id
-                ? 'bg-blue-600 text-white border-blue-600'
+                ? 'bg-blue-900 text-white border-blue-900'
                 : 'bg-white text-gray-700 border-gray-300 hover:border-blue-500'
                 }`}
             >

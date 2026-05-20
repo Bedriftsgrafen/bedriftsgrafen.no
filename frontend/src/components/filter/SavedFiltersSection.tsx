@@ -46,7 +46,7 @@ export function SavedFiltersSection({
         <Button
           onClick={onShowSaveInput}
           variant="secondary"
-          className="text-green-700 bg-green-50 border-green-200 hover:bg-green-100"
+          className="text-blue-900 bg-blue-50 border-blue-200 hover:bg-blue-100"
           size="sm"
           leftIcon={<Save className="h-4 w-4" />}
         >
@@ -67,7 +67,7 @@ export function SavedFiltersSection({
           <Button
             onClick={onShowSaveInput}
             variant="secondary"
-            className="text-green-700 bg-green-50 border-green-200 hover:bg-green-100 flex items-center gap-0.5"
+            className="text-blue-900 bg-blue-50 border-blue-200 hover:bg-blue-100 flex items-center gap-0.5"
             size="sm"
             leftIcon={<Save className="h-3.5 w-3.5" />}
           >
@@ -92,7 +92,7 @@ export function SavedFiltersSection({
             onClick={onSaveFilter}
             disabled={!saveFilterName.trim()}
             variant="primary"
-            className="bg-green-600 hover:bg-green-700 focus:ring-green-500"
+            className="bg-blue-900 hover:bg-blue-800 focus:ring-blue-200"
             size="sm"
           >
             Lagre
@@ -136,7 +136,7 @@ export function SavedFiltersSection({
                 {isEditing && (
                   <button
                     onClick={() => onUpdateFilter(filter.id, filter.name)}
-                    className="p-1 text-green-600 hover:text-green-700 hover:bg-green-50 rounded transition-colors"
+                    className="p-1 text-blue-900 hover:text-blue-800 hover:bg-blue-50 rounded transition-colors"
                     title="Oppdater filter med nåværende verdier"
                     aria-label="Oppdater filter"
                   >

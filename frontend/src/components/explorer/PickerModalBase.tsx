@@ -43,6 +43,7 @@ export function PickerModalBase({
     confirmDisabled = false,
 }: PickerModalBaseProps) {
     const modalRef = useRef<HTMLDivElement>(null)
+    const previousActiveElementRef = useRef<HTMLElement | null>(null)
 
     // Check if we're on the client (for SSR safety with portals)
     // This is a simple, lint-friendly alternative to useState in useEffect
@@ -51,6 +52,10 @@ export function PickerModalBase({
     // Handle ESC key to close modal
     useEffect(() => {
         if (!isOpen) return
+
+        previousActiveElementRef.current = document.activeElement instanceof HTMLElement
+            ? document.activeElement
+            : null
 
         const handleKeyDown = (e: KeyboardEvent) => {
             if (e.key === 'Escape') {
@@ -61,8 +66,13 @@ export function PickerModalBase({
             // Focus trap
             if (e.key === 'Tab' && modalRef.current) {
                 const focusables = modalRef.current.querySelectorAll<HTMLElement>(
-                    'a[href], button, textarea, input, select, [tabindex]:not([tabindex="-1"])'
+                    'a[href], button:not([disabled]), textarea:not([disabled]), input:not([disabled]), select:not([disabled]), [tabindex]:not([tabindex="-1"])'
                 )
+                if (focusables.length === 0) {
+                    e.preventDefault()
+                    modalRef.current.focus()
+                    return
+                }
                 const first = focusables[0]
                 const last = focusables[focusables.length - 1]
 
@@ -90,14 +100,20 @@ export function PickerModalBase({
     // Focus first focusable element when modal opens
     useEffect(() => {
         if (isOpen && modalRef.current) {
-            // Small timeout to ensure DOM is ready after portal render
-            const timer = setTimeout(() => {
-                const focusable = modalRef.current?.querySelector<HTMLElement>(
-                    'input, button, [tabindex]:not([tabindex="-1"])'
-                )
-                focusable?.focus()
-            }, 50)
-            return () => clearTimeout(timer)
+            const preferredFocusable = modalRef.current.querySelector<HTMLElement>(
+                'input:not([disabled]), select:not([disabled]), textarea:not([disabled])'
+            )
+            const fallbackFocusable = modalRef.current.querySelector<HTMLElement>(
+                'button:not([disabled]), [tabindex]:not([tabindex="-1"])'
+            )
+
+            ;(preferredFocusable ?? fallbackFocusable ?? modalRef.current).focus()
+
+            return () => {
+                if (previousActiveElementRef.current && document.contains(previousActiveElementRef.current)) {
+                    previousActiveElementRef.current.focus()
+                }
+            }
         }
     }, [isOpen])
 
@@ -131,6 +147,7 @@ export function PickerModalBase({
                 ref={modalRef}
                 className="relative z-10 bg-white rounded-2xl shadow-2xl w-full max-w-2xl max-h-[85vh] flex flex-col"
                 onClick={(e) => e.stopPropagation()} // Prevent clicks inside modal from closing it
+                tabIndex={-1}
             >
                 {/* Header */}
                 <div className="flex items-center justify-between p-4 border-b border-gray-200 shrink-0">

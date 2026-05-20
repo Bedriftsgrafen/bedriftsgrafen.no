@@ -9,6 +9,7 @@ import { ProFeatureModal } from '../modals'
 
 /** Maximum rows for export */
 const EXPORT_LIMIT = 1000
+const NBSP_REGEX = /\u00A0/g
 
 /**
  * Mock pro access check - replace with real auth later
@@ -106,6 +107,15 @@ export const ExportButton = memo(function ExportButton({
     // Determine actual export count (capped at limit)
     const exportCount = totalCount !== undefined && totalCount > EXPORT_LIMIT ? EXPORT_LIMIT : totalCount
     const isAtLimit = totalCount !== undefined && totalCount > EXPORT_LIMIT
+    const exportLimitLabel = formatNumber(EXPORT_LIMIT).replace(NBSP_REGEX, ' ')
+    const exportCountLabel = exportCount !== undefined ? formatNumber(exportCount).replace(NBSP_REGEX, ' ') : undefined
+    const exportLabel = isExporting
+        ? 'Eksporterer virksomheter'
+        : isAtLimit
+            ? `Eksporter første ${exportLimitLabel} virksomheter`
+            : exportCountLabel !== undefined
+                ? `Eksporter ${exportCountLabel} virksomheter`
+                : 'Last ned virksomheter som CSV'
 
     const handleExportClick = useCallback(() => {
         // Track the attempt
@@ -134,7 +144,10 @@ export const ExportButton = memo(function ExportButton({
                 type="button"
                 onClick={handleExportClick}
                 disabled={isExporting || totalCount === 0}
-                className="flex items-center gap-1.5 px-3 py-1.5 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                aria-label={exportLabel}
+                aria-haspopup={!HAS_PRO_ACCESS ? 'dialog' : undefined}
+                aria-expanded={!HAS_PRO_ACCESS ? showProModal : undefined}
+                className="flex items-center gap-1.5 px-3 py-1.5 bg-blue-900 text-white text-sm font-medium rounded-lg hover:bg-blue-800 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                 title={
                     isAtLimit
                         ? `Eksporterer første ${formatNumber(EXPORT_LIMIT)} virksomheter`

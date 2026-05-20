@@ -173,17 +173,18 @@ export const IndustryBreakdownStats = memo(function IndustryBreakdownStats({
             {/* Header with search */}
             <div className="p-4 border-b border-gray-200 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                 <div className="flex items-center gap-2">
-                    <Icon className={`w-5 h-5 text-${colorScheme === 'green' ? 'green' : 'red'}-600`} />
+                    <Icon className={`w-5 h-5 text-${colorScheme === 'green' ? 'green' : 'red'}-600`} aria-hidden="true" />
                     <h2 className="text-lg font-semibold text-gray-900">{title}</h2>
                 </div>
                 <div className="relative">
-                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" aria-hidden="true" />
                     <input
                         type="text"
                         placeholder="Søk i bransjer..."
                         value={searchQuery}
                         onChange={(e) => setSearchQuery(e.target.value)}
                         className={`pl-9 pr-4 py-2 w-full sm:w-64 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-${colorScheme === 'green' ? 'green' : 'red'}-500 focus:border-${colorScheme === 'green' ? 'green' : 'red'}-500`}
+                        aria-label="Søk i bransjer"
                     />
                 </div>
             </div>
@@ -242,8 +243,17 @@ export const IndustryBreakdownStats = memo(function IndustryBreakdownStats({
                                 return (
                                     <tr
                                         key={ind.nace_division}
-                                        className={`${HOVER_COLORS[colorScheme]} cursor-pointer transition-colors`}
+                                        className={`${HOVER_COLORS[colorScheme]} ${onIndustryClick ? 'cursor-pointer' : ''} transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-blue-500`}
                                         onClick={() => onIndustryClick?.(ind.nace_division, ind.nace_name)}
+                                        onKeyDown={(event) => {
+                                            if (!onIndustryClick) return;
+                                            if (event.key === 'Enter' || event.key === ' ') {
+                                                event.preventDefault();
+                                                onIndustryClick(ind.nace_division, ind.nace_name);
+                                            }
+                                        }}
+                                        tabIndex={onIndustryClick ? 0 : undefined}
+                                        aria-label={onIndustryClick ? `Vis virksomheter i ${ind.nace_name}` : undefined}
                                     >
                                         <td className="px-4 py-3">
                                             <div className="flex items-center gap-2">

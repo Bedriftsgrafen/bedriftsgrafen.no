@@ -84,7 +84,7 @@ export class ErrorBoundary extends Component<Props, State> {
             )}
             <button
               onClick={this.handleReset}
-              className="w-full px-4 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium"
+              className="w-full px-4 py-3 bg-blue-900 text-white rounded-lg hover:bg-blue-800 transition-colors font-medium"
             >
               Last inn siden på nytt
             </button>

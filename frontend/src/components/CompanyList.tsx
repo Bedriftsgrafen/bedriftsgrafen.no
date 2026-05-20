@@ -240,7 +240,14 @@ const CompanyTableBody = React.memo(({
                 <tr
                     key={company.orgnr}
                     onClick={() => onSelectCompany(company.orgnr)}
-                    className="hover:bg-blue-50 transition-colors cursor-pointer group"
+                    onKeyDown={(event) => {
+                        if (event.key === 'Enter' || event.key === ' ') {
+                            event.preventDefault()
+                            onSelectCompany(company.orgnr)
+                        }
+                    }}
+                    tabIndex={0}
+                    className="hover:bg-blue-50 transition-colors cursor-pointer group focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-blue-500"
                 >
                     {visibleColumns.map((column) => (
                         <td

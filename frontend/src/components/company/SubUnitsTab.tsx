@@ -49,6 +49,7 @@ function SubUnitCard({
 
   return (
     <CardWrapper 
+      type={onClick ? 'button' : undefined}
       className={`w-full text-left p-4 bg-white border border-gray-200 rounded-lg transition-all focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 ${onClick ? 'cursor-pointer hover:border-blue-400 hover:shadow-md hover:bg-blue-50/30 group' : 'hover:border-blue-300 hover:shadow-md'}`}
       onClick={() => onClick?.(unit.orgnr)}
       aria-label={onClick ? `Se detaljer for ${unit.navn}` : undefined}
@@ -58,14 +59,14 @@ function SubUnitCard({
           <HighlightedText text={unit.navn} highlight={highlight} />
         </div>
         {onClick && (
-          <ChevronRight className="h-4 w-4 text-gray-300 group-hover:text-blue-500 transition-colors shrink-0 mt-0.5" />
+          <ChevronRight className="h-4 w-4 text-gray-300 group-hover:text-blue-500 transition-colors shrink-0 mt-0.5" aria-hidden="true" />
         )}
       </div>
 
       <div className="space-y-2.5 text-sm text-gray-600">
         {address && (
           <div className="flex items-start gap-2">
-            <MapPin className="h-4 w-4 mt-0.5 text-gray-400 shrink-0 flex-none" />
+            <MapPin className="h-4 w-4 mt-0.5 text-gray-400 shrink-0 flex-none" aria-hidden="true" />
             <div>
               {addressLine1 && <div>{addressLine1}</div>}
               {addressLine2 && <div>{addressLine2}</div>}
@@ -83,7 +84,7 @@ function SubUnitCard({
 
         {unit.antall_ansatte !== undefined && unit.antall_ansatte !== null && (
           <div className="flex items-center gap-2">
-            <Users className="h-4 w-4 text-gray-400 flex-none" />
+            <Users className="h-4 w-4 text-gray-400 flex-none" aria-hidden="true" />
             <span>
               {unit.antall_ansatte} {unit.antall_ansatte === 1 ? 'ansatt' : 'ansatte'}
             </span>
@@ -92,7 +93,7 @@ function SubUnitCard({
 
         {unit.stiftelsesdato && (
           <div className="flex items-center gap-2">
-            <Calendar className="h-4 w-4 text-gray-400 flex-none" />
+            <Calendar className="h-4 w-4 text-gray-400 flex-none" aria-hidden="true" />
             <span>
               Opprettet: {unit.stiftelsesdato.split('T')[0].split('-').reverse().join('.')}
             </span>
@@ -163,7 +164,7 @@ export function SubUnitsTab({ orgnr, onSubUnitClick }: SubUnitsTabProps) {
   if (isLoading) {
     return (
       <div className="p-12 text-center">
-        <Loader className="h-8 w-8 text-blue-600 mx-auto mb-4 animate-spin" />
+        <Loader className="h-8 w-8 text-blue-600 mx-auto mb-4 animate-spin" aria-hidden="true" />
         <p className="text-gray-600">Laster avdelinger...</p>
       </div>
     )
@@ -174,7 +175,7 @@ export function SubUnitsTab({ orgnr, onSubUnitClick }: SubUnitsTabProps) {
     return (
       <div className="p-4 bg-red-50 text-red-700 rounded-lg flex items-center justify-between gap-3">
         <div className="flex items-center gap-3">
-          <AlertCircle className="h-5 w-5 shrink-0" />
+          <AlertCircle className="h-5 w-5 shrink-0" aria-hidden="true" />
           <div>
             <p className="font-medium">Kunne ikke laste avdelinger</p>
             <p className="text-sm text-red-600 mt-1">{errorMessage}</p>
@@ -183,9 +184,9 @@ export function SubUnitsTab({ orgnr, onSubUnitClick }: SubUnitsTabProps) {
         <button
           onClick={handleFetchFromBrreg}
           disabled={isBusy}
-          className="ml-4 px-3 py-1 bg-red-600 text-white rounded text-sm hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors shrink-0 whitespace-nowrap inline-flex items-center gap-2"
+          className="ml-4 px-3 py-1 bg-blue-900 text-white rounded text-sm hover:bg-blue-800 disabled:opacity-50 disabled:cursor-not-allowed transition-colors shrink-0 whitespace-nowrap inline-flex items-center gap-2"
         >
-          {isBusy && <Loader className="h-3 w-3 animate-spin" />}
+          {isBusy && <Loader className="h-3 w-3 animate-spin" aria-hidden="true" />}
           {isBusy ? 'Henter...' : 'Prøv igjen'}
         </button>
       </div>
@@ -195,7 +196,7 @@ export function SubUnitsTab({ orgnr, onSubUnitClick }: SubUnitsTabProps) {
   if (!subunits || subunits.length === 0) {
     return (
       <div className="p-8 text-center bg-gray-50 rounded-lg border border-dashed border-gray-300">
-        <Building className="h-8 w-8 text-gray-400 mx-auto mb-2" />
+        <Building className="h-8 w-8 text-gray-400 mx-auto mb-2" aria-hidden="true" />
         <p className="text-gray-600 font-medium mb-1">Ingen avdelinger funnet</p>
         <p className="text-sm text-gray-500 mb-4">
           Denne virksomheten har ingen registrerte underenheter eller avdelinger i Brønnøysundregistrene.
@@ -203,9 +204,9 @@ export function SubUnitsTab({ orgnr, onSubUnitClick }: SubUnitsTabProps) {
         <button
           onClick={handleFetchFromBrreg}
           disabled={isBusy}
-          className="px-3 py-1.5 bg-blue-600 text-white rounded text-sm hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors inline-flex items-center gap-2"
+          className="px-3 py-1.5 bg-blue-900 text-white rounded text-sm hover:bg-blue-800 disabled:opacity-50 disabled:cursor-not-allowed transition-colors inline-flex items-center gap-2"
         >
-          {isBusy && <Loader className="h-3 w-3 animate-spin" />}
+          {isBusy && <Loader className="h-3 w-3 animate-spin" aria-hidden="true" />}
           {isBusy ? 'Henter fra Brønnøysund...' : 'Hent fra Brønnøysund'}
         </button>
       </div>
@@ -246,7 +247,7 @@ export function SubUnitsTab({ orgnr, onSubUnitClick }: SubUnitsTabProps) {
               title="Tøm søk"
               aria-label="Tøm søk"
             >
-              <X className="h-4 w-4" />
+              <X className="h-4 w-4" aria-hidden="true" />
             </button>
           )}
         </div>

@@ -18,7 +18,7 @@ import { useUiStore } from '../../store/uiStore'
 import { useFilterStore, type FilterValues } from '../../store/filterStore'
 import { useExplorerStore } from '../../store/explorerStore'
 import { isNumericSortField } from '../../constants/explorer'
-import { ComparisonBar, ComparisonModal } from '../comparison'
+import { ComparisonModal } from '../comparison'
 import { formatNumber, cleanOrgnr } from '../../utils/formatters'
 
 /** Props for ExplorerLayout */
@@ -268,7 +268,6 @@ export const ExplorerLayout = memo(function ExplorerLayout({ onSelectCompany }: 
             </main>
 
             {/* Comparison UI */}
-            <ComparisonBar />
             <ComparisonModal />
         </div>
     )

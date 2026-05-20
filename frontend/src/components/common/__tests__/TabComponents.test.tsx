@@ -41,9 +41,23 @@ describe('TabComponents', () => {
                     onClick={() => { }}
                 />
             )
-            const button = screen.getByRole('button')
-            expect(button.className).toContain('text-blue-600')
-            expect(button.className).toContain('border-blue-600')
+            const button = screen.getByRole('tab', { name: 'Active Tab' })
+            expect(button.className).toContain('text-blue-900')
+            expect(button.className).toContain('border-blue-900')
+            expect(button).toHaveAttribute('aria-selected', 'true')
+        })
+
+        it('exposes inactive tabs as unselected', () => {
+            render(
+                <TabButton
+                    active={false}
+                    icon={<span />}
+                    label="Inactive Tab"
+                    onClick={() => { }}
+                />
+            )
+
+            expect(screen.getByRole('tab', { name: 'Inactive Tab' })).toHaveAttribute('aria-selected', 'false')
         })
 
         it('renders badge when provided', () => {
@@ -69,6 +83,8 @@ describe('TabComponents', () => {
             )
             expect(screen.getByTestId('child')).toBeDefined()
             const container = screen.getByTestId('child').parentElement
+            expect(container).toHaveAttribute('role', 'tablist')
+            expect(container).toHaveAttribute('aria-label', 'Seksjoner')
             expect(container?.className).toContain('overflow-x-auto')
             expect(container?.className).toContain('no-scrollbar')
         })

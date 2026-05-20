@@ -72,8 +72,9 @@ export function KommunerPage() {
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               className="w-full pl-14 pr-6 py-4 bg-white border border-slate-200 rounded-2xl focus:ring-4 focus:ring-blue-500/5 focus:border-blue-500 outline-none shadow-sm transition-all text-lg font-medium"
+              aria-label="Søk etter kommune"
             />
-            <Search className="absolute left-5 top-1/2 -translate-y-1/2 h-6 w-6 text-slate-400 group-focus-within:text-blue-600 transition-colors" />
+            <Search className="absolute left-5 top-1/2 -translate-y-1/2 h-6 w-6 text-slate-400 group-focus-within:text-blue-600 transition-colors" aria-hidden="true" />
           </div>
 
           {/* County Select */}
@@ -88,7 +89,7 @@ export function KommunerPage() {
                 <option key={c.code} value={c.code}>{c.name}</option>
               ))}
             </select>
-            <ChevronDown className="absolute right-5 top-1/2 -translate-y-1/2 h-5 w-5 text-slate-400 pointer-events-none" />
+            <ChevronDown className="absolute right-5 top-1/2 -translate-y-1/2 h-5 w-5 text-slate-400 pointer-events-none" aria-hidden="true" />
           </div>
         </div>
 

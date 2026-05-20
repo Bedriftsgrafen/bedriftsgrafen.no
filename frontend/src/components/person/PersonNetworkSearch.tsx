@@ -131,7 +131,7 @@ export function PersonNetworkSearch({ initialPersonA }: PersonNetworkSearchProps
                 <button
                     onClick={handleSearch}
                     disabled={!selectedPersonB || mutation.isPending}
-                    className="w-full py-2.5 px-4 bg-blue-600 text-white rounded-lg font-medium text-sm hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center justify-center gap-2"
+                    className="w-full py-2.5 px-4 bg-blue-900 text-white rounded-lg font-medium text-sm hover:bg-blue-800 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center justify-center gap-2"
                 >
                     {mutation.isPending ? (
                         <>

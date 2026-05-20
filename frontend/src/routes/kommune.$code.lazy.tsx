@@ -168,7 +168,7 @@ export function MunicipalityDashboardPage() {
                 <Link
                   to="/kart"
                   search={{ municipality_code: dashboard.code }}
-                  className="w-full bg-blue-600 text-white py-5 rounded-2xl font-black uppercase text-[10px] tracking-[0.2em] flex items-center justify-center gap-3 hover:bg-blue-500 transition-all shadow-xl shadow-blue-900/20"
+                  className="w-full bg-blue-900 text-white py-5 rounded-2xl font-black uppercase text-[10px] tracking-[0.2em] flex items-center justify-center gap-3 hover:bg-blue-800 transition-all shadow-xl shadow-blue-950/20"
                 >
                   Utforsk i kartet
                   <ChevronRight className="h-4 w-4" />

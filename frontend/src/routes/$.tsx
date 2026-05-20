@@ -28,7 +28,7 @@ function NotFoundPage() {
         <div className="flex flex-col sm:flex-row gap-4 justify-center pt-4">
           <Link
             to="/"
-            className="inline-flex items-center gap-2 px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium"
+            className="inline-flex items-center gap-2 px-6 py-3 bg-blue-900 text-white rounded-lg hover:bg-blue-800 transition-colors font-medium"
           >
             ← Tilbake til forsiden
           </Link>

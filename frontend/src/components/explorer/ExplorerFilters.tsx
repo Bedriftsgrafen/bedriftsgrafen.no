@@ -151,6 +151,8 @@ export const ExplorerFilters = memo(function ExplorerFilters() {
                     <button
                         onClick={openNaceModal}
                         type="button"
+                        aria-expanded={isNaceModalOpen}
+                        aria-haspopup="dialog"
                         className="w-full flex items-center gap-3 px-4 py-3 border border-gray-300 rounded-lg hover:border-gray-400 hover:bg-gray-50 transition-colors text-left"
                     >
                         <Building2 className="h-5 w-5 text-gray-400 shrink-0" aria-hidden="true" />
@@ -170,6 +172,8 @@ export const ExplorerFilters = memo(function ExplorerFilters() {
                     <button
                         onClick={openRegionModal}
                         type="button"
+                        aria-expanded={isRegionModalOpen}
+                        aria-haspopup="dialog"
                         className="w-full flex items-center gap-3 px-4 py-3 border border-gray-300 rounded-lg hover:border-gray-400 hover:bg-gray-50 transition-colors text-left"
                     >
                         <MapPin className="h-5 w-5 text-gray-400 shrink-0" aria-hidden="true" />

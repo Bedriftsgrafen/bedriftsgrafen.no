@@ -24,6 +24,8 @@ export const SortSelect = memo(function SortSelect() {
     const sortBy = useFilterStore((s) => s.sortBy)
     const sortOrder = useFilterStore((s) => s.sortOrder)
     const setSort = useFilterStore((s) => s.setSort)
+    const currentOrderLabel = sortOrder === 'asc' ? 'stigende' : 'synkende'
+    const nextOrderLabel = sortOrder === 'asc' ? 'synkende' : 'stigende'
 
     // Handle sort field change
     const handleSortChange = useCallback(
@@ -42,8 +44,8 @@ export const SortSelect = memo(function SortSelect() {
     }, [sortBy, sortOrder, setSort])
 
     return (
-        <div className="flex items-center gap-2">
-            <span className="text-sm text-gray-500 hidden sm:inline">Sorter:</span>
+        <div className="flex items-center gap-2" role="group" aria-label="Sorter resultater">
+            <span className="text-sm text-gray-500 hidden sm:inline" aria-hidden="true">Sorter:</span>
 
             {/* Sort field dropdown */}
             <div className="relative z-0">
@@ -51,7 +53,7 @@ export const SortSelect = memo(function SortSelect() {
                     value={sortBy}
                     onChange={handleSortChange}
                     className="appearance-none bg-white border border-gray-300 rounded-lg px-3 py-1.5 pr-8 text-sm font-medium text-gray-700 hover:border-gray-400 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none cursor-pointer"
-                    aria-label="Sorteringsfelt"
+                    aria-label="Sorter etter"
                 >
                     {SORT_OPTIONS.map((option) => (
                         <option key={option.value} value={option.value}>
@@ -70,8 +72,8 @@ export const SortSelect = memo(function SortSelect() {
                 type="button"
                 onClick={toggleOrder}
                 className="flex items-center gap-1 px-2 py-1.5 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 hover:border-gray-400 hover:bg-gray-50 transition-colors"
-                aria-label={sortOrder === 'asc' ? 'Sorter stigende' : 'Sorter synkende'}
-                title={sortOrder === 'asc' ? 'Stigende (A-Å, lavest først)' : 'Synkende (Å-A, høyest først)'}
+                aria-label={`Sorteringsretning: ${currentOrderLabel}. Bytt til ${nextOrderLabel}.`}
+                title={sortOrder === 'asc' ? 'Stigende (A-Å, lavest først). Klikk for synkende.' : 'Synkende (Å-A, høyest først). Klikk for stigende.'}
             >
                 <ArrowUpDown className="h-4 w-4" aria-hidden="true" />
                 <span className="hidden sm:inline">

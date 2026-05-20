@@ -64,24 +64,32 @@ describe('CompanyCard', () => {
 
     it('handles click events', () => {
         const handleClick = vi.fn()
-        const { container } = render(<CompanyCard company={mockCompany} onClick={handleClick} />)
+        render(<CompanyCard company={mockCompany} onClick={handleClick} />)
 
-        const card = container.firstChild
-        expect(card).toBeTruthy()
-        fireEvent.click(card!)
+        const openButton = screen.getByRole('button', { name: /Åpne Test Virksomhet AS/i })
+        fireEvent.click(openButton)
         expect(handleClick).toHaveBeenCalledTimes(1)
     })
 
-    it('handles keyboard enter key', () => {
+    it('uses a dedicated open button instead of making the whole card a nested button container', () => {
         const handleClick = vi.fn()
         const { container } = render(<CompanyCard company={mockCompany} onClick={handleClick} />)
 
-        const card = container.firstChild as HTMLElement
-        expect(card).toBeTruthy()
-        card.focus()
-        fireEvent.keyDown(card, { key: 'Enter' })
+        const openButton = screen.getByRole('button', { name: /Åpne Test Virksomhet AS/i })
+        expect(openButton).toBeInTheDocument()
 
-        expect(handleClick).toHaveBeenCalledTimes(1)
+        const root = container.firstChild as HTMLElement
+        expect(root).not.toHaveAttribute('role', 'button')
+    })
+
+    it('exposes a focusable native open button for keyboard users', () => {
+        render(<CompanyCard company={mockCompany} onClick={() => {}} />)
+
+        const openButton = screen.getByRole('button', { name: /Åpne Test Virksomhet AS/i })
+        openButton.focus()
+
+        expect(openButton.tagName).toBe('BUTTON')
+        expect(openButton).toHaveFocus()
     })
 
     describe('Smart Badges', () => {

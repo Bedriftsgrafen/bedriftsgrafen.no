@@ -85,24 +85,97 @@ export const CompanyCard = memo(function CompanyCard({ company, onClick }: Compa
         return list
     }, [company.latest_equity_ratio, company.stiftelsesdato])
 
+    const openCompanyLabel = `Åpne ${company.navn || 'Ukjent navn'} (${company.orgnr})`
+
     return (
-        <div
-            onClick={onClick}
-            className="bg-white rounded-xl border border-slate-200 p-4 hover:shadow-xl hover:border-blue-200 transition-all duration-300 cursor-pointer group active:scale-[0.98] min-w-0"
-            role="button"
-            tabIndex={0}
-            onKeyDown={(e) => e.key === 'Enter' && onClick()}
-        >
-            {/* Header */}
-            <div className="flex items-start justify-between gap-2 mb-2">
-                <div className="min-w-0 flex-1">
-                    <h3 className="font-semibold text-gray-900 truncate group-hover:text-blue-600 transition-colors">
-                        {company.navn || 'Ukjent navn'}
-                    </h3>
-                    <p className="text-xs text-gray-500 mt-0.5">
-                        Org.nr: {company.orgnr}
-                    </p>
-                </div>
+        <div className="bg-white rounded-xl border border-slate-200 p-4 hover:shadow-xl hover:border-blue-200 transition-all duration-300 group min-w-0">
+            <div className="flex items-start justify-between gap-2">
+                <button
+                    type="button"
+                    onClick={onClick}
+                    aria-label={openCompanyLabel}
+                    className="min-w-0 flex-1 rounded-lg text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 active:scale-[0.98]"
+                >
+                    {/* Header */}
+                    <div className="mb-2 min-w-0">
+                        <h3 className="font-semibold text-gray-900 truncate group-hover:text-blue-600 transition-colors">
+                            {company.navn || 'Ukjent navn'}
+                        </h3>
+                        <p className="text-xs text-gray-500 mt-0.5">
+                            Org.nr: {company.orgnr}
+                        </p>
+                    </div>
+
+                    {/* Smart Badges Row */}
+                    {badges.length > 0 && (
+                        <div className="flex flex-wrap gap-1.5 mb-3">
+                            {badges.map((badge) => (
+                                <div
+                                    key={badge.id}
+                                    title={badge.title}
+                                    className={`flex items-center gap-1 px-1.5 py-0.5 rounded border text-[10px] font-bold uppercase tracking-tight ${badge.className}`}
+                                >
+                                    <badge.icon className="h-3 w-3" aria-hidden="true" />
+                                    {badge.label}
+                                </div>
+                            ))}
+                        </div>
+                    )}
+
+                    {/* Industry */}
+                    {industry && (
+                        <p className="text-[11px] font-medium text-slate-500 line-clamp-2 mb-3 leading-snug" title={industry}>
+                            {industry}
+                        </p>
+                    )}
+
+                    {/* Purpose snippet if available - Important for search discovery */}
+                    {company.vedtektsfestet_formaal && (
+                        <p className="text-[11px] text-slate-500 line-clamp-2 mb-3 leading-relaxed italic border-l-2 border-slate-100 pl-2">
+                            {normalizeText(company.vedtektsfestet_formaal)}
+                        </p>
+                    )}
+
+                    {/* Location */}
+                    {kommune && (
+                        <div className="flex items-center gap-1 text-xs text-gray-500 mb-3">
+                            <MapPin className="h-3 w-3" aria-hidden="true" />
+                            {kommune}
+                        </div>
+                    )}
+
+                    {/* Metrics Grid */}
+                    <div className="grid grid-cols-3 gap-2 pt-3 border-t border-gray-100">
+                        <div className="text-center">
+                            <div className="flex items-center justify-center mb-1">
+                                <TrendingUp className="h-3.5 w-3.5 text-green-500" aria-hidden="true" />
+                            </div>
+                            <p className="text-xs font-medium text-gray-900 tabular-nums">
+                                {formatMillions(company.latest_revenue)}
+                            </p>
+                            <p className="text-[10px] text-gray-500">Omsetning</p>
+                        </div>
+                        <div className="text-center">
+                            <div className="flex items-center justify-center mb-1">
+                                <PiggyBank className="h-3.5 w-3.5 text-purple-500" aria-hidden="true" />
+                            </div>
+                            <p className="text-xs font-medium text-gray-900 tabular-nums">
+                                {formatMillions(company.latest_profit)}
+                            </p>
+                            <p className="text-[10px] text-gray-500">Resultat</p>
+                        </div>
+                        <div className="text-center">
+                            <div className="flex items-center justify-center mb-1">
+                                <Users className="h-3.5 w-3.5 text-orange-500" aria-hidden="true" />
+                            </div>
+                            <p className="text-xs font-medium text-gray-900 tabular-nums">
+                                {company.antall_ansatte ?? '-'}
+                            </p>
+                            <p className="text-[10px] text-gray-500">Ansatte</p>
+                        </div>
+                    </div>
+                </button>
+
                 <div className="flex items-center gap-1 shrink-0">
                     <FavoriteButton
                         orgnr={company.orgnr}
@@ -117,75 +190,6 @@ export const CompanyCard = memo(function CompanyCard({ company, onClick }: Compa
                     >
                         {company.organisasjonsform}
                     </span>
-                </div>
-            </div>
-
-            {/* Smart Badges Row */}
-            {badges.length > 0 && (
-                <div className="flex flex-wrap gap-1.5 mb-3">
-                    {badges.map((badge) => (
-                        <div
-                            key={badge.id}
-                            title={badge.title}
-                            className={`flex items-center gap-1 px-1.5 py-0.5 rounded border text-[10px] font-bold uppercase tracking-tight ${badge.className}`}
-                        >
-                            <badge.icon className="h-3 w-3" />
-                            {badge.label}
-                        </div>
-                    ))}
-                </div>
-            )}
-
-            {/* Industry */}
-            {industry && (
-                <p className="text-[11px] font-medium text-slate-500 line-clamp-2 mb-3 leading-snug" title={industry}>
-                    {industry}
-                </p>
-            )}
-
-            {/* Purpose snippet if available - Important for search discovery */}
-            {company.vedtektsfestet_formaal && (
-                <p className="text-[11px] text-slate-500 line-clamp-2 mb-3 leading-relaxed italic border-l-2 border-slate-100 pl-2">
-                    {normalizeText(company.vedtektsfestet_formaal)}
-                </p>
-            )}
-
-            {/* Location */}
-            {kommune && (
-                <div className="flex items-center gap-1 text-xs text-gray-500 mb-3">
-                    <MapPin className="h-3 w-3" aria-hidden="true" />
-                    {kommune}
-                </div>
-            )}
-
-            {/* Metrics Grid */}
-            <div className="grid grid-cols-3 gap-2 pt-3 border-t border-gray-100">
-                <div className="text-center">
-                    <div className="flex items-center justify-center mb-1">
-                        <TrendingUp className="h-3.5 w-3.5 text-green-500" aria-hidden="true" />
-                    </div>
-                    <p className="text-xs font-medium text-gray-900 tabular-nums">
-                        {formatMillions(company.latest_revenue)}
-                    </p>
-                    <p className="text-[10px] text-gray-500">Omsetning</p>
-                </div>
-                <div className="text-center">
-                    <div className="flex items-center justify-center mb-1">
-                        <PiggyBank className="h-3.5 w-3.5 text-purple-500" aria-hidden="true" />
-                    </div>
-                    <p className="text-xs font-medium text-gray-900 tabular-nums">
-                        {formatMillions(company.latest_profit)}
-                    </p>
-                    <p className="text-[10px] text-gray-500">Resultat</p>
-                </div>
-                <div className="text-center">
-                    <div className="flex items-center justify-center mb-1">
-                        <Users className="h-3.5 w-3.5 text-orange-500" aria-hidden="true" />
-                    </div>
-                    <p className="text-xs font-medium text-gray-900 tabular-nums">
-                        {company.antall_ansatte ?? '-'}
-                    </p>
-                    <p className="text-[10px] text-gray-500">Ansatte</p>
                 </div>
             </div>
         </div>
