@@ -5,6 +5,7 @@ import { Header } from '../components/layout'
 import { Footer } from '../components/Footer'
 import { NotFoundComponent } from '../components/NotFoundComponent'
 import { ComparisonBar } from '../components/comparison'
+import { GlobalAffiliateStrip } from '../components/ads/GlobalAffiliateStrip'
 import { GlobalErrorComponent } from '../components/GlobalErrorComponent'
 import { useOnlineStatus } from '../hooks/useOnlineStatus'
 
@@ -43,6 +44,7 @@ function RootComponent() {
         <Outlet /> {/* Child routes render here */}
       </main>
 
+      <GlobalAffiliateStrip />
       <Footer />
 
       {/* Comparison floating bar - visible on all pages */}

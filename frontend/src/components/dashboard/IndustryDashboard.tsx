@@ -1,5 +1,5 @@
 import { useQuery } from '@tanstack/react-query';
-import { Building2, TrendingUp, Users, Search, Settings, RotateCcw, Landmark, ExternalLink } from 'lucide-react';
+import { Building2, TrendingUp, Users, Search, Settings, RotateCcw, ExternalLink } from 'lucide-react';
 import React, { useState, useMemo, memo, useCallback, useRef, useEffect } from 'react';
 import { Link } from '@tanstack/react-router';
 import { API_BASE } from '../../utils/apiClient';
@@ -7,8 +7,8 @@ import { formatNumber, formatCurrency, formatPercentValue } from '../../utils/fo
 import { createRouteCode } from '../../utils/slugify';
 import { CompanyListModal } from './CompanyListModal';
 import { SummaryCard, SortableHeader, LoadingState, ErrorState } from '../common';
-import { AffiliateBanner } from '../ads/AffiliateBanner';
-import { getContactEmailHref } from '../../constants/contact';
+import { RotatingAffiliateBanner } from '../ads/RotatingAffiliateBanner';
+import { GLOBAL_AFFILIATIONS } from '../../constants/affiliations';
 
 // ============================================================================
 // Types
@@ -85,15 +85,23 @@ interface IndustryRowProps {
 
 const IndustryRow = memo(({ industry: ind, onRowClick, onNewClick, onBankruptClick, visibleOptionalColumns }: IndustryRowProps) => (
     <tr
-        className="hover:bg-blue-50 cursor-pointer transition-colors group"
+        className="hover:bg-blue-50 cursor-pointer transition-colors group focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-blue-500"
         onClick={() => onRowClick(ind.nace_division, ind.nace_name)}
+        onKeyDown={(event) => {
+            if (event.key === 'Enter' || event.key === ' ') {
+                event.preventDefault();
+                onRowClick(ind.nace_division, ind.nace_name);
+            }
+        }}
+        tabIndex={0}
+        aria-label={`Vis virksomheter i ${ind.nace_name}`}
     >
         <td className="px-4 py-3">
             <div className="flex items-center gap-2">
                 <span className="text-xs font-mono bg-blue-100 text-blue-700 px-1.5 py-0.5 rounded">
                     {ind.nace_division}
                 </span>
-                <span className="text-sm text-gray-900 truncate max-w-[250px] group-hover:text-blue-700" title={ind.nace_name}>
+                <span className="text-sm text-gray-900 truncate max-w-62.5 group-hover:text-blue-700" title={ind.nace_name}>
                     {ind.nace_name}
                 </span>
             </div>
@@ -120,11 +128,13 @@ const IndustryRow = memo(({ industry: ind, onRowClick, onNewClick, onBankruptCli
         )}
         <td className="px-4 py-3">
             <button
+                type="button"
                 onClick={(e) => {
                     e.stopPropagation();
                     onNewClick(ind.nace_division, ind.nace_name);
                 }}
-                className="text-xs bg-green-100 text-green-700 px-2 py-0.5 rounded-full font-medium hover:bg-green-200 transition-colors"
+                aria-label={`Vis nyetableringer i ${ind.nace_name}`}
+                className="text-xs bg-blue-900 text-white px-2 py-0.5 rounded-full font-medium hover:bg-blue-800 transition-colors"
             >
                 +{formatNumber(ind.new_last_year)}
             </button>
@@ -132,11 +142,13 @@ const IndustryRow = memo(({ industry: ind, onRowClick, onNewClick, onBankruptCli
         <td className="px-4 py-3">
             {ind.bankruptcies_last_year > 0 ? (
                 <button
+                    type="button"
                     onClick={(e) => {
                         e.stopPropagation();
                         onBankruptClick(ind.nace_division, ind.nace_name);
                     }}
-                    className="text-xs bg-red-100 text-red-700 px-2 py-0.5 rounded-full font-medium hover:bg-red-200 transition-colors"
+                    aria-label={`Vis konkurser i ${ind.nace_name}`}
+                    className="text-xs bg-blue-900 text-white px-2 py-0.5 rounded-full font-medium hover:bg-blue-800 transition-colors"
                 >
                     {formatNumber(ind.bankruptcies_last_year)}
                 </button>
@@ -151,8 +163,9 @@ const IndustryRow = memo(({ industry: ind, onRowClick, onNewClick, onBankruptCli
                 onClick={(e) => e.stopPropagation()}
                 className="text-slate-400 hover:text-blue-600 transition-colors"
                 title={`Se bransjeside for ${ind.nace_name}`}
+                aria-label={`Se bransjeside for ${ind.nace_name}`}
             >
-                <ExternalLink className="h-4 w-4" />
+                <ExternalLink className="h-4 w-4" aria-hidden="true" />
             </Link>
         </td>
     </tr>
@@ -192,24 +205,28 @@ const IndustryColumnPicker = memo(function IndustryColumnPicker({ visibleColumns
     return (
         <div className="relative" ref={dropdownRef}>
             <button
+                type="button"
                 onClick={() => setIsOpen(!isOpen)}
                 className="p-2 hover:bg-blue-100 rounded-lg transition-colors text-gray-600 hover:text-blue-600"
                 title="Vis flere kolonner"
                 aria-label="Vis flere kolonner"
+                aria-expanded={isOpen}
+                aria-haspopup="true"
             >
-                <Settings className="h-4 w-4" />
+                <Settings className="h-4 w-4" aria-hidden="true" />
             </button>
             {isOpen && (
-                <div className="absolute right-0 top-full mt-1 bg-white rounded-lg shadow-lg border border-gray-200 py-2 z-50 min-w-[180px]">
+                <div className="absolute right-0 top-full mt-1 bg-white rounded-lg shadow-lg border border-gray-200 py-2 z-50 min-w-45">
                     <div className="px-3 py-1.5 border-b border-gray-100 flex items-center justify-between">
                         <span className="text-xs font-medium text-gray-500 uppercase">Ekstra kolonner</span>
                         <button
+                            type="button"
                             onClick={onReset}
                             className="text-xs text-blue-600 hover:text-blue-800 flex items-center gap-1"
                             title="Skjul alle"
                             aria-label="Skjul alle kolonner"
                         >
-                            <RotateCcw className="h-3 w-3" />
+                            <RotateCcw className="h-3 w-3" aria-hidden="true" />
                         </button>
                     </div>
                     {OPTIONAL_COLUMN_ENTRIES.map(([key, config]) => (
@@ -393,6 +410,12 @@ export const IndustryDashboard = ({ initialNace, onSelectCompany }: IndustryDash
                     />
                 </div>
 
+                <RotatingAffiliateBanner
+                    placement="industry_dashboard_top"
+                    candidates={GLOBAL_AFFILIATIONS}
+                    className="mb-6"
+                />
+
                 {/* Industry Table */}
                 <div className="bg-white rounded-xl border border-gray-200 overflow-hidden shadow-sm">
                     <div className="p-4 border-b border-gray-200 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
@@ -409,6 +432,7 @@ export const IndustryDashboard = ({ initialNace, onSelectCompany }: IndustryDash
                                     value={searchQuery}
                                     onChange={(e) => setSearchQuery(e.target.value)}
                                     className="pl-9 pr-4 py-2 w-full sm:w-64 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                                    aria-label="Søk i bransjer"
                                 />
                             </div>
                             <IndustryColumnPicker
@@ -470,19 +494,6 @@ export const IndustryDashboard = ({ initialNace, onSelectCompany }: IndustryDash
                     </div>
                 </div>
 
-                {/* Affiliate Banner - Banking */}
-                <AffiliateBanner
-                    bannerId="banking_industry_dashboard"
-                    placement="industry_dashboard"
-                    title="Tilbyr dere virksomhetskonto?"
-                    description="Nå ut til tusenvis av norske virksomheter. Denne annonseplassen er ledig for samarbeid med Bedriftsgrafen.no."
-                    buttonText="Kontakt Bedriftsgrafen"
-                    link={getContactEmailHref('Annonsering på Bedriftsgrafen.no')}
-                    icon={Landmark}
-                    variant="banking"
-                    contactIntent="advertising"
-                    isPlaceholder
-                />
             </div>
 
             {/* Company List Modal */}

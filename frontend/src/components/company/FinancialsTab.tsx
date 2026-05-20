@@ -1,5 +1,5 @@
 import React, { useMemo, useEffect } from 'react'
-import { TrendingUp, Database, Wallet, Info, Home, ChevronRight } from 'lucide-react'
+import { TrendingUp, Database, Info, Home, ChevronRight } from 'lucide-react'
 import { Link } from '@tanstack/react-router'
 import type { CompanyWithAccounting, AccountingWithKpis } from '../../types'
 import { formatDate } from '../../utils/formatters'
@@ -11,7 +11,6 @@ import { EmptyState } from '../EmptyState'
 import { YearSelector } from './YearSelector'
 import { CapitalInfoCard } from './CapitalInfoCard'
 import { AffiliateBanner } from '../ads/AffiliateBanner'
-import { getContactEmailHref } from '../../constants/contact'
 import { AFFILIATIONS } from '../../constants/affiliations'
 
 // Constants
@@ -38,16 +37,10 @@ function getAdConfig(company: CompanyWithAccounting) {
   )
 
   if (latestRevenue > REVENUE_THRESHOLD_HIGH) {
+    const aff = AFFILIATIONS.ZENSUM_LOAN
     return {
-      id: "premium_banking_financials",
-      title: "Tilbyr dere Private Banking?",
-      description: "Nå ut til virksomheter med høy omsetning. Denne plassen er ledig for samarbeid med Bedriftsgrafen.no.",
-      buttonText: "Kontakt Bedriftsgrafen",
-      icon: Wallet,
-      variant: "banking" as const,
-      link: getContactEmailHref('Partnerskap med Bedriftsgrafen.no'),
-      contactIntent: "partnership" as const,
-      requiresContactConfirmation: true,
+      ...aff,
+      id: `financials_${aff.id}`,
     }
   }
 
@@ -57,8 +50,6 @@ function getAdConfig(company: CompanyWithAccounting) {
     return {
       ...aff,
       id: `financials_${aff.id}`,
-      contactIntent: undefined,
-      requiresContactConfirmation: undefined,
     }
   }
 
@@ -165,10 +156,10 @@ export const FinancialsTab = React.memo(function FinancialsTab({
                 buttonText={adConfig.buttonText}
                 link={adConfig.link}
                 icon={adConfig.icon}
+                logo={adConfig.logo}
                 variant={adConfig.variant}
-                contactIntent={adConfig.contactIntent}
-                requiresContactConfirmation={adConfig.requiresContactConfirmation}
-                isPlaceholder={adConfig.variant === 'banking'}
+                legalText={adConfig.legalText}
+                legalTextMode="inline"
               />
             </div>
           )}
@@ -199,7 +190,7 @@ export const FinancialsTab = React.memo(function FinancialsTab({
                 )}
               </div>
 
-              <div className="min-h-[200px]" aria-live="polite" aria-busy={kpiLoading}>
+              <div className="min-h-50" aria-live="polite" aria-busy={kpiLoading}>
                 {kpiLoading ? (
                   <KpiCardSkeleton />
                 ) : kpiError ? (
@@ -235,7 +226,7 @@ export const FinancialsTab = React.memo(function FinancialsTab({
               <h2 id="charts-heading" className="text-xl font-semibold text-gray-900 mb-4">
                 Historisk Utvikling
               </h2>
-              <div className="min-h-[300px]">
+              <div className="min-h-75">
                 {kpiLoading ? <ChartSkeleton height={300} /> : <CompanyCharts company={company} />}
               </div>
             </section>

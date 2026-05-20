@@ -275,7 +275,7 @@ export function RolesTab({ orgnr, onCompanyClick }: RolesTabProps) {
                 <button
                     onClick={handleFetchFromBrreg}
                     disabled={isBusy}
-                    className="px-3 py-1 bg-red-600 text-white rounded text-sm hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors shrink-0 whitespace-nowrap inline-flex items-center gap-2"
+                    className="px-3 py-1 bg-blue-900 text-white rounded text-sm hover:bg-blue-800 disabled:opacity-50 disabled:cursor-not-allowed transition-colors shrink-0 whitespace-nowrap inline-flex items-center gap-2"
                 >
                     {isBusy && <Loader className="h-3 w-3 animate-spin" />}
                     {isBusy ? 'Henter...' : 'Prøv igjen'}
@@ -295,7 +295,7 @@ export function RolesTab({ orgnr, onCompanyClick }: RolesTabProps) {
                 <button
                     onClick={handleFetchFromBrreg}
                     disabled={isBusy}
-                    className="px-3 py-1.5 bg-blue-600 text-white rounded text-sm hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors inline-flex items-center gap-2"
+                    className="px-3 py-1.5 bg-blue-900 text-white rounded text-sm hover:bg-blue-800 disabled:opacity-50 disabled:cursor-not-allowed transition-colors inline-flex items-center gap-2"
                 >
                     {isBusy && <Loader className="h-3 w-3 animate-spin" />}
                     {isBusy ? 'Henter fra Brønnøysund...' : 'Hent fra Brønnøysund'}

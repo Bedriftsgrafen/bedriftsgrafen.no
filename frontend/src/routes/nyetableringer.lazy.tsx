@@ -16,8 +16,8 @@ import { formatNumber, formatCurrency, cleanOrgnr } from '../utils/formatters'
 import { getStartingDate } from '../utils/dates'
 import { API_BASE } from '../utils/apiClient'
 import { PeriodSelector } from '../components/common/PeriodSelector'
-import { AffiliateBanner } from '../components/ads/AffiliateBanner'
-import { AFFILIATIONS } from '../constants/affiliations'
+import { RotatingAffiliateBanner } from '../components/ads/RotatingAffiliateBanner'
+import { GLOBAL_AFFILIATIONS } from '../constants/affiliations'
 import { useFilterStore, FilterValues } from '../store/filterStore'
 import { COUNTIES } from '../constants/explorer'
 import { MUNICIPALITIES } from '../constants/municipalityCodes'
@@ -234,14 +234,11 @@ function NyetableringerPage() {
                 </SummaryCard>
             </div>
 
-            {/* Affiliate Banner - official Tjenestetorget affiliation for new companies */}
-            <div className="mb-6">
-                <AffiliateBanner
-                    bannerId={`nyetableringer_${AFFILIATIONS.TJENESTETORGET_ACCOUNTANT.id}`}
-                    placement="nyetableringer_page"
-                    {...AFFILIATIONS.TJENESTETORGET_ACCOUNTANT}
-                />
-            </div>
+            <RotatingAffiliateBanner
+                placement="nyetableringer_top"
+                candidates={GLOBAL_AFFILIATIONS}
+                className="mb-6"
+            />
 
             {/* Tab navigation */}
             <TabContainer>
@@ -268,7 +265,7 @@ function NyetableringerPage() {
             </TabContainer>
 
             {/* Content */}
-            <div className="min-h-[400px] md:min-h-[600px]">
+            <div className="min-h-100 md:min-h-150">
             {activeTab === 'list' && (
                 <NewCompaniesList
                     onSelectCompany={setSelectedCompanyOrgnr}
@@ -299,9 +296,9 @@ function NyetableringerPage() {
             )}
 
             {activeTab === 'map' && (
-                <Suspense fallback={<div className="flex items-center justify-center h-[800px]"><Loader2 className="h-8 w-8 animate-spin text-green-500" /></div>}>
+                <Suspense fallback={<div className="flex h-200 items-center justify-center"><Loader2 className="h-8 w-8 animate-spin text-green-500" /></div>}>
                     <div className="space-y-4">
-                        <div className="rounded-2xl overflow-hidden border border-gray-100 shadow-sm h-[900px] md:h-[800px] relative">
+                        <div className="relative h-225 overflow-hidden rounded-2xl border border-gray-100 shadow-sm md:h-200">
                             <IndustryMap
                                 filters={mapFilters}
                                 onFilterChange={handleFilterChange}

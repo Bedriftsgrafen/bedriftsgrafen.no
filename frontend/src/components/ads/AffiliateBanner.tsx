@@ -25,6 +25,8 @@ interface AffiliateBannerProps {
     icon?: LucideIcon
     logo?: string
     variant: BannerVariant
+    legalText?: string
+    legalTextMode?: 'none' | 'inline'
     /** If true, shows as a placeholder banner */
     isPlaceholder?: boolean
     contactIntent?: BedriftsgrafenContactIntent
@@ -46,26 +48,26 @@ const VARIANT_STYLES: Record<BannerVariant, {
         border: 'border-blue-200',
         iconBg: 'bg-blue-50',
         iconColor: 'text-blue-600',
-        buttonBg: 'bg-blue-600',
-        buttonHover: 'hover:bg-blue-700',
-        accent: 'text-blue-700',
+        buttonBg: 'bg-blue-900',
+        buttonHover: 'hover:bg-blue-800',
+        accent: 'text-gray-900',
     },
     banking: {
         background: 'bg-white',
         border: 'border-emerald-200',
         iconBg: 'bg-emerald-50',
         iconColor: 'text-emerald-600',
-        buttonBg: 'bg-emerald-600',
-        buttonHover: 'hover:bg-emerald-700',
-        accent: 'text-emerald-700',
+        buttonBg: 'bg-blue-900',
+        buttonHover: 'hover:bg-blue-800',
+        accent: 'text-gray-900',
     },
     general: {
         background: 'bg-white',
         border: 'border-gray-200',
         iconBg: 'bg-gray-100',
         iconColor: 'text-gray-600',
-        buttonBg: 'bg-blue-600',
-        buttonHover: 'hover:bg-blue-700',
+        buttonBg: 'bg-blue-900',
+        buttonHover: 'hover:bg-blue-800',
         accent: 'text-gray-900',
     },
 }
@@ -80,7 +82,8 @@ export const AffiliateBanner = memo(function AffiliateBanner({
     icon: Icon = Lightbulb,
     logo,
     variant,
-    isPlaceholder = false,
+    legalText,
+    legalTextMode = 'none',
     contactIntent = 'partnership',
     contactContext,
     requiresContactConfirmation,
@@ -91,11 +94,11 @@ export const AffiliateBanner = memo(function AffiliateBanner({
         // Track the click
         trackAffiliateClick(bannerId, variant, placement)
 
-        // If placeholder and no link, prevent navigation
-        if (isPlaceholder && link === '#') {
+        // If placeholder/no link, prevent navigation
+        if (link === '#') {
             e.preventDefault()
         }
-    }, [bannerId, variant, placement, isPlaceholder, link])
+    }, [bannerId, variant, placement, link])
 
     const handleContactClick = useCallback(() => {
         trackAffiliateClick(bannerId, variant, placement)
@@ -103,64 +106,80 @@ export const AffiliateBanner = memo(function AffiliateBanner({
 
     const isInteractive = link !== '#'
     const isBedriftsgrafenContact = isBedriftsgrafenContactHref(link)
-    const buttonClassName = `inline-flex items-center gap-1.5 px-4 py-2 text-sm font-medium text-white rounded-lg transition-colors ${styles.buttonBg} ${styles.buttonHover} ${!isInteractive ? 'cursor-default opacity-75' : ''}`
+    const buttonClassName = `inline-flex w-fit items-center gap-1.5 px-4 py-2 text-sm font-medium text-white rounded-lg transition-colors ${styles.buttonBg} ${styles.buttonHover} ${!isInteractive ? 'cursor-default opacity-75' : ''}`
 
     return (
         <div
-            className={`relative rounded-lg border p-4 ${styles.background} ${styles.border}`}
+            className={`relative flex h-full rounded-lg border p-4 ${styles.background} ${styles.border}`}
         >
-            {/* Disclosure label - Norwegian marketing law compliance */}
-            <span className="absolute top-2 right-2 text-xs font-medium text-gray-500 uppercase tracking-wide">
-                Annonse
-            </span>
-
-            <div className="flex items-start gap-4">
-                {/* Icon or Logo */}
-                <div
-                    className={`shrink-0 flex items-center justify-center overflow-hidden rounded-lg ${styles.iconBg} ${logo ? 'w-12 h-12 p-0' : 'p-2'}`}
-                >
-                    {logo ? (
-                        <img
-                            src={logo}
-                            alt=""
-                            className="w-full h-full object-contain"
-                        />
-                    ) : (
-                        <Icon className={`h-5 w-5 ${styles.iconColor}`} />
-                    )}
+            <div className="flex w-full flex-col">
+                {/* Disclosure label - Norwegian marketing law compliance */}
+                <div className="mb-2 flex justify-end">
+                    <span className="text-xs font-medium uppercase tracking-wide text-gray-500">
+                        Annonse
+                    </span>
                 </div>
 
-                {/* Content */}
-                <div className="flex-1 min-w-0">
-                    <div className={`font-semibold ${styles.accent} mb-1 text-lg`}>
-                        {title}
+                <div className="flex flex-1 items-start gap-4">
+                    {/* Icon or Logo */}
+                    <div
+                        className={`shrink-0 flex items-center justify-center overflow-hidden rounded-lg ${styles.iconBg} ${logo ? 'w-12 h-12 p-0' : 'p-2'}`}
+                    >
+                        {logo ? (
+                            <img
+                                src={logo}
+                                alt=""
+                                className="w-full h-full object-contain"
+                            />
+                        ) : (
+                            <Icon className={`h-5 w-5 ${styles.iconColor}`} aria-hidden="true" />
+                        )}
                     </div>
-                    <p className="text-sm text-gray-600 mb-3">
-                        {description}
-                    </p>
 
-                    {isBedriftsgrafenContact ? (
-                        <BedriftsgrafenContactLink
-                            className={buttonClassName}
-                            intent={contactIntent}
-                            context={contactContext}
-                            requiresConfirmation={requiresContactConfirmation}
-                            onClick={handleContactClick}
-                        >
-                            {buttonText}
-                        </BedriftsgrafenContactLink>
-                    ) : (
-                        <a
-                            href={link}
-                            target={isInteractive && !link.startsWith('mailto:') ? '_blank' : undefined}
-                            rel={isInteractive ? 'noopener noreferrer sponsored' : undefined}
-                            onClick={handleClick}
-                            className={buttonClassName}
-                        >
-                            {buttonText}
-                            {isInteractive && !link.startsWith('mailto:') && <ExternalLink className="h-3.5 w-3.5" />}
-                        </a>
-                    )}
+                    {/* Content */}
+                    <div className="flex min-w-0 flex-1 flex-col self-stretch">
+                        <div className={`font-semibold ${styles.accent} mb-1 text-lg`}>
+                            {title}
+                        </div>
+                        <p className="text-sm text-gray-600 mb-3">
+                            {description}
+                        </p>
+
+                        <div className="mt-auto pt-1">
+                            {isBedriftsgrafenContact ? (
+                                <BedriftsgrafenContactLink
+                                    className={buttonClassName}
+                                    intent={contactIntent}
+                                    context={contactContext}
+                                    requiresConfirmation={requiresContactConfirmation}
+                                    onClick={handleContactClick}
+                                >
+                                    {buttonText}
+                                </BedriftsgrafenContactLink>
+                            ) : isInteractive ? (
+                                <a
+                                    href={link}
+                                    target={isInteractive && !link.startsWith('mailto:') ? '_blank' : undefined}
+                                    rel={isInteractive ? 'noopener noreferrer sponsored' : undefined}
+                                    onClick={handleClick}
+                                    className={buttonClassName}
+                                >
+                                    {buttonText}
+                                    {isInteractive && !link.startsWith('mailto:') && <ExternalLink className="h-3.5 w-3.5" aria-hidden="true" />}
+                                </a>
+                            ) : (
+                                <span className={buttonClassName} aria-disabled="true">
+                                    {buttonText}
+                                </span>
+                            )}
+                        </div>
+
+                        {legalText && legalTextMode === 'inline' && (
+                            <p className="mt-3 border-t border-gray-100 pt-3 text-xs leading-5 text-gray-500">
+                                {legalText}
+                            </p>
+                        )}
+                    </div>
                 </div>
             </div>
         </div>

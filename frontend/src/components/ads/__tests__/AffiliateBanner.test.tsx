@@ -39,6 +39,18 @@ describe('AffiliateBanner', () => {
         expect(screen.getByText('Annonse')).toBeInTheDocument()
     })
 
+    it('only shows legal text when inline terms are enabled', () => {
+        const legalText = 'Eksempel lån uten sikkerhet: effektiv rente 19,92 %, 65 000 kr o/5 år.'
+
+        const { rerender } = render(<AffiliateBanner {...defaultProps} legalText={legalText} />)
+
+        expect(screen.queryByText(/Eksempel lån uten sikkerhet/i)).not.toBeInTheDocument()
+
+        rerender(<AffiliateBanner {...defaultProps} legalText={legalText} legalTextMode="inline" />)
+
+        expect(screen.getByText(/Eksempel lån uten sikkerhet/i)).toBeInTheDocument()
+    })
+
     it('has correct link attributes for marketing compliance', () => {
         render(<AffiliateBanner {...defaultProps} />)
 
@@ -64,14 +76,9 @@ describe('AffiliateBanner', () => {
     it('renders as non-interactive when no link is provided (placeholder)', () => {
         render(<AffiliateBanner {...defaultProps} link="#" isPlaceholder={true} />)
 
-        const link = screen.getByRole('link', { name: /Test Button/i })
-        expect(link).toHaveAttribute('href', '#')
-        expect(link).not.toHaveAttribute('target')
-        expect(link).not.toHaveAttribute('rel')
-
-        fireEvent.click(link)
-        // Should still track the click (for internal placeholders to see interest)
-        expect(trackAffiliateClick).toHaveBeenCalled()
+        expect(screen.queryByRole('link', { name: /Test Button/i })).not.toBeInTheDocument()
+        expect(screen.getByText('Test Button')).toHaveAttribute('aria-disabled', 'true')
+        expect(trackAffiliateClick).not.toHaveBeenCalled()
     })
 
     it('opens confirmation modal for Bedriftsgrafen contact links', () => {

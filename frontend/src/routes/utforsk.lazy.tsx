@@ -3,11 +3,11 @@ import { createLazyFileRoute } from '@tanstack/react-router'
 import { useCallback, useEffect } from 'react'
 import { SEOHead, Breadcrumbs } from '../components/layout'
 import { FilterPanel } from '../components/FilterPanel'
-import { getContactEmailHref } from '../constants/contact'
 import { CompanyList } from '../components/CompanyList'
 import { Pagination } from '../components/common'
 import { ExportButton } from '../components/explorer'
-import { AffiliateBanner } from '../components/ads/AffiliateBanner'
+import { RotatingAffiliateBanner } from '../components/ads/RotatingAffiliateBanner'
+import { GLOBAL_AFFILIATIONS } from '../constants/affiliations'
 import { useFilterParams } from '../hooks/useFilterParams'
 import { useCompaniesQuery } from '../hooks/queries/useCompaniesQuery'
 import { useCompanyStatsQuery } from '../hooks/queries/useCompanyStatsQuery'
@@ -154,6 +154,12 @@ export function UtforskPage() {
 
             <FilterPanel />
 
+            <RotatingAffiliateBanner
+                placement="utforsk_top"
+                candidates={GLOBAL_AFFILIATIONS}
+                className="mb-8"
+            />
+
             <div id="company-table" className="mb-8">
                 <CompanyList
                     companies={companies}
@@ -185,16 +191,6 @@ export function UtforskPage() {
                 </div>
             )}
 
-            <AffiliateBanner
-                bannerId="utforsk_bottom_placeholder"
-                placement="utforsk_bottom"
-                title="Vil du nå ut til norske virksomheter?"
-                description="Vi åpner nå for utvalgte samarbeidspartnere på Bedriftsgrafen.no."
-                buttonText="Kontakt Bedriftsgrafen"
-                link={getContactEmailHref('Partnerskap med Bedriftsgrafen.no')}
-                variant="general"
-                contactIntent="partnership"
-            />
         </>
     )
 }

@@ -16,8 +16,8 @@ import { formatNumber, formatCurrency, cleanOrgnr } from '../utils/formatters'
 import { getStartingDate } from '../utils/dates'
 import { API_BASE } from '../utils/apiClient'
 import { PeriodSelector } from '../components/common/PeriodSelector'
-import { AffiliateBanner } from '../components/ads/AffiliateBanner'
-import { AFFILIATIONS } from '../constants/affiliations'
+import { RotatingAffiliateBanner } from '../components/ads/RotatingAffiliateBanner'
+import { AFFILIATIONS, GLOBAL_AFFILIATIONS, type AffiliateCopyOverrides } from '../constants/affiliations'
 import { useFilterStore, FilterValues } from '../store/filterStore'
 import { COUNTIES } from '../constants/explorer'
 import { MUNICIPALITIES } from '../constants/municipalityCodes'
@@ -26,6 +26,13 @@ import { mnokToNok } from '../utils/financials'
 // Lazy-load heavy components: IndustryMap (leaflet ~154KB), TrendChart (recharts ~325KB)
 const IndustryMap = lazy(() => import('../components/maps/IndustryMap').then(m => ({ default: m.IndustryMap })))
 const TrendChart = lazy(() => import('../components/dashboard/TrendChart').then(m => ({ default: m.TrendChart })))
+
+const KONKURS_AFFILIATE_COPY: AffiliateCopyOverrides = {
+    [AFFILIATIONS.TJENESTETORGET_ACCOUNTANT.id]: {
+        title: 'Ny start med regnskapsfører hos Tjenestetorget',
+        description: 'Få en god start på ditt neste prosjekt. Sammenlign regnskapsførere som hjelper deg fra dag én.',
+    },
+}
 
 export const Route = createLazyFileRoute('/konkurser')({
     component: KonkurserPage,
@@ -233,16 +240,12 @@ function KonkurserPage() {
                 </SummaryCard>
             </div>
 
-            {/* Affiliate Banner - contextual for users browsing bankruptcies (potential fresh start) */}
-            <div className="mb-6">
-                <AffiliateBanner
-                    bannerId={`konkurser_${AFFILIATIONS.TJENESTETORGET_ACCOUNTANT.id}`}
-                    placement="konkurser_page"
-                    {...AFFILIATIONS.TJENESTETORGET_ACCOUNTANT}
-                    title="Behov for ny start?"
-                    description="Få en god start på ditt neste prosjekt. Sammenlign regnskapsførere som hjelper deg fra dag én."
-                />
-            </div>
+            <RotatingAffiliateBanner
+                placement="konkurser_top"
+                candidates={GLOBAL_AFFILIATIONS}
+                className="mb-6"
+                copyOverrides={KONKURS_AFFILIATE_COPY}
+            />
 
             {/* Tab navigation */}
             <TabContainer>
@@ -268,7 +271,7 @@ function KonkurserPage() {
             </TabContainer>
 
             {/* Content */}
-            <div className="min-h-[400px] md:min-h-[600px]">
+            <div className="min-h-100 md:min-h-150">
             {activeTab === 'list' && (
                 <BankruptcyList
                     onSelectCompany={setSelectedCompanyOrgnr}
@@ -299,9 +302,9 @@ function KonkurserPage() {
             )}
 
             {activeTab === 'map' && (
-                <Suspense fallback={<div className="flex items-center justify-center h-[800px]"><Loader2 className="h-8 w-8 animate-spin text-red-500" /></div>}>
+                <Suspense fallback={<div className="flex h-200 items-center justify-center"><Loader2 className="h-8 w-8 animate-spin text-red-500" /></div>}>
                     <div className="space-y-4">
-                        <div className="rounded-2xl overflow-hidden border border-gray-100 shadow-sm h-[900px] md:h-[800px] relative">
+                        <div className="relative h-225 overflow-hidden rounded-2xl border border-gray-100 shadow-sm md:h-200">
                             <IndustryMap
                                 filters={mapFilters}
                                 onFilterChange={handleFilterChange}

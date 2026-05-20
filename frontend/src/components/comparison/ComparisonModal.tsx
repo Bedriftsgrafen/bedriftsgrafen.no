@@ -1,13 +1,14 @@
-import { memo, useCallback, useEffect, useState, useRef, startTransition, useMemo } from 'react'
-import { X, Building2, Users, TrendingUp, TrendingDown, Wallet } from 'lucide-react'
+import { memo, useCallback, useEffect, useState, useRef, startTransition, useMemo, useId } from 'react'
+import { Building2, Users, TrendingUp, TrendingDown, Wallet } from 'lucide-react'
 import { useComparisonStore } from '../../store/comparisonStore'
+import { Modal } from '../common'
 import { Button } from '../common/Button'
 import { apiClient } from '../../utils/apiClient'
 import { formatLargeNumber } from '../../utils/formatters'
 import { formatNace } from '../../utils/nace'
 import type { CompanyWithAccounting } from '../../types'
 import { AffiliateBanner } from '../ads/AffiliateBanner'
-import { getContactEmailHref } from '../../constants/contact'
+import { AFFILIATIONS } from '../../constants/affiliations'
 
 /** Fetched company data for comparison */
 interface ComparisonData {
@@ -48,7 +49,7 @@ const ComparisonCard = memo(function ComparisonCard({ item }: { item: Comparison
                     {/* Basic info */}
                     <div className="space-y-2 min-w-0">
                         <div className="flex items-start gap-2 text-sm min-w-0">
-                            <Building2 className="h-4 w-4 text-gray-400 shrink-0 mt-0.5" />
+                            <Building2 className="h-4 w-4 text-gray-400 shrink-0 mt-0.5" aria-hidden="true" />
                             <div className="min-w-0 flex-1">
                                 <span className="block line-clamp-2 text-gray-600 leading-snug" title={formatNace(item.company.naeringskode)}>
                                     {formatNace(item.company.naeringskode) || 'Ukjent bransje'}
@@ -56,7 +57,7 @@ const ComparisonCard = memo(function ComparisonCard({ item }: { item: Comparison
                             </div>
                         </div>
                         <div className="flex items-center gap-2 text-sm">
-                            <Users className="h-4 w-4 text-gray-400" />
+                            <Users className="h-4 w-4 text-gray-400" aria-hidden="true" />
                             <span className="text-gray-600">
                                 {item.company.antall_ansatte ?? '-'} ansatte
                             </span>
@@ -73,7 +74,7 @@ const ComparisonCard = memo(function ComparisonCard({ item }: { item: Comparison
                             {/* Revenue */}
                             <div className="flex items-center justify-between">
                                 <div className="flex items-center gap-2 text-sm text-gray-600">
-                                    <TrendingUp className="h-4 w-4 text-blue-500" />
+                                    <TrendingUp className="h-4 w-4 text-blue-500" aria-hidden="true" />
                                     Omsetning
                                 </div>
                                 <span className="font-medium text-gray-900">
@@ -85,9 +86,9 @@ const ComparisonCard = memo(function ComparisonCard({ item }: { item: Comparison
                             <div className="flex items-center justify-between">
                                 <div className="flex items-center gap-2 text-sm text-gray-600">
                                     {(accounting.aarsresultat ?? 0) >= 0 ? (
-                                        <TrendingUp className="h-4 w-4 text-green-500" />
+                                        <TrendingUp className="h-4 w-4 text-green-500" aria-hidden="true" />
                                     ) : (
-                                        <TrendingDown className="h-4 w-4 text-red-500" />
+                                        <TrendingDown className="h-4 w-4 text-red-500" aria-hidden="true" />
                                     )}
                                     Resultat
                                 </div>
@@ -102,7 +103,7 @@ const ComparisonCard = memo(function ComparisonCard({ item }: { item: Comparison
                             {/* Equity */}
                             <div className="flex items-center justify-between">
                                 <div className="flex items-center gap-2 text-sm text-gray-600">
-                                    <Wallet className="h-4 w-4 text-purple-500" />
+                                    <Wallet className="h-4 w-4 text-purple-500" aria-hidden="true" />
                                     Egenkapital
                                 </div>
                                 <span className="font-medium text-gray-900">
@@ -129,9 +130,12 @@ export const ComparisonModal = memo(function ComparisonModal() {
     const companies = useComparisonStore((s) => s.companies)
     const closeModal = useComparisonStore((s) => s.closeModal)
     const clear = useComparisonStore((s) => s.clear)
+    const modalId = useId()
 
     const [data, setData] = useState<ComparisonData[]>([])
     const fetchIdRef = useRef(0)
+    const titleId = `${modalId}-title`
+    const descriptionId = `${modalId}-description`
 
     // Fetch company data when modal opens
     useEffect(() => {
@@ -190,38 +194,28 @@ export const ComparisonModal = memo(function ComparisonModal() {
         clear()
     }, [closeModal, clear])
 
-    // Handle escape key
-    useEffect(() => {
-        const handleEsc = (e: KeyboardEvent) => {
-            if (e.key === 'Escape') handleClose()
-        }
-        if (isOpen) {
-            window.addEventListener('keydown', handleEsc)
-            return () => window.removeEventListener('keydown', handleEsc)
-        }
-    }, [isOpen, handleClose])
-
     if (!isOpen) return null
 
     return (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50">
-            <div
-                className="bg-white rounded-xl shadow-xl max-w-5xl w-full max-h-[90vh] overflow-hidden flex flex-col"
-                onClick={(e) => e.stopPropagation()}
-            >
+        <Modal
+            isOpen={isOpen}
+            onClose={handleClose}
+            maxWidth="max-w-5xl"
+            padding={false}
+            ariaLabelledBy={titleId}
+            ariaDescribedBy={descriptionId}
+        >
+            <div className="max-h-[90vh] overflow-hidden flex flex-col">
                 {/* Header */}
-                <div className="flex items-center justify-between gap-3 px-4 sm:px-6 py-4 border-b border-gray-200">
-                    <h2 className="text-lg sm:text-xl font-semibold text-gray-900 flex-1 min-w-0 truncate">
-                        Sammenligning av {companies.length} virksomheter
-                    </h2>
-                    <button
-                        type="button"
-                        onClick={handleClose}
-                        className="p-3 sm:p-2 hover:bg-gray-100 rounded-lg transition-colors shrink-0"
-                        aria-label="Lukk"
-                    >
-                        <X className="h-5 w-5 text-gray-500" />
-                    </button>
+                <div className="flex items-center justify-between gap-3 px-4 sm:px-6 py-4 pr-14 sm:pr-16 border-b border-gray-200">
+                    <div className="min-w-0">
+                        <h2 id={titleId} className="text-lg sm:text-xl font-semibold text-gray-900 flex-1 min-w-0 truncate">
+                            Sammenligning av {companies.length} virksomheter
+                        </h2>
+                        <p id={descriptionId} className="mt-1 text-sm text-gray-500">
+                            Sammenlign nøkkeltall og siste tilgjengelige regnskap side ved side.
+                        </p>
+                    </div>
                 </div>
 
                 {/* Content */}
@@ -233,19 +227,13 @@ export const ComparisonModal = memo(function ComparisonModal() {
                         ))}
                     </div>
 
-                    {/* Affiliate Banner - Banking */}
+                    {/* Affiliate Banner */}
                     <div className="mt-8">
                         <AffiliateBanner
-                            bannerId="banking_comparison_modal"
+                            bannerId={`comparison_${AFFILIATIONS.ZENSUM_LOAN.id}`}
                             placement="comparison_modal"
-                            title="Vil du nå virksomheter i vekst?"
-                            description="Denne plassen er ledig for en bankpartner på Bedriftsgrafen.no."
-                            buttonText="Kontakt Bedriftsgrafen"
-                            link={getContactEmailHref('Partnerskap med Bedriftsgrafen.no')}
-                            icon={Wallet}
-                            variant="banking"
-                            contactIntent="partnership"
-                            isPlaceholder
+                            legalTextMode="inline"
+                            {...AFFILIATIONS.ZENSUM_LOAN}
                         />
                     </div>
                 </div>
@@ -270,6 +258,6 @@ export const ComparisonModal = memo(function ComparisonModal() {
                     </Button>
                 </div>
             </div>
-        </div>
+        </Modal>
     )
 })

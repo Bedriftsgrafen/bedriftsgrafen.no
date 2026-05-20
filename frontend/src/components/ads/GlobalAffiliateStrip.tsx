@@ -1,0 +1,39 @@
+import { AffiliateBanner } from './AffiliateBanner'
+import { AffiliateLegalNotes } from './AffiliateLegalNotes'
+import { GLOBAL_AFFILIATIONS } from '../../constants/affiliations'
+
+export function GlobalAffiliateStrip() {
+    return (
+        <section
+            aria-labelledby="global-affiliate-heading"
+            className="border-t border-gray-200 bg-white"
+        >
+            <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6">
+                <div className="mb-4 flex flex-col gap-1 sm:flex-row sm:items-end sm:justify-between">
+                    <div>
+                        <p className="text-xs font-semibold uppercase tracking-wide text-blue-700">Annonser</p>
+                        <h2 id="global-affiliate-heading" className="text-xl font-semibold text-gray-900">
+                            Aktuelle tjenester
+                        </h2>
+                    </div>
+                    <p className="max-w-2xl text-sm text-gray-600">
+                        Utvalgte kommersielle lenker som støtter driften av Bedriftsgrafen.no.
+                    </p>
+                </div>
+
+                <div className="grid grid-cols-[repeat(auto-fit,minmax(min(100%,18rem),1fr))] gap-4">
+                    {GLOBAL_AFFILIATIONS.map((affiliation) => (
+                        <AffiliateBanner
+                            key={affiliation.id}
+                            bannerId={`global_${affiliation.id}`}
+                            placement="global_sitewide"
+                            {...affiliation}
+                        />
+                    ))}
+                </div>
+
+                <AffiliateLegalNotes affiliations={GLOBAL_AFFILIATIONS} className="mt-4" />
+            </div>
+        </section>
+    )
+}
