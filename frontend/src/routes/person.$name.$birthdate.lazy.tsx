@@ -1,5 +1,5 @@
 /* eslint-disable react-refresh/only-export-components */
-import { createLazyFileRoute } from '@tanstack/react-router'
+import { createLazyFileRoute, Link } from '@tanstack/react-router'
 import { useState, useCallback, useMemo } from 'react'
 import { User, ShieldCheck, Briefcase, Users, LayoutDashboard, AlertTriangle, Network } from 'lucide-react'
 import { SEOHead, Breadcrumbs } from '../components/layout'
@@ -51,7 +51,14 @@ function TopCompaniesByRevenue({ roles }: { roles: PersonRole[] }) {
                 {top5.map((r) => (
                     <div key={`${r.orgnr}-${r.type_kode}`} className="flex items-center justify-between text-sm">
                         <div className="min-w-0 flex-1">
-                            <span className="font-medium text-gray-900 truncate">{r.enhet_navn}</span>
+                            <Link
+                                to="/virksomhet/$orgnr"
+                                params={{ orgnr: r.orgnr }}
+                                className="block truncate rounded-sm font-medium text-gray-900 hover:text-blue-700 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2"
+                                title={`Åpne ${r.enhet_navn}`}
+                            >
+                                {r.enhet_navn}
+                            </Link>
                             {r.organisasjonsform && (
                                 <span className="text-xs text-gray-400 ml-1.5">{r.organisasjonsform}</span>
                             )}
