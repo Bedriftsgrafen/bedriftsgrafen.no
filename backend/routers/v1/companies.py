@@ -1,3 +1,4 @@
+import hashlib
 import logging
 from datetime import UTC, datetime
 
@@ -38,6 +39,28 @@ logger = logging.getLogger(__name__)
 
 router: APIRouter = APIRouter(prefix="/v1/companies", tags=["companies-v1"])
 
+MIN_COMPANY_TEXT_SEARCH_LENGTH = 3
+
+
+def _compact_orgnr_candidate(value: str) -> str:
+    return value.replace(" ", "").replace("-", "").replace(".", "")
+
+
+def _validate_fast_company_search_term(value: str | None) -> None:
+    if value is None:
+        return
+
+    search_term = value.strip()
+    if not search_term:
+        return
+
+    compact = _compact_orgnr_candidate(search_term)
+    if compact.isdigit() and len(compact) != 9:
+        raise HTTPException(status_code=422, detail="Use the full 9-digit organization number.")
+
+    if not compact.isdigit() and len(search_term) < MIN_COMPANY_TEXT_SEARCH_LENGTH:
+        raise HTTPException(status_code=422, detail="Search term must be at least 3 characters.")
+
 
 @router.get("", response_model=list[CompanyBase])
 @limiter.limit("5/second")
@@ -56,6 +79,8 @@ async def get_companies(
 
     Uses CompanyFilterDTO for type-safe parameter handling.
     """
+    _validate_fast_company_search_term(params.name)
+
     # Build DTO from query parameters dependency
     filters = params.to_dto(skip=skip, limit=limit, sort_by=sort_by, sort_order=sort_order)
 
@@ -72,6 +97,8 @@ async def count_companies(
     db: AsyncSession = Depends(get_db),
 ):
     """Count companies matching filters. No pagination parameters."""
+    _validate_fast_company_search_term(params.name)
+
     # Build filter DTO (no pagination params for counting, but include sort_by)
     filters = params.to_dto(sort_by=sort_by)
 
@@ -91,6 +118,8 @@ async def get_company_stats(
     Get aggregate statistics for companies matching filters.
     Returns total count, sum of revenue/profit/employees, and organisation form breakdown.
     """
+    _validate_fast_company_search_term(params.name)
+
     # Build filter DTO (include sort_by as it affects join behavior)
     filters = params.to_dto(sort_by=sort_by)
 
@@ -141,9 +170,24 @@ async def export_companies(
 
 @router.get("/search", response_model=list[CompanyBase])
 @limiter.limit("10/second")
-async def search_companies(request: Request, name: str, limit: int = 20, db: AsyncSession = Depends(get_db)):
+async def search_companies(
+    request: Request,
+    response: Response,
+    name: str = Query(..., min_length=1, max_length=200),
+    limit: int = Query(20, ge=1, le=50),
+    db: AsyncSession = Depends(get_db),
+):
+    _validate_fast_company_search_term(name)
+
     service = CompanyService(db)
-    return await service.search_companies(name, limit)
+    result = await service.search_companies(name.strip(), limit)
+    set_http_cache_headers(
+        response,
+        etag=hashlib.sha256(f"companies-search:{name.strip().lower()}:{limit}:{len(result)}".encode()).hexdigest(),
+        ttl_seconds=60,
+        stale_seconds=300,
+    )
+    return result
 
 
 @router.get("/search/subunits", response_model=SubUnitsWithMetadata)

@@ -1,5 +1,6 @@
 import { useQuery } from '@tanstack/react-query'
 import { apiClient } from '../../utils/apiClient'
+import { isShortCompanyTextSearch } from '../../utils/searchValidation'
 
 /** Organisation form breakdown item */
 interface OrgFormBreakdown {
@@ -61,9 +62,12 @@ async function fetchCompanyStats(params: UseCompanyStatsQueryParams): Promise<Co
 }
 
 export function useCompanyStatsQuery(params: UseCompanyStatsQueryParams) {
+    const shouldFetchStats = !isShortCompanyTextSearch(params.name)
+
     return useQuery({
         queryKey: ['companyStats', params],
         queryFn: () => fetchCompanyStats(params),
+        enabled: shouldFetchStats,
         staleTime: 300_000, // 5 minutes – data changes nightly via materialized view refresh
     })
 }

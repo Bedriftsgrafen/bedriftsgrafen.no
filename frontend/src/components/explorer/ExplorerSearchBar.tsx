@@ -1,8 +1,9 @@
-import { useState, useEffect, useCallback, useMemo, type KeyboardEvent } from 'react';
+import { useState, useEffect, useCallback, useMemo, useId, type KeyboardEvent } from 'react';
 import { Search, MapPin, ChevronRight } from 'lucide-react';
 import { Link } from '@tanstack/react-router';
 import { useMunicipalitiesListQuery } from '../../hooks/queries/useMunicipalityQuery';
 import clsx from 'clsx';
+import { getCompanySearchValidationMessage } from '../../utils/searchValidation';
 
 interface ExplorerSearchBarProps {
     initialValue: string;
@@ -23,6 +24,8 @@ export function ExplorerSearchBar({
 }: ExplorerSearchBarProps) {
     const [localValue, setLocalValue] = useState(initialValue);
     const [showSuggestions, setShowSuggestions] = useState(false);
+    const inputId = useId();
+    const validationMessage = getCompanySearchValidationMessage(localValue);
 
     const { data: municipalities } = useMunicipalitiesListQuery();
 
@@ -46,9 +49,10 @@ export function ExplorerSearchBar({
     }, [initialValue]);
 
     const handleAction = useCallback(() => {
+        if (validationMessage) return;
         setShowSuggestions(false);
         onSearch(localValue);
-    }, [onSearch, localValue]);
+    }, [onSearch, localValue, validationMessage]);
 
     const handleKeyDown = (e: KeyboardEvent<HTMLInputElement>) => {
         if (e.key === 'Enter') {
@@ -62,7 +66,11 @@ export function ExplorerSearchBar({
         <div className="relative w-full group">
             <div className="flex gap-2">
                 <div className="relative flex-1">
+                    <label htmlFor={inputId} className="sr-only">
+                        Søk etter virksomhet, bransje eller formål
+                    </label>
                     <input
+                        id={inputId}
                         type="text"
                         value={localValue}
                         onChange={(e) => {
@@ -74,7 +82,7 @@ export function ExplorerSearchBar({
                         placeholder={placeholder}
                         className="w-full pl-11 pr-4 py-3 bg-white border border-slate-200 rounded-xl focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 outline-none shadow-sm transition-all text-slate-900 placeholder-slate-400"
                     />
-                    <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-slate-400 group-focus-within:text-blue-500 transition-colors" />
+                    <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-slate-400 group-focus-within:text-blue-500 transition-colors" aria-hidden="true" />
 
                     {/* Suggestions Dropdown */}
                     {showSuggestions && suggestions.length > 0 && (
@@ -82,13 +90,15 @@ export function ExplorerSearchBar({
                             <div className="p-3 bg-slate-50 border-b border-slate-100 flex items-center justify-between">
                                 <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Forslag: Steder</span>
                                 <button
+                                    type="button"
                                     onClick={() => setShowSuggestions(false)}
                                     className="text-[10px] text-slate-400 hover:text-slate-600 font-bold"
+                                    aria-label="Lukk søkeforslag"
                                 >
                                     LUKK
                                 </button>
                             </div>
-                            <div className="max-h-[300px] overflow-y-auto py-1">
+                            <div className="max-h-75 overflow-y-auto py-1">
                                 {suggestions.map(m => (
                                     <Link
                                         key={m.code}
@@ -98,8 +108,8 @@ export function ExplorerSearchBar({
                                         className="flex items-center justify-between px-4 py-3 hover:bg-blue-50 transition-colors group"
                                     >
                                         <div className="flex items-center gap-3">
-                                            <div className="h-8 w-8 rounded-lg bg-blue-100 text-blue-600 flex items-center justify-center group-hover:bg-blue-600 group-hover:text-white transition-colors">
-                                                <MapPin className="h-4 w-4" />
+                                            <div className="h-8 w-8 rounded-lg bg-blue-100 text-blue-900 flex items-center justify-center group-hover:bg-blue-900 group-hover:text-white transition-colors">
+                                                <MapPin className="h-4 w-4" aria-hidden="true" />
                                             </div>
                                             <div>
                                                 <p className="text-sm font-bold text-slate-900">{m.name}</p>
@@ -108,45 +118,53 @@ export function ExplorerSearchBar({
                                         </div>
                                         <div className="flex items-center gap-2">
                                             <span className="text-[10px] font-bold text-slate-400 tabular-nums">{m.company_count.toLocaleString('no-NO')} virksomheter</span>
-                                            <ChevronRight className="h-4 w-4 text-slate-300 group-hover:text-blue-600 transition-colors" />
+                                            <ChevronRight className="h-4 w-4 text-slate-300 group-hover:text-blue-600 transition-colors" aria-hidden="true" />
                                         </div>
                                     </Link>
                                 ))}
 
-                                <div
-                                    className="px-4 py-3 border-t border-slate-50 flex items-center gap-3 cursor-pointer hover:bg-slate-50 transition-colors"
+                                <button
+                                    type="button"
+                                    disabled={Boolean(validationMessage)}
+                                    className="w-full px-4 py-3 border-t border-slate-50 flex items-center gap-3 text-left hover:bg-slate-50 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-blue-500"
                                     onClick={handleAction}
                                 >
                                     <div className="h-8 w-8 rounded-lg bg-slate-100 text-slate-400 flex items-center justify-center">
-                                        <Search className="h-4 w-4" />
+                                        <Search className="h-4 w-4" aria-hidden="true" />
                                     </div>
                                     <div>
                                         <p className="text-sm font-bold text-slate-900">Søk etter "{localValue}"</p>
                                         <p className="text-[10px] text-slate-500 font-medium uppercase tracking-tighter">I alle virksomheter</p>
                                     </div>
-                                </div>
+                                </button>
                             </div>
                         </div>
                     )}
                 </div>
 
                 <button
+                    type="button"
                     onClick={handleAction}
-                    disabled={isLoading}
+                    disabled={isLoading || Boolean(validationMessage)}
                     className={clsx(
-                        "px-6 py-3 bg-blue-600 text-white rounded-xl font-bold shadow-lg shadow-blue-500/20",
-                        "hover:bg-blue-700 active:scale-95 transition-all text-sm flex items-center gap-2",
+                        "px-6 py-3 bg-blue-900 text-white rounded-xl font-bold shadow-lg shadow-blue-950/20",
+                        "hover:bg-blue-800 active:scale-95 transition-all text-sm flex items-center gap-2",
                         "disabled:opacity-50 disabled:cursor-not-allowed disabled:active:scale-100"
                     )}
                 >
                     {isLoading ? (
-                        <div className="h-4 w-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                        <div className="h-4 w-4 border-2 border-white/30 border-t-white rounded-full animate-spin" aria-hidden="true" />
                     ) : (
-                        <Search className="h-4 w-4" />
+                        <Search className="h-4 w-4" aria-hidden="true" />
                     )}
                     Søk
                 </button>
             </div>
+            {validationMessage && (
+                <p className="mt-2 text-sm font-medium text-slate-600" role="status">
+                    {validationMessage}
+                </p>
+            )}
         </div>
     );
 }

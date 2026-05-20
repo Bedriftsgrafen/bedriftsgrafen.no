@@ -1,17 +1,21 @@
 import { useQuery } from '@tanstack/react-query'
 import { apiClient } from '../../utils/apiClient'
 import { Company } from '../../types'
+import { canRunCompanySearch, normalizeCompanySearchQuery } from '../../utils/searchValidation'
 
 export function useCompanySearchQuery(query: string, limit = 10) {
+  const normalizedQuery = normalizeCompanySearchQuery(query)
+
   return useQuery({
-    queryKey: ['companies', 'search', query, limit],
+    queryKey: ['companies', 'search', normalizedQuery, limit],
     queryFn: async () => {
       const response = await apiClient.get<Company[]>('/v1/companies/search', {
-        params: { name: query, limit }
+        params: { name: normalizedQuery, limit }
       })
       return response.data
     },
-    enabled: query.length >= 2, // Only run query if search term is at least 2 characters
+    enabled: canRunCompanySearch(normalizedQuery),
+    placeholderData: [],
     staleTime: 2 * 60 * 1000, // 2 minutes for search results
   })
 }

@@ -153,6 +153,33 @@ async def test_search_companies(mock_company_service):
 
 
 @pytest.mark.asyncio
+async def test_search_companies_rejects_short_text_query(mock_company_service):
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as ac:
+        response = await ac.get("/v1/companies/search?name=as")
+
+        assert response.status_code == 422
+        mock_company_service.search_companies.assert_not_called()
+
+
+@pytest.mark.asyncio
+async def test_get_companies_rejects_short_text_query(mock_company_service):
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as ac:
+        response = await ac.get("/v1/companies?name=as")
+
+        assert response.status_code == 422
+        mock_company_service.get_companies.assert_not_called()
+
+
+@pytest.mark.asyncio
+async def test_company_stats_rejects_short_text_query(mock_company_service):
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as ac:
+        response = await ac.get("/v1/companies/stats?name=as")
+
+        assert response.status_code == 422
+        mock_company_service.get_aggregate_stats.assert_not_called()
+
+
+@pytest.mark.asyncio
 async def test_get_company_stats(mock_company_service):
     # Arrange
     mock_stats = {"total": 100, "revenue_sum": 1000000, "org_form_breakdown": {"AS": 80, "ENK": 20}}

@@ -1,6 +1,7 @@
 import { useQuery } from '@tanstack/react-query'
 import { apiClient } from '../../utils/apiClient'
 import { Company } from '../../types'
+import { isShortCompanyTextSearch } from '../../utils/searchValidation'
 
 export interface UseCompaniesQueryParams {
   skip?: number
@@ -75,6 +76,8 @@ export function useCompaniesQuery({
   registered_from,
   registered_to
 }: UseCompaniesQueryParams = {}) {
+  const shortCompanyTextSearch = isShortCompanyTextSearch(name)
+
   return useQuery({
     queryKey: [
       'companies',
@@ -155,6 +158,7 @@ export function useCompaniesQuery({
       return response.data
     },
     staleTime: 30_000, // Cache for 30 seconds to reduce API calls
+    enabled: !shortCompanyTextSearch,
     // placeholderData removed - showing stale data while filtering is confusing
   })
 }

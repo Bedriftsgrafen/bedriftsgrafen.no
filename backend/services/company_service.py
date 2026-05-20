@@ -314,12 +314,13 @@ class CompanyService:
 
     async def search_companies(self, name: str, limit: int = 10) -> list[CompanyWithFinancials]:
         """Full-text search for companies."""
-        cache_key = f"search_{name}_{limit}"
+        normalized_name = name.strip()
+        cache_key = f"search_{normalized_name.lower()}_{limit}"
         cached = await search_cache.get(cache_key)
         if cached:
             return cached
 
-        results = await self.company_repo.search_by_name(name, limit)
+        results = await self.company_repo.search_by_name(normalized_name, limit)
         await self.enrich_nace_codes(results)
         await search_cache.set(cache_key, results)
         return results
