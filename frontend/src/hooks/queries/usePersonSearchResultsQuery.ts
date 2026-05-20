@@ -26,6 +26,7 @@ export function usePersonSearchResultsQuery(
             return response.data
         },
         enabled: query.length >= 3,
+        placeholderData: (previousData) => previousData,
         staleTime: 1000 * 60 * 5,
         gcTime: 1000 * 60 * 10,
     })

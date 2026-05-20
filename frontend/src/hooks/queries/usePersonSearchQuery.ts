@@ -10,7 +10,7 @@ export interface PersonSearchResult {
 // Centralized query key factory for consistency
 export const personQueryKeys = {
     all: ['people'] as const,
-    search: (query: string) => [...personQueryKeys.all, 'search', query] as const,
+    search: (query: string, limit: number = 10) => [...personQueryKeys.all, 'search', query, limit] as const,
     searchResults: (query: string, offset: number, limit: number, sortBy?: string, sortOrder?: string) =>
         [...personQueryKeys.all, 'searchResults', query, offset, limit, sortBy, sortOrder] as const,
     searchResultsCount: (query: string) =>
@@ -36,7 +36,7 @@ export const personQueryKeys = {
  */
 export function usePersonSearchQuery(query: string, limit: number = 10) {
     return useQuery({
-        queryKey: personQueryKeys.search(query),
+        queryKey: personQueryKeys.search(query, limit),
         queryFn: async (): Promise<PersonSearchResult[]> => {
             if (query.length < 3) return []
             const response = await apiClient.get<PersonSearchResult[]>(

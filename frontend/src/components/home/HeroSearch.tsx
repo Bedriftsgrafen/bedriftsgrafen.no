@@ -175,6 +175,7 @@ export function HeroSearch() {
                                     <input
                                         id="home-search-input"
                                         aria-label="Søk etter virksomhet eller person"
+                                        role="combobox"
                                         type="search"
                                         autoComplete="off"
                                         enterKeyHint="search"

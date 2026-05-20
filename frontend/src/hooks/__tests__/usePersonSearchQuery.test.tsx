@@ -56,7 +56,12 @@ describe('personQueryKeys', () => {
 
     it('creates search key with query', () => {
         const key = personQueryKeys.search('Ola')
-        expect(key).toEqual(['people', 'search', 'Ola'])
+        expect(key).toEqual(['people', 'search', 'Ola', 10])
+    })
+
+    it('creates distinct search keys for different limits', () => {
+        expect(personQueryKeys.search('Ola', 5)).toEqual(['people', 'search', 'Ola', 5])
+        expect(personQueryKeys.search('Ola', 25)).toEqual(['people', 'search', 'Ola', 25])
     })
 
     it('creates roles key with name and birthdate', () => {

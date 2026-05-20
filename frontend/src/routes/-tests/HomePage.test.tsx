@@ -96,7 +96,7 @@ describe('HomePage', () => {
         expect(screen.getByTestId('seo-head')).toBeInTheDocument()
         expect(screen.getByRole('heading', { name: /Finn og sammenlign norske virksomheter/i })).toBeInTheDocument()
         expect(screen.getByRole('search')).toBeInTheDocument()
-        expect(screen.getByRole('searchbox', { name: /Søk etter virksomhet eller person/i })).toBeInTheDocument()
+        expect(screen.getByRole('combobox', { name: /Søk etter virksomhet eller person/i })).toBeInTheDocument()
         expect(screen.getByText(/Roller og personer/i)).toBeInTheDocument()
         expect(screen.getByRole('heading', { name: /Utforsk næringslivet fra flere vinkler/i })).toBeInTheDocument()
         expect(screen.getByRole('link', { name: /Personer/i })).toBeInTheDocument()
@@ -108,7 +108,7 @@ describe('HomePage', () => {
     it('handles company search and navigation', () => {
         render(<HomePage />)
 
-        const input = screen.getByRole('searchbox', { name: /Søk etter virksomhet eller person/i })
+        const input = screen.getByRole('combobox', { name: /Søk etter virksomhet eller person/i })
         const searchButton = screen.getByRole('button', { name: /Søk etter virksomhet/i })
 
         fireEvent.change(input, { target: { value: 'Test Company' } })
@@ -125,7 +125,7 @@ describe('HomePage', () => {
     it('navigates directly to orgnr when 9-digit number is entered', () => {
         render(<HomePage />)
 
-        const input = screen.getByRole('searchbox', { name: /Søk etter virksomhet eller person/i })
+        const input = screen.getByRole('combobox', { name: /Søk etter virksomhet eller person/i })
         const searchButton = screen.getByRole('button', { name: /Søk etter virksomhet/i })
 
         fireEvent.change(input, { target: { value: '993144169' } })
@@ -142,7 +142,7 @@ describe('HomePage', () => {
 
         fireEvent.click(screen.getByRole('button', { name: /Personer/i }))
 
-        const input = screen.getByRole('searchbox', { name: /Søk etter virksomhet eller person/i })
+        const input = screen.getByRole('combobox', { name: /Søk etter virksomhet eller person/i })
         const searchButton = screen.getByRole('button', { name: /Søk etter person/i })
 
         fireEvent.change(input, { target: { value: 'Ola Nordmann' } })

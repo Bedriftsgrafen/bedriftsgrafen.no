@@ -12,8 +12,28 @@ Production operations and maintenance for Bedriftsgrafen.no.
 
 ```bash
 ./scripts/system_health_check.sh     # Full health check
+npm run smoke:prod                   # Release smoke and search latency check
 docker compose ps                     # Container status
 curl http://localhost:8000/stats       # API stats
+```
+
+---
+
+## Release Smoke
+
+Run this after a production rebuild, or before a release when you need a quick health and search-speed baseline:
+
+```bash
+npm run smoke:prod
+```
+
+The smoke check verifies API health, company search, person autocomplete, detailed person results, CSP headers for analytics, and recent backend error logs. It does not source `.env`, so affiliate tracker URLs containing `&` cannot accidentally spawn shell background jobs.
+
+Latency budgets can be adjusted without editing the script:
+
+```bash
+PERSON_RESULTS_BUDGET=0.9 RUNS=10 npm run smoke:prod
+BASE_URL=http://localhost:5173 npm run smoke:prod
 ```
 
 ---

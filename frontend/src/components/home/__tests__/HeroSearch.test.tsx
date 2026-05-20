@@ -79,7 +79,7 @@ describe('HeroSearch', () => {
 
         render(<HeroSearch />)
 
-        fireEvent.change(screen.getByRole('searchbox', { name: 'Søk etter virksomhet eller person' }), {
+        fireEvent.change(screen.getByRole('combobox', { name: 'Søk etter virksomhet eller person' }), {
             target: { value: 'equinor' },
         })
 
@@ -92,7 +92,7 @@ describe('HeroSearch', () => {
     it('blocks broad two-character company searches before navigation', () => {
         render(<HeroSearch />)
 
-        fireEvent.change(screen.getByRole('searchbox', { name: 'Søk etter virksomhet eller person' }), {
+        fireEvent.change(screen.getByRole('combobox', { name: 'Søk etter virksomhet eller person' }), {
             target: { value: 'as' },
         })
 

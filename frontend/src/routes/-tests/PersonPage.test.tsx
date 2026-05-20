@@ -1,10 +1,13 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
+import type { ReactNode } from 'react'
 import { render, screen, waitFor, fireEvent } from '@testing-library/react'
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { PersonProfilePage } from '../person.$name.$birthdate.lazy'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { server } from '../../mocks/server'
 import { http, HttpResponse } from 'msw'
+
+type MockChartProps = { children?: ReactNode }
 
 // Mock components
 vi.mock('../../components/layout', () => ({
@@ -14,6 +17,18 @@ vi.mock('../../components/layout', () => ({
 
 vi.mock('../../components/common/Button', () => ({
     Button: ({ children, onClick }: any) => <button onClick={onClick}>{children}</button>
+}))
+
+vi.mock('recharts', () => ({
+    BarChart: ({ children }: MockChartProps) => <div data-testid="bar-chart">{children}</div>,
+    Bar: () => null,
+    PieChart: ({ children }: MockChartProps) => <div data-testid="pie-chart">{children}</div>,
+    Pie: () => null,
+    XAxis: () => null,
+    YAxis: () => null,
+    ResponsiveContainer: ({ children }: MockChartProps) => <div>{children}</div>,
+    Tooltip: () => null,
+    Legend: () => null,
 }))
 
 // Mock router

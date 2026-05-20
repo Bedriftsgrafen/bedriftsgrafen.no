@@ -98,9 +98,11 @@ export function LiveDataPanel() {
                         ))
                         : metrics.map((metric) => (
                             <dl key={metric.label} className="rounded-2xl border border-slate-200 bg-slate-50 p-5 shadow-[inset_0_1px_0_rgba(255,255,255,0.65)] sm:p-6">
-                                <dt className="text-sm font-medium text-slate-700">{metric.label}</dt>
-                                <dd className="mt-3 text-3xl font-semibold tabular-nums text-slate-950">{metric.value}</dd>
-                                <p className="mt-3 text-sm leading-6 text-slate-600">{metric.helper}</p>
+                                <div>
+                                    <dt className="text-sm font-medium text-slate-700">{metric.label}</dt>
+                                    <dd className="mt-3 text-3xl font-semibold tabular-nums text-slate-950">{metric.value}</dd>
+                                    <dd className="mt-3 text-sm leading-6 text-slate-600">{metric.helper}</dd>
+                                </div>
                             </dl>
                         ))}
                 </div>

@@ -43,6 +43,15 @@ export const handlers = [
         ])
     }),
 
+    // Mock person sparklines
+    http.get('*/api/v1/people/sparklines', () => {
+        return HttpResponse.json([
+            { month: '2025-01', active_roles: 2 },
+            { month: '2025-02', active_roles: 3 },
+            { month: '2025-03', active_roles: 3 },
+        ])
+    }),
+
     // Mock municipality dashboard
     http.get('*/api/v1/municipality/:code', ({ params }) => {
         const { code } = params

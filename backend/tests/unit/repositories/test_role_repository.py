@@ -400,6 +400,41 @@ class TestSearchPeopleDetailed:
         assert "person_toplist_mv" in str(statement)
 
     @pytest.mark.asyncio
+    async def test_enrichment_filters_by_selected_person_keys(self, repo, mock_db_session):
+        """Detailed enrichment narrows role/company queries to selected name+birthdate keys."""
+        first_person = MagicMock()
+        first_person.person_navn = "Ola Nordmann"
+        first_person.foedselsdato = date(1980, 5, 15)
+        first_person.role_count = 5
+        first_person.active_role_count = 3
+
+        second_person = MagicMock()
+        second_person.person_navn = "Ola Nordmann"
+        second_person.foedselsdato = date(1990, 7, 20)
+        second_person.role_count = 2
+        second_person.active_role_count = 1
+
+        mock_db_session.execute.side_effect = [
+            [first_person, second_person],
+            [],
+            [],
+        ]
+
+        await repo.search_people_detailed("Ola")
+
+        role_statement = mock_db_session.execute.call_args_list[1].args[0]
+        company_statement = mock_db_session.execute.call_args_list[2].args[0]
+
+        role_sql = str(role_statement.compile(compile_kwargs={"literal_binds": True})).lower()
+        company_sql = str(company_statement.compile(compile_kwargs={"literal_binds": True})).lower()
+
+        assert "(roller.person_navn, roller.foedselsdato) in" in role_sql
+        assert "(roller.person_navn, roller.foedselsdato) in" in company_sql
+        assert "ola nordmann" in role_sql
+        assert "1980-05-15" in role_sql
+        assert "1990-07-20" in role_sql
+
+    @pytest.mark.asyncio
     async def test_handles_database_error(self, repo, mock_db_session):
         """Returns empty list on database error."""
         mock_db_session.execute.side_effect = Exception("DB Error")

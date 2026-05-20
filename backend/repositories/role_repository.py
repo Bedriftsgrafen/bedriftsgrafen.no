@@ -4,7 +4,7 @@ import logging
 from datetime import UTC, date, datetime, timedelta
 from typing import Any
 
-from sqlalchemy import Select, and_, delete, or_, select, text
+from sqlalchemy import Select, and_, delete, or_, select, text, tuple_
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import contains_eager
 from sqlalchemy.sql import func
@@ -27,6 +27,19 @@ def _escape_like(value: str) -> str:
 
 def _contains_like_pattern(value: str) -> str:
     return f"%{_escape_like(value)}%"
+
+
+def _person_key_filter(person_keys: list[tuple[str, date | None]]) -> Any:
+    dated_keys = [(name, birthdate) for name, birthdate in person_keys if birthdate is not None]
+    null_birthdate_names = [name for name, birthdate in person_keys if birthdate is None]
+
+    predicates: list[Any] = []
+    if dated_keys:
+        predicates.append(tuple_(models.Role.person_navn, models.Role.foedselsdato).in_(dated_keys))
+    if null_birthdate_names:
+        predicates.append(and_(models.Role.person_navn.in_(null_birthdate_names), models.Role.foedselsdato.is_(None)))
+
+    return or_(*predicates)
 
 
 # Cache duration: roles are valid for 7 days before refresh
@@ -230,7 +243,7 @@ class RoleRepository:
 
         try:
             if not include_all:
-                stmt = (
+                public_stmt = (
                     select(
                         models.PersonToplist.person_navn,
                         models.PersonToplist.foedselsdato,
@@ -244,7 +257,7 @@ class RoleRepository:
                     )
                     .limit(limit)
                 )
-                result = await self.db.execute(stmt)
+                result = await self.db.execute(public_stmt)
                 return [
                     {
                         "name": row.person_navn,
@@ -255,7 +268,7 @@ class RoleRepository:
                 ]
 
             # We want unique combinations of name and birthdate
-            stmt = (
+            admin_stmt: Select[Any] = (
                 select(
                     models.Role.person_navn,
                     models.Role.foedselsdato,
@@ -267,14 +280,14 @@ class RoleRepository:
             )
 
             if not include_all:
-                stmt = self._commercial_filter(stmt)
+                admin_stmt = self._commercial_filter(admin_stmt)
 
-            stmt = stmt.group_by(models.Role.person_navn, models.Role.foedselsdato).order_by(
+            admin_stmt = admin_stmt.group_by(models.Role.person_navn, models.Role.foedselsdato).order_by(
                 func.count(models.Role.id).desc()
             )
-            stmt = stmt.limit(limit)
+            admin_stmt = admin_stmt.limit(limit)
 
-            result = await self.db.execute(stmt)
+            result = await self.db.execute(admin_stmt)
             return [
                 {
                     "name": row.person_navn,
@@ -306,15 +319,15 @@ class RoleRepository:
         try:
             # Step 1: Get paginated people with counts
             if not include_all:
-                sort_column_map = {
+                public_sort_column_map: dict[str, Any] = {
                     "role_count": models.PersonToplist.total_roles,
                     "active_roles": models.PersonToplist.active_roles,
                     "name": models.PersonToplist.person_navn,
                 }
-                sort_column = sort_column_map.get(sort_by, models.PersonToplist.total_roles)
+                sort_column = public_sort_column_map.get(sort_by, models.PersonToplist.total_roles)
                 order_clause = sort_column.asc() if sort_order == "asc" else sort_column.desc()
 
-                stmt = (
+                public_stmt = (
                     select(
                         models.PersonToplist.person_navn,
                         models.PersonToplist.foedselsdato,
@@ -328,12 +341,12 @@ class RoleRepository:
                     .offset(offset)
                     .limit(limit)
                 )
-                result = await self.db.execute(stmt)
+                result = await self.db.execute(public_stmt)
             else:
                 role_count_expr = func.count(models.Role.id)
                 active_count_expr = func.count(models.Role.id).filter(models.Role.fratraadt.is_(False))
 
-                stmt = (
+                admin_stmt: Select[Any] = (
                     select(
                         models.Role.person_navn,
                         models.Role.foedselsdato,
@@ -346,22 +359,22 @@ class RoleRepository:
                 )
 
                 # Dynamic sort
-                sort_column_map = {
+                admin_sort_column_map: dict[str, Any] = {
                     "role_count": role_count_expr,
                     "active_roles": active_count_expr,
                     "name": models.Role.person_navn,
                 }
-                sort_col = sort_column_map.get(sort_by, role_count_expr)
+                sort_col = admin_sort_column_map.get(sort_by, role_count_expr)
                 order_clause = sort_col.asc() if sort_order == "asc" else sort_col.desc()
 
-                stmt = (
-                    stmt.group_by(models.Role.person_navn, models.Role.foedselsdato)
+                admin_stmt = (
+                    admin_stmt.group_by(models.Role.person_navn, models.Role.foedselsdato)
                     .order_by(order_clause)
                     .offset(offset)
                     .limit(limit)
                 )
 
-                result = await self.db.execute(stmt)
+                result = await self.db.execute(admin_stmt)
             people = [
                 {
                     "name": row.person_navn,
@@ -377,7 +390,7 @@ class RoleRepository:
 
             # Step 2: Batch-enrich all people with top roles (single query)
             person_keys = [(p["name"], p["birthdate"]) for p in people]
-            name_list = [k[0] for k in person_keys]
+            person_filter = _person_key_filter(person_keys)
 
             # Top role types per person (batched)
             role_stmt = (
@@ -388,7 +401,7 @@ class RoleRepository:
                     func.count(models.Role.id).label("cnt"),
                 )
                 .join(models.Company, models.Role.orgnr == models.Company.orgnr)
-                .where(models.Role.person_navn.in_(name_list))
+                .where(person_filter)
                 .where(models.Role.fratraadt.is_(False))
                 .where(models.Role.type_beskrivelse.is_not(None))
             )
@@ -416,7 +429,7 @@ class RoleRepository:
                     models.Company.navn,
                 )
                 .join(models.Company, models.Role.orgnr == models.Company.orgnr)
-                .where(models.Role.person_navn.in_(name_list))
+                .where(person_filter)
                 .where(models.Role.fratraadt.is_(False))
                 .where(models.Company.navn.is_not(None))
             )

@@ -74,6 +74,12 @@ describe('PersonSearchResults — loading state', () => {
         expect(screen.getByText('Søker...')).toBeInTheDocument()
     })
 
+    it('marks the result count region busy while loading', () => {
+        mockQuery.mockReturnValue({ data: undefined, isLoading: true, isError: false })
+        render(<PersonSearchResults {...defaultProps} />)
+        expect(screen.getByText('Søker...').closest('[aria-live="polite"]')).toHaveAttribute('aria-busy', 'true')
+    })
+
     it('does not show cards while loading', () => {
         mockQuery.mockReturnValue({ data: undefined, isLoading: true, isError: false })
         render(<PersonSearchResults {...defaultProps} />)

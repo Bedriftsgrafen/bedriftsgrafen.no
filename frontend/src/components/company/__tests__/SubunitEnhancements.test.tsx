@@ -8,8 +8,8 @@ import type { CompanyWithAccounting } from '../../../types'
 
 // Mock TanStack Router Link component
 vi.mock('@tanstack/react-router', () => ({
-    Link: ({ children, ...props }: { children: ReactNode;[key: string]: unknown }) => (
-        <a href="#" data-testid="mock-link" {...props}>{children}</a>
+    Link: ({ children, className, title }: { children: ReactNode; className?: string; title?: string }) => (
+        <a href="#" data-testid="mock-link" className={className} title={title}>{children}</a>
     ),
 }))
 
@@ -72,19 +72,21 @@ const mockSubunitWithData: CompanyWithAccounting = {
 }
 
 describe('Subunit Enhancements - OverviewTab', () => {
-    it('displays parent company name and organization number', () => {
+    it('displays parent company name and organization number', async () => {
         render(<OverviewTab company={mockSubunit} />, { wrapper: createTestWrapper() })
 
         expect(screen.getByText('Hovedenhet')).toBeInTheDocument()
         expect(screen.getByText('Parent Company AS')).toBeInTheDocument()
         expect(screen.getByText(/Org.nr 987654321/)).toBeInTheDocument()
+        expect(await screen.findByTestId('mock-location-map')).toBeInTheDocument()
     })
 
-    it('renders a link to the parent company', () => {
+    it('renders a link to the parent company', async () => {
         render(<OverviewTab company={mockSubunit} />, { wrapper: createTestWrapper() })
         
         const link = screen.getByTestId('mock-link')
         expect(link).toBeInTheDocument()
+        expect(await screen.findByTestId('mock-location-map')).toBeInTheDocument()
     })
 })
 
