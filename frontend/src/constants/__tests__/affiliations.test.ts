@@ -27,4 +27,15 @@ describe('affiliate constants', () => {
             'zensum_loan',
         ])
     })
+
+    it('uses compact logo dimensions for raster affiliate assets', () => {
+        expect(AFFILIATIONS.TJENESTETORGET_ACCOUNTANT).toMatchObject({
+            logoWidth: 120,
+            logoHeight: 40,
+        })
+        expect(AFFILIATIONS.KLIKKLAAN_LOAN).toMatchObject({
+            logoWidth: 135,
+            logoHeight: 40,
+        })
+    })
 })

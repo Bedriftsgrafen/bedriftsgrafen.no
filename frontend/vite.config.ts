@@ -75,6 +75,11 @@ export default defineConfig({
           if (id.includes('commonjsHelpers')) {
             return 'vendor-react'
           }
+          // react-dom/server is only used by map marker rendering. Keep it with the
+          // lazy map route instead of the app-wide React runtime chunk.
+          if (id.includes('node_modules/react-dom/server') || id.includes('node_modules/react-dom/cjs/react-dom-server')) {
+            return
+          }
           // Core framework — always needed on every page
           if (id.includes('node_modules/react/') || id.includes('node_modules/react-dom/')) {
             return 'vendor-react'
@@ -89,17 +94,8 @@ export default defineConfig({
           if (id.includes('node_modules/clsx/')) {
             return 'vendor-utils'
           }
-          // Leaflet must be explicitly isolated to prevent Vite from co-locating
-          // unrelated modules (recharts utilities, etc.) into the leaflet chunk
-          if (id.includes('node_modules/leaflet/') || id.includes('node_modules/react-leaflet/') || id.includes('node_modules/@react-leaflet/')) {
-            return 'leaflet'
-          }
-          // Icons — used on most pages
-          if (id.includes('lucide-react')) {
-            return 'vendor-ui'
-          }
-          // Charts and maps — ONLY used by lazy routes, must NOT be modulepreloaded
-          // Let Vite handle these naturally so they stay lazy
+          // Maps, charts, and icons are route-local. Manual chunks for these packages
+          // can make the app shell preload code that only lazy routes need.
         }
       }
     },

@@ -27,12 +27,8 @@
     }());
   </script>
 
-  <!-- Preconnect to third-party origins (saves ~300ms) -->
-  <link rel="preconnect" href="https://www.googletagmanager.com" crossorigin>
-  <link rel="preconnect" href="https://www.google-analytics.com" crossorigin>
-
-  <!-- Preload only the critical regular font; bold loads on demand via font-display: swap -->
-  <link rel="preload" href="/fonts/Inter-Regular.woff2" as="font" type="font/woff2" crossorigin>
+  <!-- Preload the headline font used by the mobile LCP element -->
+  <link rel="preload" href="/fonts/Inter-Bold.woff2" as="font" type="font/woff2" crossorigin>
 
   <!-- Favicon and icons -->
   <link rel="icon" type="image/webp" href="/favicon.webp?v=2" />
@@ -74,9 +70,15 @@
         <section style="margin: 0 auto 3.5rem; max-width: 64rem; padding: 0 1rem;">
           <div style="border: 1px solid #cbd5e1; background: rgba(248,250,252,.96); border-radius: 32px; padding: 2.5rem; box-shadow: 0 28px 70px -42px rgba(15,23,42,.44);">
             <div style="margin: 0 auto; max-width: 48rem; text-align: center;">
-              <div style="height: 14px; width: 260px; max-width: 70%; margin: 0 auto 1.25rem; border-radius: 999px; background: #dbe4ef;"></div>
-              <div style="height: 54px; width: 78%; margin: 0 auto 1rem; border-radius: 18px; background: #e6edf5;"></div>
-              <div style="height: 22px; width: 62%; margin: 0 auto 2.25rem; border-radius: 999px; background: #edf2f7;"></div>
+              <p style="margin: 0 auto 1rem; max-width: 42rem; color: #1e40af; font-size: .78rem; font-weight: 700; letter-spacing: .26em; text-transform: uppercase;">
+                INNSIKT I NORSKE VIRKSOMHETER
+              </p>
+              <h1 id="hero-title" style="margin: 0; color: #020617; font-size: clamp(2.35rem, 10vw, 3.75rem); font-weight: 800; line-height: 1.04; letter-spacing: 0; text-wrap: balance;">
+                Finn og sammenlign norske virksomheter.
+              </h1>
+              <p style="margin: 1.25rem auto 2.25rem; max-width: 42rem; color: #475569; font-size: clamp(1.05rem, 4vw, 1.25rem); line-height: 1.65;">
+                Regnskap, nøkkeltall, roller og eierskap samlet i ett raskt søk.
+              </p>
             </div>
             <div style="margin: 0 auto; max-width: 48rem; border: 1px solid #cbd5e1; border-radius: 28px; background: rgba(241,245,249,.86); padding: 1.25rem; box-shadow: 0 20px 45px -34px rgba(15,23,42,.38);">
               <div style="display: flex; justify-content: center; gap: .4rem; margin: 0 auto 1rem; width: max-content; max-width: 100%; border-radius: 999px; background: #fff; padding: .35rem; box-shadow: 0 0 0 1px #e2e8f0 inset;">
@@ -91,38 +93,20 @@
           </div>
         </section>
       </main>
-      <footer style="background: #f9fafb; border-top: 1px solid #e5e7eb; padding: 3rem 1rem; color: #4b5563; font-size: 0.875rem;">
-        <div style="max-width: 1280px; margin: 0 auto; display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 2rem;">
-          <div>
-            <h3 style="color: #111827; font-weight: 600; margin-bottom: 1rem;">Utforsk</h3>
-            <ul style="list-style: none; padding: 0; margin: 0; line-height: 2;">
-              <li><a href="/utforsk" style="color: inherit; text-decoration: none;">Finn virksomheter</a></li>
-              <li><a href="/bransjer" style="color: inherit; text-decoration: none;">Bransjeoversikt</a></li>
-              <li><a href="/kommuner" style="color: inherit; text-decoration: none;">Norske kommuner</a></li>
-              <li><a href="/kart" style="color: inherit; text-decoration: none;">Virksomhetskart</a></li>
-            </ul>
-          </div>
-          <div>
-            <h3 style="color: #111827; font-weight: 600; margin-bottom: 1rem;">Trender</h3>
-            <ul style="list-style: none; padding: 0; margin: 0; line-height: 2;">
-              <li><a href="/nyetableringer" style="color: inherit; text-decoration: none;">Nye virksomheter</a></li>
-              <li><a href="/konkurser" style="color: inherit; text-decoration: none;">Siste konkurser</a></li>
-              <li><a href="/sammenlign" style="color: inherit; text-decoration: none;">Sammenlign virksomheter</a></li>
-            </ul>
-          </div>
-          <div>
-            <h3 style="color: #111827; font-weight: 600; margin-bottom: 1rem;">Bedriftsgrafen.no</h3>
-            <p style="line-height: 1.5;">Gratis innsikt i norsk næringsliv. Vi analyserer data fra Enhetsregisteret og SSB for å gi deg de beste verktøyene.</p>
-          </div>
-        </div>
-      </footer>
     </div>
   </div>
   <script type="module" src="/src/main.tsx"></script>
 
-  <!-- Google Analytics - deferred to not block rendering -->
+  <!-- Google Analytics - delayed so mobile LCP is driven by app content, not third-party JS -->
   <script>
-    window.addEventListener('load', function () {
+    (function () {
+      var analyticsLoaded = false;
+      var analyticsDelayMs = 5000;
+
+      function loadAnalytics() {
+        if (analyticsLoaded) return;
+        analyticsLoaded = true;
+
       var script = document.createElement('script');
       script.src = 'https://www.googletagmanager.com/gtag/js?id=G-8GYNJE4Z3Q';
       script.async = true;
@@ -150,7 +134,29 @@
           'debug_mode': false
         });
       };
-    });
+
+      }
+
+      function scheduleAnalytics() {
+        window.setTimeout(function () {
+          if ('requestIdleCallback' in window) {
+            window.requestIdleCallback(loadAnalytics, { timeout: 2000 });
+            return;
+          }
+
+          loadAnalytics();
+        }, analyticsDelayMs);
+      }
+
+      if (document.readyState === 'complete') {
+        scheduleAnalytics();
+      } else {
+        window.addEventListener('load', scheduleAnalytics, { once: true });
+      }
+
+      window.addEventListener('pointerdown', loadAnalytics, { once: true, passive: true });
+      window.addEventListener('keydown', loadAnalytics, { once: true });
+    }());
   </script>
 </body>
 

@@ -1,5 +1,9 @@
-import { useState, type MouseEvent, type ReactNode } from 'react'
-import { BedriftsgrafenContactModal, type BedriftsgrafenContactContext, type BedriftsgrafenContactIntent } from './BedriftsgrafenContactModal'
+import { lazy, Suspense, useState, type MouseEvent, type ReactNode } from 'react'
+import type { BedriftsgrafenContactContext, BedriftsgrafenContactIntent } from './BedriftsgrafenContactModal'
+
+const BedriftsgrafenContactModal = lazy(() =>
+    import('./BedriftsgrafenContactModal').then((mod) => ({ default: mod.BedriftsgrafenContactModal })),
+)
 
 interface BedriftsgrafenContactLinkProps {
     children: ReactNode
@@ -44,13 +48,15 @@ export function BedriftsgrafenContactLink({
                 {children}
             </button>
             {isOpen && (
-                <BedriftsgrafenContactModal
-                    isOpen
-                    onClose={() => setIsOpen(false)}
-                    intent={intent}
-                    context={contactContext}
-                    requiresConfirmation={shouldRequireConfirmation}
-                />
+                <Suspense fallback={null}>
+                    <BedriftsgrafenContactModal
+                        isOpen
+                        onClose={() => setIsOpen(false)}
+                        intent={intent}
+                        context={contactContext}
+                        requiresConfirmation={shouldRequireConfirmation}
+                    />
+                </Suspense>
             )}
         </>
     )

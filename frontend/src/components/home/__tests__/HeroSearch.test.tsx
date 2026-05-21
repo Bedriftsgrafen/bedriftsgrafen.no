@@ -57,6 +57,11 @@ vi.mock('../../../store/uiStore', () => ({
     useUiStore: vi.fn(),
 }))
 
+async function revealSearchPanel() {
+    fireEvent.pointerDown(window)
+    return screen.findByRole('combobox', { name: 'Søk etter virksomhet eller person' })
+}
+
 describe('HeroSearch', () => {
     beforeEach(() => {
         vi.clearAllMocks()
@@ -79,7 +84,7 @@ describe('HeroSearch', () => {
 
         render(<HeroSearch />)
 
-        fireEvent.change(screen.getByRole('combobox', { name: 'Søk etter virksomhet eller person' }), {
+        fireEvent.change(await revealSearchPanel(), {
             target: { value: 'equinor' },
         })
 
@@ -89,10 +94,10 @@ describe('HeroSearch', () => {
         )
     })
 
-    it('blocks broad two-character company searches before navigation', () => {
+    it('blocks broad two-character company searches before navigation', async () => {
         render(<HeroSearch />)
 
-        fireEvent.change(screen.getByRole('combobox', { name: 'Søk etter virksomhet eller person' }), {
+        fireEvent.change(await revealSearchPanel(), {
             target: { value: 'as' },
         })
 

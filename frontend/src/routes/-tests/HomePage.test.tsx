@@ -57,6 +57,15 @@ const statsResponse = {
     avg_board_age: 0,
 }
 
+async function revealSearchPanel() {
+    fireEvent.pointerDown(window)
+    return screen.findByRole('combobox', { name: /Søk etter virksomhet eller person/i })
+}
+
+async function waitForDeferredHomeSections() {
+    return screen.findByRole('heading', { name: /Utforsk næringslivet fra flere vinkler/i }, { timeout: 5000 })
+}
+
 describe('HomePage', () => {
     const mockAddRecentSearch = vi.fn()
     const mockClearFilters = vi.fn()
@@ -90,25 +99,26 @@ describe('HomePage', () => {
         vi.mocked(usePersonSearchQuery).mockReturnValue({ data: [], isFetching: false } as any)
     })
 
-    it('renders the redesigned landing sections', () => {
+    it('renders the redesigned landing sections', async () => {
         render(<HomePage />)
 
         expect(screen.getByTestId('seo-head')).toBeInTheDocument()
         expect(screen.getByRole('heading', { name: /Finn og sammenlign norske virksomheter/i })).toBeInTheDocument()
+        await revealSearchPanel()
         expect(screen.getByRole('search')).toBeInTheDocument()
         expect(screen.getByRole('combobox', { name: /Søk etter virksomhet eller person/i })).toBeInTheDocument()
+        await waitForDeferredHomeSections()
         expect(screen.getByText(/Roller og personer/i)).toBeInTheDocument()
-        expect(screen.getByRole('heading', { name: /Utforsk næringslivet fra flere vinkler/i })).toBeInTheDocument()
         expect(screen.getByRole('link', { name: /Personer/i })).toBeInTheDocument()
         expect(screen.getByRole('link', { name: /Bransjer/i })).toBeInTheDocument()
         expect(screen.getByRole('link', { name: /Kart/i })).toBeInTheDocument()
         expect(screen.getByRole('link', { name: /Regioner/i })).toBeInTheDocument()
     })
 
-    it('handles company search and navigation', () => {
+    it('handles company search and navigation', async () => {
         render(<HomePage />)
 
-        const input = screen.getByRole('combobox', { name: /Søk etter virksomhet eller person/i })
+        const input = await revealSearchPanel()
         const searchButton = screen.getByRole('button', { name: /Søk etter virksomhet/i })
 
         fireEvent.change(input, { target: { value: 'Test Company' } })
@@ -122,10 +132,10 @@ describe('HomePage', () => {
         })
     })
 
-    it('navigates directly to orgnr when 9-digit number is entered', () => {
+    it('navigates directly to orgnr when 9-digit number is entered', async () => {
         render(<HomePage />)
 
-        const input = screen.getByRole('combobox', { name: /Søk etter virksomhet eller person/i })
+        const input = await revealSearchPanel()
         const searchButton = screen.getByRole('button', { name: /Søk etter virksomhet/i })
 
         fireEvent.change(input, { target: { value: '993144169' } })
@@ -137,9 +147,10 @@ describe('HomePage', () => {
         })
     })
 
-    it('handles person search mode navigation', () => {
+    it('handles person search mode navigation', async () => {
         render(<HomePage />)
 
+        await revealSearchPanel()
         fireEvent.click(screen.getByRole('button', { name: /Personer/i }))
 
         const input = screen.getByRole('combobox', { name: /Søk etter virksomhet eller person/i })
@@ -154,7 +165,7 @@ describe('HomePage', () => {
         })
     })
 
-    it('falls back to searchable coverage when accounting metrics are missing', () => {
+    it('falls back to searchable coverage when accounting metrics are missing', async () => {
         vi.mocked(useStatsQuery).mockReturnValue({
             data: {
                 ...statsResponse,
@@ -166,14 +177,15 @@ describe('HomePage', () => {
 
         render(<HomePage />)
 
-        expect(screen.getByText(/Søkbar datadekning/i)).toBeInTheDocument()
+        expect(await screen.findByText(/Søkbar datadekning/i, {}, { timeout: 5000 })).toBeInTheDocument()
         expect(screen.getByText(/Antall virksomheter som inngår i søk, sammenligning og analyse/i)).toBeInTheDocument()
         expect(screen.queryByText(/^Regnskapsrapporter$/i)).not.toBeInTheDocument()
     })
 
-    it('hides personal sections when favorites and recent companies are empty', () => {
+    it('hides personal sections when favorites and recent companies are empty', async () => {
         render(<HomePage />)
 
+        await waitForDeferredHomeSections()
         expect(screen.queryByRole('heading', { name: /Fortsett der du slapp/i })).not.toBeInTheDocument()
         expect(screen.queryByRole('heading', { name: /Dine favoritter/i })).not.toBeInTheDocument()
         expect(screen.queryByRole('heading', { name: /Nylig besøkte virksomheter/i })).not.toBeInTheDocument()

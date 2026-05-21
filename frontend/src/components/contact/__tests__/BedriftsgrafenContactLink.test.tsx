@@ -8,12 +8,12 @@ describe('BedriftsgrafenContactLink', () => {
         window.history.pushState({}, '', '/')
     })
 
-    it('opens a confirmation modal before exposing the email link', () => {
+    it('opens a confirmation modal before exposing the email link', async () => {
         render(<BedriftsgrafenContactLink>Kontakt</BedriftsgrafenContactLink>)
 
         fireEvent.click(screen.getByRole('button', { name: 'Kontakt' }))
 
-        const dialog = screen.getByRole('dialog', { name: 'Kontakt Bedriftsgrafen.no' })
+        const dialog = await screen.findByRole('dialog', { name: 'Kontakt Bedriftsgrafen.no' })
 
         expect(dialog).toHaveAttribute('aria-describedby')
         expect(screen.getByRole('heading', { name: 'Kontakt Bedriftsgrafen.no' })).toBeInTheDocument()
@@ -30,7 +30,7 @@ describe('BedriftsgrafenContactLink', () => {
         const trigger = screen.getByRole('button', { name: 'Kontakt' })
         fireEvent.click(trigger)
 
-        expect(screen.getByRole('dialog', { name: 'Kontakt Bedriftsgrafen.no' })).toBeInTheDocument()
+        expect(await screen.findByRole('dialog', { name: 'Kontakt Bedriftsgrafen.no' })).toBeInTheDocument()
 
         fireEvent.keyDown(document, { key: 'Escape' })
 
@@ -41,13 +41,13 @@ describe('BedriftsgrafenContactLink', () => {
         expect(trigger).toHaveFocus()
     })
 
-    it('requires explicit confirmation on company profile pages', () => {
+    it('requires explicit confirmation on company profile pages', async () => {
         window.history.pushState({}, '', '/virksomhet/123456789')
         render(<BedriftsgrafenContactLink>Kontakt</BedriftsgrafenContactLink>)
 
         fireEvent.click(screen.getByRole('button', { name: 'Kontakt' }))
 
-        const emailLink = screen.getByRole('link', { name: `Åpne e-post til ${CONTACT_EMAIL}` })
+        const emailLink = await screen.findByRole('link', { name: `Åpne e-post til ${CONTACT_EMAIL}` })
         expect(emailLink).toHaveAttribute('aria-disabled', 'true')
 
         fireEvent.click(screen.getByRole('checkbox', { name: /jeg forstår/i }))
@@ -55,35 +55,35 @@ describe('BedriftsgrafenContactLink', () => {
         expect(emailLink).toHaveAttribute('aria-disabled', 'false')
     })
 
-    it('infers the current route when the user clicks', () => {
+    it('infers the current route when the user clicks', async () => {
         render(<BedriftsgrafenContactLink>Kontakt</BedriftsgrafenContactLink>)
 
         window.history.pushState({}, '', '/virksomhet/123456789')
         fireEvent.click(screen.getByRole('button', { name: 'Kontakt' }))
 
-        expect(screen.getByText('Du kontakter Bedriftsgrafen.no, ikke virksomheten på siden.')).toBeInTheDocument()
+        expect(await screen.findByText('Du kontakter Bedriftsgrafen.no, ikke virksomheten på siden.')).toBeInTheDocument()
         expect(screen.getByRole('checkbox', { name: /ikke virksomheten jeg nettopp så på/i })).toBeInTheDocument()
     })
 
-    it('uses person-specific confirmation on person profile pages', () => {
+    it('uses person-specific confirmation on person profile pages', async () => {
         window.history.pushState({}, '', '/person/Ola%20Nordmann/1980')
         render(<BedriftsgrafenContactLink>Kontakt</BedriftsgrafenContactLink>)
 
         fireEvent.click(screen.getByRole('button', { name: 'Kontakt' }))
 
-        expect(screen.getByText('Du kontakter Bedriftsgrafen.no, ikke personen på siden.')).toBeInTheDocument()
+        expect(await screen.findByText('Du kontakter Bedriftsgrafen.no, ikke personen på siden.')).toBeInTheDocument()
         expect(screen.getByRole('checkbox', { name: /ikke personen jeg nettopp så på/i })).toBeInTheDocument()
 
         const emailLink = screen.getByRole('link', { name: `Åpne e-post til ${CONTACT_EMAIL}` })
         expect(emailLink).toHaveAttribute('aria-disabled', 'true')
     })
 
-    it('uses the Gmail compose action for the email button', () => {
+    it('uses the Gmail compose action for the email button', async () => {
         render(<BedriftsgrafenContactLink>Kontakt</BedriftsgrafenContactLink>)
 
         fireEvent.click(screen.getByRole('button', { name: 'Kontakt' }))
 
-        const emailLink = screen.getByRole('link', { name: `Åpne e-post til ${CONTACT_EMAIL}` })
+        const emailLink = await screen.findByRole('link', { name: `Åpne e-post til ${CONTACT_EMAIL}` })
         expect(emailLink).toHaveAttribute('href', getContactGmailComposeHref())
         expect(emailLink).toHaveAttribute('target', '_blank')
     })

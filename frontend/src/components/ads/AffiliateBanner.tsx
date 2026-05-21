@@ -24,6 +24,8 @@ interface AffiliateBannerProps {
     link: string
     icon?: LucideIcon
     logo?: string
+    logoWidth?: number
+    logoHeight?: number
     variant: BannerVariant
     legalText?: string
     legalTextMode?: 'none' | 'inline'
@@ -81,6 +83,8 @@ export const AffiliateBanner = memo(function AffiliateBanner({
     link,
     icon: Icon = Lightbulb,
     logo,
+    logoWidth,
+    logoHeight,
     variant,
     legalText,
     legalTextMode = 'none',
@@ -129,6 +133,10 @@ export const AffiliateBanner = memo(function AffiliateBanner({
                             <img
                                 src={logo}
                                 alt=""
+                                width={logoWidth}
+                                height={logoHeight}
+                                loading="lazy"
+                                decoding="async"
                                 className="w-full h-full object-contain"
                             />
                         ) : (

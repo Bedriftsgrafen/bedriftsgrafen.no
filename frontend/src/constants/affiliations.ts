@@ -1,6 +1,6 @@
 import { Calculator, CreditCard, Landmark, type LucideIcon } from 'lucide-react'
-import klikklaanLogo from '../assets/affiliates/klikklaan.png'
-import tjenestetorgetLogo from '../assets/affiliates/tjenestetorget.png'
+import klikklaanLogo from '../assets/affiliates/klikklaan-135x40.png'
+import tjenestetorgetLogo from '../assets/affiliates/tjenestetorget-120x40.png'
 import zensumLogo from '../assets/affiliates/zensum.svg'
 
 export interface Affiliation {
@@ -12,6 +12,8 @@ export interface Affiliation {
     link: string
     icon: LucideIcon
     logo?: string
+    logoWidth?: number
+    logoHeight?: number
     variant: 'accounting' | 'banking' | 'general'
     legalText?: string
     isPlaceholder?: boolean
@@ -39,6 +41,8 @@ export const AFFILIATIONS = {
         link: AFFILIATE_LINKS.tjenestetorget,
         icon: Calculator,
         logo: tjenestetorgetLogo,
+        logoWidth: 120,
+        logoHeight: 40,
         variant: 'accounting',
     } as Affiliation,
     KLIKKLAAN_LOAN: {
@@ -50,6 +54,8 @@ export const AFFILIATIONS = {
         link: AFFILIATE_LINKS.klikklaan,
         icon: CreditCard,
         logo: klikklaanLogo,
+        logoWidth: 135,
+        logoHeight: 40,
         variant: 'general',
         legalText: 'Nominell rente fra 12,0 % til 26,40 %, basert på individuell kredittvurdering. Eksempel: nominell rente 20,40 % med avtalegiro, effektiv rente 28,68 %, kostnad 11 005 kr, totalt 36 005 kr. For å søke må du være over 21 år, ha bodd i Norge i 2 år og ikke ha betalingsanmerkninger.',
     } as Affiliation,

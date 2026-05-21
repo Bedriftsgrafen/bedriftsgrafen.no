@@ -39,6 +39,19 @@ describe('AffiliateBanner', () => {
         expect(screen.getByText('Annonse')).toBeInTheDocument()
     })
 
+    it('renders compact logos with explicit dimensions and lazy decoding', () => {
+        const { container } = render(
+            <AffiliateBanner {...defaultProps} logo="/logo.png" logoWidth={120} logoHeight={40} />
+        )
+
+        const logo = container.querySelector('img')
+        expect(logo).toHaveAttribute('src', '/logo.png')
+        expect(logo).toHaveAttribute('width', '120')
+        expect(logo).toHaveAttribute('height', '40')
+        expect(logo).toHaveAttribute('loading', 'lazy')
+        expect(logo).toHaveAttribute('decoding', 'async')
+    })
+
     it('only shows legal text when inline terms are enabled', () => {
         const legalText = 'Eksempel lån uten sikkerhet: effektiv rente 19,92 %, 65 000 kr o/5 år.'
 
@@ -81,7 +94,7 @@ describe('AffiliateBanner', () => {
         expect(trackAffiliateClick).not.toHaveBeenCalled()
     })
 
-    it('opens confirmation modal for Bedriftsgrafen contact links', () => {
+    it('opens confirmation modal for Bedriftsgrafen contact links', async () => {
         render(<AffiliateBanner {...defaultProps} link={`mailto:${CONTACT_EMAIL}`} buttonText="Kontakt Bedriftsgrafen" />)
 
         const button = screen.getByRole('button', { name: 'Kontakt Bedriftsgrafen' })
@@ -92,25 +105,25 @@ describe('AffiliateBanner', () => {
             'accounting',
             'test_placement'
         )
-        expect(screen.getByRole('heading', { name: 'Partnerskap med Bedriftsgrafen.no' })).toBeInTheDocument()
+        expect(await screen.findByRole('heading', { name: 'Partnerskap med Bedriftsgrafen.no' })).toBeInTheDocument()
         expect(screen.getByText('Du kontakter Bedriftsgrafen.no, ikke en virksomhet eller person omtalt på siden.')).toBeInTheDocument()
     })
 
-    it('recognizes Bedriftsgrafen contact links with subjects', () => {
+    it('recognizes Bedriftsgrafen contact links with subjects', async () => {
         render(<AffiliateBanner {...defaultProps} link={`mailto:${CONTACT_EMAIL}?subject=Partnerskap`} buttonText="Kontakt Bedriftsgrafen" />)
 
         fireEvent.click(screen.getByRole('button', { name: 'Kontakt Bedriftsgrafen' }))
 
-        expect(screen.getByRole('heading', { name: 'Partnerskap med Bedriftsgrafen.no' })).toBeInTheDocument()
+        expect(await screen.findByRole('heading', { name: 'Partnerskap med Bedriftsgrafen.no' })).toBeInTheDocument()
     })
 
-    it('inherits company-page confirmation for Bedriftsgrafen contact links', () => {
+    it('inherits company-page confirmation for Bedriftsgrafen contact links', async () => {
         window.history.pushState({}, '', '/virksomhet/123456789')
         render(<AffiliateBanner {...defaultProps} link={`mailto:${CONTACT_EMAIL}`} buttonText="Kontakt Bedriftsgrafen" />)
 
         fireEvent.click(screen.getByRole('button', { name: 'Kontakt Bedriftsgrafen' }))
 
-        expect(screen.getByText('Du kontakter Bedriftsgrafen.no, ikke virksomheten på siden.')).toBeInTheDocument()
+        expect(await screen.findByText('Du kontakter Bedriftsgrafen.no, ikke virksomheten på siden.')).toBeInTheDocument()
 
         const emailLink = screen.getByRole('link', { name: `Åpne e-post til ${CONTACT_EMAIL}` })
         expect(emailLink).toHaveAttribute('aria-disabled', 'true')

@@ -1,11 +1,8 @@
 /* eslint-disable react-refresh/only-export-components */
 import { createRootRoute, Outlet } from '@tanstack/react-router'
-import { lazy, Suspense } from 'react'
+import { lazy, Suspense, useEffect, useState } from 'react'
 import { Header } from '../components/layout'
-import { Footer } from '../components/Footer'
 import { NotFoundComponent } from '../components/NotFoundComponent'
-import { ComparisonBar } from '../components/comparison'
-import { GlobalAffiliateStrip } from '../components/ads/GlobalAffiliateStrip'
 import { GlobalErrorComponent } from '../components/GlobalErrorComponent'
 import { useOnlineStatus } from '../hooks/useOnlineStatus'
 
@@ -17,6 +14,23 @@ const TanStackRouterDevtools = import.meta.env.PROD
         default: mod.TanStackRouterDevtools,
       })),
     )
+
+const Footer = lazy(() =>
+  import('../components/Footer').then((mod) => ({ default: mod.Footer })),
+)
+
+const GlobalAffiliateStrip = lazy(() =>
+  import('../components/ads/GlobalAffiliateStrip').then((mod) => ({ default: mod.GlobalAffiliateStrip })),
+)
+
+const ComparisonBar = lazy(() =>
+  import('../components/comparison/ComparisonBar').then((mod) => ({ default: mod.ComparisonBar })),
+)
+
+type IdleSchedulerWindow = Window & {
+  requestIdleCallback?: (callback: () => void, options?: { timeout: number }) => number
+  cancelIdleCallback?: (handle: number) => void
+}
 
 export const Route = createRootRoute({
   component: RootComponent,
@@ -44,11 +58,7 @@ function RootComponent() {
         <Outlet /> {/* Child routes render here */}
       </main>
 
-      <GlobalAffiliateStrip />
-      <Footer />
-
-      {/* Comparison floating bar - visible on all pages */}
-      <ComparisonBar />
+      <DeferredRootExtras />
 
       {/* DevTools only in development */}
       {!import.meta.env.PROD && (
@@ -57,5 +67,39 @@ function RootComponent() {
         </Suspense>
       )}
     </div>
+  )
+}
+
+function DeferredRootExtras() {
+  const [shouldRender, setShouldRender] = useState(false)
+
+  useEffect(() => {
+    const idleWindow = window as IdleSchedulerWindow
+    let idleHandle: number | undefined
+    const timeoutHandle = window.setTimeout(() => {
+      if (idleWindow.requestIdleCallback) {
+        idleHandle = idleWindow.requestIdleCallback(() => setShouldRender(true), { timeout: 2200 })
+        return
+      }
+
+      setShouldRender(true)
+    }, 3200)
+
+    return () => {
+      window.clearTimeout(timeoutHandle)
+      if (idleHandle !== undefined) {
+        idleWindow.cancelIdleCallback?.(idleHandle)
+      }
+    }
+  }, [])
+
+  if (!shouldRender) return null
+
+  return (
+    <Suspense fallback={null}>
+      <GlobalAffiliateStrip />
+      <Footer />
+      <ComparisonBar />
+    </Suspense>
   )
 }
