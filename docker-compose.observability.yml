@@ -230,6 +230,47 @@ services:
         reservations:
           memory: 32M
 
+  postgres-exporter:
+    image: quay.io/prometheuscommunity/postgres-exporter:v0.19.1
+    container_name: monitoring-postgres-exporter
+    restart: unless-stopped
+    init: true
+    command:
+      - "--web.listen-address=:9187"
+      - "--config.file=/etc/postgres_exporter/postgres_exporter.yml"
+      - "--collector.database_wraparound"
+      - "--collector.long_running_transactions"
+      - "--collector.stat_activity_autovacuum"
+      - "--collector.stat_checkpointer"
+      - "--no-collector.stat_statements"
+      - "--log.level=warn"
+    environment:
+      DATA_SOURCE_URI: bedriftsgrafen-db:5432/bedriftsgrafen?sslmode=disable
+      DATA_SOURCE_USER: postgres_exporter
+      DATA_SOURCE_PASS_FILE: /run/secrets/postgres_exporter_password
+      PG_EXPORTER_COLLECTION_TIMEOUT: 5s
+    volumes:
+      - ./observability/postgres-exporter/postgres_exporter.yml:/etc/postgres_exporter/postgres_exporter.yml:ro
+    secrets:
+      - postgres_exporter_password
+    networks:
+      - observability-net
+      - bedriftsgrafen-internal
+    logging: *observability-logging
+    deploy:
+      resources:
+        limits:
+          cpus: '0.10'
+          memory: 128M
+        reservations:
+          memory: 32M
+    healthcheck:
+      test: [ "CMD-SHELL", "wget -q --spider http://localhost:9187/metrics || exit 1" ]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 20s
+
 networks:
   observability-net:
     driver: bridge
@@ -254,3 +295,5 @@ secrets:
     file: ./observability/secrets/prometheus_metrics_token
   discord_webhook_url:
     file: ./observability/secrets/discord_webhook_url
+  postgres_exporter_password:
+    file: ./observability/secrets/postgres_exporter_password

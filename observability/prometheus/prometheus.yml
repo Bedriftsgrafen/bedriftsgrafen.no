@@ -59,3 +59,13 @@ scrape_configs:
       - targets: ["monitoring-node-exporter:9100"]
         labels:
           service: node-exporter
+
+  - job_name: postgres
+    metrics_path: /metrics
+    scrape_interval: 60s
+    scrape_timeout: 10s
+    static_configs:
+      - targets: ["monitoring-postgres-exporter:9187"]
+        labels:
+          service: postgres
+          environment: production

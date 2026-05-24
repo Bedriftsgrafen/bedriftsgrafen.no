@@ -95,6 +95,7 @@ Bedriftsgrafen uses a lightweight Grafana stack for production signals:
 - **Loki + Alloy**: searchable Docker logs
 - **cAdvisor**: container CPU/memory metrics
 - **node-exporter**: host CPU/RAM/disk metrics
+- **postgres_exporter**: PostgreSQL health, locks, connections, vacuum, temp files, and WAL signals
 - **Docker socket proxy**: read-limited Docker API access for Alloy log discovery
 
 The observability stack is separate from the production app stack:
@@ -103,6 +104,7 @@ The observability stack is separate from the production app stack:
 # One-time secret setup
 mkdir -p observability/secrets
 [[ -f observability/secrets/grafana_admin_password ]] || openssl rand -base64 36 > observability/secrets/grafana_admin_password
+[[ -f observability/secrets/postgres_exporter_password ]] || openssl rand -base64 36 > observability/secrets/postgres_exporter_password
 if grep -q '^METRICS_TOKEN=' .env; then
   METRICS_TOKEN=$(grep '^METRICS_TOKEN=' .env | tail -1 | cut -d= -f2-)
 else
@@ -117,7 +119,14 @@ touch observability/secrets/discord_webhook_url
 chmod 0444 \
   observability/secrets/grafana_admin_password \
   observability/secrets/prometheus_metrics_token \
-  observability/secrets/discord_webhook_url
+  observability/secrets/discord_webhook_url \
+  observability/secrets/postgres_exporter_password
+```
+
+Create or update the least-privileged PostgreSQL monitoring role after the password file exists:
+
+```bash
+scripts/setup_postgres_exporter_role.sh
 ```
 
 Grafana alerting is provisioned from `observability/grafana/provisioning/alerting/`:
@@ -140,9 +149,20 @@ docker compose -f docker-compose.observability.yml ps
 docker logs --tail 100 monitoring-prometheus
 docker logs --tail 100 monitoring-loki
 docker logs --tail 100 monitoring-alloy
+docker logs --tail 100 monitoring-postgres-exporter
 ```
 
 If aliases are loaded, use `observe-discord-test` to send a safe test message and `observe-target-summary` to list unhealthy Prometheus targets.
+
+PostgreSQL exporter validation:
+
+```bash
+docker exec monitoring-postgres-exporter wget -qO- http://localhost:9187/metrics | grep -E '^(pg_up|pg_stat_database_numbackends|pg_database_size_bytes)'
+docker exec monitoring-prometheus wget -qO- 'http://localhost:9090/api/v1/query?query=pg_up' | python3 -m json.tool
+docker exec monitoring-prometheus wget -qO- 'http://localhost:9090/api/v1/query?query=pg_stat_database_numbackends%7Bdatname%3D%22bedriftsgrafen%22%7D' | python3 -m json.tool
+```
+
+PostgreSQL alerts are intentionally limited to meaningful first-response signals: exporter down, database unreachable, high connection usage, deadlocks, long transactions, and temp-byte spikes. Query-level analysis with `pg_stat_statements` is a later phase because it requires PostgreSQL configuration changes and a planned restart.
 
 Nginx Proxy Manager should point `monitor.bedriftsgrafen.no` to:
 
