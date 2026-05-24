@@ -125,7 +125,7 @@ describe('AffiliateBanner', () => {
 
         expect(await screen.findByText('Du kontakter Bedriftsgrafen.no, ikke virksomheten på siden.')).toBeInTheDocument()
 
-        const emailLink = screen.getByRole('link', { name: `Åpne e-post til ${CONTACT_EMAIL}` })
+        const emailLink = screen.getByRole('link', { name: 'Åpne e-postutkast' })
         expect(emailLink).toHaveAttribute('aria-disabled', 'true')
     })
 })

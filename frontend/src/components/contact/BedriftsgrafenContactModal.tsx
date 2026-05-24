@@ -1,7 +1,7 @@
 import { useId, useState } from 'react'
 import { AlertTriangle, CheckCircle2, Mail } from 'lucide-react'
 import { Modal } from '../common'
-import { CONTACT_EMAIL, getContactGmailComposeHref } from '../../constants/contact'
+import { getContactGmailComposeHref } from '../../constants/contact'
 
 export type BedriftsgrafenContactIntent = 'general' | 'advertising' | 'partnership'
 export type BedriftsgrafenContactContext = 'general' | 'company' | 'person'
@@ -183,7 +183,7 @@ export function BedriftsgrafenContactModal({
                         tabIndex={canOpenEmail ? undefined : -1}
                         className={`inline-flex items-center justify-center rounded-xl px-5 py-2.5 text-sm font-semibold shadow-[0_16px_32px_-20px_rgba(30,58,138,0.8)] transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-200 focus-visible:ring-offset-2 dark:focus-visible:ring-blue-300 dark:focus-visible:ring-offset-slate-900 ${canOpenEmail ? 'bg-blue-900 text-white hover:bg-blue-800 dark:bg-blue-600 dark:hover:bg-blue-500' : 'cursor-not-allowed bg-slate-400 text-white shadow-none dark:bg-slate-700 dark:text-slate-300'}`}
                     >
-                        Åpne e-post til {CONTACT_EMAIL}
+                        Åpne e-postutkast
                     </a>
                 </div>
             </div>

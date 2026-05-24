@@ -1,6 +1,5 @@
 /* eslint-disable react-refresh/only-export-components */
 import { createLazyFileRoute } from '@tanstack/react-router'
-import { CONTACT_EMAIL } from '../constants/contact'
 import { Database, TrendingUp, Shield, Heart, Layout, Server, Cloud } from 'lucide-react'
 import { SEOHead } from '../components/layout'
 import { BedriftsgrafenContactLink } from '../components/contact'
@@ -184,11 +183,12 @@ function AboutPage() {
                         </div>
 
                         <div className="border-t border-gray-200 pt-6 dark:border-slate-800">
-                            <p className="text-sm text-gray-700 dark:text-slate-300">
-                                Har du spørsmål eller tilbakemeldinger? Send en e-post til{' '}
-                                <BedriftsgrafenContactLink className="inline font-medium text-blue-600 hover:underline dark:text-blue-300">
-                                    {CONTACT_EMAIL}
+                            <p className="text-sm leading-6 text-gray-700 dark:text-slate-300">
+                                Har du spørsmål eller tilbakemeldinger om Bedriftsgrafen.no?{' '}
+                                <BedriftsgrafenContactLink className="font-medium text-blue-600 hover:underline dark:text-blue-300">
+                                    Send e-post om nettsiden
                                 </BedriftsgrafenContactLink>
+                                . Ikke bruk dette for å kontakte virksomheter eller personer omtalt på siden.
                             </p>
                         </div>
                     </div>

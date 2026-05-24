@@ -1,5 +1,4 @@
 import { ArrowUpRight, Database, Mail } from 'lucide-react'
-import { CONTACT_EMAIL } from '../constants/contact'
 import { BedriftsgrafenContactLink } from './contact'
 
 const CURRENT_YEAR = new Date().getFullYear()
@@ -90,14 +89,14 @@ export function Footer() {
 
           <section className="rounded-2xl border border-white/10 bg-white/5 p-5">
             <h2 className="text-base font-semibold text-white">Kontakt Bedriftsgrafen.no</h2>
-            <p className="mt-3 text-sm leading-6 text-slate-300">Kun spørsmål om nettsiden, data eller feil i tjenesten.</p>
+            <p className="mt-3 text-sm leading-6 text-slate-300">Kun spørsmål om nettsiden, data eller feil i tjenesten. Ikke henvendelser til virksomheter eller personer omtalt på siden.</p>
             <div className="mt-4 space-y-3">
               <BedriftsgrafenContactLink
                 className="inline-flex w-full items-center justify-between gap-3 rounded-xl border border-white/10 bg-white/5 px-4 py-3 text-left text-sm font-medium text-slate-200 transition-colors hover:border-white/20 hover:bg-white/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-200 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-950"
               >
                 <span className="inline-flex items-center gap-2">
                   <Mail className="h-4 w-4 text-blue-300" aria-hidden="true" />
-                  {CONTACT_EMAIL}
+                  Send e-post om nettsiden
                 </span>
                 <ArrowUpRight aria-hidden="true" className="h-4 w-4 text-slate-500" />
               </BedriftsgrafenContactLink>
