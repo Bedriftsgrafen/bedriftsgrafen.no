@@ -600,7 +600,7 @@
             "uid": "loki"
           },
           "editorMode": "code",
-          "expr": "{container=~\"bedriftsgrafen-backend|bedriftsgrafen-worker|bedriftsgrafen-frontend|bedriftsgrafen-db|bedriftsgrafen-redis\"} |~ \"(?i)(error|exception|timeout|failed|critical)\"",
+          "expr": "{container=~\"bedriftsgrafen-backend|bedriftsgrafen-worker|bedriftsgrafen-frontend|bedriftsgrafen-db|bedriftsgrafen-redis\"} |~ \"(?i)(error|exception|traceback|critical|fatal|failed|timeout)\" !~ \"(?i)(mv_refresh_done|timeout_ms|failed=0|failed: 0)\"",
           "queryType": "range",
           "refId": "A"
         }
