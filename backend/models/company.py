@@ -99,6 +99,11 @@ class Company(Base):
         Index(
             "idx_bedrifter_needs_financial_polling", "orgnr", postgresql_where=sa_text("last_polled_regnskap IS NULL")
         ),
+        Index(
+            "idx_bedrifter_slettedato_orgnr",
+            "orgnr",
+            postgresql_where=sa_text("((data ->> 'slettedato') IS NOT NULL)"),
+        ),
         # --- RESTORED INDEXES to match Database definition ---
         Index(
             "idx_bedrifter_active_orgform",

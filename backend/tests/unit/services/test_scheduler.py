@@ -387,7 +387,10 @@ async def test_purge_deleted_companies_does_not_count_first(mock_session_local):
 
     execute_sql = [str(call.args[0]) for call in mock_db.execute.await_args_list]
     assert not any("COUNT(*)" in sql for sql in execute_sql)
-    assert any("SELECT orgnr FROM bedrifter" in sql for sql in execute_sql)
+    purge_selects = [sql for sql in execute_sql if "SELECT orgnr" in sql and "FROM bedrifter" in sql]
+    assert len(purge_selects) == 1
+    assert "(data->>'slettedato') IS NOT NULL" in purge_selects[0]
+    assert "ORDER BY orgnr" in purge_selects[0]
     mock_db.commit.assert_not_called()
 
 

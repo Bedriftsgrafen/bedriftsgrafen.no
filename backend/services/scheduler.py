@@ -1031,7 +1031,15 @@ class SchedulerService:
 
                 while True:
                     batch_result = await db.execute(
-                        text("SELECT orgnr FROM bedrifter WHERE (data->>'slettedato') IS NOT NULL LIMIT :limit"),
+                        text(
+                            """
+                            SELECT orgnr
+                            FROM bedrifter
+                            WHERE (data->>'slettedato') IS NOT NULL
+                            ORDER BY orgnr
+                            LIMIT :limit
+                            """
+                        ),
                         {"limit": BATCH_SIZE},
                     )
                     batch_orgnrs = [row[0] for row in batch_result.fetchall()]
