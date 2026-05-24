@@ -1,0 +1,13 @@
+[Unit]
+Description=Hourly Bedriftsgrafen Adtraction Discord Notifier
+Requires=bedriftsgrafen-adtraction-notifier.service
+
+[Timer]
+OnBootSec=10min
+OnUnitActiveSec=1h
+RandomizedDelaySec=10min
+AccuracySec=1min
+Persistent=true
+
+[Install]
+WantedBy=timers.target

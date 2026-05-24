@@ -1,0 +1,256 @@
+name: monitoring
+
+x-observability-logging: &observability-logging
+  driver: json-file
+  options:
+    max-size: "10m"
+    max-file: "3"
+
+services:
+  grafana:
+    image: grafana/grafana:12.4.3-security-02
+    container_name: monitoring-grafana
+    restart: unless-stopped
+    init: true
+    environment:
+      GF_SERVER_ROOT_URL: https://monitor.bedriftsgrafen.no/
+      GF_USERS_ALLOW_SIGN_UP: "false"
+      GF_AUTH_ANONYMOUS_ENABLED: "false"
+      GF_ANALYTICS_REPORTING_ENABLED: "false"
+      GF_ANALYTICS_CHECK_FOR_UPDATES: "false"
+      GF_METRICS_ENABLED: "true"
+      GF_LOG_LEVEL: warn
+      GF_SECURITY_COOKIE_SECURE: "true"
+      GF_SECURITY_COOKIE_SAMESITE: strict
+      GF_SECURITY_DISABLE_GRAVATAR: "true"
+      GF_SNAPSHOTS_EXTERNAL_ENABLED: "false"
+      GF_SECURITY_ADMIN_USER: ${GRAFANA_ADMIN_USER:-admin}
+      GF_SECURITY_ADMIN_PASSWORD__FILE: /run/secrets/grafana_admin_password
+    entrypoint:
+      - /bin/sh
+      - -c
+    command:
+      - export DISCORD_WEBHOOK_URL="$$(cat /run/secrets/discord_webhook_url)" && exec /run.sh
+    volumes:
+      - grafana_data:/var/lib/grafana
+      - ./observability/grafana/provisioning:/etc/grafana/provisioning:ro
+      - ./observability/grafana/dashboards:/var/lib/grafana/dashboards:ro
+    secrets:
+      - grafana_admin_password
+      - discord_webhook_url
+    networks:
+      - observability-net
+      - web-proxy
+    depends_on:
+      prometheus:
+        condition: service_healthy
+      loki:
+        condition: service_healthy
+    logging: *observability-logging
+    deploy:
+      resources:
+        limits:
+          cpus: '0.25'
+          memory: 384M
+        reservations:
+          memory: 128M
+    healthcheck:
+      test: [ "CMD-SHELL", "wget -q --spider http://localhost:3000/api/health || exit 1" ]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+
+  prometheus:
+    image: prom/prometheus:v3.11.3
+    container_name: monitoring-prometheus
+    restart: unless-stopped
+    init: true
+    command:
+      - "--config.file=/etc/prometheus/prometheus.yml"
+      - "--storage.tsdb.path=/prometheus"
+      - "--storage.tsdb.retention.time=7d"
+      - "--storage.tsdb.retention.size=1GB"
+    volumes:
+      - ./observability/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - prometheus_data:/prometheus
+    secrets:
+      - prometheus_metrics_token
+    networks:
+      - observability-net
+      - bedriftsgrafen-internal
+    logging: *observability-logging
+    deploy:
+      resources:
+        limits:
+          cpus: '0.25'
+          memory: 512M
+        reservations:
+          memory: 128M
+    healthcheck:
+      test: [ "CMD-SHELL", "wget -q --spider http://localhost:9090/-/healthy || exit 1" ]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+
+  loki:
+    image: grafana/loki:3.7.2
+    container_name: monitoring-loki
+    restart: unless-stopped
+    init: true
+    command: [ "-config.file=/etc/loki/loki-config.yml" ]
+    volumes:
+      - ./observability/loki/loki-config.yml:/etc/loki/loki-config.yml:ro
+      - loki_data:/loki
+    networks:
+      - observability-net
+    logging: *observability-logging
+    deploy:
+      resources:
+        limits:
+          cpus: '0.25'
+          memory: 512M
+        reservations:
+          memory: 128M
+    healthcheck:
+      test: [ "CMD", "/usr/bin/loki", "-config.file=/etc/loki/loki-config.yml", "-verify-config" ]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+
+  alloy:
+    image: grafana/alloy:v1.16.1
+    container_name: monitoring-alloy
+    restart: unless-stopped
+    init: true
+    command:
+      - run
+      - --server.http.listen-addr=0.0.0.0:12345
+      - /etc/alloy/config.alloy
+    volumes:
+      - ./observability/alloy/config.alloy:/etc/alloy/config.alloy:ro
+    networks:
+      - observability-net
+    depends_on:
+      docker-socket-proxy:
+        condition: service_started
+      loki:
+        condition: service_healthy
+    logging: *observability-logging
+    deploy:
+      resources:
+        limits:
+          cpus: '0.15'
+          memory: 256M
+        reservations:
+          memory: 64M
+
+  docker-socket-proxy:
+    image: tecnativa/docker-socket-proxy:v0.4.2
+    container_name: monitoring-docker-socket-proxy
+    restart: unless-stopped
+    init: true
+    environment:
+      LOG_LEVEL: warning
+      CONTAINERS: 1
+      EVENTS: 1
+      INFO: 1
+      NETWORKS: 1
+      PING: 1
+      VERSION: 1
+      POST: 0
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    networks:
+      - observability-net
+    logging: *observability-logging
+    deploy:
+      resources:
+        limits:
+          cpus: '0.10'
+          memory: 128M
+        reservations:
+          memory: 32M
+
+  cadvisor:
+    image: ghcr.io/google/cadvisor:v0.57.0
+    container_name: monitoring-cadvisor
+    restart: unless-stopped
+    init: true
+    privileged: true
+    command:
+      - "--housekeeping_interval=30s"
+      - "--docker_only=true"
+      - "--store_container_labels=false"
+    volumes:
+      - /:/rootfs:ro
+      - /var/run:/var/run:ro
+      - /sys:/sys:ro
+      - /var/lib/docker:/var/lib/docker:ro
+      - /dev/disk:/dev/disk:ro
+    devices:
+      - /dev/kmsg
+    networks:
+      - observability-net
+    logging: *observability-logging
+    deploy:
+      resources:
+        limits:
+          cpus: '0.20'
+          memory: 256M
+        reservations:
+          memory: 64M
+    healthcheck:
+      test: [ "CMD", "/usr/bin/healthcheck.sh" ]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 30s
+
+  node-exporter:
+    image: prom/node-exporter:v1.11.1
+    container_name: monitoring-node-exporter
+    restart: unless-stopped
+    init: true
+    command:
+      - "--path.rootfs=/host"
+      - "--collector.filesystem.mount-points-exclude=^/(dev|proc|sys|var/lib/docker/.+|var/lib/kubelet/.+)($$|/)"
+    volumes:
+      - /:/host:ro,rslave
+    networks:
+      - observability-net
+    logging: *observability-logging
+    deploy:
+      resources:
+        limits:
+          cpus: '0.10'
+          memory: 128M
+        reservations:
+          memory: 32M
+
+networks:
+  observability-net:
+    driver: bridge
+  web-proxy:
+    external: true
+  bedriftsgrafen-internal:
+    external: true
+    name: bedriftsgrafen_internal-net
+
+volumes:
+  grafana_data:
+    name: monitoring_grafana_data
+  prometheus_data:
+    name: monitoring_prometheus_data
+  loki_data:
+    name: monitoring_loki_data
+
+secrets:
+  grafana_admin_password:
+    file: ./observability/secrets/grafana_admin_password
+  prometheus_metrics_token:
+    file: ./observability/secrets/prometheus_metrics_token
+  discord_webhook_url:
+    file: ./observability/secrets/discord_webhook_url

@@ -1,0 +1,34 @@
+[Unit]
+Description=Bedriftsgrafen Adtraction Discord Notifier
+Documentation=https://github.com/Bedriftsgrafen/bedriftsgrafen.no
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+User=k1sso
+Group=k1sso
+WorkingDirectory=/home/k1sso/bedriftsgrafen.no
+Environment=ADTRACTION_NOTIFIER_ENABLED=false
+EnvironmentFile=-/home/k1sso/bedriftsgrafen.no/.env
+Environment=PYTHONUNBUFFERED=1
+
+# Keep the timer installed but inert until explicitly enabled in .env.
+ExecCondition=/usr/bin/test "${ADTRACTION_NOTIFIER_ENABLED}" = "true"
+ExecStart=/home/k1sso/bedriftsgrafen.no/backend/.venv/bin/python /home/k1sso/bedriftsgrafen.no/backend/scripts/adtraction_notifier.py --send-discord
+
+# Resource limits for the modest host; the script is short-lived and network-bound.
+MemoryMax=128M
+CPUQuota=10%
+Nice=10
+
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=bedriftsgrafen-adtraction-notifier
+
+TimeoutStartSec=90
+NoNewPrivileges=true
+ProtectSystem=strict
+ProtectHome=read-only
+ReadWritePaths=/home/k1sso/bedriftsgrafen.no/observability/state
+PrivateTmp=true

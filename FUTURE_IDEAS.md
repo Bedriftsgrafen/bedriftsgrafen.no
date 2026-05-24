@@ -40,6 +40,14 @@ This document consolidates feature ideas and strategic plans for the future deve
   - Quick filters: same industry, same size, fastest growth.
 - **Why**: Improves discovery and time-on-site with minimal UI changes.
 
+### Adtraction Revenue Notifications (Discord)
+- **Goal**: Send a Discord notification when Adtraction registers a commission-bearing event for Bedriftsgrafen, including CPL/lead commissions and generated payments, while keeping business notifications separate from Grafana operational alerts.
+- **API basis**: Use Adtraction API v2 with `X-Token` authentication against `https://api.adtraction.net/v2/`. Alert sources are `/partner/transactions` with `transactionStatus=3` (approved + pending) and `commission > 0`, plus `/partner/payments/{currency}/{paymentId}`. Do not call click/statistics endpoints for alerting.
+- **Secret hygiene**: Keep raw values only in `observability/secrets/ADTRACTION_API_KEY` and `observability/secrets/ADTRACTION_DISCORD_WEB_HOOK`; do not keep the Adtraction token or Discord webhook in `.env` or `.env.example`. The notifier should read file paths from config and pass the API key as an `X-Token` header, never as a query parameter.
+- **Current status**: CLI, dry-run, `--mark-seen`, Discord sends, masked summaries, local ignored state, per-run Discord message cap, and hourly systemd timer files are implemented in the repo.
+- **Runtime behavior**: Once the timer is installed and `.env` has `ADTRACTION_NOTIFIER_ENABLED=true`, it polls hourly and only sends previously unseen commission/payment events. The same event is not repeated after state is written.
+- **Remaining hardening**: Optional Prometheus metrics for last successful poll/new events/API failures, a dedicated manual `--test-discord` command, and redacted recorded fixtures if the API shape changes.
+
 ---
 
 ## Priority 2: Core Features (4-7 days each)
@@ -115,7 +123,7 @@ This document consolidates feature ideas and strategic plans for the future deve
 
 ### Role Network & Ownership Graph
 - **Goal**: Visualize connections between people and companies.
-- **Features**: 
+- **Features**:
   - "Hvem sitter i styret med hvem?"
   - Trace ownership chains to find the Ultimate Beneficial Owner (UBO).
 - **Tech**: Graph database (Neo4j) or recursive SQL queries + `react-force-graph`.

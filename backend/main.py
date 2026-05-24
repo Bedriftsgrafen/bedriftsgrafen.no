@@ -1,5 +1,6 @@
 import logging
 import os
+import secrets
 from contextlib import asynccontextmanager
 
 from fastapi import Depends, FastAPI, Request
@@ -264,22 +265,31 @@ app.include_router(sitemap.router)
 # Instrument app with Prometheus metrics (but don't expose publicly)
 Instrumentator(
     should_instrument_requests_inprogress=True,
-    excluded_handlers=["/metrics", "/health", "/health/ready"],
+    excluded_handlers=["/metrics", "/health", "/health/live", "/health/ready"],
 ).instrument(app)
 
 
-# Secured /metrics endpoint — requires ?key=ADMIN_KEY
-ADMIN_KEY = os.getenv("ADMIN_KEY", "")
+# Secured /metrics endpoint — requires METRICS_TOKEN (or legacy ADMIN_KEY fallback)
+METRICS_TOKEN = os.getenv("METRICS_TOKEN") or os.getenv("ADMIN_KEY", "")
+
+
+def metrics_token_matches(provided_token: str, expected_token: str) -> bool:
+    return bool(provided_token and expected_token and secrets.compare_digest(provided_token, expected_token))
 
 
 @app.get("/metrics", include_in_schema=False)
 async def metrics_endpoint(request: Request):
-    """Prometheus metrics endpoint, secured with ADMIN_KEY query param."""
+    """Prometheus metrics endpoint, secured with a metrics token."""
     from prometheus_client import CONTENT_TYPE_LATEST, generate_latest
     from starlette.responses import Response
 
     key = request.query_params.get("key", "")
-    if not ADMIN_KEY or key != ADMIN_KEY:
+    auth_header = request.headers.get("authorization", "")
+    bearer_token = auth_header.removeprefix("Bearer ").strip() if auth_header.startswith("Bearer ") else ""
+
+    if not METRICS_TOKEN or not (
+        metrics_token_matches(key, METRICS_TOKEN) or metrics_token_matches(bearer_token, METRICS_TOKEN)
+    ):
         return JSONResponse(status_code=403, content={"detail": "Forbidden"})
     return Response(content=generate_latest(), media_type=CONTENT_TYPE_LATEST)
 

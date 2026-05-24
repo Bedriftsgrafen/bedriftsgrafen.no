@@ -1,0 +1,23 @@
+apiVersion: 1
+
+templates:
+  - orgId: 1
+    name: bedriftsgrafen-discord-template
+    template: |
+      {{ define "bedriftsgrafen.discord.message" -}}
+      {{ if gt (len .Alerts.Firing) 0 -}}
+      **Bedriftsgrafen alert: {{ len .Alerts.Firing }} firing**
+      {{ range .Alerts.Firing }}
+      **{{ .Labels.alertname }}** (`{{ .Labels.severity }}` / `{{ .Labels.service }}`)
+      {{ .Annotations.summary }}
+      {{ if .Annotations.description }}{{ .Annotations.description }}{{ end }}
+      {{ if .Annotations.runbook_url }}Runbook: {{ .Annotations.runbook_url }}{{ end }}
+      {{ end }}
+      {{ end -}}
+      {{ if gt (len .Alerts.Resolved) 0 -}}
+      **Bedriftsgrafen resolved: {{ len .Alerts.Resolved }}**
+      {{ range .Alerts.Resolved }}
+      **{{ .Labels.alertname }}** resolved (`{{ .Labels.service }}`)
+      {{ end }}
+      {{ end -}}
+      {{ end }}

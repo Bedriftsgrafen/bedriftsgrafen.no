@@ -30,6 +30,70 @@ alias prod-worker-logs='docker logs -f bedriftsgrafen-worker'
 alias prod-frontend-logs='docker logs -f bedriftsgrafen-frontend'
 
 # =============================================================================
+# OBSERVABILITY COMMANDS
+# =============================================================================
+
+# Start/stop observability stack (Grafana, Prometheus, Loki, Alloy)
+alias observe-up='docker compose -f $BEDRIFTSGRAFEN_DIR/docker-compose.observability.yml up -d'
+alias observe-down='docker compose -f $BEDRIFTSGRAFEN_DIR/docker-compose.observability.yml down'
+alias observe-restart='docker compose -f $BEDRIFTSGRAFEN_DIR/docker-compose.observability.yml restart'
+alias observe-build='docker compose -f $BEDRIFTSGRAFEN_DIR/docker-compose.observability.yml pull && docker compose -f $BEDRIFTSGRAFEN_DIR/docker-compose.observability.yml up -d --remove-orphans'
+alias observe-logs='docker compose -f $BEDRIFTSGRAFEN_DIR/docker-compose.observability.yml logs -f'
+alias observe-ps='docker compose -f $BEDRIFTSGRAFEN_DIR/docker-compose.observability.yml ps'
+
+# Observability specific logs
+alias observe-grafana-logs='docker logs -f monitoring-grafana'
+alias observe-prometheus-logs='docker logs -f monitoring-prometheus'
+alias observe-loki-logs='docker logs -f monitoring-loki'
+alias observe-alloy-logs='docker logs -f monitoring-alloy'
+alias observe-cadvisor-logs='docker logs -f monitoring-cadvisor'
+alias observe-node-logs='docker logs -f monitoring-node-exporter'
+
+observe-health() {
+    docker ps --format "table {{.Names}}\t{{.Status}}\t{{.Ports}}" | grep -E "monitoring-|NAMES"
+}
+
+observe-targets() {
+    docker exec monitoring-prometheus wget -q -O - "http://localhost:9090/api/v1/targets?state=active" \
+        | python3 -m json.tool 2>/dev/null || cat
+}
+
+observe-target-summary() {
+    docker exec monitoring-prometheus wget -q -O - "http://localhost:9090/api/v1/targets?state=active" \
+        | python3 -c 'import json,sys; data=json.load(sys.stdin); targets=data["data"]["activeTargets"]; bad=[(t["labels"].get("job"), t["labels"].get("instance"), t["health"], t.get("lastError", "")) for t in targets if t["health"] != "up"]; print(f"targets {len(targets)} bad {len(bad)}"); [print(*item) for item in bad]'
+}
+
+observe-discord-test() {
+    local webhook_file="$BEDRIFTSGRAFEN_DIR/observability/secrets/discord_webhook_url"
+    if [[ ! -s "$webhook_file" ]]; then
+        echo "Discord webhook secret missing: $webhook_file"
+        return 1
+    fi
+
+    curl -fsS \
+        -H "Content-Type: application/json" \
+        -d "{\"content\":\"Bedriftsgrafen observability test from $(hostname) at $(date -Is).\"}" \
+        "$(cat "$webhook_file")" >/dev/null \
+        && echo "Discord test alert sent."
+}
+
+adtraction-dry-run() {
+    (cd "$BEDRIFTSGRAFEN_DIR" && backend/.venv/bin/python backend/scripts/adtraction_notifier.py --dry-run "$@")
+}
+
+adtraction-send() {
+    (cd "$BEDRIFTSGRAFEN_DIR" && backend/.venv/bin/python backend/scripts/adtraction_notifier.py --send-discord "$@")
+}
+
+adtraction-mark-seen() {
+    (cd "$BEDRIFTSGRAFEN_DIR" && backend/.venv/bin/python backend/scripts/adtraction_notifier.py --mark-seen "$@")
+}
+
+adtraction-timer-status() {
+    systemctl status bedriftsgrafen-adtraction-notifier.timer
+}
+
+# =============================================================================
 # DEV COMMANDS
 # =============================================================================
 
@@ -145,6 +209,21 @@ bg-help() {
     echo "  dev-logs       Follow dev logs"
     echo "  dev-ps         Show dev containers"
     echo ""
+    echo "OBSERVABILITY:"
+    echo "  observe-up     Start observability stack"
+    echo "  observe-down   Stop observability stack"
+    echo "  observe-build  Pull images and start observability"
+    echo "  observe-logs   Follow observability logs"
+    echo "  observe-ps     Show observability containers"
+    echo "  observe-health Show monitoring container health"
+    echo "  observe-targets Show Prometheus scrape targets"
+    echo "  observe-target-summary Show unhealthy Prometheus targets"
+    echo "  observe-discord-test Send a Discord webhook test"
+    echo "  adtraction-dry-run  Preview Adtraction money events"
+    echo "  adtraction-send     Send unseen Adtraction money events to Discord"
+    echo "  adtraction-mark-seen Mark current Adtraction events as seen"
+    echo "  adtraction-timer-status Show notifier timer status"
+    echo ""
     echo "EXEC:"
     echo "  dev-backend    Enter dev backend container"
     echo "  dev-frontend   Enter dev frontend container"
@@ -204,9 +283,9 @@ _admin_call() {
     local method="$1"
     local endpoint="$2"
     local data="$3"
-    
+
     _load_admin_key || return 1
-    
+
     if [ "$method" = "GET" ]; then
         curl -s -X GET \
             -H "X-Admin-Key: $ADMIN_API_KEY" \
