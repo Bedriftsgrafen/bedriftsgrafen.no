@@ -66,10 +66,12 @@ Likely causes: leaked transaction scope, stuck import, manual psql session, or a
 
 ## PostgreSQL Temp Bytes Spike
 
-1. Check whether imports, refresh jobs, or search-heavy traffic started around the alert time.
-2. Inspect active queries: `docker exec bedriftsgrafen-db psql -U admin -d bedriftsgrafen -c "SELECT pid, now() - query_start AS age, state, query FROM pg_stat_activity WHERE datname = 'bedriftsgrafen' ORDER BY query_start LIMIT 20;"`.
-3. Compare temp-byte rate with API latency and host disk pressure.
-4. If the same endpoint or job repeats, investigate sort/hash plans and missing indexes before raising memory settings.
+1. Confirm the alert window: `increase(pg_stat_database_temp_bytes{datname="bedriftsgrafen"}[15m])` in Grafana Explore.
+2. Check whether materialized view refreshes, imports, or search-heavy traffic started around the alert time.
+3. Inspect active queries: `docker exec bedriftsgrafen-db psql -U admin -d bedriftsgrafen -c "SELECT pid, now() - query_start AS age, state, query FROM pg_stat_activity WHERE datname = 'bedriftsgrafen' ORDER BY query_start LIMIT 20;"`.
+4. Compare temp-byte rate with API latency and host disk pressure.
+5. Remember that `pg_stat_database.temp_bytes` is cumulative; use `increase(...)` for alert-window analysis.
+6. If the same endpoint or job repeats, investigate sort/hash plans and missing indexes before raising memory settings.
 
 Likely causes: large sorts, hash joins, materialized view refreshes, missing indexes, or broad analytics queries.
 

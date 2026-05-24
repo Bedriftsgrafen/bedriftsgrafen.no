@@ -1,5 +1,13 @@
 apiVersion: 1
 
+deleteRules:
+  - orgId: 1
+    uid: bedriftsgrafen_postgres_connections_high
+  - orgId: 1
+    uid: bedriftsgrafen_postgres_exporter_down
+  - orgId: 1
+    uid: bedriftsgrafen_postgres_unreachable
+
 groups:
   - orgId: 1
     name: Production Health
@@ -20,7 +28,7 @@ groups:
                 type: prometheus
                 uid: prometheus
               editorMode: code
-              expr: up{job="bedriftsgrafen-api"} == 0
+              expr: max_over_time(up{job="bedriftsgrafen-api"}[3m]) == 0
               instant: true
               intervalMs: 1000
               maxDataPoints: 43200
@@ -68,7 +76,7 @@ groups:
               maxDataPoints: 43200
               refId: C
               type: threshold
-        noDataState: Alerting
+        noDataState: OK
         execErrState: Error
         for: 2m
         annotations:
@@ -94,7 +102,7 @@ groups:
                 type: prometheus
                 uid: prometheus
               editorMode: code
-              expr: up{job!="bedriftsgrafen-api",job!="postgres"} == 0
+              expr: max_over_time(up{job!="bedriftsgrafen-api",job!="postgres"}[5m]) == 0
               instant: true
               intervalMs: 1000
               maxDataPoints: 43200
@@ -142,7 +150,7 @@ groups:
               maxDataPoints: 43200
               refId: C
               type: threshold
-        noDataState: Alerting
+        noDataState: OK
         execErrState: Error
         for: 3m
         annotations:
@@ -1016,7 +1024,7 @@ groups:
               conditions:
                 - evaluator:
                     params:
-                      - 1073741824
+                      - 2147483648
                     type: gt
                   operator:
                     type: and
@@ -1039,8 +1047,8 @@ groups:
         execErrState: Error
         for: 5m
         annotations:
-          summary: PostgreSQL generated more than 1 GB of temp data in 15 minutes.
-          description: Temp file spikes often point to sort/hash workloads, missing indexes, or undersized work memory for a query pattern.
+          summary: PostgreSQL generated more than 2 GiB of temp data in 15 minutes.
+          description: Temp file spikes often point to sort/hash workloads, missing indexes, or undersized work memory for a query pattern; routine refreshes can produce smaller bursts.
           runbook_url: https://github.com/Bedriftsgrafen/bedriftsgrafen.no/blob/main/observability/runbooks/alerts.md#postgresql-temp-bytes-spike
         labels:
           severity: warning
