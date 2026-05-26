@@ -83,6 +83,8 @@ async def test_refresh_views_heavy(mock_engine):
     mock_conn = mock_engine.begin.return_value.__aenter__.return_value
     # 3 heavy views x (SET LOCAL + REFRESH + optional ANALYZE) — at least 3 REFRESH calls
     assert mock_conn.execute.call_count >= 3
+    execute_sql = [str(call.args[0]) for call in mock_conn.execute.await_args_list]
+    assert "ANALYZE industry_stats" in execute_sql
     mock_lock.assert_awaited_once_with("heavy")
     mock_release.assert_awaited_once_with(lock_conn, "heavy")
 

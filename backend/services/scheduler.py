@@ -77,8 +77,8 @@ class SchedulerService:
             misfire_grace_time=300,
         )
 
-        # Refresh heavy materialized views every 60 minutes
-        # (large views: industry_stats 204MB, commercial_people_mv 57MB, person_toplist_mv 120MB)
+        # Refresh expensive materialized views every 60 minutes.
+        # Runtime is driven by source-table aggregation cost, not just MV size.
         self.scheduler.add_job(
             self._wrap_job("refresh_views_heavy", self.refresh_views_heavy),
             trigger=IntervalTrigger(minutes=60, start_date=now + timedelta(minutes=5)),
@@ -329,7 +329,7 @@ class SchedulerService:
         """
         views: list[tuple[str, bool, int]] = [
             # (view_name, run_analyze, statement_timeout_ms)
-            ("industry_stats", False, 300_000),  # ~204MB, can take several minutes
+            ("industry_stats", True, 300_000),  # Small output, expensive source aggregation
             ("commercial_people_mv", True, 300_000),  # ~57MB
             ("person_toplist_mv", True, 600_000),  # ~120MB, needs up to 10 min
         ]
