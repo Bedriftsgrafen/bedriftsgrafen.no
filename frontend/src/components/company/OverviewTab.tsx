@@ -1,10 +1,11 @@
-import { Building2, Building, MapPin, Users, Calendar, Briefcase, ChevronRight, AlertTriangle, ExternalLink, Home, Coins } from 'lucide-react'
+import { Activity, Building2, Building, MapPin, Users, Calendar, Briefcase, ChevronRight, AlertTriangle, ExternalLink, Home, Coins, Database } from 'lucide-react'
 import { useMemo, lazy, Suspense } from 'react'
 import type { CompanyWithAccounting, Naeringskode } from '../../types'
 import { Link } from '@tanstack/react-router'
 import { formatDate, getBrregEnhetsregisteretUrl, normalizeText, formatLargeCurrency } from '../../utils/formatters'
 import { getOrganizationFormLabel } from '../../utils/organizationForms'
 import { formatNace, getNaceCode } from '../../utils/nace'
+import { buildCompanyFreshnessItems, buildCompanyTimelineEvents, type CompanyTimelineTone } from '../../utils/companyTimeline'
 import { ContactCard } from './ContactCard'
 import { AffiliateBanner } from '../ads/AffiliateBanner'
 import { AFFILIATIONS } from '../../constants/affiliations'
@@ -17,7 +18,18 @@ interface OverviewTabProps {
   onOpenIndustry?: (naceCode: string, description: string) => void
 }
 
+const timelineToneClassNames: Record<CompanyTimelineTone, string> = {
+  neutral: 'bg-slate-100 text-slate-600 ring-slate-200 dark:bg-slate-800 dark:text-slate-300 dark:ring-slate-700',
+  positive: 'bg-emerald-50 text-emerald-700 ring-emerald-200 dark:bg-emerald-950/40 dark:text-emerald-300 dark:ring-emerald-800',
+  warning: 'bg-amber-50 text-amber-700 ring-amber-200 dark:bg-amber-950/40 dark:text-amber-300 dark:ring-amber-800',
+  critical: 'bg-red-50 text-red-700 ring-red-200 dark:bg-red-950/40 dark:text-red-300 dark:ring-red-800',
+  info: 'bg-blue-50 text-blue-700 ring-blue-200 dark:bg-blue-950/40 dark:text-blue-300 dark:ring-blue-800',
+}
+
 export function OverviewTab({ company, onOpenIndustry }: OverviewTabProps) {
+
+  const timelineEvents = useMemo(() => buildCompanyTimelineEvents(company), [company])
+  const freshnessItems = useMemo(() => buildCompanyFreshnessItems(company), [company])
 
   const showAffiliateBanner = useMemo(() => {
     if (!company.stiftelsesdato) return false
@@ -389,6 +401,87 @@ export function OverviewTab({ company, onOpenIndustry }: OverviewTabProps) {
           </div>
         </div>
       </div>
+
+      <section
+        className="bg-white rounded-lg border border-gray-200 p-6 shadow-sm dark:bg-slate-900 dark:border-slate-800"
+        aria-labelledby="company-timeline-heading"
+      >
+        <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
+          <div>
+            <h3 id="company-timeline-heading" className="text-lg font-semibold text-gray-900 flex items-center gap-2 dark:text-slate-50">
+              <Activity className="h-5 w-5 text-blue-600 dark:text-blue-400" />
+              Hendelser og datagrunnlag
+            </h3>
+            <p className="mt-1 text-sm text-gray-600 dark:text-slate-300">
+              Daterte hendelser og kildeinformasjon basert på data som allerede finnes hos Bedriftsgrafen.
+            </p>
+          </div>
+          <a
+            href={getBrregEnhetsregisteretUrl(company.orgnr)}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex shrink-0 items-center gap-1 text-sm font-medium text-blue-700 hover:text-blue-800 hover:underline dark:text-blue-300 dark:hover:text-blue-200"
+          >
+            Kontroller hos Brreg
+            <ExternalLink className="h-4 w-4" />
+          </a>
+        </div>
+
+        <div className="mt-6 grid gap-6 lg:grid-cols-[minmax(0,1.25fr)_minmax(260px,0.75fr)]">
+          <div>
+            <h4 className="text-sm font-semibold text-gray-900 dark:text-slate-100">Viktige hendelser</h4>
+            {timelineEvents.length > 0 ? (
+              <ol className="mt-4 space-y-4" aria-label="Tidslinje for virksomheten">
+                {timelineEvents.map((event) => (
+                  <li key={event.id} className="grid grid-cols-[2.75rem_minmax(0,1fr)] gap-3">
+                    <div className="flex flex-col items-center" aria-hidden="true">
+                      <span className={`flex h-9 w-9 items-center justify-center rounded-full ring-1 ${timelineToneClassNames[event.tone]}`}>
+                        <Calendar className="h-4 w-4" />
+                      </span>
+                      <span className="mt-2 h-full w-px bg-gray-200 dark:bg-slate-700" />
+                    </div>
+                    <div className="min-w-0 pb-2">
+                      <div className="flex flex-col gap-1 sm:flex-row sm:items-baseline sm:justify-between">
+                        <p className="font-medium text-gray-900 dark:text-slate-50">{event.title}</p>
+                        <time className="text-sm font-medium text-gray-600 dark:text-slate-300" dateTime={event.date}>
+                          {formatDate(event.date)}
+                        </time>
+                      </div>
+                      <p className="mt-1 text-sm text-gray-600 dark:text-slate-300">{event.description}</p>
+                      <p className="mt-1 text-xs font-medium uppercase tracking-wide text-gray-400 dark:text-slate-500">{event.source}</p>
+                    </div>
+                  </li>
+                ))}
+              </ol>
+            ) : (
+              <p className="mt-4 rounded-lg bg-gray-50 px-4 py-3 text-sm text-gray-600 dark:bg-slate-800 dark:text-slate-300">
+                Ingen daterte hendelser er tilgjengelige for denne virksomheten ennå.
+              </p>
+            )}
+          </div>
+
+          <div className="lg:border-l lg:border-gray-200 lg:pl-6 dark:lg:border-slate-800">
+            <h4 className="text-sm font-semibold text-gray-900 flex items-center gap-2 dark:text-slate-100">
+              <Database className="h-4 w-4 text-blue-600 dark:text-blue-400" />
+              Datagrunnlag
+            </h4>
+            <dl className="mt-4 divide-y divide-gray-100 dark:divide-slate-800">
+              {freshnessItems.map((item) => (
+                <div key={item.id} className="py-3 first:pt-0 last:pb-0">
+                  <dt className="text-sm font-medium text-gray-900 dark:text-slate-100">{item.label}</dt>
+                  <dd className="mt-1">
+                    <span className={`inline-flex max-w-full items-center rounded-full px-2.5 py-1 text-xs font-semibold ring-1 ${timelineToneClassNames[item.tone]}`}>
+                      {item.valueType === 'date' ? formatDate(item.value) : item.value}
+                    </span>
+                    <p className="mt-2 text-sm text-gray-600 dark:text-slate-300">{item.description}</p>
+                    <p className="mt-1 text-xs font-medium uppercase tracking-wide text-gray-400 dark:text-slate-500">{item.source}</p>
+                  </dd>
+                </div>
+              ))}
+            </dl>
+          </div>
+        </div>
+      </section>
 
       {/* Affiliate Banner - shown for newer companies */}
       {showAffiliateBanner && (
