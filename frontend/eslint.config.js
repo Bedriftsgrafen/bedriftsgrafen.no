@@ -7,7 +7,7 @@ import tseslint from 'typescript-eslint';
 
 export default defineConfig(
     {
-        ignores: ['dist', 'create-og-image.js', 'coverage'],
+        ignores: ['dist', 'create-og-image.js', 'coverage', 'playwright-report', 'test-results', 'blob-report'],
     },
     {
         files: ['**/*.ts', '**/*.tsx'],
@@ -59,6 +59,19 @@ export default defineConfig(
             globals: globals.node,
             parserOptions: {
                 project: ['tsconfig.node.json'],
+            },
+        },
+    },
+    {
+        files: ['e2e/**/*.ts'],
+        languageOptions: {
+            globals: {
+                ...globals.browser,
+                ...globals.node,
+            },
+            parserOptions: {
+                project: ['tsconfig.e2e.json'],
+                tsconfigRootDir: import.meta.dirname,
             },
         },
     },

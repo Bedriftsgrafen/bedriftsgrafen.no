@@ -46,6 +46,9 @@ coverage/
 frontend/coverage/
 htmlcov/
 coverage.xml
+frontend/playwright-report/
+frontend/test-results/
+frontend/blob-report/
 nosetests.xml
 *.cover
 *.py,cover
