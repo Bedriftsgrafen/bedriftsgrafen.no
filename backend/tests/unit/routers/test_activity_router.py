@@ -11,6 +11,8 @@ from schemas.activity import (
     ActivityFeed,
     ActivityOverviewResponse,
     ActivityStatusItem,
+    CompanyEventItem,
+    CompanyEventListResponse,
 )
 from services.activity_service import ActivityService
 
@@ -18,6 +20,7 @@ from services.activity_service import ActivityService
 @pytest.fixture
 def mock_activity_service(monkeypatch):
     service_mock = AsyncMock(spec=ActivityService)
+    service_mock.event_ledger_enabled = True
     monkeypatch.setattr("routers.v1.activity.ActivityService", MagicMock(return_value=service_mock))
     return service_mock
 
@@ -80,6 +83,31 @@ def make_activity_response() -> ActivityOverviewResponse:
     )
 
 
+def make_event_response() -> CompanyEventListResponse:
+    return CompanyEventListResponse(
+        generated_at=datetime(2026, 5, 27, 14, 30, tzinfo=UTC),
+        cache_ttl_seconds=300,
+        orgnr="123456789",
+        limit=25,
+        offset=0,
+        has_more=False,
+        events=[
+            CompanyEventItem(
+                id=1,
+                orgnr="123456789",
+                event_type="accounting_added",
+                title="Regnskap lagt til",
+                source="Regnskapsregisteret via Brreg",
+                source_update_id="journal-1",
+                occurred_at=datetime(2025, 12, 31, tzinfo=UTC),
+                observed_at=datetime(2026, 5, 27, 14, 0, tzinfo=UTC),
+                time_semantics="Kildetidspunkt når kilden oppgir det; ellers tidspunktet Bedriftsgrafen observerte hendelsen.",
+                new_value={"aar": 2025},
+            )
+        ],
+    )
+
+
 def test_get_activity_overview_success(client, mock_activity_service):
     mock_activity_service.get_overview.return_value = make_activity_response()
 
@@ -103,6 +131,51 @@ def test_get_activity_overview_handles_service_error(client, mock_activity_servi
     mock_activity_service.get_overview.side_effect = RuntimeError("database unavailable")
 
     response = client.get("/v1/activity/overview")
+
+    assert response.status_code == 500
+    assert response.json()["detail"] == "Internal server error"
+
+
+def test_get_company_events_success(client, mock_activity_service):
+    mock_activity_service.get_company_events.return_value = make_event_response()
+
+    response = client.get("/v1/activity/events/123456789?limit=25&offset=0")
+
+    assert response.status_code == 200
+    data = response.json()
+    assert data["orgnr"] == "123456789"
+    assert data["events"][0]["event_type"] == "accounting_added"
+    mock_activity_service.get_company_events.assert_called_once_with(orgnr="123456789", limit=25, offset=0)
+
+
+def test_get_company_events_rejects_invalid_orgnr(client, mock_activity_service):
+    response = client.get("/v1/activity/events/123")
+
+    assert response.status_code == 422
+    mock_activity_service.get_company_events.assert_not_called()
+
+
+def test_get_company_events_rejects_large_limit(client, mock_activity_service):
+    response = client.get("/v1/activity/events/123456789?limit=100")
+
+    assert response.status_code == 422
+    mock_activity_service.get_company_events.assert_not_called()
+
+
+def test_get_company_events_returns_503_when_ledger_disabled(client, mock_activity_service):
+    mock_activity_service.event_ledger_enabled = False
+
+    response = client.get("/v1/activity/events/123456789")
+
+    assert response.status_code == 503
+    assert response.json()["detail"] == "Event ledger is not enabled"
+    mock_activity_service.get_company_events.assert_not_called()
+
+
+def test_get_company_events_handles_service_error(client, mock_activity_service):
+    mock_activity_service.get_company_events.side_effect = RuntimeError("company_events missing")
+
+    response = client.get("/v1/activity/events/123456789")
 
     assert response.status_code == 500
     assert response.json()["detail"] == "Internal server error"

@@ -1,21 +1,32 @@
 """Service layer for public activity and freshness feeds."""
 
+import os
 from datetime import UTC, datetime
 from typing import Any
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from repositories.activity_repository import ActivityRepository
+from repositories.company_event_repository import CompanyEventRepository
 from schemas.activity import (
     ActivityCompanyItem,
     ActivityDeferredFeed,
     ActivityFeed,
     ActivityOverviewResponse,
     ActivityStatusItem,
+    CompanyEventItem,
+    CompanyEventListResponse,
 )
 from utils.redis_cache import RedisCache
 
 ACTIVITY_CACHE_TTL_SECONDS = 120
+EVENT_CACHE_TTL_SECONDS = 300
+
+EVENT_TYPE_TITLES: dict[str, str] = {
+    "company_registered": "Virksomhet registrert",
+    "company_deleted": "Virksomhet slettet",
+    "accounting_added": "Regnskap lagt til",
+}
 
 SYSTEM_STATE_LABELS: dict[str, dict[str, str]] = {
     "company_update_last_sync_date": {
@@ -46,7 +57,9 @@ class ActivityService:
 
     def __init__(self, db: AsyncSession):
         self.repository = ActivityRepository(db)
+        self.event_repository = CompanyEventRepository(db)
         self.cache = RedisCache(prefix="activity", ttl=ACTIVITY_CACHE_TTL_SECONDS)
+        self.event_ledger_enabled = os.getenv("ENABLE_COMPANY_EVENT_LEDGER", "").lower() in {"1", "true", "yes"}
 
     async def get_overview(self, limit: int) -> ActivityOverviewResponse:
         cache_key = f"overview:{limit}"
@@ -101,6 +114,29 @@ class ActivityService:
         await self.cache.set(cache_key, overview.model_dump(mode="json"))
         return overview
 
+    async def get_company_events(self, orgnr: str, *, limit: int, offset: int) -> CompanyEventListResponse:
+        cache_key = f"events:{orgnr}:{limit}:{offset}"
+        cached = await self.cache.get(cache_key)
+        if cached is not None:
+            return CompanyEventListResponse.model_validate(cached)
+
+        rows = await self.event_repository.get_events_for_company(orgnr, limit=limit + 1, offset=offset)
+        has_more = len(rows) > limit
+        visible_rows = rows[:limit]
+
+        response = CompanyEventListResponse(
+            generated_at=datetime.now(UTC),
+            cache_ttl_seconds=EVENT_CACHE_TTL_SECONDS,
+            orgnr=orgnr,
+            limit=limit,
+            offset=offset,
+            has_more=has_more,
+            events=self._build_event_items(visible_rows),
+        )
+
+        await self.cache.set(cache_key, response.model_dump(mode="json"), ttl=EVENT_CACHE_TTL_SECONDS)
+        return response
+
     @staticmethod
     def _build_company_items(
         rows: list[dict[str, Any]],
@@ -146,3 +182,25 @@ class ActivityService:
             )
 
         return items
+
+    @staticmethod
+    def _build_event_items(rows: list[Any]) -> list[CompanyEventItem]:
+        return [
+            CompanyEventItem(
+                id=row.id,
+                orgnr=row.orgnr,
+                event_type=row.event_type,
+                title=EVENT_TYPE_TITLES.get(row.event_type, "Hendelse registrert"),
+                source=row.source,
+                source_update_id=row.source_update_id,
+                occurred_at=row.occurred_at,
+                observed_at=row.observed_at,
+                time_semantics=(
+                    "Kildetidspunkt når kilden oppgir det; ellers tidspunktet Bedriftsgrafen observerte hendelsen."
+                ),
+                previous_value=row.previous_value,
+                new_value=row.new_value,
+                payload=row.payload,
+            )
+            for row in rows
+        ]

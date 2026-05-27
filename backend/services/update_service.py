@@ -1,5 +1,6 @@
 import asyncio
 import logging
+import os
 from datetime import UTC, date, datetime, timedelta
 from typing import Any
 
@@ -13,6 +14,7 @@ from constants.concurrency import API_CONCURRENCY_LIMIT
 from constants.urls import BRREG_ROLE_UPDATES_URL, BRREG_SUBUNIT_UPDATES_URL, BRREG_UPDATES_URL
 from repositories.accounting_repository import AccountingRepository
 from repositories.company.repository import CompanyRepository
+from repositories.company_event_repository import CompanyEventRepository
 from repositories.role_repository import RoleRepository
 from repositories.subunit_repository import SubUnitRepository
 from repositories.system_repository import SystemRepository
@@ -40,6 +42,63 @@ class UpdateService:
         self.role_repo = RoleRepository(db)
         self.system_repo = SystemRepository(db)
         self.accounting_repo = AccountingRepository(db)
+        self.event_repo = CompanyEventRepository(db)
+        self.event_ledger_enabled = os.getenv("ENABLE_COMPANY_EVENT_LEDGER", "").lower() in {"1", "true", "yes"}
+
+    @staticmethod
+    def _parse_brreg_datetime(value: Any) -> datetime | None:
+        if not value:
+            return None
+        try:
+            parsed = datetime.fromisoformat(str(value))
+        except ValueError:
+            return None
+        if parsed.tzinfo is None:
+            return parsed.replace(tzinfo=UTC)
+        return parsed.astimezone(UTC)
+
+    @staticmethod
+    def _parse_brreg_date_as_datetime(value: Any) -> datetime | None:
+        if not value:
+            return None
+        try:
+            parsed_date = date.fromisoformat(str(value))
+        except ValueError:
+            return None
+        return datetime.combine(parsed_date, datetime.min.time(), tzinfo=UTC)
+
+    async def _record_company_event_safe(
+        self,
+        *,
+        orgnr: str,
+        event_type: str,
+        source: str,
+        source_update_id: str | None = None,
+        occurred_at: datetime | None = None,
+        previous_value: dict[str, Any] | None = None,
+        new_value: dict[str, Any] | None = None,
+        payload: dict[str, Any] | None = None,
+    ) -> None:
+        if not self.event_ledger_enabled:
+            return
+
+        try:
+            async with self.db.begin_nested():
+                await self.event_repo.record_event(
+                    orgnr=orgnr,
+                    event_type=event_type,
+                    source=source,
+                    source_update_id=source_update_id,
+                    occurred_at=occurred_at,
+                    previous_value=previous_value,
+                    new_value=new_value,
+                    payload=payload,
+                )
+        except Exception:
+            logger.exception(
+                "Failed to record company event",
+                extra={"orgnr": sanitize_log(orgnr), "event_type": sanitize_log(event_type)},
+            )
 
     async def report_sync_error(
         self,
@@ -228,6 +287,8 @@ class UpdateService:
         async def fetch_single(entity: dict[str, Any]) -> FetchResult:
             orgnr = entity.get("organisasjonsnummer", "unknown")
             endringstype = entity.get("endringstype", "")
+            source_update_id = str(entity["oppdateringsid"]) if entity.get("oppdateringsid") is not None else None
+            source_event_time = self._parse_brreg_datetime(entity.get("dato"))
 
             # Validate orgnr format before making API calls
             if not orgnr or len(orgnr) != 9 or not orgnr.isdigit():
@@ -235,6 +296,9 @@ class UpdateService:
                     orgnr=orgnr,
                     success=False,
                     error=f"Invalid orgnr format: {orgnr}",
+                    source_update_id=source_update_id,
+                    source_event_time=source_event_time,
+                    source_change_type=endringstype,
                 )
 
             # Mark deletions for processing in _persist_chunk
@@ -243,6 +307,9 @@ class UpdateService:
                     orgnr=orgnr,
                     success=True,
                     company_data=None,  # None signals deletion to _persist_chunk
+                    source_update_id=source_update_id,
+                    source_event_time=source_event_time,
+                    source_change_type=endringstype,
                 )
 
             async with semaphore:
@@ -252,9 +319,23 @@ class UpdateService:
 
                         # We don't fetch financials here anymore - it's too slow.
                         # Financials are now synced in a separate background job.
-                        return FetchResult(orgnr=orgnr, success=True, company_data=company_data)
-                except Exception as e:
-                    return FetchResult(orgnr=orgnr, success=False, error=str(e))
+                        return FetchResult(
+                            orgnr=orgnr,
+                            success=True,
+                            company_data=company_data,
+                            source_update_id=source_update_id,
+                            source_event_time=source_event_time,
+                            source_change_type=endringstype,
+                        )
+                except Exception as exc:
+                    return FetchResult(
+                        orgnr=orgnr,
+                        success=False,
+                        error=str(exc),
+                        source_update_id=source_update_id,
+                        source_event_time=source_event_time,
+                        source_change_type=endringstype,
+                    )
 
         tasks = [fetch_single(entity) for entity in entities]
         return list(await asyncio.gather(*tasks))
@@ -300,6 +381,16 @@ class UpdateService:
                 if fetch_result.company_data is None:
                     deleted_count = await self.company_repo.delete_by_orgnr(fetch_result.orgnr)
                     if deleted_count:
+                        await self._record_company_event_safe(
+                            orgnr=fetch_result.orgnr,
+                            event_type="company_deleted",
+                            source="Enhetsregisteret via Brreg",
+                            source_update_id=fetch_result.source_update_id,
+                            occurred_at=fetch_result.source_event_time,
+                            payload={
+                                "time_semantics": "Tidspunkt fra Brregs oppdateringsstrøm når tilgjengelig.",
+                            },
+                        )
                         result.companies_deleted += 1
                         SYNC_OPERATIONS_TOTAL.labels(entity_type="company", operation_type="deleted").inc()
                     continue
@@ -310,10 +401,33 @@ class UpdateService:
                 # Check if this is a new company (never polled for financials)
                 is_new = company.last_polled_regnskap is None
 
+                if is_new and fetch_result.source_change_type == "Ny":
+                    await self._record_company_event_safe(
+                        orgnr=fetch_result.orgnr,
+                        event_type="company_registered",
+                        source="Enhetsregisteret via Brreg",
+                        source_update_id=fetch_result.source_update_id,
+                        occurred_at=self._parse_brreg_date_as_datetime(
+                            fetch_result.company_data.get("registreringsdatoEnhetsregisteret")
+                        )
+                        or fetch_result.source_event_time,
+                        new_value={
+                            "navn": fetch_result.company_data.get("navn"),
+                            "organisasjonsform": fetch_result.company_data.get("organisasjonsform", {}).get("kode")
+                            if isinstance(fetch_result.company_data.get("organisasjonsform"), dict)
+                            else None,
+                            "antall_ansatte": fetch_result.company_data.get("antallAnsatte"),
+                        },
+                        payload={
+                            "registreringsdato_enhetsregisteret": fetch_result.company_data.get(
+                                "registreringsdatoEnhetsregisteret"
+                            ),
+                            "time_semantics": "Kildedato fra Enhetsregisteret når tilgjengelig; ellers Brregs oppdateringsstrøm.",
+                        },
+                    )
                 if is_new:
                     result.companies_created += 1
                     SYNC_OPERATIONS_TOTAL.labels(entity_type="company", operation_type="created").inc()
-
                     # Fetch and persist financials for new companies
                     await self._fetch_and_persist_financials(fetch_result.orgnr, result)
                 else:
@@ -361,6 +475,25 @@ class UpdateService:
                     parsed = await self.brreg_api.parse_financial_data(statement)
                     if parsed.get("aar"):
                         await self.accounting_repo.create_or_update(orgnr, parsed, statement)
+                        await self._record_company_event_safe(
+                            orgnr=orgnr,
+                            event_type="accounting_added",
+                            source="Regnskapsregisteret via Brreg",
+                            source_update_id=str(
+                                statement.get("id")
+                                or statement.get("journalnr")
+                                or f"{orgnr}:{parsed.get('aar')}:{parsed.get('periode_til')}"
+                            ),
+                            occurred_at=self._parse_brreg_date_as_datetime(parsed.get("periode_til")),
+                            new_value={
+                                "aar": parsed.get("aar"),
+                                "periode_til": parsed.get("periode_til"),
+                            },
+                            payload={
+                                "journalnr": statement.get("journalnr"),
+                                "time_semantics": "Regnskapsperiode når tilgjengelig; observert tidspunkt er Bedriftsgrafens importtid.",
+                            },
+                        )
                         result.financials_updated += 1
                 except ValidationError as e:
                     logger.warning(f"Validation error parsing financials for {orgnr}: {e}")

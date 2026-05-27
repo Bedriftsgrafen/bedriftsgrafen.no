@@ -3,6 +3,7 @@ from models_import import BulkImportQueue, ImportBatch
 
 from .accounting import Accounting, LatestAccountings, LatestFinancials
 from .company import Company, Role, SubUnit
+from .company_event import CompanyEvent, CompanyEventType
 from .geo import MunicipalityPopulation
 from .person_toplist import PersonToplist
 from .stats import (
@@ -20,6 +21,8 @@ __all__ = [
     "Base",
     "BulkImportQueue",
     "Company",
+    "CompanyEvent",
+    "CompanyEventType",
     "CompanyTotals",
     "CountyStats",
     "DashboardStats",

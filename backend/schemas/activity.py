@@ -1,7 +1,7 @@
 """Public activity and freshness response models."""
 
 from datetime import date, datetime
-from typing import Literal
+from typing import Any, Literal
 
 from pydantic import BaseModel, ConfigDict
 
@@ -65,3 +65,34 @@ class ActivityOverviewResponse(BaseModel):
     bankruptcies: ActivityFeed
     data_status: list[ActivityStatusItem]
     deferred_feeds: list[ActivityDeferredFeed]
+
+
+class CompanyEventItem(BaseModel):
+    """A durable company event observed by Bedriftsgrafen."""
+
+    id: int
+    orgnr: str
+    event_type: str
+    title: str
+    source: str
+    source_update_id: str | None = None
+    occurred_at: datetime | None = None
+    observed_at: datetime
+    time_semantics: str
+    previous_value: dict[str, Any] | None = None
+    new_value: dict[str, Any] | None = None
+    payload: dict[str, Any] | None = None
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+class CompanyEventListResponse(BaseModel):
+    """Paginated company event timeline."""
+
+    generated_at: datetime
+    cache_ttl_seconds: int
+    orgnr: str
+    limit: int
+    offset: int
+    has_more: bool
+    events: list[CompanyEventItem]

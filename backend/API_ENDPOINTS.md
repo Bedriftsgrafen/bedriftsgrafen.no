@@ -153,6 +153,14 @@ Public freshness overview for `/oppdateringer`.
 - Returns index-backed feeds for newest company registrations and bankruptcies, plus `system_state` data status.
 - Does not expose latest accounting rows yet; that feed is deferred until an index or event ledger supports it safely.
 
+### GET /v1/activity/events/{orgnr}
+Company event timeline backed by the `company_events` ledger.
+- `orgnr` — 9-digit organization number
+- `limit` (default: 25, max: 50)
+- `offset` (default: 0, max: 5000)
+- Returns durable events with source, source update ID, observed time, optional occurred time, and explicit timestamp semantics.
+- The ledger table is introduced by Alembic migration `b8c9d0e1f2a3`; reads and ingestion writes are gated by `ENABLE_COMPANY_EVENT_LEDGER=true` until the migration is deliberately applied.
+
 ---
 
 ## Geographic (`/v1/municipality`, `/v1/county`)

@@ -14,6 +14,14 @@ from schemas.brreg import FetchResult, UpdateBatchResult
 from services.update_service import UpdateService
 
 
+class NoopAsyncContext:
+    async def __aenter__(self):
+        return self
+
+    async def __aexit__(self, exc_type, exc_value, traceback):
+        return False
+
+
 @pytest.fixture
 def mock_db():
     db = AsyncMock()
@@ -42,6 +50,50 @@ class TestUpdateServiceInit:
         assert service.company_repo is not None
         assert service.subunit_repo is not None
         assert service.role_repo is not None
+        assert service.event_repo is not None
+        assert service.event_ledger_enabled is False
+
+
+@pytest.mark.asyncio
+async def test_record_company_event_safe_skips_when_disabled(update_service, mock_db):
+    update_service.event_ledger_enabled = False
+    update_service.event_repo = AsyncMock()
+
+    await update_service._record_company_event_safe(
+        orgnr="123456789",
+        event_type="accounting_added",
+        source="Regnskapsregisteret via Brreg",
+    )
+
+    update_service.event_repo.record_event.assert_not_called()
+    mock_db.begin_nested.assert_not_called()
+
+
+@pytest.mark.asyncio
+async def test_record_company_event_safe_writes_inside_savepoint_when_enabled(update_service, mock_db):
+    update_service.event_ledger_enabled = True
+    update_service.event_repo = AsyncMock()
+    mock_db.begin_nested = MagicMock(return_value=NoopAsyncContext())
+
+    await update_service._record_company_event_safe(
+        orgnr="123456789",
+        event_type="accounting_added",
+        source="Regnskapsregisteret via Brreg",
+        source_update_id="journal-1",
+        new_value={"aar": 2025},
+    )
+
+    mock_db.begin_nested.assert_called_once()
+    update_service.event_repo.record_event.assert_awaited_once_with(
+        orgnr="123456789",
+        event_type="accounting_added",
+        source="Regnskapsregisteret via Brreg",
+        source_update_id="journal-1",
+        occurred_at=None,
+        previous_value=None,
+        new_value={"aar": 2025},
+        payload=None,
+    )
 
 
 class TestFetchUpdates:

@@ -4,7 +4,7 @@ These models validate external API data at the boundary before processing.
 Uses strict validation to catch data integrity issues early.
 """
 
-from datetime import date
+from datetime import date, datetime
 from typing import Any
 
 from pydantic import BaseModel, Field, field_validator
@@ -129,6 +129,9 @@ class FetchResult(BaseModel):
     financial_statements: list[dict[str, Any]] = Field(default_factory=list)
     error: str | None = None
     is_new: bool = False  # Whether this is a newly discovered company
+    source_update_id: str | None = None
+    source_event_time: datetime | None = None
+    source_change_type: str | None = None
 
 
 class UpdateBatchResult(BaseModel):
