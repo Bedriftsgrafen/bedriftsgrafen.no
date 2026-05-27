@@ -42,12 +42,13 @@ function formatDateTime(value: string | null | undefined) {
   }
 }
 
-export type OppdateringerTabId = 'oversikt' | 'nyetableringer' | 'konkurser' | 'datastatus'
+export type OppdateringerTabId = 'oversikt' | 'nyetableringer' | 'konkurser' | 'regnskap' | 'datastatus'
 
 const tabs: { id: OppdateringerTabId; label: string; icon: LucideIcon }[] = [
   { id: 'oversikt', label: 'Oversikt', icon: Activity },
   { id: 'nyetableringer', label: 'Nyetableringer', icon: Building2 },
   { id: 'konkurser', label: 'Konkurser', icon: ShieldAlert },
+  { id: 'regnskap', label: 'Regnskap', icon: FileClock },
   { id: 'datastatus', label: 'Datastatus', icon: Database },
 ]
 
@@ -145,6 +146,14 @@ function ActivityContent({ data, activeTab }: { data: ActivityOverview; activeTa
         />
       )}
 
+      {(showOverview || activeTab === 'regnskap') && (
+        <ActivityFeedSection
+          feed={data.accounting_updates}
+          icon={FileClock}
+          color="blue"
+        />
+      )}
+
       {(showOverview || activeTab === 'datastatus') && <DataStatusPanel data={data} />}
     </div>
   )
@@ -167,6 +176,13 @@ function ActivitySummary({ data }: { data: ActivityOverview }) {
       color: 'bg-red-50 text-red-700 ring-red-100 dark:bg-red-500/15 dark:text-red-200 dark:ring-red-400/20',
     },
     {
+      label: 'Regnskap',
+      value: formatNumber(data.accounting_updates.items.length),
+      helper: 'Eventlogg-støttet feed',
+      icon: FileClock,
+      color: 'bg-sky-50 text-sky-700 ring-sky-100 dark:bg-sky-500/15 dark:text-sky-200 dark:ring-sky-400/20',
+    },
+    {
       label: 'Datakilder',
       value: formatNumber(data.data_status.length),
       helper: 'Synkroniserte statuser',
@@ -183,7 +199,7 @@ function ActivitySummary({ data }: { data: ActivityOverview }) {
   ]
 
   return (
-    <section aria-label="Oppsummering" className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+    <section aria-label="Oppsummering" className="grid gap-4 sm:grid-cols-2 xl:grid-cols-5">
       {summaryItems.map((item) => {
         const Icon = item.icon
         return (
@@ -214,13 +230,15 @@ function ActivityFeedSection({
 }: {
   feed: ActivityFeed
   icon: LucideIcon
-  color: 'green' | 'red'
-  fullLink: '/nyetableringer' | '/konkurser'
-  fullLinkLabel: string
+  color: 'green' | 'red' | 'blue'
+  fullLink?: '/nyetableringer' | '/konkurser'
+  fullLinkLabel?: string
 }) {
-  const accent = color === 'green'
-    ? 'bg-emerald-50 text-emerald-700 ring-emerald-100 dark:bg-emerald-500/15 dark:text-emerald-200 dark:ring-emerald-400/20'
-    : 'bg-red-50 text-red-700 ring-red-100 dark:bg-red-500/15 dark:text-red-200 dark:ring-red-400/20'
+  const accent = {
+    green: 'bg-emerald-50 text-emerald-700 ring-emerald-100 dark:bg-emerald-500/15 dark:text-emerald-200 dark:ring-emerald-400/20',
+    red: 'bg-red-50 text-red-700 ring-red-100 dark:bg-red-500/15 dark:text-red-200 dark:ring-red-400/20',
+    blue: 'bg-sky-50 text-sky-700 ring-sky-100 dark:bg-sky-500/15 dark:text-sky-200 dark:ring-sky-400/20',
+  }[color]
 
   return (
     <section aria-labelledby={`${feed.id}-title`} className="rounded-2xl border border-slate-200 bg-white shadow-sm dark:border-slate-800 dark:bg-slate-900">
@@ -239,18 +257,25 @@ function ActivityFeedSection({
             </p>
           </div>
         </div>
-        <Link
-          to={fullLink}
-          className="inline-flex items-center gap-2 self-start rounded-lg border border-slate-200 px-3 py-2 text-sm font-semibold text-slate-700 transition-colors hover:border-slate-300 hover:bg-slate-50 hover:text-slate-950 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 focus-visible:ring-offset-white dark:border-slate-700 dark:text-slate-300 dark:hover:bg-white/10 dark:hover:text-white dark:focus-visible:ring-blue-300 dark:focus-visible:ring-offset-slate-900"
-        >
-          {fullLinkLabel}
-          <ArrowRight aria-hidden="true" className="h-4 w-4" />
-        </Link>
+        {fullLink && fullLinkLabel && (
+          <Link
+            to={fullLink}
+            className="inline-flex items-center gap-2 self-start rounded-lg border border-slate-200 px-3 py-2 text-sm font-semibold text-slate-700 transition-colors hover:border-slate-300 hover:bg-slate-50 hover:text-slate-950 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 focus-visible:ring-offset-white dark:border-slate-700 dark:text-slate-300 dark:hover:bg-white/10 dark:hover:text-white dark:focus-visible:ring-blue-300 dark:focus-visible:ring-offset-slate-900"
+          >
+            {fullLinkLabel}
+            <ArrowRight aria-hidden="true" className="h-4 w-4" />
+          </Link>
+        )}
       </div>
 
       <div className="divide-y divide-slate-200 dark:divide-slate-800">
-        {feed.items.map((item) => (
-          <ActivityRow key={`${feed.id}-${item.orgnr}`} item={item} />
+        {feed.items.length === 0 && (
+          <div className="p-4 text-sm text-slate-600 dark:text-slate-400 sm:p-5">
+            Ingen hendelser i denne feeden ennå.
+          </div>
+        )}
+        {feed.items.map((item, index) => (
+          <ActivityRow key={`${feed.id}-${item.orgnr}-${item.event_date ?? index}-${index}`} item={item} />
         ))}
       </div>
     </section>
@@ -346,7 +371,7 @@ function DataStatusPanel({ data }: { data: ActivityOverview }) {
             <AlertTriangle aria-hidden="true" className="h-5 w-5" />
           </span>
           <div>
-            <h2 className="text-lg font-bold">Regnskapsoppdateringer venter</h2>
+            <h2 className="text-lg font-bold">Neste hendelsesfeeder</h2>
             {data.deferred_feeds.map((feed) => (
               <div key={feed.id} className="mt-3 text-sm leading-6">
                 <p className="font-semibold">{feed.title}</p>
@@ -366,11 +391,11 @@ function DataStatusPanel({ data }: { data: ActivityOverview }) {
           <div>
             <h2 className="font-semibold text-slate-950 dark:text-white">Tidsstempler</h2>
             <p className="mt-1 text-sm leading-6 text-slate-600 dark:text-slate-300">
-              Registreringsdato og konkursdato kommer fra Brreg-kildene. Datastatus viser når Bedriftsgrafen sist oppdaterte egne synkroniseringspunkter.
+              Registreringsdato og konkursdato kommer fra Brreg-kildene. Regnskapsfeeden viser når Bedriftsgrafen observerte eller importerte en regnskapshendelse.
             </p>
             <p className="mt-3 inline-flex items-center gap-2 text-sm font-semibold text-emerald-700 dark:text-emerald-200">
               <CheckCircle2 aria-hidden="true" className="h-4 w-4" />
-              Ingen regnskapsfeed publiseres før spørringen er indeks- eller eventlogg-støttet.
+              Regnskapsfeeden er eventlogg-støttet og bruker ikke skanning av regnskapstabellen ved lasting av siden.
             </p>
           </div>
         </div>

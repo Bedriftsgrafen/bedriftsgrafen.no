@@ -104,3 +104,28 @@ class CompanyEventRepository:
         )
         result = await self.db.execute(stmt)
         return list(result.scalars().all())
+
+    async def get_latest_events_by_type_with_company(self, event_type: str, *, limit: int) -> list[dict[str, Any]]:
+        stmt = (
+            select(
+                models.CompanyEvent.id,
+                models.CompanyEvent.orgnr,
+                models.CompanyEvent.event_type,
+                models.CompanyEvent.source,
+                models.CompanyEvent.source_update_id,
+                models.CompanyEvent.occurred_at,
+                models.CompanyEvent.observed_at,
+                models.CompanyEvent.new_value,
+                models.CompanyEvent.payload,
+                models.Company.navn,
+                models.Company.organisasjonsform,
+                models.Company.naeringskode,
+                models.Company.antall_ansatte,
+            )
+            .outerjoin(models.Company, models.Company.orgnr == models.CompanyEvent.orgnr)
+            .where(models.CompanyEvent.event_type == event_type)
+            .order_by(models.CompanyEvent.observed_at.desc(), models.CompanyEvent.id.desc())
+            .limit(limit)
+        )
+        result = await self.db.execute(stmt)
+        return [dict(row) for row in result.mappings().all()]

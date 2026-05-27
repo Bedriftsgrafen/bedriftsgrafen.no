@@ -150,8 +150,8 @@ Timeline/trend statistics.
 ### GET /v1/activity/overview
 Public freshness overview for `/oppdateringer`.
 - `limit` (default: 12, max: 24) — rows per live feed
-- Returns index-backed feeds for newest company registrations and bankruptcies, plus `system_state` data status.
-- Does not expose latest accounting rows yet; that feed is deferred until an index or event ledger supports it safely.
+- Returns index-backed feeds for newest company registrations and bankruptcies, event-backed accounting updates from `company_events`, plus `system_state` data status.
+- Accounting activity reflects when Bedriftsgrafen observed/imported an accounting event, not official filing time at Brreg.
 
 ### GET /v1/activity/events/{orgnr}
 Company event timeline backed by the `company_events` ledger.

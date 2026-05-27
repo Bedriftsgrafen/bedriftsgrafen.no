@@ -17,7 +17,8 @@ test('loads live updates hub from the activity endpoint', async ({ page }) => {
   await expect(page.getByRole('heading', { name: 'Siste oppdateringer' })).toBeVisible()
   await expect(page.getByRole('heading', { name: 'Nye virksomheter' })).toBeVisible()
   await expect(page.getByRole('heading', { name: 'Konkurser og avvikling' })).toBeVisible()
-  await expect(page.getByText(/Regnskapsoppdateringer venter/i)).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Nye regnskap hos Bedriftsgrafen' })).toBeVisible()
+  await expect(page.getByText(/Regnskapsfeeden er eventlogg-støttet/i)).toBeVisible()
   await expect(page.getByText('Hello "/oppdateringer"!')).toBeHidden()
 
   const companyRows = page.locator('a[href^="/virksomhet/"]')

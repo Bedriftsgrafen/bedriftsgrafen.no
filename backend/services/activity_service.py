@@ -53,7 +53,7 @@ SYSTEM_STATE_LABELS: dict[str, dict[str, str]] = {
 
 
 class ActivityService:
-    """Build activity hub payloads from index-backed repository queries."""
+    """Build activity hub payloads from indexed and event-backed queries."""
 
     def __init__(self, db: AsyncSession):
         self.repository = ActivityRepository(db)
@@ -70,6 +70,11 @@ class ActivityService:
         registered_rows = await self.repository.get_latest_registered_companies(limit)
         bankruptcy_rows = await self.repository.get_latest_bankruptcies(limit)
         status_rows = await self.repository.get_system_state(list(SYSTEM_STATE_LABELS.keys()))
+        accounting_rows = (
+            await self.event_repository.get_latest_events_by_type_with_company("accounting_added", limit=limit)
+            if self.event_ledger_enabled
+            else []
+        )
 
         overview = ActivityOverviewResponse(
             generated_at=datetime.now(UTC),
@@ -100,14 +105,28 @@ class ActivityService:
                     time_semantics="Kildedato fra Brreg. Status bør kontrolleres mot Brreg ved juridisk bruk.",
                 ),
             ),
+            accounting_updates=ActivityFeed(
+                id="accounting_updates",
+                title="Nye regnskap hos Bedriftsgrafen",
+                description="Regnskapshendelser skrevet til Bedriftsgrafens eventlogg ved import eller kontrollert backfill.",
+                source="Bedriftsgrafen eventlogg",
+                time_label="Lagt til hos Bedriftsgrafen",
+                items=self._build_accounting_event_items(accounting_rows),
+            ),
             data_status=self._build_status_items(status_rows),
             deferred_feeds=[
                 ActivityDeferredFeed(
-                    id="accounting_updates",
-                    title="Nye regnskap hos Bedriftsgrafen",
-                    reason="Regnskapstabellen mangler i dag en trygg indeks for siste oppdatering.",
-                    requirement="Legg til indeks eller skriv regnskapshendelser til eventloggen før dette blir en offentlig live-feed.",
-                )
+                    id="employee_changes",
+                    title="Endringer i ansatte",
+                    reason="Antall ansatte er foreløpig bare nåverdi i selskapsdataene.",
+                    requirement="Skriv forrige og ny verdi til eventloggen under Brreg-oppdateringer før dette blir en offentlig feed.",
+                ),
+                ActivityDeferredFeed(
+                    id="brreg_announcements",
+                    title="Brreg-kunngjøringer",
+                    reason="Kunngjøringer må hentes fra en godkjent kilde og normaliseres før publisering.",
+                    requirement="Ingest via offisiell XML/subscription eller annen godkjent kilde, med GDPR-vurdering før indeksering.",
+                ),
             ],
         )
 
@@ -178,6 +197,35 @@ class ActivityService:
                     value=row.get("value") if key == "company_update_last_sync_date" else "Cursor oppdatert",
                     updated_at=row.get("updated_at"),
                     source=metadata["source"],
+                )
+            )
+
+        return items
+
+    @staticmethod
+    def _build_accounting_event_items(rows: list[dict[str, Any]]) -> list[ActivityCompanyItem]:
+        items: list[ActivityCompanyItem] = []
+
+        for row in rows:
+            new_value = row.get("new_value") or {}
+            payload = row.get("payload") or {}
+            year = new_value.get("aar") or payload.get("aar")
+            observed_at = row.get("observed_at")
+
+            items.append(
+                ActivityCompanyItem(
+                    orgnr=row["orgnr"],
+                    navn=row.get("navn"),
+                    organisasjonsform=row.get("organisasjonsform"),
+                    naeringskode=row.get("naeringskode"),
+                    antall_ansatte=row.get("antall_ansatte"),
+                    event_date=observed_at.date() if observed_at else None,
+                    event_label=f"Regnskap {year} lagt til" if year else "Regnskap lagt til",
+                    source=row.get("source") or "Bedriftsgrafen eventlogg",
+                    time_semantics=(
+                        "Datoen viser når Bedriftsgrafen observerte eller importerte regnskapet, "
+                        "ikke offisiell innsendingsdato hos Brreg."
+                    ),
                 )
             )
 

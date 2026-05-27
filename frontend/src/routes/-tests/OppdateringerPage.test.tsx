@@ -54,6 +54,26 @@ const overviewResponse = {
     time_label: 'Konkursdato',
     items: [],
   },
+  accounting_updates: {
+    id: 'accounting_updates' as const,
+    title: 'Nye regnskap hos Bedriftsgrafen',
+    description: 'Regnskapshendelser skrevet til Bedriftsgrafens eventlogg.',
+    source: 'Bedriftsgrafen eventlogg',
+    time_label: 'Lagt til hos Bedriftsgrafen',
+    items: [
+      {
+        orgnr: '987654321',
+        navn: 'Regnskap Bedrift AS',
+        organisasjonsform: 'AS',
+        naeringskode: '69.201',
+        antall_ansatte: 4,
+        event_date: '2026-05-27',
+        event_label: 'Regnskap 2025 lagt til',
+        source: 'Bedriftsgrafen backfill',
+        time_semantics: 'Datoen viser når Bedriftsgrafen observerte eller importerte regnskapet.',
+      },
+    ],
+  },
   data_status: [
     {
       key: 'company_update_last_sync_date',
@@ -66,10 +86,10 @@ const overviewResponse = {
   ],
   deferred_feeds: [
     {
-      id: 'accounting_updates' as const,
-      title: 'Nye regnskap hos Bedriftsgrafen',
-      reason: 'Regnskapstabellen mangler i dag en trygg indeks for siste oppdatering.',
-      requirement: 'Legg til indeks eller eventlogg før offentlig feed.',
+      id: 'employee_changes' as const,
+      title: 'Endringer i ansatte',
+      reason: 'Antall ansatte er foreløpig bare nåverdi.',
+      requirement: 'Skriv endringer til eventloggen før offentlig feed.',
     },
   ],
 }
@@ -81,16 +101,19 @@ describe('OppdateringerPage', () => {
     vi.mocked(useActivityOverviewQuery).mockReturnValue({ data: overviewResponse, isLoading: false, error: null } as any)
   })
 
-  it('renders indexed feeds and deferred accounting copy', () => {
+  it('renders indexed feeds and event-backed accounting copy', () => {
     render(<OppdateringerPage />)
 
     expect(screen.getByTestId('seo-head')).toBeInTheDocument()
     expect(screen.getByRole('heading', { name: /Siste oppdateringer/i })).toBeInTheDocument()
     expect(screen.getByRole('heading', { name: /Nye virksomheter/i })).toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: /Nye regnskap hos Bedriftsgrafen/i })).toBeInTheDocument()
     expect(screen.getByText(/Test Bedrift AS/i)).toBeInTheDocument()
+    expect(screen.getByText(/Regnskap Bedrift AS/i)).toBeInTheDocument()
     expect(screen.getByRole('link', { name: /Test Bedrift AS/i })).toHaveAttribute('href', '/virksomhet/123456789')
-    expect(screen.getByText(/Regnskapsoppdateringer venter/i)).toBeInTheDocument()
-    expect(screen.getByText(/mangler i dag en trygg indeks/i)).toBeInTheDocument()
+    expect(screen.getByText(/Neste hendelsesfeeder/i)).toBeInTheDocument()
+    expect(screen.getByText(/Endringer i ansatte/i)).toBeInTheDocument()
+    expect(screen.getByText(/Regnskapsfeeden er eventlogg-støttet/i)).toBeInTheDocument()
   })
 
   it('can render the data status tab without activity rows', () => {
@@ -99,5 +122,6 @@ describe('OppdateringerPage', () => {
     expect(screen.getByRole('heading', { name: /Datastatus/i })).toBeInTheDocument()
     expect(screen.getByText(/Brreg oppdateringsstrøm/i)).toBeInTheDocument()
     expect(screen.queryByText(/Test Bedrift AS/i)).not.toBeInTheDocument()
+    expect(screen.queryByText(/Regnskap Bedrift AS/i)).not.toBeInTheDocument()
   })
 })

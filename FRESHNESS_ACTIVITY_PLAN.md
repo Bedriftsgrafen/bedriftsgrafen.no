@@ -1,7 +1,7 @@
 # Freshness And Activity Plan
 
 **Date:** 2026-05-27  
-**Status:** F2 verified in production; F3a event-ledger foundation is in progress  
+**Status:** F3a event-ledger foundation is live; F3b event-backed accounting feed is next
 **Purpose:** Make Bedriftsgrafen feel current and alive without making false freshness claims or adding unsafe production queries.
 
 ## Current Status
@@ -10,7 +10,8 @@
 - F1 homepage `Siste bevegelser`: implemented in `LiveDataPanel` using existing `/api/stats` and existing routes.
 - F2 `/oppdateringer` V1: implemented with index-backed new-company and bankruptcy feeds, data status, and a visible deferred accounting feed.
 - F2 production freshness verified on 2026-05-27 after rebuild: public activity API returned 200, newest company registration date was 2026-05-27, newest bankruptcy date was 2026-05-26, and Brreg cursors were updated on 2026-05-27.
-- Next implementation item: F3a event-ledger foundation for durable activity history.
+- F3a event-ledger foundation: implemented, migrated, enabled, rebuilt, and committed on 2026-05-27.
+- Next implementation item: F3b event-backed accounting feed and controlled recent-event backfill.
 
 ## Decision
 
@@ -174,6 +175,24 @@ F3a definition of done:
 - Event endpoint is gated until the ledger is enabled, uses bounded `limit` and `offset`, returns clear source/timestamp semantics, and does not imply official source dates where only observation time exists.
 - Unit/router tests cover repository idempotency, endpoint validation/error handling, service response shaping, and disabled/enabled update-service hooks.
 - Ruff, mypy, focused pytest, and migration syntax checks pass.
+
+### Phase F3b: Event-Backed Accounting Feed
+
+Scope:
+
+- Add `accounting_updates` to `/v1/activity/overview`, sourced only from `company_events` where `event_type = 'accounting_added'`.
+- Keep request-time queries on `company_events`, never `regnskap.updated_at DESC`.
+- Add a bounded manual backfill utility for recent accounting events, ordered by `regnskap.id DESC` and protected by explicit `--limit`, explicit `--apply`, and idempotent `event_key` writes.
+- Update `/oppdateringer` to show the accounting feed as active, with employee changes and Brreg kunngjoringer remaining deferred.
+- If the ledger is empty, the page must show an empty feed state instead of implying missing or failed data.
+
+F3b definition of done:
+
+- `GET /v1/activity/overview` includes `accounting_updates` with source/timestamp semantics.
+- Backend query plan for latest accounting events uses `idx_company_events_type_observed_id`.
+- Backfill script dry-runs by default, supports explicit `--dry-run`, requires `--apply` for writes, and cannot run unbounded.
+- Frontend, unit, and Playwright tests cover the event-backed feed and empty-state behavior.
+- Do not run production backfill without explicit approval for the batch size.
 
 Definition of done:
 

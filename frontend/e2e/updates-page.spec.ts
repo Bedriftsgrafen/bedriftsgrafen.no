@@ -43,6 +43,26 @@ const activityResponse = {
       },
     ],
   },
+  accounting_updates: {
+    id: 'accounting_updates',
+    title: 'Nye regnskap hos Bedriftsgrafen',
+    description: 'Regnskapshendelser skrevet til Bedriftsgrafens eventlogg ved import eller kontrollert backfill.',
+    source: 'Bedriftsgrafen eventlogg',
+    time_label: 'Lagt til hos Bedriftsgrafen',
+    items: [
+      {
+        orgnr: '555555555',
+        navn: 'Regnskap Test AS',
+        organisasjonsform: 'AS',
+        naeringskode: '69.201',
+        antall_ansatte: 7,
+        event_date: '2026-05-27',
+        event_label: 'Regnskap 2025 lagt til',
+        source: 'Bedriftsgrafen backfill',
+        time_semantics: 'Datoen viser når Bedriftsgrafen observerte eller importerte regnskapet.',
+      },
+    ],
+  },
   data_status: [
     {
       key: 'company_update_last_sync_date',
@@ -55,10 +75,10 @@ const activityResponse = {
   ],
   deferred_feeds: [
     {
-      id: 'accounting_updates',
-      title: 'Nye regnskap hos Bedriftsgrafen',
-      reason: 'Regnskapstabellen mangler i dag en trygg indeks for siste oppdatering.',
-      requirement: 'Legg til indeks eller skriv regnskapshendelser til eventloggen før dette blir en offentlig live-feed.',
+      id: 'employee_changes',
+      title: 'Endringer i ansatte',
+      reason: 'Antall ansatte er foreløpig bare nåverdi i selskapsdataene.',
+      requirement: 'Skriv forrige og ny verdi til eventloggen under Brreg-oppdateringer før dette blir en offentlig feed.',
     },
   ],
 }
@@ -115,15 +135,22 @@ test('renders updates hub with indexed feeds and dark-mode mobile-safe layout', 
   await expect(page.locator('html')).toHaveClass(/dark/)
   await expect(page.getByRole('heading', { name: 'Siste oppdateringer' })).toBeVisible()
   await expect(page.getByRole('heading', { name: 'Nye virksomheter' })).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Nye regnskap hos Bedriftsgrafen' })).toBeVisible()
   await expect(page.getByText('Test Bedrift AS')).toBeVisible()
   await expect(page.getByText('Avsluttet Firma AS')).toBeVisible()
-  await expect(page.getByText(/Regnskapsoppdateringer venter/i)).toBeVisible()
-  await expect(page.getByText(/mangler i dag en trygg indeks/i)).toBeVisible()
+  await expect(page.getByText('Regnskap Test AS')).toBeVisible()
+  await expect(page.getByText(/Neste hendelsesfeeder/i)).toBeVisible()
+  await expect(page.getByText(/Endringer i ansatte/i)).toBeVisible()
 
   await page.getByRole('link', { name: /Datastatus/i }).click()
   await expect(page).toHaveURL(/tab=datastatus/)
   await expect(page.getByText('Brreg oppdateringsstrøm')).toBeVisible()
   await expect(page.getByText('Test Bedrift AS')).toBeHidden()
+  await expect(page.getByText('Regnskap Test AS')).toBeHidden()
+
+  await page.getByRole('link', { name: /Regnskap/i }).click()
+  await expect(page).toHaveURL(/tab=regnskap/)
+  await expect(page.getByText('Regnskap Test AS')).toBeVisible()
 
   await expectNoHorizontalOverflow(page, ['main', 'header', 'nav', 'section'])
 })

@@ -114,3 +114,25 @@ async def test_get_events_for_company_returns_ordered_scalars():
 
     assert events == [event]
     db.execute.assert_awaited_once()
+
+
+@pytest.mark.asyncio
+async def test_get_latest_events_by_type_with_company_returns_mappings():
+    db = AsyncMock()
+    execute_result = MagicMock()
+    mappings_result = MagicMock()
+    mappings_result.all.return_value = [
+        {
+            "orgnr": "123456789",
+            "event_type": "accounting_added",
+            "navn": "Test Bedrift AS",
+        }
+    ]
+    execute_result.mappings.return_value = mappings_result
+    db.execute.return_value = execute_result
+
+    repository = CompanyEventRepository(db)
+    rows = await repository.get_latest_events_by_type_with_company("accounting_added", limit=12)
+
+    assert rows[0]["navn"] == "Test Bedrift AS"
+    db.execute.assert_awaited_once()
