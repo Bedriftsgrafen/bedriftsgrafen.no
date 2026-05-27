@@ -14,10 +14,14 @@ const LABELS: Record<Theme, string> = {
     system: 'Auto',
 }
 
+type ThemeToggleProps = {
+    compact?: boolean
+}
+
 /**
  * Theme toggle button cycling through light → dark → system.
  */
-export const ThemeToggle = memo(function ThemeToggle() {
+export const ThemeToggle = memo(function ThemeToggle({ compact = false }: ThemeToggleProps) {
     const theme = useThemeStore((s) => s.theme)
     const setTheme = useThemeStore((s) => s.setTheme)
 
@@ -30,12 +34,12 @@ export const ThemeToggle = memo(function ThemeToggle() {
         <button
             type="button"
             onClick={handleClick}
-            className="flex items-center gap-1.5 rounded-xl border border-slate-200 bg-white/70 px-3 py-2 text-sm font-semibold text-slate-700 shadow-sm backdrop-blur-sm transition-all duration-200 hover:border-slate-300 hover:bg-white hover:text-slate-950 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-200 focus-visible:ring-offset-2 dark:border-white/10 dark:bg-white/5 dark:text-slate-200 dark:hover:border-white/20 dark:hover:bg-white/10 dark:hover:text-white dark:focus-visible:ring-blue-300 dark:focus-visible:ring-offset-slate-950"
+            className={`${compact ? 'h-11 w-11 justify-center px-0' : 'min-h-11 gap-1.5 px-3'} flex items-center rounded-xl border border-slate-200 bg-white/70 py-2 text-sm font-semibold text-slate-700 shadow-sm backdrop-blur-sm transition-all duration-200 hover:border-slate-300 hover:bg-white hover:text-slate-950 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-200 focus-visible:ring-offset-2 dark:border-white/10 dark:bg-white/5 dark:text-slate-200 dark:hover:border-white/20 dark:hover:bg-white/10 dark:hover:text-white dark:focus-visible:ring-blue-300 dark:focus-visible:ring-offset-slate-950`}
             title={`Tema: ${LABELS[theme]}`}
             aria-label={`Bytt tema (nåværende: ${LABELS[theme]})`}
         >
             {ICONS[theme]}
-            <span className="hidden sm:inline">{LABELS[theme]}</span>
+            {!compact && <span className="hidden sm:inline">{LABELS[theme]}</span>}
         </button>
     )
 })

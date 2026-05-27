@@ -28,7 +28,7 @@ function AboutPage() {
                         </p>
 
                         <div className="space-y-4">
-                            <div className="flex gap-4">
+                            <div id="datakilder" className="flex scroll-mt-24 gap-4">
                                 <Database className="mt-1 h-6 w-6 shrink-0 text-blue-600 dark:text-blue-300" />
                                 <div>
                                     <h2 className="mb-1 font-semibold text-gray-900 dark:text-white">Åpne Data</h2>
