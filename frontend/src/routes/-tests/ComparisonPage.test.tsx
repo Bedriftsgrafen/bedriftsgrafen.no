@@ -82,7 +82,7 @@ describe('ComparisonPage', () => {
     })
 
     it('parses only unique valid org numbers from URL params', () => {
-        expect(parseComparisonOrgNumbers(' bad,923609016,923609016, 989795848 ,123456789,111111111,222222222,333333333 '))
+        expect(parseComparisonOrgNumbers(' bad,"923609016",923609016, 989795848 ,123456789,111111111,222222222,333333333 '))
             .toEqual(['923609016', '989795848', '123456789', '111111111', '222222222'])
     })
 
@@ -119,7 +119,7 @@ describe('ComparisonPage', () => {
     })
 
     it('falls back to selected companies when URL params are malformed', async () => {
-        mockSearch = { orgnr: '"932115948"' }
+        mockSearch = { orgnr: '"ikke-et-orgnr"' }
         useComparisonStore.setState({
             companies: [
                 { orgnr: '984661185', navn: 'POSTEN BRING AS' },
@@ -138,6 +138,17 @@ describe('ComparisonPage', () => {
         })
         expect(apiClient.get).toHaveBeenCalledWith('/v1/companies/984661185')
         expect(apiClient.get).toHaveBeenCalledWith('/v1/companies/932115948')
+    })
+
+    it('shows a visible error card when a selected company cannot be fetched', async () => {
+        mockSearch = { orgnr: '932115948' }
+        vi.mocked(apiClient.get).mockRejectedValueOnce(new Error('Not found'))
+
+        render(<ComparisonPage />)
+
+        expect(await screen.findByRole('alert')).toHaveTextContent('Kunne ikke hente virksomheten')
+        expect(screen.getByText(/Org.nr. 932115948 svarte ikke med gyldige data/)).toBeInTheDocument()
+        expect(screen.getByRole('link', { name: /Finn virksomhet/i })).toHaveAttribute('href', '/utforsk')
     })
 
     it('copies the comparison URL and shows feedback', async () => {
