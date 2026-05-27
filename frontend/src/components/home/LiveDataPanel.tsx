@@ -1,53 +1,47 @@
 import { Link } from '@tanstack/react-router'
-import { ArrowRight, CircleDot } from 'lucide-react'
+import { ArrowRight, Building2, CircleDot, FileBarChart2, ShieldAlert } from 'lucide-react'
 import { useStatsQuery } from '../../hooks/queries/useStatsQuery'
 import { formatLargeNumber } from '../../utils/formatters'
 
 const SKELETON_ROWS = Array.from({ length: 3 }, (_, index) => index)
 
+function formatMetricValue(value: number | null | undefined, fallback: string) {
+    return value != null ? formatLargeNumber(value) : fallback
+}
+
 export function LiveDataPanel() {
     const { data: stats, isLoading } = useStatsQuery()
 
-    const secondaryMetric = (() => {
-        if (!stats) {
-            return null
-        }
-
-        if (stats.new_companies_ytd != null) {
-            return {
-                label: 'Nye virksomheter hittil i år',
-                value: formatLargeNumber(stats.new_companies_ytd),
-                helper: 'Brukes for å følge tempo og etableringstrykk.',
-            }
-        }
-
-        if (stats.total_accounting_reports != null) {
-            return {
-                label: 'Regnskapsrapporter',
-                value: formatLargeNumber(stats.total_accounting_reports),
-                helper: 'Grunnlaget for finansiell analyse på tvers av selskaper.',
-            }
-        }
-
-        return {
-            label: 'Søkbar datadekning',
-            value: formatLargeNumber(stats.total_companies),
-            helper: 'Antall virksomheter som inngår i søk, sammenligning og analyse.',
-        }
-    })()
-
-    const metrics = stats && secondaryMetric
+    const activityCards = stats
         ? [
             {
-                label: 'Nye virksomheter siste 30 dager',
-                value: formatLargeNumber(stats.new_companies_30d),
-                helper: 'Et løpende bilde av nyetableringer i markedet.',
+                label: 'Nye virksomheter',
+                value: formatMetricValue(stats.new_companies_30d, 'Se oversikt'),
+                period: stats.new_companies_30d != null ? 'Siste 30 dager' : 'Nyeste oversikt',
+                helper: 'Basert på registreringsdatoer i Enhetsregisteret.',
+                to: '/nyetableringer' as const,
+                action: 'Se nyetableringer',
+                icon: Building2,
             },
-            secondaryMetric,
             {
-                label: 'Geokodede virksomheter',
-                value: formatLargeNumber(stats.geocoded_count),
-                helper: 'Gir grunnlag for områdesøk og kartanalyse.',
+                label: 'Konkurser og avvikling',
+                value: formatMetricValue(stats.bankruptcies, 'Se oversikt'),
+                period: stats.bankruptcies != null ? 'Registrert i datagrunnlaget' : 'Egen oversikt',
+                helper: 'Status bør kontrolleres mot Brreg ved juridisk bruk.',
+                to: '/konkurser' as const,
+                action: 'Se konkurser',
+                icon: ShieldAlert,
+            },
+            {
+                label: stats.total_accounting_reports != null ? 'Regnskapsgrunnlag' : 'Søkbar datadekning',
+                value: formatMetricValue(stats.total_accounting_reports ?? stats.total_companies, 'Se data'),
+                period: stats.total_accounting_reports != null ? 'Rapporter hos oss' : 'Virksomheter hos oss',
+                helper: stats.total_accounting_reports != null
+                    ? 'Dekning hos Bedriftsgrafen, ikke siste innsendingsdato.'
+                    : 'Antall virksomheter som inngår i søk og analyse.',
+                to: '/utforsk' as const,
+                action: 'Utforsk datagrunnlaget',
+                icon: FileBarChart2,
             },
         ]
         : []
@@ -62,10 +56,10 @@ export function LiveDataPanel() {
                             Løpende datapuls
                         </div>
                         <h2 id="live-data-title" className="mt-4 text-2xl font-semibold tracking-tight text-slate-950 dark:text-white sm:text-3xl">
-                            Følg bevegelsen i norske virksomheter
+                            Siste bevegelser
                         </h2>
                         <p className="mt-3 max-w-2xl text-base leading-7 text-slate-600 dark:text-slate-300 sm:text-lg">
-                            Nøkkeltallene under viser aktivitet, dekning og oppdatering i datagrunnlaget.
+                            Nye virksomheter, statusendringer og datadekning samlet som raske innganger til ferske oversikter.
                         </p>
                     </div>
                     <div className="flex flex-col items-start gap-2 md:items-end">
@@ -96,15 +90,33 @@ export function LiveDataPanel() {
                                 <div className="mt-3 h-3 w-full animate-pulse rounded bg-slate-200 dark:bg-slate-800" />
                             </div>
                         ))
-                        : metrics.map((metric) => (
-                            <dl key={metric.label} className="rounded-2xl border border-slate-200 bg-slate-50 p-5 shadow-[inset_0_1px_0_rgba(255,255,255,0.65)] dark:border-slate-800 dark:bg-slate-950 dark:shadow-[inset_0_1px_0_rgba(255,255,255,0.04)] sm:p-6">
-                                <div>
-                                    <dt className="text-sm font-medium text-slate-700 dark:text-slate-300">{metric.label}</dt>
+                        : activityCards.map((metric) => {
+                            const Icon = metric.icon
+
+                            return (
+                            <Link
+                                key={metric.label}
+                                to={metric.to}
+                                className="group rounded-2xl border border-slate-200 bg-slate-50 p-5 shadow-[inset_0_1px_0_rgba(255,255,255,0.65)] transition hover:-translate-y-0.5 hover:border-slate-300 hover:bg-white hover:shadow-[0_18px_45px_-36px_rgba(15,23,42,0.34)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 focus-visible:ring-offset-white dark:border-slate-800 dark:bg-slate-950 dark:shadow-[inset_0_1px_0_rgba(255,255,255,0.04)] dark:hover:border-slate-700 dark:hover:bg-slate-900 dark:hover:shadow-[0_18px_45px_-36px_rgba(0,0,0,0.95)] dark:focus-visible:ring-blue-300 dark:focus-visible:ring-offset-slate-900 sm:p-6"
+                            >
+                                <dl>
+                                    <div className="flex items-start justify-between gap-3">
+                                        <dt className="text-sm font-medium text-slate-700 dark:text-slate-300">{metric.label}</dt>
+                                        <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-blue-50 text-blue-700 ring-1 ring-blue-100 dark:bg-blue-500/15 dark:text-blue-200 dark:ring-blue-400/20">
+                                            <Icon aria-hidden="true" className="h-5 w-5" />
+                                        </span>
+                                    </div>
                                     <dd className="mt-3 text-3xl font-semibold tabular-nums text-slate-950 dark:text-white">{metric.value}</dd>
+                                    <dd className="mt-1 text-xs font-semibold uppercase tracking-[0.16em] text-slate-500 dark:text-slate-500">{metric.period}</dd>
                                     <dd className="mt-3 text-sm leading-6 text-slate-600 dark:text-slate-400">{metric.helper}</dd>
-                                </div>
-                            </dl>
-                        ))}
+                                </dl>
+                                <span className="mt-5 inline-flex items-center gap-2 text-sm font-semibold text-blue-800 transition-colors group-hover:text-blue-700 dark:text-blue-300 dark:group-hover:text-blue-200">
+                                    {metric.action}
+                                    <ArrowRight aria-hidden="true" className="h-4 w-4 transition-transform group-hover:translate-x-0.5" />
+                                </span>
+                            </Link>
+                            )
+                        })}
                 </div>
             </div>
         </section>

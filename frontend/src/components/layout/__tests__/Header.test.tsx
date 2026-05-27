@@ -84,6 +84,16 @@ describe('Header', () => {
     expect(screen.queryByRole('navigation', { name: 'Hurtigmeny' })).not.toBeInTheDocument()
   })
 
+  it('falls back to the public favicon if the bundled logo fails to load', () => {
+    const { container } = render(<Header />)
+    const logoImage = container.querySelector('img[aria-hidden="true"]')
+
+    expect(logoImage).toBeInTheDocument()
+    fireEvent.error(logoImage as HTMLImageElement)
+
+    expect(logoImage).toHaveAttribute('src', '/favicon.webp')
+  })
+
   it('opens a grouped quick menu that reaches every static site area', () => {
     render(<Header />)
 

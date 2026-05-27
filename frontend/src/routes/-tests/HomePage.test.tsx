@@ -178,7 +178,7 @@ describe('HomePage', () => {
         render(<HomePage />)
 
         expect(await screen.findByText(/Søkbar datadekning/i, {}, { timeout: 5000 })).toBeInTheDocument()
-        expect(screen.getByText(/Antall virksomheter som inngår i søk, sammenligning og analyse/i)).toBeInTheDocument()
+        expect(screen.getByText(/Antall virksomheter som inngår i søk og analyse/i)).toBeInTheDocument()
         expect(screen.queryByText(/^Regnskapsrapporter$/i)).not.toBeInTheDocument()
     })
 

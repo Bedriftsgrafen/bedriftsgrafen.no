@@ -1,6 +1,6 @@
 import { Menu, X } from 'lucide-react'
 import { Link, useRouterState } from '@tanstack/react-router'
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState, type SyntheticEvent } from 'react'
 import { ThemeToggle } from '../common/ThemeToggle'
 import logo from '../../img/bg_logo_small.webp'
 import { useComparisonCount } from '../../store/comparisonStore'
@@ -54,6 +54,13 @@ function HeaderComparisonBadge({ count, inline = false }: { count: number; inlin
       {count}
     </span>
   )
+}
+
+function handleLogoError(event: SyntheticEvent<HTMLImageElement>) {
+  const image = event.currentTarget
+  if (image.src.endsWith('/favicon.webp')) return
+
+  image.src = '/favicon.webp'
 }
 
 export function Header() {
@@ -124,6 +131,8 @@ function HeaderContent({ currentPath, currentSearch }: HeaderContentProps) {
               aria-hidden="true"
               width="40"
               height="40"
+              decoding="async"
+              onError={handleLogoError}
               className="h-10 w-10 shrink-0 rounded-xl ring-1 ring-slate-200 shadow-[0_12px_24px_-20px_rgba(15,23,42,0.26)] transition-transform group-hover:scale-[1.02] dark:ring-white/15 dark:shadow-black/20 lg:h-11 lg:w-11"
             />
             <div className="hidden min-w-0 sm:block">
