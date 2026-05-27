@@ -2,6 +2,7 @@ import type { AriaAttributes, MouseEventHandler, ReactNode } from 'react'
 import { fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { Header } from '../Header'
+import { useComparisonStore } from '../../../store/comparisonStore'
 
 type MockSearch = {
   tab?: string
@@ -69,6 +70,7 @@ vi.mock('@tanstack/react-router', () => ({
 describe('Header', () => {
   beforeEach(() => {
     setRouterLocation('/')
+    useComparisonStore.setState({ companies: [], isModalOpen: false })
   })
 
   it('renders a compact global header with menu controls', () => {
@@ -118,6 +120,26 @@ describe('Header', () => {
     for (const [label, href] of expectedLinks) {
       expect(within(menu).getByRole('link', { name: label })).toHaveAttribute('href', href)
     }
+  })
+
+  it('shows a comparison count badge in header links when companies are selected', () => {
+    useComparisonStore.setState({
+      companies: [
+        { orgnr: '923609016', navn: 'EQUINOR ASA' },
+        { orgnr: '989795848', navn: 'AKER BP ASA' },
+      ],
+      isModalOpen: false,
+    })
+
+    render(<Header />)
+
+    expect(screen.getAllByRole('link', { name: 'Sammenlign virksomheter (2 valgt)' }).length).toBeGreaterThan(0)
+    expect(screen.getAllByText('2').length).toBeGreaterThan(0)
+
+    fireEvent.click(screen.getByRole('button', { name: 'Åpne meny' }))
+    const menu = screen.getByRole('navigation', { name: 'Hurtigmeny' })
+
+    expect(within(menu).getByRole('link', { name: 'Sammenlign virksomheter (2 valgt)' })).toBeInTheDocument()
   })
 
   it('closes the quick menu with Escape and restores focus to the menu button', () => {

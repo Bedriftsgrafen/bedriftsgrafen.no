@@ -1,6 +1,6 @@
 import { memo, useCallback } from 'react'
-import { X, BarChart3 } from 'lucide-react'
-import { useNavigate } from '@tanstack/react-router'
+import { X, ArrowLeftRight } from 'lucide-react'
+import { useNavigate, useRouterState } from '@tanstack/react-router'
 import { useComparisonStore } from '../../store/comparisonStore'
 
 /**
@@ -12,6 +12,7 @@ export const ComparisonBar = memo(function ComparisonBar() {
     const removeCompany = useComparisonStore((s) => s.removeCompany)
     const clear = useComparisonStore((s) => s.clear)
     const navigate = useNavigate()
+    const pathname = useRouterState().location.pathname
 
     const handleRemove = useCallback((orgnr: string) => {
         removeCompany(orgnr)
@@ -29,15 +30,14 @@ export const ComparisonBar = memo(function ComparisonBar() {
         clear()
     }, [clear])
 
-    // Don't render if no companies selected
-    if (companies.length === 0) return null
+    if (companies.length === 0 || pathname === '/sammenlign') return null
 
     return (
         <div className="fixed bottom-0 left-0 right-0 z-1500 border-t border-gray-200 bg-white px-4 py-3 shadow-lg dark:border-slate-800 dark:bg-slate-950 dark:shadow-black/40">
             <div className="container mx-auto flex items-center justify-between gap-4">
                 {/* Selected companies */}
                 <div className="flex items-center gap-2 flex-1 min-w-0">
-                    <span className="shrink-0 text-sm text-gray-500 dark:text-slate-400">
+                    <span className="shrink-0 text-sm font-medium text-gray-700 dark:text-slate-300">
                         Sammenlign ({companies.length}/3):
                     </span>
                     <div className="flex items-center gap-2 overflow-x-auto pb-1">
@@ -79,7 +79,7 @@ export const ComparisonBar = memo(function ComparisonBar() {
                             : 'cursor-not-allowed bg-gray-200 text-gray-400 dark:bg-slate-800 dark:text-slate-600'
                             }`}
                     >
-                        <BarChart3 className="h-4 w-4" aria-hidden="true" />
+                        <ArrowLeftRight className="h-4 w-4" aria-hidden="true" />
                         Sammenlign
                     </button>
                 </div>

@@ -36,14 +36,14 @@ export function PersonalSection() {
                                     </div>
                                     <div className="min-w-0">
                                         <h3 id="favorites-title" className="text-xl font-semibold text-slate-950 dark:text-white">Dine favoritter</h3>
-                                        <p className="text-sm text-slate-500 dark:text-slate-400">Hurtig tilgang til virksomheter du følger.</p>
+                                        <p className="text-sm text-slate-600 dark:text-slate-300">Hurtig tilgang til virksomheter du følger.</p>
                                     </div>
                                 </div>
                                 <button
                                     type="button"
                                     onClick={clearFavorites}
                                     aria-label="Tøm favoritter"
-                                    className="text-sm font-semibold text-slate-500 transition-colors hover:text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-200 focus:ring-offset-2 dark:text-slate-400 dark:hover:text-white dark:focus:ring-blue-300 dark:focus:ring-offset-slate-900"
+                                    className="text-sm font-semibold text-slate-600 transition-colors hover:text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-200 focus:ring-offset-2 dark:text-slate-300 dark:hover:text-white dark:focus:ring-blue-300 dark:focus:ring-offset-slate-900"
                                 >
                                     Tøm favoritter
                                 </button>
@@ -63,7 +63,7 @@ export function PersonalSection() {
                                                     {company.organisasjonsform || 'Virksomhet'} • {company.orgnr}
                                                 </div>
                                             </div>
-                                            <div className="shrink-0 whitespace-nowrap text-right text-xs font-medium text-slate-400 dark:text-slate-500">
+                                            <div className="shrink-0 whitespace-nowrap text-right text-xs font-semibold text-slate-600 dark:text-slate-300">
                                                 {formatDistanceToNow(company.addedAt)}
                                             </div>
                                         </Link>
@@ -82,14 +82,14 @@ export function PersonalSection() {
                                     </div>
                                     <div className="min-w-0">
                                         <h3 id="recent-companies-title" className="text-xl font-semibold text-slate-950 dark:text-white">Nylig besøkte virksomheter</h3>
-                                        <p className="text-sm text-slate-500 dark:text-slate-400">Bruk historikken for å gå raskt tilbake.</p>
+                                        <p className="text-sm text-slate-600 dark:text-slate-300">Bruk historikken for å gå raskt tilbake.</p>
                                     </div>
                                 </div>
                                 <button
                                     type="button"
                                     onClick={clearRecentCompanies}
                                     aria-label="Tøm historikk"
-                                    className="text-sm font-semibold text-slate-500 transition-colors hover:text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-200 focus:ring-offset-2 dark:text-slate-400 dark:hover:text-white dark:focus:ring-blue-300 dark:focus:ring-offset-slate-900"
+                                    className="text-sm font-semibold text-slate-600 transition-colors hover:text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-200 focus:ring-offset-2 dark:text-slate-300 dark:hover:text-white dark:focus:ring-blue-300 dark:focus:ring-offset-slate-900"
                                 >
                                     Tøm historikk
                                 </button>
@@ -109,7 +109,7 @@ export function PersonalSection() {
                                                     {company.organisasjonsform || 'Virksomhet'} • {company.orgnr}
                                                 </div>
                                             </div>
-                                            <div className="shrink-0 whitespace-nowrap text-right text-xs font-medium text-slate-400 dark:text-slate-500">
+                                            <div className="shrink-0 whitespace-nowrap text-right text-xs font-semibold text-slate-600 dark:text-slate-300">
                                                 {formatDistanceToNow(company.timestamp)}
                                             </div>
                                         </Link>

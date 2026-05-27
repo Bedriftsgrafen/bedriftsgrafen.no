@@ -1,7 +1,7 @@
 /* eslint-disable react-refresh/only-export-components */
 import { createLazyFileRoute, Link } from '@tanstack/react-router'
 import { useEffect, useState, useRef, startTransition, useMemo, useCallback } from 'react'
-import { Building2, Users, TrendingUp, TrendingDown, Wallet, X, ArrowLeft, Share2, Crown, Swords, LayoutGrid } from 'lucide-react'
+import { Building2, Users, TrendingUp, TrendingDown, Wallet, X, ArrowLeft, Share2, Crown, Swords, LayoutGrid, ArrowRight, Search, MapPin, ArrowLeftRight } from 'lucide-react'
 import { SEOHead } from '../components/layout'
 import { apiClient } from '../utils/apiClient'
 import { formatLargeNumber } from '../utils/formatters'
@@ -24,9 +24,114 @@ interface ComparisonData {
     error: string | null
 }
 
+const MAX_COMPARISON_URL_ORG_NUMBERS = 5
+const COMPARISON_ORGNR_PATTERN = /^\d{9}$/
+const ENERGY_COMPARISON_ORG_NUMBERS = ['923609016', '989795848', '919160675'] as const
+
+export function parseComparisonOrgNumbers(orgnrParam: string | undefined): string[] {
+    if (!orgnrParam) return []
+
+    const orgNumbers: string[] = []
+    for (const candidate of orgnrParam.split(',')) {
+        const orgnr = candidate.trim()
+        if (!COMPARISON_ORGNR_PATTERN.test(orgnr) || orgNumbers.includes(orgnr)) continue
+
+        orgNumbers.push(orgnr)
+        if (orgNumbers.length >= MAX_COMPARISON_URL_ORG_NUMBERS) break
+    }
+
+    return orgNumbers
+}
+
+function getComparisonOrgParam(orgNumbers: readonly string[]): string {
+    return orgNumbers.join(',')
+}
+
 export function getComparisonShareUrl(origin: string, orgNumbers: string[]): string {
     const params = new URLSearchParams({ orgnr: orgNumbers.join(',') })
     return `${origin}/sammenlign?${params.toString()}`
+}
+
+function ComparisonEmptyState() {
+    return (
+        <section
+            aria-labelledby="comparison-empty-title"
+            className="min-w-0 overflow-hidden rounded-2xl border border-slate-200 bg-white p-6 text-left shadow-sm md:rounded-3xl md:p-10"
+        >
+            <div className="mx-auto max-w-3xl text-center">
+                <div className="mx-auto mb-6 flex h-16 w-16 items-center justify-center rounded-2xl bg-blue-50 text-blue-900 ring-1 ring-blue-100">
+                    <ArrowLeftRight className="h-8 w-8" aria-hidden="true" />
+                </div>
+                <h2 id="comparison-empty-title" className="text-2xl font-black tracking-tight text-slate-900 md:text-3xl">
+                    Velg virksomheter å sammenligne
+                </h2>
+                <p className="mx-auto mt-3 max-w-2xl text-base font-medium leading-7 text-slate-600">
+                    Start med et ferdig eksempel, finn egne kandidater med filtrene, eller åpne en virksomhetsside og legg selskapet til sammenligning derfra.
+                </p>
+            </div>
+
+            <div className="mt-8 grid min-w-0 gap-4 md:grid-cols-3">
+                <Link
+                    to="/sammenlign"
+                    search={{ orgnr: getComparisonOrgParam(ENERGY_COMPARISON_ORG_NUMBERS) }}
+                    className="group flex min-w-0 flex-col rounded-2xl border border-blue-200 bg-blue-50/70 p-5 text-left transition-all hover:-translate-y-0.5 hover:border-blue-300 hover:bg-blue-50 hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2"
+                >
+                    <div className="mb-4 flex h-11 w-11 items-center justify-center rounded-xl bg-white text-blue-900 shadow-sm ring-1 ring-blue-100">
+                        <ArrowLeftRight className="h-5 w-5" aria-hidden="true" />
+                    </div>
+                    <span className="text-base font-bold leading-snug text-slate-950">
+                        Sammenlign Equinor, Aker BP og Vår Energi
+                    </span>
+                    <span className="mt-2 flex-1 text-sm leading-6 text-slate-600">
+                        Åpner tre verifiserte energiaktører side ved side med siste tilgjengelige regnskap.
+                    </span>
+                    <span className="mt-5 inline-flex items-center gap-2 text-sm font-bold text-blue-900">
+                        Åpne eksempel
+                        <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-0.5" aria-hidden="true" />
+                    </span>
+                </Link>
+
+                <Link
+                    to="/utforsk"
+                    className="group flex min-w-0 flex-col rounded-2xl border border-slate-200 bg-slate-50/80 p-5 text-left transition-all hover:-translate-y-0.5 hover:border-slate-300 hover:bg-white hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2"
+                >
+                    <div className="mb-4 flex h-11 w-11 items-center justify-center rounded-xl bg-white text-slate-700 shadow-sm ring-1 ring-slate-200">
+                        <MapPin className="h-5 w-5" aria-hidden="true" />
+                    </div>
+                    <span className="text-base font-bold leading-snug text-slate-950">
+                        Finn konkurrenter i samme kommune
+                    </span>
+                    <span className="mt-2 flex-1 text-sm leading-6 text-slate-600">
+                        Bruk kommune, bransje og størrelse i utforskeren, og legg aktuelle virksomheter til sammenligning.
+                    </span>
+                    <span className="mt-5 inline-flex items-center gap-2 text-sm font-bold text-slate-800">
+                        Åpne utforsker
+                        <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-0.5" aria-hidden="true" />
+                    </span>
+                </Link>
+
+                <Link
+                    to="/virksomhet/$orgnr"
+                    params={{ orgnr: '984661185' }}
+                    className="group flex min-w-0 flex-col rounded-2xl border border-slate-200 bg-slate-50/80 p-5 text-left transition-all hover:-translate-y-0.5 hover:border-slate-300 hover:bg-white hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2"
+                >
+                    <div className="mb-4 flex h-11 w-11 items-center justify-center rounded-xl bg-white text-slate-700 shadow-sm ring-1 ring-slate-200">
+                        <Search className="h-5 w-5" aria-hidden="true" />
+                    </div>
+                    <span className="text-base font-bold leading-snug text-slate-950">
+                        Start fra en virksomhetsside
+                    </span>
+                    <span className="mt-2 flex-1 text-sm leading-6 text-slate-600">
+                        Åpne Posten Bring som eksempel, finn sammenligningsknappen og bygg et eget utvalg.
+                    </span>
+                    <span className="mt-5 inline-flex items-center gap-2 text-sm font-bold text-slate-800">
+                        Åpne virksomhet
+                        <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-0.5" aria-hidden="true" />
+                    </span>
+                </Link>
+            </div>
+        </section>
+    )
 }
 
 function ComparisonCard({
@@ -85,7 +190,7 @@ function ComparisonCard({
                         >
                             {item.company.navn}
                         </Link>
-                        <p className="text-[10px] font-black text-gray-400 uppercase tracking-[0.15em] mt-1 truncate" title={`${item.company.organisasjonsform} • ${item.orgnr}`}>
+                        <p className="mt-1 truncate text-[10px] font-black uppercase tracking-[0.15em] text-gray-600" title={`${item.company.organisasjonsform} • ${item.orgnr}`}>
                             {item.company.organisasjonsform} • {item.orgnr}
                         </p>
                     </div>
@@ -132,7 +237,7 @@ function ComparisonCard({
                     {/* Financial data */}
                     {accounting ? (
                         <div className="space-y-5 pt-5 border-t border-slate-100">
-                            <p className="text-[9px] font-black text-slate-400 uppercase tracking-[0.2em]">
+                            <p className="text-[9px] font-black uppercase tracking-[0.2em] text-slate-600">
                                 REGNSKAP {accounting.aar}
                             </p>
 
@@ -232,7 +337,7 @@ function ComparisonCard({
                         </div>
                     ) : (
                         <div className="py-8 text-center bg-slate-50 rounded-xl border border-dashed border-slate-200">
-                            <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">
+                            <p className="text-[10px] font-black uppercase tracking-widest text-slate-600">
                                 Ingen regnskapsdata
                             </p>
                         </div>
@@ -257,13 +362,20 @@ export function ComparisonPage() {
     const fetchIdRef = useRef(0)
     const shareFeedbackTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
+    const urlOrgNumbers = useMemo(() => parseComparisonOrgNumbers(orgnrParam), [orgnrParam])
+
+    const storeOrgNumbers = useMemo(
+        () => parseComparisonOrgNumbers(storeCompanies.map((company) => company.orgnr).join(',')),
+        [storeCompanies],
+    )
+
     // Determine which org numbers to use (URL params take priority, then store)
     const orgNumbers = useMemo(() => {
-        if (orgnrParam) {
-            return orgnrParam.split(',').filter(Boolean).slice(0, 5) // Max 5
+        if (orgnrParam && urlOrgNumbers.length > 0) {
+            return urlOrgNumbers
         }
-        return storeCompanies.map(c => c.orgnr)
-    }, [orgnrParam, storeCompanies])
+        return storeOrgNumbers
+    }, [orgnrParam, storeOrgNumbers, urlOrgNumbers])
 
     // Calculate winners and max values
     const { winners, maxValues } = useMemo(() => {
@@ -375,14 +487,14 @@ export function ComparisonPage() {
 
     // Sync URL params when coming from store
     useEffect(() => {
-        if (!orgnrParam && storeCompanies.length > 0) {
+        if ((!orgnrParam || urlOrgNumbers.length === 0) && storeOrgNumbers.length > 0) {
             navigate({
                 to: '/sammenlign',
-                search: { orgnr: storeCompanies.map(c => c.orgnr).join(',') },
+                search: { orgnr: getComparisonOrgParam(storeOrgNumbers) },
                 replace: true
             })
         }
-    }, [orgnrParam, storeCompanies, navigate])
+    }, [orgnrParam, storeOrgNumbers, urlOrgNumbers.length, navigate])
 
     return (
         <>
@@ -407,7 +519,7 @@ export function ComparisonPage() {
                             <h1 className="text-2xl md:text-3xl font-black text-slate-900 tracking-tight">
                                 Sammenligning
                             </h1>
-                            <p className="text-sm font-medium text-slate-400 mt-1">
+                            <p className="mt-1 text-sm font-medium text-slate-600">
                                 {orgNumbers.length} virksomhet{orgNumbers.length > 1 ? 'er' : ''} i utvalget
                             </p>
                         </div>
@@ -451,23 +563,7 @@ export function ComparisonPage() {
 
                 {/* Empty state */}
                 {orgNumbers.length === 0 && (
-                    <div className="bg-white rounded-2xl md:rounded-3xl border border-slate-200 p-10 md:p-20 text-center shadow-sm">
-                        <div className="h-20 w-20 bg-slate-50 text-slate-400 rounded-3xl flex items-center justify-center mx-auto mb-6">
-                            <Building2 className="h-10 w-10" aria-hidden="true" />
-                        </div>
-                        <h2 className="text-2xl font-black text-slate-900 mb-3">
-                            Ingen virksomheter valgt
-                        </h2>
-                        <p className="text-slate-500 mb-8 max-w-md mx-auto font-medium">
-                            Søk etter virksomheter og bruk "Sammenlign"-knappen for å sette opp en analyse.
-                        </p>
-                        <Link
-                            to="/utforsk"
-                            className="inline-flex items-center gap-2 px-8 py-4 bg-blue-900 text-white font-bold rounded-2xl hover:bg-blue-800 transition-all shadow-xl shadow-blue-950/20"
-                        >
-                            Finn virksomheter
-                        </Link>
-                    </div>
+                    <ComparisonEmptyState />
                 )}
 
                 {/* Company grid */}
@@ -507,7 +603,7 @@ export function ComparisonPage() {
                 {orgNumbers.length > 1 && !battleMode && (
                     <div className="mt-8 md:mt-12 p-5 md:p-8 bg-slate-100/50 border border-slate-200 rounded-2xl md:rounded-3xl flex flex-col sm:flex-row items-center justify-between gap-4 md:gap-6">
                         <div className="flex items-center gap-5">
-                            <div className="h-12 w-12 bg-white text-slate-400 rounded-2xl flex items-center justify-center shadow-sm">
+                            <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-white text-slate-600 shadow-sm">
                                 <Swords className="h-6 w-6" aria-hidden="true" />
                             </div>
                             <div>

@@ -13,6 +13,7 @@ type HeaderNavLinkProps = {
   children: ReactNode
   className: string
   isActive?: boolean
+  ariaLabel?: string
   onNavigate?: () => void
 }
 
@@ -21,11 +22,12 @@ export function HeaderNavLink({
   children,
   className,
   isActive = false,
+  ariaLabel,
   onNavigate,
 }: HeaderNavLinkProps) {
   const ariaCurrent: AriaAttributes['aria-current'] = isActive ? 'page' : undefined
   const commonProps = {
-    'aria-label': item.label,
+    'aria-label': ariaLabel ?? item.label,
     'aria-current': ariaCurrent,
     activeOptions: { exact: true, includeSearch: true } as const,
     className,
@@ -77,6 +79,7 @@ type HeaderQuickMenuProps = {
   groups: readonly HeaderNavGroup[]
   pathname: string
   search: HeaderLocationSearch
+  comparisonCount: number
   onNavigate: () => void
 }
 
@@ -85,6 +88,7 @@ export function HeaderQuickMenu({
   groups,
   pathname,
   search,
+  comparisonCount,
   onNavigate,
 }: HeaderQuickMenuProps) {
   return (
@@ -116,6 +120,7 @@ export function HeaderQuickMenu({
                       key={`${group.id}-${getHeaderItemHref(item)}`}
                       item={item}
                       isActive={isActive}
+                      ariaLabel={item.id === 'compare' && comparisonCount > 0 ? `${item.label} (${comparisonCount} valgt)` : item.label}
                       onNavigate={onNavigate}
                       className={`flex min-h-11 items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-200 focus-visible:ring-offset-2 dark:focus-visible:ring-blue-300 dark:focus-visible:ring-offset-slate-950 ${isActive
                         ? 'bg-blue-900 text-white dark:bg-blue-500 dark:text-slate-950'
@@ -124,6 +129,11 @@ export function HeaderQuickMenu({
                     >
                       <Icon className="h-4 w-4 shrink-0" aria-hidden="true" />
                       <span className="min-w-0 flex-1 truncate">{item.label}</span>
+                      {item.id === 'compare' && comparisonCount > 0 && (
+                        <span aria-hidden="true" className="inline-flex h-5 min-w-5 shrink-0 items-center justify-center rounded-full bg-blue-900 px-1.5 text-[11px] font-black tabular-nums text-white dark:bg-blue-400 dark:text-slate-950">
+                          {comparisonCount}
+                        </span>
+                      )}
                     </HeaderNavLink>
                   )
                 })}

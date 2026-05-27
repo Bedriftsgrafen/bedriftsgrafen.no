@@ -1,4 +1,4 @@
-import { Building2, Copy, Check, Share2, Star, GitCompareArrows } from 'lucide-react'
+import { Building2, Copy, Check, Share2, Star, ArrowLeftRight } from 'lucide-react'
 import type { CompanyWithAccounting } from '../../types'
 import { formatDate, getLinkedInSearchUrl, getBrregEnhetsregisteretUrl } from '../../utils/formatters'
 import { getOrganizationFormLabel } from '../../utils/organizationForms'
@@ -69,7 +69,7 @@ export function CompanyModalHeader({
           onClick={handleFavorite}
           className={`rounded-lg p-2.5 transition-colors md:p-2 ${isFavorite
             ? 'bg-yellow-50 text-yellow-500 hover:bg-yellow-100 dark:bg-yellow-500/15 dark:text-yellow-200 dark:hover:bg-yellow-500/20'
-            : 'text-gray-400 hover:bg-gray-100 hover:text-yellow-500 dark:text-slate-500 dark:hover:bg-white/10 dark:hover:text-yellow-300'
+            : 'text-gray-600 hover:bg-gray-100 hover:text-yellow-600 dark:text-slate-400 dark:hover:bg-white/10 dark:hover:text-yellow-300'
             }`}
           title={isFavorite ? 'Fjern fra favoritter' : 'Legg til favoritter'}
           aria-label={isFavorite ? 'Fjern fra favoritter' : 'Legg til favoritter'}
@@ -86,19 +86,19 @@ export function CompanyModalHeader({
           className={`rounded-lg p-2.5 transition-colors md:p-2 ${isSelected
             ? 'bg-blue-50 text-blue-600 hover:bg-blue-100 dark:bg-blue-500/15 dark:text-blue-200 dark:hover:bg-blue-500/20'
             : canAddMore
-              ? 'text-gray-400 hover:bg-gray-100 hover:text-blue-500 dark:text-slate-500 dark:hover:bg-white/10 dark:hover:text-blue-300'
-              : 'cursor-not-allowed text-gray-300 dark:text-slate-700'
+              ? 'text-gray-600 hover:bg-gray-100 hover:text-blue-700 dark:text-slate-400 dark:hover:bg-white/10 dark:hover:text-blue-300'
+              : 'cursor-not-allowed text-gray-400 dark:text-slate-700'
             }`}
           title={isSelected ? 'Fjern fra sammenligning' : canAddMore ? 'Legg til sammenligning' : 'Maks 3 virksomheter'}
           aria-label={isSelected ? 'Fjern fra sammenligning' : canAddMore ? 'Legg til sammenligning' : 'Maks 3 virksomheter'}
         >
-          <GitCompareArrows className="h-5 w-5" aria-hidden="true" />
+          <ArrowLeftRight className="h-5 w-5" aria-hidden="true" />
         </button>
       )}
 
       <button
         onClick={onShare}
-        className="rounded-lg p-2.5 text-gray-400 transition-colors hover:bg-gray-100 hover:text-gray-600 dark:text-slate-500 dark:hover:bg-white/10 dark:hover:text-slate-300 md:p-2"
+        className="rounded-lg p-2.5 text-gray-600 transition-colors hover:bg-gray-100 hover:text-gray-800 dark:text-slate-400 dark:hover:bg-white/10 dark:hover:text-slate-300 md:p-2"
         title="Del virksomhetsprofil"
         aria-label="Del virksomhetsprofil"
       >
@@ -110,7 +110,7 @@ export function CompanyModalHeader({
           href={getBrregEnhetsregisteretUrl(company.orgnr)}
           target="_blank"
           rel="noopener noreferrer"
-          className="rounded-lg p-2.5 text-gray-400 transition-colors hover:bg-gray-100 hover:text-gray-700 dark:text-slate-500 dark:hover:bg-white/10 dark:hover:text-slate-200 md:p-2"
+          className="rounded-lg p-2.5 text-gray-600 transition-colors hover:bg-gray-100 hover:text-gray-800 dark:text-slate-400 dark:hover:bg-white/10 dark:hover:text-slate-200 md:p-2"
           title="Se i Enhetsregisteret (Brreg)"
           aria-label="Se i Enhetsregisteret (Brreg)"
         >
@@ -136,7 +136,7 @@ export function CompanyModalHeader({
           href={getLinkedInSearchUrl(company.navn, 'company')}
           target="_blank"
           rel="noopener noreferrer"
-          className="rounded-lg p-2.5 text-gray-400 transition-colors hover:bg-gray-100 hover:text-[#0A66C2] dark:text-slate-500 dark:hover:bg-white/10 dark:hover:text-blue-300 md:p-2"
+          className="rounded-lg p-2.5 text-gray-600 transition-colors hover:bg-gray-100 hover:text-[#0A66C2] dark:text-slate-400 dark:hover:bg-white/10 dark:hover:text-blue-300 md:p-2"
           title={`Søk etter ${company.navn} på LinkedIn`}
           aria-label={`Søk etter ${company.navn} på LinkedIn`}
         >

@@ -4,9 +4,11 @@ import { ComparisonBar } from '../ComparisonBar'
 import { useComparisonStore } from '../../../store/comparisonStore'
 
 const mockNavigate = vi.fn()
+let mockPathname = '/utforsk'
 
 vi.mock('@tanstack/react-router', () => ({
     useNavigate: () => mockNavigate,
+    useRouterState: () => ({ location: { pathname: mockPathname } }),
 }))
 
 vi.mock('../../../store/toastStore', () => ({
@@ -24,6 +26,7 @@ describe('ComparisonBar', () => {
             companies: [],
             isModalOpen: false,
         })
+        mockPathname = '/utforsk'
     })
 
     it('does not render without selected companies', () => {
@@ -46,6 +49,20 @@ describe('ComparisonBar', () => {
         expect(screen.getByText('Sammenlign (2/3):')).toBeInTheDocument()
         expect(screen.getByText('VARDE HARTMARK AS')).toBeInTheDocument()
         expect(screen.getByText('TESTSELSKAP AS')).toBeInTheDocument()
+    })
+
+    it('does not render on the dedicated comparison page', () => {
+        mockPathname = '/sammenlign'
+        useComparisonStore.setState({
+            companies: [
+                { orgnr: '993144169', navn: 'VARDE HARTMARK AS' },
+                { orgnr: '913352483', navn: 'TESTSELSKAP AS' },
+            ],
+        })
+
+        const { container } = render(<ComparisonBar />)
+
+        expect(container).toBeEmptyDOMElement()
     })
 
     it('navigates to the comparison page with selected org numbers', () => {

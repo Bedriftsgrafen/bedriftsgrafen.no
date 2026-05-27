@@ -1,5 +1,5 @@
 import React, { memo, useCallback } from 'react'
-import { Plus, Check } from 'lucide-react'
+import { ArrowLeftRight } from 'lucide-react'
 import { useComparisonStore } from '../../store/comparisonStore'
 
 /** Props for ComparisonButton */
@@ -12,7 +12,6 @@ interface ComparisonButtonProps {
 
 /**
  * Button to add/remove a company from comparison.
- * Shows + when not selected, ✓ when selected.
  */
 export const ComparisonButton = memo(function ComparisonButton({
     orgnr,
@@ -44,18 +43,14 @@ export const ComparisonButton = memo(function ComparisonButton({
                 aria-label={isSelected ? 'Fjern fra sammenligning' : isMaxReached ? 'Maks 3 virksomheter' : 'Legg til sammenligning'}
                 aria-pressed={isSelected}
                 className={`rounded p-1 transition-colors ${isSelected
-                    ? 'bg-blue-100 text-blue-600 hover:bg-blue-200 dark:bg-blue-500/15 dark:text-blue-200 dark:hover:bg-blue-500/20'
+                    ? 'bg-blue-100 text-blue-700 hover:bg-blue-200 dark:bg-blue-500/15 dark:text-blue-200 dark:hover:bg-blue-500/20'
                     : isMaxReached
-                        ? 'cursor-not-allowed text-gray-300 dark:text-slate-700'
-                        : 'text-gray-400 hover:bg-gray-100 hover:text-gray-600 dark:text-slate-500 dark:hover:bg-white/10 dark:hover:text-slate-300'
+                        ? 'cursor-not-allowed text-gray-400 dark:text-slate-700'
+                        : 'text-gray-600 hover:bg-gray-100 hover:text-blue-700 dark:text-slate-400 dark:hover:bg-white/10 dark:hover:text-blue-300'
                     }`}
                 title={isSelected ? 'Fjern fra sammenligning' : isMaxReached ? 'Maks 3 virksomheter' : 'Legg til sammenligning'}
             >
-                {isSelected ? (
-                    <Check className="h-4 w-4" aria-hidden="true" />
-                ) : (
-                    <Plus className="h-4 w-4" aria-hidden="true" />
-                )}
+                <ArrowLeftRight className="h-4 w-4" aria-hidden="true" />
             </button>
         )
     }
@@ -76,12 +71,12 @@ export const ComparisonButton = memo(function ComparisonButton({
         >
             {isSelected ? (
                 <>
-                    <Check className="h-4 w-4" aria-hidden="true" />
+                    <ArrowLeftRight className="h-4 w-4" aria-hidden="true" />
                     <span>Valgt</span>
                 </>
             ) : (
                 <>
-                    <Plus className="h-4 w-4" aria-hidden="true" />
+                    <ArrowLeftRight className="h-4 w-4" aria-hidden="true" />
                     <span>Sammenlign</span>
                 </>
             )}

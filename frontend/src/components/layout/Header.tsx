@@ -3,6 +3,7 @@ import { Link, useRouterState } from '@tanstack/react-router'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { ThemeToggle } from '../common/ThemeToggle'
 import logo from '../../img/bg_logo_small.webp'
+import { useComparisonCount } from '../../store/comparisonStore'
 import { HeaderNavLink, HeaderQuickMenu } from './HeaderQuickMenu'
 import {
   HEADER_MOBILE_SHORTCUT_ITEMS,
@@ -19,7 +20,7 @@ const MENU_ID = 'header-quick-menu'
 function getShortcutClassName(item: HeaderNavItem, isActive: boolean): string {
   const visibilityClass = item.id === 'compare' ? 'hidden md:inline-flex lg:hidden' : 'inline-flex lg:hidden'
 
-  return `${visibilityClass} h-11 w-11 items-center justify-center rounded-lg transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-200 focus-visible:ring-offset-2 dark:focus-visible:ring-blue-300 dark:focus-visible:ring-offset-slate-950 ${isActive
+  return `${visibilityClass} relative h-11 w-11 items-center justify-center rounded-lg transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-200 focus-visible:ring-offset-2 dark:focus-visible:ring-blue-300 dark:focus-visible:ring-offset-slate-950 ${isActive
     ? 'bg-blue-900 text-white shadow-[0_12px_24px_-20px_rgba(30,58,138,0.65)] hover:bg-blue-800 dark:bg-blue-500 dark:text-slate-950 dark:hover:bg-blue-400'
     : 'text-slate-600 hover:bg-blue-50 hover:text-blue-950 dark:text-slate-300 dark:hover:bg-white/10 dark:hover:text-white'
     }`
@@ -28,10 +29,31 @@ function getShortcutClassName(item: HeaderNavItem, isActive: boolean): string {
 function getTopNavClassName(item: HeaderNavItem, isActive: boolean): string {
   const responsiveSizeClass = item.topBar === 'xl' ? 'w-11 px-0 xl:w-auto xl:px-3' : 'px-3'
 
-  return `hidden h-11 items-center justify-center gap-1.5 whitespace-nowrap rounded-lg text-sm font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-200 focus-visible:ring-offset-2 dark:focus-visible:ring-blue-300 dark:focus-visible:ring-offset-slate-950 lg:inline-flex ${responsiveSizeClass} ${isActive
+  return `relative hidden h-11 items-center justify-center gap-1.5 whitespace-nowrap rounded-lg text-sm font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-200 focus-visible:ring-offset-2 dark:focus-visible:ring-blue-300 dark:focus-visible:ring-offset-slate-950 lg:inline-flex ${responsiveSizeClass} ${isActive
     ? 'bg-blue-900 text-white shadow-[0_12px_24px_-20px_rgba(30,58,138,0.65)] hover:bg-blue-800 dark:bg-blue-500 dark:text-slate-950 dark:hover:bg-blue-400'
     : 'text-slate-600 hover:bg-blue-50 hover:text-blue-950 dark:text-slate-300 dark:hover:bg-white/10 dark:hover:text-white'
     }`
+}
+
+function getHeaderItemAriaLabel(item: HeaderNavItem, comparisonCount: number): string {
+  if (item.id !== 'compare' || comparisonCount === 0) return item.label
+  return `${item.label} (${comparisonCount} valgt)`
+}
+
+function HeaderComparisonBadge({ count, inline = false }: { count: number; inline?: boolean }) {
+  if (count === 0) return null
+
+  return (
+    <span
+      aria-hidden="true"
+      className={inline
+        ? 'ml-auto inline-flex h-5 min-w-5 shrink-0 items-center justify-center rounded-full bg-blue-900 px-1.5 text-[11px] font-black tabular-nums text-white dark:bg-blue-400 dark:text-slate-950'
+        : 'absolute -right-1 -top-1 inline-flex h-5 min-w-5 items-center justify-center rounded-full border border-white bg-blue-900 px-1.5 text-[11px] font-black tabular-nums leading-none text-white shadow-sm dark:border-slate-950 dark:bg-blue-400 dark:text-slate-950'
+      }
+    >
+      {count}
+    </span>
+  )
 }
 
 export function Header() {
@@ -52,6 +74,7 @@ function HeaderContent({ currentPath, currentSearch }: HeaderContentProps) {
   const [isMenuOpen, setIsMenuOpen] = useState(false)
   const headerRef = useRef<HTMLDivElement>(null)
   const menuButtonRef = useRef<HTMLButtonElement>(null)
+  const comparisonCount = useComparisonCount()
 
   const closeMenu = useCallback((restoreFocus = false) => {
     setIsMenuOpen(false)
@@ -123,9 +146,11 @@ function HeaderContent({ currentPath, currentSearch }: HeaderContentProps) {
                   key={`shortcut-${item.id}`}
                   item={item}
                   isActive={isActive}
+                  ariaLabel={getHeaderItemAriaLabel(item, comparisonCount)}
                   className={getShortcutClassName(item, isActive)}
                 >
                   <Icon className="h-4 w-4" aria-hidden="true" />
+                  {item.id === 'compare' && <HeaderComparisonBadge count={comparisonCount} />}
                 </HeaderNavLink>
               )
             })}
@@ -140,6 +165,7 @@ function HeaderContent({ currentPath, currentSearch }: HeaderContentProps) {
                     key={item.id}
                     item={item}
                     isActive={isActive}
+                    ariaLabel={getHeaderItemAriaLabel(item, comparisonCount)}
                     className={getTopNavClassName(item, isActive)}
                   >
                     <Icon className="h-4 w-4" aria-hidden="true" />
@@ -156,10 +182,12 @@ function HeaderContent({ currentPath, currentSearch }: HeaderContentProps) {
                     key={item.id}
                     item={item}
                     isActive={isActive}
+                    ariaLabel={getHeaderItemAriaLabel(item, comparisonCount)}
                     className={getTopNavClassName(item, isActive)}
                   >
                     <Icon className="h-4 w-4" aria-hidden="true" />
                     <span>{item.topLabel ?? item.label}</span>
+                    {item.id === 'compare' && <HeaderComparisonBadge count={comparisonCount} inline />}
                   </HeaderNavLink>
                 )
               })}
@@ -192,6 +220,7 @@ function HeaderContent({ currentPath, currentSearch }: HeaderContentProps) {
             groups={HEADER_QUICK_MENU_GROUPS}
             pathname={currentPath}
             search={currentSearch}
+            comparisonCount={comparisonCount}
             onNavigate={() => closeMenu()}
           />
         )}
