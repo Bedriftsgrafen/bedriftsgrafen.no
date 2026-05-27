@@ -693,8 +693,10 @@ class SchedulerService:
 
                         dummy_result = UpdateBatchResult(since_date=datetime.now().date(), since_iso="")
                         await update_service._fetch_and_persist_financials(orgnr, dummy_result)
+                        await db.commit()
                         processed += 1
                     except Exception as ex:
+                        await db.rollback()
                         logger.warning("Failed to sync accounting", extra={"orgnr": orgnr, "error": str(ex)})
 
                     if attempt_index % 10 == 0 or attempt_index == total:

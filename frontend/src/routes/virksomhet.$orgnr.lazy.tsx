@@ -10,6 +10,7 @@ import { useFetchCompanyMutation } from '../hooks/mutations/useFetchCompanyMutat
 import { useCompanyModal } from '../hooks/useCompanyModal'
 import { useUiStore } from '../store/uiStore'
 import { useSlowLoadingToast } from '../hooks/useSlowLoadingToast'
+import { getPreferredAccounting } from '../utils/accountingHelpers'
 import type { TabType } from '../components/company/ModalTabs'
 
 // Search params for the company page
@@ -72,7 +73,7 @@ export function CompanyPage() {
             const selectionValid = selectedAccountingId != null &&
                 company.regnskap.some(r => r.id === selectedAccountingId)
             if (!selectionValid) {
-                const mostRecent = company.regnskap[0]
+                const mostRecent = getPreferredAccounting(company.regnskap)
                 if (mostRecent?.id != null) {
                     setSelectedAccounting(mostRecent.aar, mostRecent.id)
                 }

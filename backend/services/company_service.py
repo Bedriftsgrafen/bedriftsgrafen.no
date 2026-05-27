@@ -4,6 +4,7 @@ import hashlib
 import logging
 import os
 import time
+from datetime import UTC, date, datetime
 from typing import Any
 
 from sqlalchemy import select
@@ -20,6 +21,7 @@ from database import AsyncSessionLocal
 from exceptions import ValidationException
 from repositories.accounting_repository import AccountingRepository
 from repositories.company import CompanyRepository, CompanyWithFinancials
+from repositories.company_event_repository import CompanyEventRepository
 from repositories.company_filter_builder import FilterParams
 from repositories.role_repository import RoleRepository
 from repositories.subunit_repository import SubUnitRepository
@@ -76,10 +78,80 @@ class CompanyService:
         self.db = db
         self.company_repo = CompanyRepository(db)
         self.accounting_repo = AccountingRepository(db)
+        self.event_repo = CompanyEventRepository(db)
         self.role_repo = RoleRepository(db)
         self.subunit_repo = SubUnitRepository(db)
         self.brreg_api = BrregApiService()
         self.geocoding_service = GeocodingService()
+        self.event_ledger_enabled = os.getenv("ENABLE_COMPANY_EVENT_LEDGER", "").lower() in {"1", "true", "yes"}
+
+    @staticmethod
+    def _parse_date_as_datetime(value: Any) -> datetime | None:
+        if not value:
+            return None
+        try:
+            parsed_date = date.fromisoformat(str(value))
+        except ValueError:
+            return None
+        return datetime.combine(parsed_date, datetime.min.time(), tzinfo=UTC)
+
+    async def _record_accounting_added_event_safe(
+        self,
+        *,
+        orgnr: str,
+        statement: dict[str, Any],
+        parsed: dict[str, Any],
+    ) -> None:
+        if not self.event_ledger_enabled:
+            return
+
+        try:
+            async with self.db.begin_nested():
+                await self.event_repo.record_event(
+                    orgnr=orgnr,
+                    event_type="accounting_added",
+                    source="Regnskapsregisteret via Brreg",
+                    source_update_id=str(
+                        statement.get("id")
+                        or statement.get("journalnr")
+                        or f"{orgnr}:{parsed.get('aar')}:{parsed.get('periode_til')}"
+                    ),
+                    occurred_at=self._parse_date_as_datetime(parsed.get("periode_til")),
+                    new_value={
+                        "aar": parsed.get("aar"),
+                        "periode_til": parsed.get("periode_til"),
+                    },
+                    payload={
+                        "journalnr": statement.get("journalnr"),
+                        "time_semantics": "Regnskapsperiode når tilgjengelig; observert tidspunkt er Bedriftsgrafens importtid.",
+                    },
+                )
+        except Exception:
+            logger.exception(
+                "Failed to record accounting event",
+                extra={"orgnr": sanitize_log(orgnr), "event_type": "accounting_added"},
+            )
+
+    @staticmethod
+    def _accounting_sort_key(accounting: Any) -> tuple[int, int, date, date, int]:
+        def get_value(name: str, default: Any = None) -> Any:
+            if isinstance(accounting, dict):
+                return accounting.get(name, default)
+            return getattr(accounting, name, default)
+
+        period_metadata_score = int(get_value("periode_fra") is not None) + int(get_value("periode_til") is not None)
+
+        return (
+            get_value("aar", 0) or 0,
+            period_metadata_score,
+            get_value("periode_til") or date.min,
+            get_value("periode_fra") or date.min,
+            get_value("id", 0) or 0,
+        )
+
+    @classmethod
+    def _sort_accounting_history(cls, accountings: list[Any]) -> list[Any]:
+        return sorted(accountings, key=cls._accounting_sort_key, reverse=True)
 
     async def get_companies(self, filters: CompanyFilterDTO) -> list[CompanyWithFinancials]:
         """Get companies matching filters."""
@@ -203,6 +275,13 @@ class CompanyService:
 
         # Enrich NACE codes before returning
         await self.enrich_nace_codes([company])
+
+        if isinstance(company, dict):
+            company["regnskap"] = self._sort_accounting_history(company.get("regnskap") or [])
+        else:
+            accountings = getattr(company, "regnskap", None)
+            if isinstance(accountings, list):
+                accountings[:] = self._sort_accounting_history(list(accountings))
 
         return company
 
@@ -387,7 +466,15 @@ class CompanyService:
                         skipped_count = 0
                         for statement in statements:
                             try:
-                                await self.accounting_repo.create_or_update(orgnr, statement, raw_data=statement)
+                                parsed = await self.brreg_api.parse_financial_data(statement)
+                                if not parsed.get("aar"):
+                                    raise ValidationException("Financial data must include accounting year (aar)")
+                                await self.accounting_repo.create_or_update(orgnr, parsed, raw_data=statement)
+                                await self._record_accounting_added_event_safe(
+                                    orgnr=orgnr,
+                                    statement=statement,
+                                    parsed=parsed,
+                                )
                                 saved_count += 1
                             except ValidationException as e:
                                 skipped_count += 1

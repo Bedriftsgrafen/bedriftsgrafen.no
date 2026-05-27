@@ -84,6 +84,8 @@ export interface Accounting {
   aar: number
   periode_fra?: string | null  // Fiscal period start (handles non-calendar years)
   periode_til?: string | null  // Fiscal period end
+  source_id?: string | null  // Regnskapsregisteret statement id
+  journalnr?: string | null  // Brreg journal number
   total_inntekt: number | null
   aarsresultat: number | null
   egenkapital: number | null

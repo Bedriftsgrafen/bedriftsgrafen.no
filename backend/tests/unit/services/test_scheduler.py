@@ -278,6 +278,8 @@ async def test_sync_accounting_batch(mock_session_local):
     mock_db = mock_session_local.return_value.__aenter__.return_value
     mock_db.execute = AsyncMock(return_value=patch("sqlalchemy.engine.Result").start())
     mock_db.execute.return_value.all.return_value = [("123456789",), ("987654321",)]
+    mock_db.commit = AsyncMock()
+    mock_db.rollback = AsyncMock()
 
     with (
         patch.object(scheduler_service, "_log_memory_snapshot") as mock_memory,
@@ -289,6 +291,8 @@ async def test_sync_accounting_batch(mock_session_local):
         await scheduler_service.sync_accounting_batch()
 
         assert mock_update._fetch_and_persist_financials.call_count == 2
+        assert mock_db.commit.await_count == 2
+        mock_db.rollback.assert_not_awaited()
         phases = [call.args[:2] for call in mock_memory.call_args_list]
         assert ("accounting_sync", "start") in phases
         assert ("accounting_sync", "selected") in phases

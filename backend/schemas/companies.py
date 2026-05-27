@@ -97,6 +97,8 @@ class AccountingBase(BaseModel):
     aar: int
     periode_fra: date | None = None  # Fiscal period start date
     periode_til: date | None = None  # Fiscal period end date
+    source_id: str | None = None  # Regnskapsregisteret statement id
+    journalnr: str | None = None  # Brreg journal number
     total_inntekt: float | None = None
     aarsresultat: float | None = None
     egenkapital: float | None = None

@@ -2,6 +2,7 @@
 Unit tests for CompanyService.
 """
 
+from datetime import date
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
@@ -22,6 +23,8 @@ def service(mock_db):
     svc = CompanyService(mock_db)
     svc.company_repo = AsyncMock()
     svc.accounting_repo = AsyncMock()
+    svc.event_repo = AsyncMock()
+    svc.event_ledger_enabled = False
     svc.role_repo = AsyncMock()
     svc.subunit_repo = AsyncMock()
     svc.brreg_api = AsyncMock()
@@ -173,6 +176,24 @@ async def test_get_company_detail_returns_company(service):
 
 
 @pytest.mark.asyncio
+async def test_get_company_detail_sorts_accounting_history(service):
+    mock_company = MagicMock()
+    mock_company.orgnr = "123456789"
+    mock_company.parent_orgnr = None
+    mock_company.latitude = 59.9
+    old_null_period = MagicMock(id=1, aar=2025, periode_fra=None, periode_til=None)
+    newer_period = MagicMock(id=2, aar=2025, periode_fra=date(2024, 8, 16), periode_til=date(2025, 6, 30))
+    previous_year = MagicMock(id=3, aar=2024, periode_fra=None, periode_til=date(2024, 12, 31))
+    dec_31_fallback = MagicMock(id=4, aar=2025, periode_fra=None, periode_til=date(2025, 12, 31))
+    mock_company.regnskap = [previous_year, old_null_period, dec_31_fallback, newer_period]
+    service.company_repo.get_by_orgnr.return_value = mock_company
+
+    result = await service.get_company_detail("123456789")
+
+    assert result.regnskap == [newer_period, dec_31_fallback, old_null_period, previous_year]
+
+
+@pytest.mark.asyncio
 async def test_get_company_detail_falls_back_to_subunit(service):
     """Should fall back to subunit if company not found."""
     # Arrange
@@ -320,7 +341,11 @@ async def test_fetch_and_store_company_skips_invalid_financial_statements(MockRo
 
     service.brreg_api.fetch_subunits.return_value = []
     service.brreg_api.fetch_financial_statements.return_value = [
-        {"aar": 2024, "aarsresultat": 1000},
+        {"regnskapsperiode": {"tilDato": "2024-12-31"}, "resultatregnskapResultat": {}},
+        {"resultatregnskapResultat": {}},
+    ]
+    service.brreg_api.parse_financial_data.side_effect = [
+        {"aar": 2024, "periode_til": "2024-12-31", "aarsresultat": 1000},
         {"aarsresultat": 500},
     ]
 
@@ -338,6 +363,12 @@ async def test_fetch_and_store_company_skips_invalid_financial_statements(MockRo
     assert result["financials_fetched"] == 1
     assert result["financials_skipped"] == 1
     assert any("manglet regnskapsår" in msg for msg in result["errors"])
+    service.brreg_api.parse_financial_data.assert_awaited()
+    service.accounting_repo.create_or_update.assert_awaited_once_with(
+        "123456789",
+        {"aar": 2024, "periode_til": "2024-12-31", "aarsresultat": 1000},
+        raw_data={"regnskapsperiode": {"tilDato": "2024-12-31"}, "resultatregnskapResultat": {}},
+    )
     service.company_repo.update_last_polled_regnskap.assert_called_once_with("123456789")
     service.db.commit.assert_called_once()
 

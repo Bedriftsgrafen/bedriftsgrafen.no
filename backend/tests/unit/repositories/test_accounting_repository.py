@@ -1,6 +1,7 @@
 from unittest.mock import AsyncMock, MagicMock
 
 import pytest
+from sqlalchemy.dialects import postgresql
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from exceptions import ValidationException
@@ -151,6 +152,21 @@ async def test_get_by_orgnr_and_year_success(accounting_repo, mock_db):
     result = await accounting_repo.get_by_orgnr_and_year("123", 2023)
 
     assert result == mock_accounting
+
+
+@pytest.mark.asyncio
+async def test_get_by_orgnr_and_year_prefers_complete_period_metadata(accounting_repo, mock_db):
+    """Should prefer real fiscal periods over legacy Dec 31 fallback rows."""
+    mock_result = MagicMock()
+    mock_result.scalar_one_or_none.return_value = MagicMock()
+    mock_db.execute.return_value = mock_result
+
+    await accounting_repo.get_by_orgnr_and_year("123", 2025)
+
+    stmt = mock_db.execute.call_args.args[0]
+    sql = str(stmt.compile(dialect=postgresql.dialect()))
+    assert "periode_fra IS NOT NULL" in sql
+    assert "periode_til DESC NULLS LAST" in sql
 
 
 @pytest.mark.asyncio

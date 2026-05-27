@@ -12,6 +12,11 @@ import { YearSelector } from './YearSelector'
 import { CapitalInfoCard } from './CapitalInfoCard'
 import { AffiliateBanner } from '../ads/AffiliateBanner'
 import { AFFILIATIONS } from '../../constants/affiliations'
+import {
+  formatAccountingPeriodRange,
+  getDisplayAccountings,
+  shouldShowAccountingPeriod,
+} from '../../utils/accountingHelpers'
 
 // Constants
 const REVENUE_THRESHOLD_HIGH = 10_000_000 // 10M NOK
@@ -69,22 +74,27 @@ export const FinancialsTab = React.memo(function FinancialsTab({
   isImporting
 }: FinancialsTabProps) {
 
-  // Filter accounting records to only show periods with actual financial data
-  // No deduplication — show all periods including split fiscal years
+  // Filter accounting records to only show periods with actual financial data.
+  // Legacy imports can contain the same statement twice: one row without period
+  // dates and one row with the real fiscal period. Collapse only those exact
+  // duplicates so real split periods remain selectable.
   const validAccountings = useMemo(() => {
-    return company.regnskap
+    return getDisplayAccountings(company.regnskap
       .filter(acc =>
         acc.salgsinntekter != null ||
         acc.aarsresultat != null ||
         acc.sum_eiendeler != null
-      )
-      .sort((a, b) => {
-        if (b.aar !== a.aar) return b.aar - a.aar
-        const aTil = a.periode_til || ''
-        const bTil = b.periode_til || ''
-        return aTil.localeCompare(bTil)
-      })
+      ))
   }, [company.regnskap])
+
+  const selectedAccounting = useMemo(
+    () => validAccountings.find(accounting => accounting.id === selectedAccountingId) ?? null,
+    [selectedAccountingId, validAccountings]
+  )
+
+  const selectedPeriodRange = selectedAccounting && shouldShowAccountingPeriod(selectedAccounting)
+    ? formatAccountingPeriodRange(selectedAccounting)
+    : null
 
   const adConfig = useMemo(() => getAdConfig(company), [company])
 
@@ -177,11 +187,18 @@ export const FinancialsTab = React.memo(function FinancialsTab({
           {selectedAccountingId && (
             <section aria-labelledby="kpi-heading" className="space-y-4">
               <div className="flex flex-col sm:flex-row sm:items-baseline sm:justify-between gap-2">
-                <div className="flex items-center gap-2">
-                  <TrendingUp className="h-5 w-5 text-blue-600 shrink-0" aria-hidden="true" />
-                  <h2 id="kpi-heading" className="text-xl font-semibold text-gray-900 dark:text-white">
-                    Nøkkeltall {selectedYear}
-                  </h2>
+                <div className="flex items-start gap-2">
+                  <TrendingUp className="h-5 w-5 text-blue-600 shrink-0 mt-0.5" aria-hidden="true" />
+                  <div>
+                    <h2 id="kpi-heading" className="text-xl font-semibold text-gray-900 dark:text-white">
+                      Nøkkeltall {selectedAccounting?.aar ?? selectedYear}
+                    </h2>
+                    {selectedPeriodRange && (
+                      <p className="text-sm text-gray-500 dark:text-slate-400">
+                        Regnskapsperiode: {selectedPeriodRange}
+                      </p>
+                    )}
+                  </div>
                 </div>
                 {company.last_polled_regnskap && (
                   <span className="text-xs text-gray-500 dark:text-slate-400">

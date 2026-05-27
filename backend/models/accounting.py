@@ -106,6 +106,22 @@ class Accounting(Base):
     # Raw data for completeness
     raw_data: Mapped[dict | None] = mapped_column(JSONB, nullable=True)
 
+    @property
+    def source_id(self) -> str | None:
+        """Stable Regnskapsregisteret statement id from raw Brreg data."""
+        if not self.raw_data:
+            return None
+        value = self.raw_data.get("id")
+        return str(value) if value is not None else None
+
+    @property
+    def journalnr(self) -> str | None:
+        """Journal number from raw Brreg data, used as a secondary source identity."""
+        if not self.raw_data:
+            return None
+        value = self.raw_data.get("journalnr")
+        return str(value) if value is not None else None
+
     # Computed columns
     likviditetsgrad1: Mapped[float | None] = mapped_column(
         Float,

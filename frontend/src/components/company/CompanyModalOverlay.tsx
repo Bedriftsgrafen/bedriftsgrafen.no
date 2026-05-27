@@ -17,6 +17,7 @@ import { useCompanyModal } from '../../hooks/useCompanyModal'
 import { useUiStore } from '../../store/uiStore'
 import { ExternalLink } from 'lucide-react'
 import { cleanOrgnr } from '../../utils/formatters'
+import { getPreferredAccounting } from '../../utils/accountingHelpers'
 
 interface CompanyModalOverlayProps {
     orgnr: string
@@ -78,7 +79,7 @@ export function CompanyModalOverlay({ orgnr: rawOrgnr, onClose, onSelectCompany 
             const selectionValid = selectedAccountingId != null &&
                 company.regnskap.some(r => r.id === selectedAccountingId)
             if (!selectionValid) {
-                const mostRecent = company.regnskap[0]
+                const mostRecent = getPreferredAccounting(company.regnskap)
                 if (mostRecent?.id != null) {
                     setSelectedAccounting(mostRecent.aar, mostRecent.id)
                 }

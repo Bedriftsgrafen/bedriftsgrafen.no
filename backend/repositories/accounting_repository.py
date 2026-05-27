@@ -4,7 +4,7 @@ from collections.abc import Sequence
 from datetime import date, datetime
 from typing import Any
 
-from sqlalchemy import select, text
+from sqlalchemy import case, select, text
 from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -161,9 +161,10 @@ class AccountingRepository:
     async def get_by_orgnr_and_year(self, orgnr: str, year: int) -> models.Accounting:
         """Get accounting record for specific year.
 
-        For companies with split fiscal years (multiple records per year),
-        returns the record with the latest ``periode_til`` — typically the
-        full-year or most recent partial period.
+        For companies with multiple records in a year, prefers records with
+        complete fiscal-period metadata before falling back to latest
+        ``periode_til``. This avoids selecting legacy Dec 31 fallback rows
+        over real non-calendar fiscal years.
 
         Args:
             orgnr: Organization number
@@ -180,7 +181,11 @@ class AccountingRepository:
             result = await self.db.execute(
                 select(models.Accounting)
                 .filter(models.Accounting.orgnr == orgnr, models.Accounting.aar == year)
-                .order_by(models.Accounting.periode_til.desc().nullslast())
+                .order_by(
+                    case((models.Accounting.periode_fra.is_not(None), 0), else_=1),
+                    models.Accounting.periode_til.desc().nullslast(),
+                    models.Accounting.id.desc(),
+                )
                 .limit(1)
             )
             accounting = result.scalar_one_or_none()
