@@ -145,6 +145,16 @@ Timeline/trend statistics.
 
 ---
 
+## Activity (`/v1/activity`)
+
+### GET /v1/activity/overview
+Public freshness overview for `/oppdateringer`.
+- `limit` (default: 12, max: 24) — rows per live feed
+- Returns index-backed feeds for newest company registrations and bankruptcies, plus `system_state` data status.
+- Does not expose latest accounting rows yet; that feed is deferred until an index or event ledger supports it safely.
+
+---
+
 ## Geographic (`/v1/municipality`, `/v1/county`)
 
 ### GET /v1/municipality/

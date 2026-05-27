@@ -115,6 +115,7 @@ describe('Header', () => {
       ['Bransjekart', '/bransjer?tab=map'],
       ['Bransjetopplister', '/bransjer?tab=toplist'],
       ['Søk virksomheter etter bransje', '/bransjer?tab=search'],
+      ['Oppdateringer', '/oppdateringer'],
       ['Nyetableringer', '/nyetableringer'],
       ['Konkurser', '/konkurser'],
       ['Regioner', '/regioner'],

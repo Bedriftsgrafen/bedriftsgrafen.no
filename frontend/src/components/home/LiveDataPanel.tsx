@@ -64,10 +64,10 @@ export function LiveDataPanel() {
                     </div>
                     <div className="flex flex-col items-start gap-2 md:items-end">
                         <Link
-                            to="/konkurser"
+                            to="/oppdateringer"
                             className="inline-flex items-center gap-2 text-sm font-semibold text-slate-700 transition-colors hover:text-blue-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 focus-visible:ring-offset-white dark:text-slate-300 dark:hover:text-blue-300 dark:focus-visible:ring-blue-300 dark:focus-visible:ring-offset-slate-900"
                         >
-                            Se konkurser
+                            Se alle oppdateringer
                             <ArrowRight aria-hidden="true" className="h-4 w-4" />
                         </Link>
                         <Link

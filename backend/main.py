@@ -32,6 +32,7 @@ from routers import (  # noqa: E402
     health,
     sitemap,
 )
+from routers.v1 import activity as v1_activity  # noqa: E402
 from routers.v1 import affiliates as v1_affiliates  # noqa: E402
 from routers.v1 import client_errors as v1_client_errors  # noqa: E402
 from routers.v1 import companies as v1_companies  # noqa: E402
@@ -250,6 +251,7 @@ async def generic_exception_handler(request: Request, exc: Exception):
 app.include_router(health.router)
 # V1 API (new versioning)
 app.include_router(v1_companies.router)
+app.include_router(v1_activity.router)
 app.include_router(v1_stats.router)
 app.include_router(v1_trends.router)
 app.include_router(v1_people.router)

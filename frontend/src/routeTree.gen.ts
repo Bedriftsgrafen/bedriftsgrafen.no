@@ -14,6 +14,7 @@ import { Route as SammenlignRouteImport } from './routes/sammenlign'
 import { Route as RegionerRouteImport } from './routes/regioner'
 import { Route as PersonerRouteImport } from './routes/personer'
 import { Route as PersonRouteImport } from './routes/person'
+import { Route as OppdateringerRouteImport } from './routes/oppdateringer'
 import { Route as OmRouteImport } from './routes/om'
 import { Route as NyetableringerRouteImport } from './routes/nyetableringer'
 import { Route as KonkurserRouteImport } from './routes/konkurser'
@@ -54,6 +55,11 @@ const PersonerRoute = PersonerRouteImport.update({
 const PersonRoute = PersonRouteImport.update({
   id: '/person',
   path: '/person',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const OppdateringerRoute = OppdateringerRouteImport.update({
+  id: '/oppdateringer',
+  path: '/oppdateringer',
   getParentRoute: () => rootRouteImport,
 } as any)
 const OmRoute = OmRouteImport.update({
@@ -153,6 +159,7 @@ export interface FileRoutesByFullPath {
   '/konkurser': typeof KonkurserRoute
   '/nyetableringer': typeof NyetableringerRoute
   '/om': typeof OmRoute
+  '/oppdateringer': typeof OppdateringerRoute
   '/person': typeof PersonRouteWithChildren
   '/personer': typeof PersonerRoute
   '/regioner': typeof RegionerRoute
@@ -176,6 +183,7 @@ export interface FileRoutesByTo {
   '/konkurser': typeof KonkurserRoute
   '/nyetableringer': typeof NyetableringerRoute
   '/om': typeof OmRoute
+  '/oppdateringer': typeof OppdateringerRoute
   '/personer': typeof PersonerRoute
   '/regioner': typeof RegionerRoute
   '/sammenlign': typeof SammenlignRoute
@@ -199,6 +207,7 @@ export interface FileRoutesById {
   '/konkurser': typeof KonkurserRoute
   '/nyetableringer': typeof NyetableringerRoute
   '/om': typeof OmRoute
+  '/oppdateringer': typeof OppdateringerRoute
   '/person': typeof PersonRouteWithChildren
   '/personer': typeof PersonerRoute
   '/regioner': typeof RegionerRoute
@@ -224,6 +233,7 @@ export interface FileRouteTypes {
     | '/konkurser'
     | '/nyetableringer'
     | '/om'
+    | '/oppdateringer'
     | '/person'
     | '/personer'
     | '/regioner'
@@ -247,6 +257,7 @@ export interface FileRouteTypes {
     | '/konkurser'
     | '/nyetableringer'
     | '/om'
+    | '/oppdateringer'
     | '/personer'
     | '/regioner'
     | '/sammenlign'
@@ -269,6 +280,7 @@ export interface FileRouteTypes {
     | '/konkurser'
     | '/nyetableringer'
     | '/om'
+    | '/oppdateringer'
     | '/person'
     | '/personer'
     | '/regioner'
@@ -293,6 +305,7 @@ export interface RootRouteChildren {
   KonkurserRoute: typeof KonkurserRoute
   NyetableringerRoute: typeof NyetableringerRoute
   OmRoute: typeof OmRoute
+  OppdateringerRoute: typeof OppdateringerRoute
   PersonRoute: typeof PersonRouteWithChildren
   PersonerRoute: typeof PersonerRoute
   RegionerRoute: typeof RegionerRoute
@@ -340,6 +353,13 @@ declare module '@tanstack/react-router' {
       path: '/person'
       fullPath: '/person'
       preLoaderRoute: typeof PersonRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/oppdateringer': {
+      id: '/oppdateringer'
+      path: '/oppdateringer'
+      fullPath: '/oppdateringer'
+      preLoaderRoute: typeof OppdateringerRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/om': {
@@ -480,6 +500,7 @@ const rootRouteChildren: RootRouteChildren = {
   KonkurserRoute: KonkurserRoute,
   NyetableringerRoute: NyetableringerRoute,
   OmRoute: OmRoute,
+  OppdateringerRoute: OppdateringerRoute,
   PersonRoute: PersonRouteWithChildren,
   PersonerRoute: PersonerRoute,
   RegionerRoute: RegionerRoute,

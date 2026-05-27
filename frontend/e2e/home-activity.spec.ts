@@ -86,6 +86,7 @@ test('shows homepage activity links without mobile dark-mode overflow', async ({
   await expect(page.getByRole('heading', { name: 'Siste bevegelser' })).toBeVisible()
   await expect(section).toContainText('Basert på registreringsdatoer i Enhetsregisteret')
   await expect(section).toContainText('ikke siste innsendingsdato')
+  await expect(section.getByRole('link', { name: /Se alle oppdateringer/i })).toHaveAttribute('href', '/oppdateringer')
   await expect(section.getByRole('link', { name: /Se nyetableringer/i }).first()).toHaveAttribute('href', '/nyetableringer')
   await expect(section.getByRole('link', { name: /Se konkurser/i }).first()).toHaveAttribute('href', '/konkurser')
   await expect(section.getByRole('link', { name: /Utforsk datagrunnlaget/i })).toHaveAttribute('href', '/utforsk')

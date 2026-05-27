@@ -48,6 +48,7 @@ describe('LiveDataPanel', () => {
         expect(screen.getByText('Regnskapsgrunnlag')).toBeInTheDocument()
         expect(screen.getByText('Dekning hos Bedriftsgrafen, ikke siste innsendingsdato.')).toBeInTheDocument()
 
+        expect(screen.getByRole('link', { name: /Se alle oppdateringer/i })).toHaveAttribute('href', '/oppdateringer')
         expect(screen.getAllByRole('link', { name: /Se konkurser/i })[0]).toHaveAttribute('href', '/konkurser')
         expect(screen.getAllByRole('link', { name: /Se nyetableringer/i })[0]).toHaveAttribute('href', '/nyetableringer')
         expect(screen.getByRole('link', { name: /Utforsk datagrunnlaget/i })).toHaveAttribute('href', '/utforsk')

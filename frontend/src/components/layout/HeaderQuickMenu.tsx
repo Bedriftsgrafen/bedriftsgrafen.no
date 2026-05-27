@@ -55,6 +55,8 @@ export function HeaderNavLink({
       return <Link to="/nyetableringer" {...commonProps}>{children}</Link>
     case 'bankruptcies':
       return <Link to="/konkurser" {...commonProps}>{children}</Link>
+    case 'activity':
+      return <Link to="/oppdateringer" {...commonProps}>{children}</Link>
     case 'regions':
       return <Link to="/regioner" {...commonProps}>{children}</Link>
     case 'counties':

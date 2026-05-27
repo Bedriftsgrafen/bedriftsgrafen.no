@@ -53,6 +53,7 @@ describe('headerNav', () => {
     ['/bransjer', { tab: 'toplist' }, ['industry-toplist']],
     ['/bransjer', { tab: 'search' }, ['industry-search']],
     ['/bransje/62', {}, ['industries']],
+    ['/oppdateringer', {}, ['activity']],
     ['/regioner', {}, ['regions']],
     ['/fylker', {}, ['counties']],
     ['/fylke/03-oslo', {}, ['counties']],

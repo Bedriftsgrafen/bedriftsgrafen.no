@@ -2,6 +2,7 @@ import type { ComponentType } from 'react'
 import type { LucideProps } from 'lucide-react'
 import {
   AlertTriangle,
+  Activity,
   ArrowLeftRight,
   Award,
   BarChart3,
@@ -24,6 +25,7 @@ export type HeaderRouteTo =
   | '/bransjer'
   | '/nyetableringer'
   | '/konkurser'
+  | '/oppdateringer'
   | '/regioner'
   | '/fylker'
   | '/kommuner'
@@ -142,6 +144,14 @@ const BANKRUPTCIES_ITEM: HeaderNavItem = {
   topBar: 'menu-only',
 }
 
+const ACTIVITY_ITEM: HeaderNavItem = {
+  id: 'activity',
+  label: 'Oppdateringer',
+  to: '/oppdateringer',
+  icon: Activity,
+  topBar: 'menu-only',
+}
+
 const REGIONS_ITEM: HeaderNavItem = {
   id: 'regions',
   label: 'Regioner',
@@ -239,6 +249,7 @@ export const HEADER_QUICK_MENU_GROUPS: readonly HeaderNavGroup[] = [
       INDUSTRY_MAP_ITEM,
       INDUSTRY_TOPLIST_ITEM,
       INDUSTRY_SEARCH_ITEM,
+      ACTIVITY_ITEM,
       NEW_COMPANIES_ITEM,
       BANKRUPTCIES_ITEM,
     ],
@@ -268,6 +279,7 @@ export const HEADER_STATIC_ENTRY_ROUTES = [
   '/bransjer',
   '/nyetableringer',
   '/konkurser',
+  '/oppdateringer',
   '/regioner',
   '/fylker',
   '/kommuner',
