@@ -181,9 +181,10 @@ services:
     init: true
     privileged: true
     command:
-      - "--housekeeping_interval=30s"
+      - "--housekeeping_interval=60s"
       - "--docker_only=true"
       - "--store_container_labels=false"
+      - "--disable_metrics=disk,diskIO"
     volumes:
       - /:/rootfs:ro
       - /var/run:/var/run:ro
@@ -198,14 +199,14 @@ services:
     deploy:
       resources:
         limits:
-          cpus: '0.20'
-          memory: 256M
+          cpus: '0.30'
+          memory: 384M
         reservations:
-          memory: 64M
+          memory: 96M
     healthcheck:
       test: [ "CMD", "/usr/bin/healthcheck.sh" ]
       interval: 30s
-      timeout: 10s
+      timeout: 20s
       retries: 5
       start_period: 30s
 
