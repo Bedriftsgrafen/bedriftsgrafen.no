@@ -24,7 +24,7 @@ class IndustryPremiumResponse(BaseModel):
 
     nace_division: str = Field(..., description="2-digit NACE division code")
     nace_name: str | None = None
-    nace_section: str | None = Field(None, description="Parent section letter (A-U)")
+    nace_section: str | None = Field(None, description="Parent section letter (A-V)")
     nace_section_name: str | None = None
 
     # Core metrics

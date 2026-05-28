@@ -1,14 +1,14 @@
 import { useQuery } from '@tanstack/react-query';
 import { Building2, TrendingUp, Users, Search, Settings, RotateCcw, ExternalLink } from 'lucide-react';
-import React, { useState, useMemo, memo, useCallback, useRef, useEffect } from 'react';
+import { useState, useMemo, memo, useCallback, useRef, useEffect } from 'react';
 import { Link } from '@tanstack/react-router';
 import { API_BASE } from '../../utils/apiClient';
 import { formatNumber, formatCurrency, formatPercentValue } from '../../utils/formatters';
 import { createRouteCode } from '../../utils/slugify';
-import { CompanyListModal } from './CompanyListModal';
 import { SummaryCard, SortableHeader, LoadingState, ErrorState } from '../common';
 import { RotatingAffiliateBanner } from '../ads/RotatingAffiliateBanner';
 import { GLOBAL_AFFILIATIONS } from '../../constants/affiliations';
+import { NaceHierarchyBrowser } from './NaceHierarchyBrowser';
 
 // ============================================================================
 // Types
@@ -36,12 +36,6 @@ interface IndustryTotals {
     companies: number;
     employees: number;
     revenue: number;
-}
-
-interface SelectedIndustry {
-    naceCode: string;
-    naceName: string;
-    filterType: 'all' | 'new' | 'bankrupt';
 }
 
 type SortField = 'company_count' | 'total_revenue' | 'avg_revenue' | 'total_employees' | 'new_last_year' | 'bankruptcies_last_year' | 'avg_profit' | 'avg_operating_margin';
@@ -77,34 +71,25 @@ const calculateTotals = (data: IndustryStat[]): IndustryTotals => ({
 
 interface IndustryRowProps {
     industry: IndustryStat;
-    onRowClick: (naceCode: string, naceName: string) => void;
-    onNewClick: (naceCode: string, naceName: string) => void;
-    onBankruptClick: (naceCode: string, naceName: string) => void;
     visibleOptionalColumns: OptionalColumn[];
 }
 
-const IndustryRow = memo(({ industry: ind, onRowClick, onNewClick, onBankruptClick, visibleOptionalColumns }: IndustryRowProps) => (
-    <tr
-        className="hover:bg-blue-50 cursor-pointer transition-colors group focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-blue-500"
-        onClick={() => onRowClick(ind.nace_division, ind.nace_name)}
-        onKeyDown={(event) => {
-            if (event.key === 'Enter' || event.key === ' ') {
-                event.preventDefault();
-                onRowClick(ind.nace_division, ind.nace_name);
-            }
-        }}
-        tabIndex={0}
-        aria-label={`Vis virksomheter i ${ind.nace_name}`}
-    >
+const IndustryRow = memo(({ industry: ind, visibleOptionalColumns }: IndustryRowProps) => (
+    <tr className="hover:bg-blue-50 transition-colors group">
         <td className="px-4 py-3">
-            <div className="flex items-center gap-2">
+            <Link
+                to="/bransje/$code"
+                params={{ code: createRouteCode(ind.nace_division, ind.nace_name) }}
+                className="flex items-center gap-2 rounded-lg transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-200"
+                aria-label={`Åpne bransjeside for ${ind.nace_name}`}
+            >
                 <span className="text-xs font-mono bg-blue-100 text-blue-700 px-1.5 py-0.5 rounded">
                     {ind.nace_division}
                 </span>
                 <span className="text-sm text-gray-900 truncate max-w-62.5 group-hover:text-blue-700" title={ind.nace_name}>
                     {ind.nace_name}
                 </span>
-            </div>
+            </Link>
         </td>
         <td className="px-4 py-3 text-sm text-gray-700">{formatNumber(ind.company_count)}</td>
         <td className="px-4 py-3 text-sm text-gray-700">{formatNumber(ind.total_employees)}</td>
@@ -127,31 +112,25 @@ const IndustryRow = memo(({ industry: ind, onRowClick, onNewClick, onBankruptCli
             </td>
         )}
         <td className="px-4 py-3">
-            <button
-                type="button"
-                onClick={(e) => {
-                    e.stopPropagation();
-                    onNewClick(ind.nace_division, ind.nace_name);
-                }}
+            <Link
+                to="/nyetableringer"
+                search={{ nace: ind.nace_division }}
                 aria-label={`Vis nyetableringer i ${ind.nace_name}`}
                 className="text-xs bg-blue-900 text-white px-2 py-0.5 rounded-full font-medium hover:bg-blue-800 transition-colors"
             >
                 +{formatNumber(ind.new_last_year)}
-            </button>
+            </Link>
         </td>
         <td className="px-4 py-3">
             {ind.bankruptcies_last_year > 0 ? (
-                <button
-                    type="button"
-                    onClick={(e) => {
-                        e.stopPropagation();
-                        onBankruptClick(ind.nace_division, ind.nace_name);
-                    }}
+                <Link
+                    to="/konkurser"
+                    search={{ nace: ind.nace_division }}
                     aria-label={`Vis konkurser i ${ind.nace_name}`}
                     className="text-xs bg-blue-900 text-white px-2 py-0.5 rounded-full font-medium hover:bg-blue-800 transition-colors"
                 >
                     {formatNumber(ind.bankruptcies_last_year)}
-                </button>
+                </Link>
             ) : (
                 <span className="text-xs text-gray-400">—</span>
             )}
@@ -255,13 +234,11 @@ const IndustryColumnPicker = memo(function IndustryColumnPicker({ visibleColumns
 
 interface IndustryDashboardProps {
     initialNace?: string;
-    onSelectCompany?: (orgnr: string) => void;
 }
 
-export const IndustryDashboard = ({ initialNace, onSelectCompany }: IndustryDashboardProps) => {
+export const IndustryDashboard = ({ initialNace }: IndustryDashboardProps) => {
     const [sortBy, setSortBy] = useState<SortField>('company_count');
     const [sortOrder, setSortOrder] = useState<SortOrder>('desc');
-    const [selectedIndustry, setSelectedIndustry] = useState<SelectedIndustry | null>(null);
     const [searchQuery, setSearchQuery] = useState('');
     const [visibleOptionalColumns, setVisibleOptionalColumns] = useState<OptionalColumn[]>(DEFAULT_VISIBLE_COLUMNS);
 
@@ -291,31 +268,6 @@ export const IndustryDashboard = ({ initialNace, onSelectCompany }: IndustryDash
         retry: 2,
     });
 
-    // Track if we've already handled the initial nace param (to prevent re-opening after close)
-    const handledNaceRef = React.useRef<string | null>(null);
-
-    // Auto-open modal when navigating from company page with nace param
-    // Using queueMicrotask to avoid synchronous setState in effect (React 18+ lint rule)
-    React.useEffect(() => {
-        // Only open if: initialNace exists, data loaded, and we haven't handled this nace yet
-        if (initialNace && industries && handledNaceRef.current !== initialNace) {
-            handledNaceRef.current = initialNace;
-
-            // Find division (first 2 digits) to provide a better generic name if it's a specific code
-            const divisionCode = initialNace.substring(0, 2);
-            const division = industries.find(i => i.nace_division === divisionCode);
-            const industry = industries.find(i => i.nace_division === initialNace);
-
-            const naceName = industry?.nace_name
-                || (division ? `NACE ${initialNace} (${division.nace_name})` : `NACE ${initialNace}`);
-
-            // Defer setState to next microtask to satisfy lint rule
-            queueMicrotask(() => {
-                setSelectedIndustry({ naceCode: initialNace, naceName, filterType: 'all' });
-            });
-        }
-    }, [initialNace, industries]);
-
     // Handlers
     const handleSort = useCallback((field: SortField) => {
         if (sortBy === field) {
@@ -325,22 +277,6 @@ export const IndustryDashboard = ({ initialNace, onSelectCompany }: IndustryDash
             setSortOrder('desc');
         }
     }, [sortBy]);
-
-    const handleRowClick = useCallback((naceCode: string, naceName: string) => {
-        setSelectedIndustry({ naceCode, naceName, filterType: 'all' });
-    }, []);
-
-    const handleNewClick = useCallback((naceCode: string, naceName: string) => {
-        setSelectedIndustry({ naceCode, naceName, filterType: 'new' });
-    }, []);
-
-    const handleBankruptClick = useCallback((naceCode: string, naceName: string) => {
-        setSelectedIndustry({ naceCode, naceName, filterType: 'bankrupt' });
-    }, []);
-
-    const handleCloseModal = useCallback(() => {
-        setSelectedIndustry(null);
-    }, []);
 
     // Memoize totals calculation
     const totals = useMemo<IndustryTotals>(() => {
@@ -416,12 +352,14 @@ export const IndustryDashboard = ({ initialNace, onSelectCompany }: IndustryDash
                     className="mb-6"
                 />
 
+                <NaceHierarchyBrowser initialNace={initialNace} divisionStats={industries ?? []} />
+
                 {/* Industry Table */}
                 <div className="bg-white rounded-xl border border-gray-200 overflow-hidden shadow-sm">
                     <div className="p-4 border-b border-gray-200 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
                         <div>
                             <h2 className="text-lg font-semibold text-gray-900">Bransjestatistikk</h2>
-                            <p className="text-sm text-gray-500">Klikk på en bransje for å se virksomheter</p>
+                            <p className="text-sm text-gray-500">Åpne bransjesiden, eller bruk kodeverket over for å filtrere mer presist.</p>
                         </div>
                         <div className="flex items-center gap-2">
                             <div className="relative">
@@ -482,9 +420,6 @@ export const IndustryDashboard = ({ initialNace, onSelectCompany }: IndustryDash
                                         <IndustryRow
                                             key={ind.nace_division}
                                             industry={ind}
-                                            onRowClick={handleRowClick}
-                                            onNewClick={handleNewClick}
-                                            onBankruptClick={handleBankruptClick}
                                             visibleOptionalColumns={visibleOptionalColumns}
                                         />
                                     ))
@@ -496,16 +431,6 @@ export const IndustryDashboard = ({ initialNace, onSelectCompany }: IndustryDash
 
             </div>
 
-            {/* Company List Modal */}
-            {selectedIndustry && (
-                <CompanyListModal
-                    naceCode={selectedIndustry.naceCode}
-                    naceName={selectedIndustry.naceName}
-                    filterType={selectedIndustry.filterType}
-                    onClose={handleCloseModal}
-                    onSelectCompany={onSelectCompany}
-                />
-            )}
         </>
     );
 };

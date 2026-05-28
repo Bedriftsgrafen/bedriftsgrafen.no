@@ -14,6 +14,7 @@ import { MUNICIPALITIES } from '../constants/municipalityCodes'
 import { useFilterStore, FilterValues } from '../store/filterStore'
 import { formatMunicipalityName } from '../constants/municipalities'
 import { cleanOrgnr } from '../utils/formatters'
+import { buildBransjerRouteFilterUpdates } from '../utils/bransjerSearchSync'
 
 // Lazy-load heavy components: IndustryMap (leaflet ~154KB) and ExplorerLayout (~56KB)
 // Only downloaded when the user activates the corresponding tab
@@ -35,21 +36,58 @@ function BransjerPage() {
         nace, tab, orgnr,
         q, county_code, municipality_code, org_form,
         revenue_min, revenue_max, employee_min, employee_max,
-        profit_min, profit_max, is_bankrupt, has_accounting, in_liquidation,
+        profit_min, profit_max, is_bankrupt, has_accounting, in_liquidation, in_forced_liquidation,
         county, municipality
     } = Route.useSearch()
 
     // Read filter state from store
-    const { naeringskode, searchQuery, setSearchQuery } = useFilterStore()
+    const { naeringskode, searchQuery } = useFilterStore()
 
-    // Sync search query between store and URL
+    // Hydrate the explorer filter store from URL params used by bransjer deep links.
     useEffect(() => {
-        // If we have a query in the store but not in the URL, and it's not a fresh navigation to industrial dashboard
-        // we might want to sync it. But more importantly, if the URL has a query, the store MUST have it.
-        if (q !== undefined && q !== searchQuery) {
-            setSearchQuery(q || '')
+        const current = useFilterStore.getState()
+        const updates = buildBransjerRouteFilterUpdates({
+            q,
+            nace,
+            county,
+            county_code,
+            municipality,
+            municipality_code,
+            org_form,
+            revenue_min,
+            revenue_max,
+            employee_min,
+            employee_max,
+            profit_min,
+            profit_max,
+            is_bankrupt,
+            has_accounting,
+            in_liquidation,
+            in_forced_liquidation,
+        }, current)
+
+        if (Object.keys(updates).length > 0) {
+            current.setAllFilters(updates)
         }
-    }, [q, searchQuery, setSearchQuery])
+    }, [
+        q,
+        nace,
+        county,
+        county_code,
+        municipality,
+        municipality_code,
+        org_form,
+        revenue_min,
+        revenue_max,
+        employee_min,
+        employee_max,
+        profit_min,
+        profit_max,
+        is_bankrupt,
+        has_accounting,
+        in_liquidation,
+        in_forced_liquidation,
+    ])
 
     // Tab state persisted in URL - defaults to 'stats' unless mapFilter is present at mount
     const activeTab = useMemo(() => {
@@ -81,15 +119,28 @@ function BransjerPage() {
         isBankrupt: is_bankrupt ?? null,
         hasAccounting: has_accounting ?? null,
         inLiquidation: in_liquidation ?? null,
-    }), [q, searchQuery, nace, naeringskode, county_code, municipality_code, org_form, revenue_min, revenue_max, employee_min, employee_max, profit_min, profit_max, is_bankrupt, has_accounting, in_liquidation])
+        inForcedLiquidation: in_forced_liquidation ?? null,
+    }), [q, searchQuery, nace, naeringskode, county_code, municipality_code, org_form, revenue_min, revenue_max, employee_min, employee_max, profit_min, profit_max, is_bankrupt, has_accounting, in_liquidation, in_forced_liquidation])
 
     const handleFilterChange = useCallback((updates: Partial<MapFilterValues>) => {
         // Sync with filterStore for consistent list/stats views
         const storeUpdates: Partial<FilterValues> = {}
         if ('query' in updates) storeUpdates.searchQuery = updates.query || ''
         if ('naceCode' in updates) storeUpdates.naeringskode = updates.naceCode || ''
-        if ('countyCode' in updates) storeUpdates.countyCode = updates.countyCode || ''
-        if ('municipalityCode' in updates) storeUpdates.municipalityCode = updates.municipalityCode || ''
+        if ('countyCode' in updates) {
+            const code = updates.countyCode || ''
+            storeUpdates.countyCode = code
+            storeUpdates.county = code ? (COUNTIES.find(c => c.code === code)?.name ?? code) : ''
+            storeUpdates.municipalityCode = ''
+            storeUpdates.municipality = ''
+        }
+        if ('municipalityCode' in updates) {
+            const code = updates.municipalityCode || ''
+            storeUpdates.municipalityCode = code
+            storeUpdates.municipality = code ? (MUNICIPALITIES.find(m => m.code === code)?.name ?? code) : ''
+            storeUpdates.countyCode = ''
+            storeUpdates.county = ''
+        }
         if ('revenueMin' in updates) storeUpdates.revenueMin = updates.revenueMin
         if ('revenueMax' in updates) storeUpdates.revenueMax = updates.revenueMax
         if ('employeeMin' in updates) storeUpdates.employeeMin = updates.employeeMin
@@ -98,9 +149,12 @@ function BransjerPage() {
         if ('profitMax' in updates) storeUpdates.profitMax = updates.profitMax
         if ('organizationForms' in updates) storeUpdates.organizationForms = updates.organizationForms || []
         if ('isBankrupt' in updates) storeUpdates.isBankrupt = updates.isBankrupt
+        if ('hasAccounting' in updates) storeUpdates.hasAccounting = updates.hasAccounting
+        if ('inLiquidation' in updates) storeUpdates.inLiquidation = updates.inLiquidation
+        if ('inForcedLiquidation' in updates) storeUpdates.inForcedLiquidation = updates.inForcedLiquidation
 
         if (Object.keys(storeUpdates).length > 0) {
-            useFilterStore.setState(storeUpdates)
+            useFilterStore.getState().setAllFilters(storeUpdates)
         }
 
         navigate({
@@ -113,10 +167,14 @@ function BransjerPage() {
                 if ('countyCode' in updates) {
                     newSearch.county_code = updates.countyCode || undefined
                     newSearch.county = updates.countyCode ? COUNTIES.find(c => c.code === updates.countyCode)?.name : undefined
+                    newSearch.municipality_code = undefined
+                    newSearch.municipality = undefined
                 }
                 if ('municipalityCode' in updates) {
                     newSearch.municipality_code = updates.municipalityCode || undefined
                     newSearch.municipality = updates.municipalityCode ? MUNICIPALITIES.find(m => m.code === updates.municipalityCode)?.name : undefined
+                    newSearch.county_code = undefined
+                    newSearch.county = undefined
                 }
                 if ('organizationForms' in updates) newSearch.org_form = updates.organizationForms?.length ? updates.organizationForms : undefined
                 if ('revenueMin' in updates) newSearch.revenue_min = updates.revenueMin ?? undefined
@@ -128,6 +186,7 @@ function BransjerPage() {
                 if ('isBankrupt' in updates) newSearch.is_bankrupt = updates.isBankrupt ?? undefined
                 if ('hasAccounting' in updates) newSearch.has_accounting = updates.hasAccounting ?? undefined
                 if ('inLiquidation' in updates) newSearch.in_liquidation = updates.inLiquidation ?? undefined
+                if ('inForcedLiquidation' in updates) newSearch.in_forced_liquidation = updates.inForcedLiquidation ?? undefined
                 return newSearch
             },
             replace: true,
@@ -232,12 +291,12 @@ function BransjerPage() {
             </TabContainer>
 
             {/* Content — min-height prevents CLS from footer shifting when data loads */}
-            <div className="min-h-[400px] md:min-h-[600px] min-w-0 overflow-x-hidden">
-            {activeTab === 'stats' && <IndustryDashboard initialNace={nace} onSelectCompany={setSelectedCompanyOrgnr} />}
+            <div className="min-h-100 md:min-h-150 min-w-0 overflow-x-hidden">
+            {activeTab === 'stats' && <IndustryDashboard initialNace={nace} />}
             {activeTab === 'map' && (
-                <Suspense fallback={<div className="flex items-center justify-center h-[800px]"><Loader2 className="h-8 w-8 animate-spin text-blue-600" /></div>}>
+                <Suspense fallback={<div className="flex items-center justify-center h-200"><Loader2 className="h-8 w-8 animate-spin text-blue-600" /></div>}>
                 <div className="space-y-4">
-                    <div className="rounded-2xl overflow-hidden border border-gray-100 shadow-sm h-[900px] md:h-[800px] relative">
+                    <div className="rounded-2xl overflow-hidden border border-gray-100 shadow-sm h-225 md:h-200 relative">
                         <IndustryMap
                             filters={filters}
                             onFilterChange={handleFilterChange}

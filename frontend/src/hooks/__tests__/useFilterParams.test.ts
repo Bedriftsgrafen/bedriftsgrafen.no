@@ -95,6 +95,18 @@ describe('Filter Value Transformation', () => {
         expect(result.current.filterParams.organisasjonsform).toEqual(['AS', 'ENK'])
     })
 
+    it('prefers county code over display name for backend filtering', () => {
+        mockState = {
+            ...emptyFilterState,
+            county: 'Oslo',
+            countyCode: '03',
+        }
+
+        const { result } = renderHook(() => useFilterParams())
+
+        expect(result.current.filterParams.county).toBe('03')
+    })
+
     it('formats date objects to ISO date strings', () => {
         const testDate = new Date('2023-06-15T12:00:00Z')
         mockState = {

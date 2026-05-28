@@ -25,6 +25,7 @@ export function useFilterParams() {
   const municipality = useFilterStore(s => s.municipality)
   const municipalityCode = useFilterStore(s => s.municipalityCode)
   const county = useFilterStore(s => s.county)
+  const countyCode = useFilterStore(s => s.countyCode)
   const foundedFrom = useFilterStore(s => s.foundedFrom)
   const foundedTo = useFilterStore(s => s.foundedTo)
   const bankruptFrom = useFilterStore(s => s.bankruptFrom)
@@ -71,7 +72,7 @@ export function useFilterParams() {
     max_employees: employeeMax !== null ? Math.max(0, employeeMax) : undefined,
     municipality: municipality || undefined,
     municipality_code: municipalityCode || undefined,
-    county: county || undefined,
+    county: countyCode || county || undefined,
     founded_from: (foundedFrom instanceof Date && !isNaN(foundedFrom.getTime())) ? foundedFrom.toISOString().split('T')[0] : undefined,
     founded_to: (foundedTo instanceof Date && !isNaN(foundedTo.getTime())) ? foundedTo.toISOString().split('T')[0] : undefined,
     bankrupt_from: (bankruptFrom instanceof Date && !isNaN(bankruptFrom.getTime())) ? bankruptFrom.toISOString().split('T')[0] : undefined,
@@ -101,6 +102,7 @@ export function useFilterParams() {
     municipality,
     municipalityCode,
     county,
+    countyCode,
     foundedFrom,
     foundedTo,
     bankruptFrom,

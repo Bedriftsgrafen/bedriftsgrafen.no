@@ -12,8 +12,8 @@ export interface NaceCode {
     readonly name: string
 }
 
-/** NACE code key (A-U) */
-export type NaceCodeKey = 'A' | 'B' | 'C' | 'D' | 'E' | 'F' | 'G' | 'H' | 'I' | 'J' | 'K' | 'L' | 'M' | 'N' | 'O' | 'P' | 'Q' | 'R' | 'S' | 'T' | 'U'
+/** NACE code key (A-V) */
+export type NaceCodeKey = 'A' | 'B' | 'C' | 'D' | 'E' | 'F' | 'G' | 'H' | 'I' | 'J' | 'K' | 'L' | 'M' | 'N' | 'O' | 'P' | 'Q' | 'R' | 'S' | 'T' | 'U' | 'V'
 
 // ============================================================================
 // Region Types

@@ -138,7 +138,7 @@ class StatsService:
             "total_employees": models.MunicipalityStats.total_employees,
         }
         # Truncate NACE to division (2 digits) if provided as subclass (5 digits)
-        # Preserve section letters (A-U)
+        # Preserve section letters (A-V)
         clean_nace = nace[:2] if nace and len(nace) > 1 else nace
         metric_col = metric_columns[metric]
 

@@ -1,14 +1,14 @@
 """
 NACE section code mappings (SSB Standard)
 
-Maps top-level NACE section letters (A-U) to their corresponding
+Maps top-level NACE section letters (A-V) to their corresponding
 numeric division ranges. Used for filtering companies by industry section.
 
 Reference: https://www.ssb.no/klass/klassifikasjoner/6
 """
 
 # Type aliases for clarity
-NaceSectionLetter = str  # Single uppercase letter A-U
+NaceSectionLetter = str  # Single uppercase letter A-V
 NaceDivisionCode = str  # 2-digit numeric code like '41', '62'
 
 # NACE section data: letter -> (tuple of division codes, Norwegian name)
@@ -48,21 +48,22 @@ _NACE_SECTIONS: dict[str, tuple[tuple[str, ...], str]] = {
     "D": (("35",), "Elektrisitets-, gass-, damp- og varmtvannsforsyning"),
     "E": (("36", "37", "38", "39"), "Vannforsyning, avløps- og renovasjonsvirksomhet"),
     "F": (("41", "42", "43"), "Bygge- og anleggsvirksomhet"),
-    "G": (("45", "46", "47"), "Varehandel, reparasjon av motorvogner"),
+    "G": (("46", "47"), "Varehandel"),
     "H": (("49", "50", "51", "52", "53"), "Transport og lagring"),
     "I": (("55", "56"), "Overnattings- og serveringsvirksomhet"),
-    "J": (("58", "59", "60", "61", "62", "63"), "Informasjon og kommunikasjon"),
-    "K": (("64", "65", "66"), "Finansierings- og forsikringsvirksomhet"),
-    "L": (("68",), "Omsetning og drift av fast eiendom"),
-    "M": (("69", "70", "71", "72", "73", "74", "75"), "Faglig, vitenskapelig og teknisk tjenesteyting"),
-    "N": (("77", "78", "79", "80", "81", "82"), "Forretningsmessig tjenesteyting"),
-    "O": (("84",), "Offentlig administrasjon og forsvar"),
-    "P": (("85",), "Undervisning"),
-    "Q": (("86", "87", "88"), "Helse- og sosialtjenester"),
-    "R": (("90", "91", "92", "93"), "Kulturell virksomhet, underholdning og fritidsaktiviteter"),
-    "S": (("94", "95", "96"), "Annen tjenesteyting"),
-    "T": (("97", "98"), "Lønnet arbeid i private husholdninger"),
-    "U": (("99",), "Internasjonale organisasjoner og organer"),
+    "J": (("58", "59", "60"), "Utgivelse, kringkasting, innholdsproduksjon og distribusjonsvirksomhet"),
+    "K": (("61", "62", "63"), "Telekommunikasjon, dataprogrammering og informasjonsteknologi"),
+    "L": (("64", "65", "66"), "Finansiell tjenesteyting"),
+    "M": (("68",), "Eiendomsvirksomhet"),
+    "N": (("69", "70", "71", "72", "73", "74", "75"), "Faglig, vitenskapelig og teknisk tjenesteyting"),
+    "O": (("77", "78", "79", "80", "81", "82"), "Forretningsmessig tjenesteyting"),
+    "P": (("84",), "Offentlig administrasjon og forsvar"),
+    "Q": (("85",), "Undervisning"),
+    "R": (("86", "87", "88"), "Helse- og sosialtjenester"),
+    "S": (("90", "91", "92", "93"), "Kulturell virksomhet, idrett og fritidsaktiviteter"),
+    "T": (("94", "95", "96"), "Annen tjenesteyting"),
+    "U": (("97", "98"), "Private husholdninger"),
+    "V": (("99",), "Internasjonale organisasjoner og organer"),
 }
 
 # Derived constants - computed once at module load (O(1) access)
@@ -79,7 +80,7 @@ NACE_UNKNOWN_CODE: str = "00"
 
 def is_nace_section_letter(code: str | None) -> bool:
     """
-    Check if a code is a single NACE section letter (A-U).
+    Check if a code is a single NACE section letter (A-V).
 
     Args:
         code: String to check (handles None/empty safely)
@@ -97,7 +98,7 @@ def get_nace_division_prefixes(section_or_code: str | None) -> list[str]:
     Get numeric division prefixes for a NACE section letter or return code as-is.
 
     Args:
-        section_or_code: Either a section letter (A-U) or a numeric code (62, 62.010)
+        section_or_code: Either a section letter (A-V) or a numeric code (62, 62.010)
 
     Returns:
         List of 2-digit division prefixes to match with LIKE.
@@ -131,7 +132,7 @@ def get_nace_section_name(section: str | None) -> str | None:
     Get Norwegian name for a NACE section letter.
 
     Args:
-        section: Section letter (A-U), case-insensitive
+        section: Section letter (A-V), case-insensitive
 
     Returns:
         Norwegian name or None if not found

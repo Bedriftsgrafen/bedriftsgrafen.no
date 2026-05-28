@@ -40,6 +40,16 @@ This document consolidates feature ideas and strategic plans for the future deve
   - Quick filters: same industry, same size, fastest growth.
 - **Why**: Improves discovery and time-on-site with minimal UI changes.
 
+### SSB-style NACE Classification Browser
+- **Goal**: Make `/bransjer` feel like a real industry-code explorer, closer to SSB Klass: filter, expand/collapse, and drill down through sections, divisions, groups and classes.
+- **Why**: Current bransje UX is too modal-oriented. Users should understand the NACE hierarchy and move from broad categories to precise codes without opening a company-list modal.
+- **Features**:
+  - Inline hierarchy from `backend/klass-version-3218-codes.csv` with direct links to bransje dashboards and filtered company search.
+  - Search across NACE code and SSB name.
+  - Show company counts where Bedriftsgrafen has indexed statistics, especially for 2-digit divisions and later for deeper levels.
+  - Replace “click row to open companies modal” with “open bransje page / drill down / search businesses”.
+- **Data note**: The CSV currently contains levels 2-4 and uses section letters as parents; section names come from Bedriftsgrafen's NACE section mapping.
+
 ### Adtraction Revenue Notifications (Discord)
 - **Goal**: Send a Discord notification when Adtraction registers a commission-bearing event for Bedriftsgrafen, including CPL/lead commissions and generated payments, while keeping business notifications separate from Grafana operational alerts.
 - **API basis**: Use Adtraction API v2 with `X-Token` authentication against `https://api.adtraction.net/v2/`. Alert sources are `/partner/transactions` with `transactionStatus=3` (approved + pending) and `commission > 0`, plus `/partner/payments/{currency}/{paymentId}`. Do not call click/statistics endpoints for alerting.
@@ -82,6 +92,29 @@ This document consolidates feature ideas and strategic plans for the future deve
 - **Goal**: Visualize the parent-child relationship between main entities and subunits.
 - **Tech**: Use `react-flow` to render a tree-like structure from `underenheter` data.
 
+### Aksjeeierbok Ownership Explorer
+- **Goal**: Import Skatteetatens aksjeeierbok for 2024 and 2025 and visualize ownership on company pages, similar to a dedicated `/virksomhet/{orgnr}/eierstruktur` view.
+- **Why**: This closes a major competitor gap and adds a high-value network layer: who owns the company, what the company owns, and how ownership changes year over year.
+- **Downloaded source**: `downloads/aksjeeiebok_2024.csv` (~3.05M rows) and `downloads/aksjeeiebok_2025.csv` (~3.09M rows), columns include company orgnr/name, share class, shareholder name, shareholder birth year/orgnr, location/country, shares and total company shares.
+- **Phase 1: Import foundation**:
+  - Create `shareholder_positions` table keyed by year, company orgnr, normalized shareholder id/name, share class and source row hash.
+  - Store shareholder orgnr when present; keep birth year as non-unique contextual data and avoid exposing sensitive assumptions about private persons.
+  - Add indexes for `company_orgnr`, `shareholder_orgnr`, `year`, and top-owner queries.
+  - Build dry-run/apply importer with row-count, duplicate, malformed-orgnr and percentage-sum reports.
+- **Phase 2: API**:
+  - `GET /v1/companies/{orgnr}/ownership?year=2025` for top shareholders, “other owners” aggregation and source freshness.
+  - `GET /v1/companies/{orgnr}/holdings?year=2025` for companies where this orgnr appears as shareholder.
+  - Optional compare mode for ownership changes from 2024 to 2025.
+- **Phase 3: UI**:
+  - Company-page ownership tab with graph/list toggle, top shareholders, owned companies, year selector, share-class filter and source note “Skatteetatens aksjonærregister per 31.12.<year>”.
+  - Aggregate long tails as “andre eiere” to keep the page fast and readable.
+  - Link organization shareholders to Bedriftsgrafen company pages when orgnr is known.
+- **Important caveats**:
+  - Aksjeeierboken is annual, not live ownership.
+  - Nominee/custodian shareholders can obscure beneficial owners.
+  - Private persons need careful display, search and removal/privacy handling.
+  - Percentages should be calculated per share class and total shares, with validation for zero/missing totals.
+
 ---
 
 ## Priority 3: Advanced Analytics (1-2 weeks each)
@@ -111,6 +144,19 @@ This document consolidates feature ideas and strategic plans for the future deve
   - Margin compression beyond industry norms.
   - Rapid employee growth or contraction.
 - **Why**: Creates proactive insights and repeat visits.
+
+### Source Worker Data Quality Hardening
+- **Goal**: Make every worker job that fetches from Brreg, SSB, Kartverket, Skatteetaten or other sources auditable, replayable and visibly healthy.
+- **Why**: Freshness pages are only as trustworthy as the jobs behind them. Data quality should be treated as product surface, not only backend plumbing.
+- **Hardening checklist**:
+  - Contract tests with recorded/redacted fixtures for every source response shape the workers parse.
+  - Dry-run mode for destructive or large backfills, with expected insert/update/delete counts before apply.
+  - Cursor monotonicity checks: no job should silently move a source cursor backwards or skip a failed window.
+  - Idempotency tests for replaying the same update window twice.
+  - Per-job data-quality metrics: rows fetched, rows persisted, rows skipped, parse errors, source lag and latest observed source timestamp.
+  - Alert if a job has zero useful rows for too long, if source lag exceeds a threshold, or if malformed rows spike.
+  - Public/internal “source health” view that maps worker state to Datastatus without exposing secrets or noisy internals.
+- **Near-term targets**: Brreg entity updates, subunit updates, role updates, accounting fetches, geocoding, materialized view refreshes and future aksjeeierbok imports.
 
 ---
 

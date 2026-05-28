@@ -56,8 +56,8 @@ async def get_industry_stat(
         ...,
         min_length=1,
         max_length=2,
-        pattern=r"^([A-U]|\d{2})$",
-        description="NACE division code (2 digits) or section letter (A-U)",
+        pattern=r"^([A-V]|\d{2})$",
+        description="NACE division code (2 digits) or section letter (A-V)",
     ),
     db: AsyncSession = Depends(get_db),
 ) -> IndustryStatResponse:
@@ -102,8 +102,8 @@ async def get_industry_benchmark(
         ...,
         min_length=1,
         max_length=12,
-        pattern=r"^([A-U]|\d{2}|\d{2}\.\d{3})$",
-        description="NACE code: section letter (A-U), 2nd-digit division, or 5-digit subclass",
+        pattern=r"^([A-V]|\d{2}|\d{2}\.\d{3})$",
+        description="NACE code: section letter (A-V), 2nd-digit division, or 5-digit subclass",
     ),
     orgnr: str = Path(..., min_length=9, max_length=9, pattern=r"^\d{9}$", description="Organization number"),
     municipality_code: str | None = Query(
@@ -164,8 +164,8 @@ async def get_geography_stats(
         None,
         min_length=1,
         max_length=12,
-        pattern=r"^([A-U]|\d{2}|\d{2}\.\d{3})$",
-        description="NACE code: section letter (A-U), 2nd-digit division, or 5-digit subclass",
+        pattern=r"^([A-V]|\d{2}|\d{2}\.\d{3})$",
+        description="NACE code: section letter (A-V), 2nd-digit division, or 5-digit subclass",
     ),
     county_code: str | None = Query(
         None, min_length=2, max_length=10, pattern=r"^\d{2}$", description="Filter by county code (2 digits)"
@@ -199,8 +199,8 @@ async def get_geography_averages(
         None,
         min_length=1,
         max_length=12,
-        pattern=r"^([A-U]|\d{2}|\d{2}\.\d{3})$",
-        description="NACE code: section letter (A-U), 2nd-digit division, or 5-digit subclass",
+        pattern=r"^([A-V]|\d{2}|\d{2}\.\d{3})$",
+        description="NACE code: section letter (A-V), 2nd-digit division, or 5-digit subclass",
     ),
     county_code: str | None = Query(
         None, min_length=2, max_length=10, pattern=r"^\d{2}$", description="County code (2 digits)"

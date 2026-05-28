@@ -199,7 +199,7 @@ const NacePickerModalContent = memo(function NacePickerModalContent({
     const allSearchableCodes = useMemo(() => {
         const codes: Array<{ code: string; name: string; level: number }> = []
 
-        // Add sections (A-U)
+        // Add sections (A-V)
         for (const section of NACE_CODES) {
             codes.push({ code: section.code, name: section.name, level: 1 })
         }

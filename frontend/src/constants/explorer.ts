@@ -9,29 +9,30 @@ import type { NaceCode, NaceCodeKey, Region, MunicipalityEntry } from '../types/
 // NACE CODES
 // ============================================================================
 
-/** Top-level NACE codes (A-U) with Norwegian descriptions */
+/** Top-level NACE codes (A-V) with Norwegian descriptions */
 export const NACE_CODES: readonly NaceCode[] = Object.freeze([
     { code: 'A', name: 'Jordbruk, skogbruk og fiske' },
     { code: 'B', name: 'Bergverksdrift og utvinning' },
     { code: 'C', name: 'Industri' },
-    { code: 'D', name: 'Elektrisitets-, gass-, damp- og varmtvannsforsyning' },
-    { code: 'E', name: 'Vannforsyning, avløps- og renovasjonsvirksomhet' },
+    { code: 'D', name: 'Forsyning av elektrisitet, gass, damp og kjøleluft' },
+    { code: 'E', name: 'Vannforsyning, avløps-, renovasjons- og oppryddingsvirksomhet' },
     { code: 'F', name: 'Bygge- og anleggsvirksomhet' },
-    { code: 'G', name: 'Varehandel, reparasjon av motorvogner' },
+    { code: 'G', name: 'Varehandel' },
     { code: 'H', name: 'Transport og lagring' },
     { code: 'I', name: 'Overnattings- og serveringsvirksomhet' },
-    { code: 'J', name: 'Informasjon og kommunikasjon' },
-    { code: 'K', name: 'Finansierings- og forsikringsvirksomhet' },
-    { code: 'L', name: 'Omsetning og drift av fast eiendom' },
-    { code: 'M', name: 'Faglig, vitenskapelig og teknisk tjenesteyting' },
-    { code: 'N', name: 'Forretningsmessig tjenesteyting' },
-    { code: 'O', name: 'Offentlig administrasjon og forsvar' },
-    { code: 'P', name: 'Undervisning' },
-    { code: 'Q', name: 'Helse- og sosialtjenester' },
-    { code: 'R', name: 'Kulturell virksomhet, underholdning og fritidsaktiviteter' },
-    { code: 'S', name: 'Annen tjenesteyting' },
-    { code: 'T', name: 'Lønnet arbeid i private husholdninger' },
-    { code: 'U', name: 'Internasjonale organisasjoner og organer' },
+    { code: 'J', name: 'Utgivelse, kringkasting, innholdsproduksjon og distribusjonsvirksomhet' },
+    { code: 'K', name: 'Telekommunikasjon, dataprogrammering, datainfrastruktur og informasjonsteknologi' },
+    { code: 'L', name: 'Finansiell tjenesteyting' },
+    { code: 'M', name: 'Eiendomsvirksomhet' },
+    { code: 'N', name: 'Faglig, vitenskapelig og teknisk tjenesteyting' },
+    { code: 'O', name: 'Forretningsmessig tjenesteyting' },
+    { code: 'P', name: 'Offentlig administrasjon og forsvar, trygdeordninger underlagt offentlig forvaltning' },
+    { code: 'Q', name: 'Undervisning' },
+    { code: 'R', name: 'Helse- og sosialtjenester' },
+    { code: 'S', name: 'Kulturell virksomhet, idrett og fritidsaktiviteter' },
+    { code: 'T', name: 'Annen tjenesteyting' },
+    { code: 'U', name: 'Lønnet arbeid i private husholdninger og annen produksjon til eget bruk' },
+    { code: 'V', name: 'Aktiviteter i internasjonale organisasjoner og organer' },
 ])
 
 /** NACE code to name mapping for quick lookup - O(1) access */
@@ -103,7 +104,6 @@ export const NACE_DIVISIONS: Readonly<Record<string, readonly NaceDivision[]>> =
         { code: '43', name: 'Spesialisert bygge- og anleggsvirksomhet' },
     ],
     'G': [
-        { code: '45', name: 'Handel og reparasjon av motorvogner' },
         { code: '46', name: 'Agentur- og engroshandel' },
         { code: '47', name: 'Detaljhandel' },
     ],
@@ -122,19 +122,21 @@ export const NACE_DIVISIONS: Readonly<Record<string, readonly NaceDivision[]>> =
         { code: '58', name: 'Forlagsvirksomhet' },
         { code: '59', name: 'Film-, video- og fjernsynsprogramproduksjon' },
         { code: '60', name: 'Radio- og fjernsynskringkasting' },
+    ],
+    'K': [
         { code: '61', name: 'Telekommunikasjon' },
         { code: '62', name: 'Tjenester tilknyttet informasjonsteknologi' },
         { code: '63', name: 'Informasjonstjenester' },
     ],
-    'K': [
+    'L': [
         { code: '64', name: 'Finansieringsvirksomhet' },
         { code: '65', name: 'Forsikringsvirksomhet og pensjonskasser' },
         { code: '66', name: 'Tjenester tilknyttet finansierings- og forsikring' },
     ],
-    'L': [
-        { code: '68', name: 'Omsetning og drift av fast eiendom' },
-    ],
     'M': [
+        { code: '68', name: 'Eiendomsvirksomhet' },
+    ],
+    'N': [
         { code: '69', name: 'Juridisk og regnskapsmessig tjenesteyting' },
         { code: '70', name: 'Hovedkontortjenester; administrativ rådgivning' },
         { code: '71', name: 'Arkitekt- og teknisk konsulentvirksomhet' },
@@ -143,7 +145,7 @@ export const NACE_DIVISIONS: Readonly<Record<string, readonly NaceDivision[]>> =
         { code: '74', name: 'Annen faglig, vitenskapelig virksomhet' },
         { code: '75', name: 'Veterinærtjenester' },
     ],
-    'N': [
+    'O': [
         { code: '77', name: 'Utleievirksomhet' },
         { code: '78', name: 'Arbeidskrafttjenester' },
         { code: '79', name: 'Reisebyrå- og reisearrangørvirksomhet' },
@@ -151,40 +153,40 @@ export const NACE_DIVISIONS: Readonly<Record<string, readonly NaceDivision[]>> =
         { code: '81', name: 'Tjenester tilknyttet eiendomsdrift' },
         { code: '82', name: 'Annen forretningsmessig tjenesteyting' },
     ],
-    'O': [
+    'P': [
         { code: '84', name: 'Offentlig administrasjon og forsvar' },
     ],
-    'P': [
+    'Q': [
         { code: '85', name: 'Undervisning' },
     ],
-    'Q': [
+    'R': [
         { code: '86', name: 'Helsetjenester' },
         { code: '87', name: 'Pleie- og omsorgstjenester i institusjon' },
         { code: '88', name: 'Sosiale omsorgstjenester uten botilbud' },
     ],
-    'R': [
+    'S': [
         { code: '90', name: 'Kunstnerisk virksomhet og underholdning' },
         { code: '91', name: 'Drift av biblioteker, arkiver, museer' },
         { code: '92', name: 'Lotteri og totalisatorspill' },
         { code: '93', name: 'Sports- og fritidsaktiviteter' },
     ],
-    'S': [
+    'T': [
         { code: '94', name: 'Aktiviteter i medlemsorganisasjoner' },
         { code: '95', name: 'Reparasjon av datamaskiner og husholdningsvarer' },
         { code: '96', name: 'Andre personlige tjenester' },
     ],
-    'T': [
+    'U': [
         { code: '97', name: 'Lønnet arbeid i private husholdninger' },
         { code: '98', name: 'Ikke-spesifisert vareproduksjon i husholdninger' },
     ],
-    'U': [
+    'V': [
         { code: '99', name: 'Internasjonale organisasjoner og organer' },
     ],
 })
 
 /**
  * Get NACE name by code with fallback
- * @param code - NACE code (A-U)
+ * @param code - NACE code (A-V)
  * @returns Name or 'Ukjent' if not found
  */
 export function getNaceName(code: string): string {
