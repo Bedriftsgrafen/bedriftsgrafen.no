@@ -161,6 +161,7 @@ Company event timeline backed by the `company_events` ledger.
 - `offset` (default: 0, max: 5000)
 - Returns durable events with source, source update ID, observed time, optional occurred time, and explicit timestamp semantics.
 - Subunit update events are stored under the subunit organization number with `payload.parent_orgnr`; parent-company timelines do not automatically include underenhet events.
+- Role update events are coarse `roles_changed` entries for the affected company. They do not expose person-level role diffs.
 - The ledger table is introduced by Alembic migration `b8c9d0e1f2a3`; reads and ingestion writes are gated by `ENABLE_COMPANY_EVENT_LEDGER=true` until the migration is deliberately applied.
 
 ---

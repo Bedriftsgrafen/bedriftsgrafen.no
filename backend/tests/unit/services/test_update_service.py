@@ -514,6 +514,81 @@ class TestFetchRoleUpdates:
             # Role sync should be skipped for this company
             update_service.brreg_api.fetch_roles.assert_not_called()
 
+    async def test_fetch_role_updates_records_coarse_roles_changed_event(self, update_service, mock_db):
+        mock_resp = MagicMock(status_code=200)
+        mock_resp.json.return_value = [
+            {
+                "id": "500",
+                "type": "no.brreg.enhetsregisteret.roller.oppdatert",
+                "source": "/enhetsregisteret/oppdateringer/roller",
+                "subject": "987654321",
+                "time": "2026-05-27T12:30:00Z",
+                "data": {"organisasjonsnummer": "987654321"},
+            }
+        ]
+
+        update_service.company_repo.get_existing_orgnrs = AsyncMock(return_value={"987654321"})
+        update_service.subunit_repo.get_existing_orgnrs = AsyncMock(return_value=set())
+        update_service.brreg_api.fetch_roles = AsyncMock(
+            return_value=[
+                {"type_kode": "DAGL", "person_navn": "Ola Nordmann", "foedselsdato": "1980-01-01"},
+                {"type_kode": "LEDE", "person_navn": "Kari Nordmann", "foedselsdato": "1981-01-01"},
+            ]
+        )
+        update_service.role_repo.create_batch = AsyncMock()
+        update_service._record_company_event_safe = AsyncMock()
+
+        with patch("httpx.AsyncClient") as mock_client:
+            mock_client.return_value.__aenter__.return_value.get.return_value = mock_resp
+
+            result = await update_service.fetch_role_updates(since_date=date(2026, 5, 27), page_size=10)
+
+        update_service._record_company_event_safe.assert_awaited_once()
+        event_kwargs = update_service._record_company_event_safe.await_args.kwargs
+        assert event_kwargs["orgnr"] == "987654321"
+        assert event_kwargs["event_type"] == "roles_changed"
+        assert event_kwargs["source"] == "Enhetsregisteret roller via Brreg"
+        assert event_kwargs["source_update_id"] == "500"
+        assert event_kwargs["new_value"] == {"role_count": 2}
+        assert event_kwargs["payload"] == {
+            "entity_type": "role_update",
+            "time_semantics": "Tidspunkt fra Brregs rolleoppdateringsstrøm når tilgjengelig.",
+            "cloud_event_type": "no.brreg.enhetsregisteret.roller.oppdatert",
+            "cloud_event_source": "/enhetsregisteret/oppdateringer/roller",
+            "cloud_event_subject": "987654321",
+        }
+        assert "Ola Nordmann" not in str(event_kwargs["payload"])
+        assert result["companies_updated"] == 1
+
+    async def test_fetch_role_updates_uses_latest_role_event_per_orgnr(self, update_service, mock_db):
+        mock_resp = MagicMock(status_code=200)
+        mock_resp.json.return_value = [
+            {
+                "id": "500",
+                "time": "2026-05-27T12:00:00Z",
+                "data": {"organisasjonsnummer": "987654321"},
+            },
+            {
+                "id": "505",
+                "time": "2026-05-27T13:00:00Z",
+                "data": {"organisasjonsnummer": "987654321"},
+            },
+        ]
+
+        update_service.company_repo.get_existing_orgnrs = AsyncMock(return_value={"987654321"})
+        update_service.subunit_repo.get_existing_orgnrs = AsyncMock(return_value=set())
+        update_service.brreg_api.fetch_roles = AsyncMock(return_value=[])
+        update_service._record_company_event_safe = AsyncMock()
+
+        with patch("httpx.AsyncClient") as mock_client:
+            mock_client.return_value.__aenter__.return_value.get.return_value = mock_resp
+
+            result = await update_service.fetch_role_updates(since_date=date(2026, 5, 27), page_size=10)
+
+        update_service._record_company_event_safe.assert_awaited_once()
+        assert update_service._record_company_event_safe.await_args.kwargs["source_update_id"] == "505"
+        assert result["latest_oppdateringsid"] == 505
+
     async def test_report_sync_error_smart_filtering(self, update_service, mock_db):
         mock_db.execute = AsyncMock(return_value=MagicMock(scalar_one_or_none=lambda: None))
 

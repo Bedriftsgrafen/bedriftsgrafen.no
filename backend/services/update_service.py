@@ -31,6 +31,7 @@ DB_COMMIT_CHUNK_SIZE = 100  # Commit every X records for efficiency
 UPDATE_PAGE_SIZE = 1000  # Max size allowed by API
 BRREG_COMPANY_EVENT_SOURCE = "Enhetsregisteret via Brreg"
 BRREG_SUBUNIT_EVENT_SOURCE = "Underenhetsregisteret via Brreg"
+BRREG_ROLE_EVENT_SOURCE = "Enhetsregisteret roller via Brreg"
 BRREG_UPDATE_TIME_SEMANTICS = "Tidspunkt fra Brregs oppdateringsstrøm når tilgjengelig."
 BRREG_COMPANY_CHANGE_EVENT_PATHS: dict[str, tuple[str, ...]] = {
     "name_changed": ("/navn",),
@@ -312,6 +313,62 @@ class UpdateService:
             payload["parent_orgnr"] = parent_orgnr
         payload["entity_type"] = "subunit"
         return payload
+
+    @staticmethod
+    def _role_event_sort_key(event: dict[str, Any]) -> tuple[int, str]:
+        event_id = str(event.get("id") or "")
+        try:
+            return int(event_id), event_id
+        except ValueError:
+            return -1, event_id
+
+    @classmethod
+    def _latest_role_events_by_orgnr(cls, events: list[dict[str, Any]]) -> dict[str, dict[str, Any]]:
+        latest_by_orgnr: dict[str, dict[str, Any]] = {}
+
+        for event in events:
+            orgnr = event.get("data", {}).get("organisasjonsnummer")
+            if not orgnr:
+                continue
+
+            current = latest_by_orgnr.get(orgnr)
+            if current is None or cls._role_event_sort_key(event) > cls._role_event_sort_key(current):
+                latest_by_orgnr[orgnr] = event
+
+        return latest_by_orgnr
+
+    async def _record_roles_changed_event(
+        self,
+        *,
+        orgnr: str,
+        source_event: dict[str, Any] | None,
+        role_count: int,
+    ) -> None:
+        if source_event is None:
+            return
+
+        source_update_id = str(source_event.get("id")) if source_event.get("id") is not None else None
+        payload = {
+            "entity_type": "role_update",
+            "time_semantics": "Tidspunkt fra Brregs rolleoppdateringsstrøm når tilgjengelig.",
+        }
+        for source_key, payload_key in (
+            ("type", "cloud_event_type"),
+            ("source", "cloud_event_source"),
+            ("subject", "cloud_event_subject"),
+        ):
+            if source_event.get(source_key):
+                payload[payload_key] = source_event[source_key]
+
+        await self._record_company_event_safe(
+            orgnr=orgnr,
+            event_type="roles_changed",
+            source=BRREG_ROLE_EVENT_SOURCE,
+            source_update_id=source_update_id,
+            occurred_at=self._parse_brreg_datetime(source_event.get("time")),
+            new_value={"role_count": role_count},
+            payload=payload,
+        )
 
     async def _record_company_event_safe(
         self,
@@ -1283,6 +1340,7 @@ class UpdateService:
 
                         # Extract unique orgnrs from the event batch
                         orgnrs_to_sync = set()
+                        latest_role_events_by_orgnr = self._latest_role_events_by_orgnr(events)
                         last_seen_id = after_id
                         for event in events:
                             orgnr = event.get("data", {}).get("organisasjonsnummer")
@@ -1364,6 +1422,7 @@ class UpdateService:
 
                         # Phase 1: Collect all roles for companies that exist in the database
                         all_batch_roles: list[models.Role] = []
+                        role_counts_by_orgnr: dict[str, int] = {}
                         processed_orgnrs: set[str] = set()
 
                         # Sort orgnrs to ensure consistent lock acquisition order and prevent deadlocks
@@ -1391,6 +1450,7 @@ class UpdateService:
                                 # Create Role models
                                 for r in roles_data:
                                     all_batch_roles.append(map_role_from_api(r, orgnr))
+                                role_counts_by_orgnr[orgnr] = len(roles_data)
                                 result.companies_updated += 1
                                 SYNC_OPERATIONS_TOTAL.labels(entity_type="role", operation_type="updated").inc()
                                 processed_orgnrs.add(orgnr)
@@ -1411,6 +1471,13 @@ class UpdateService:
                             # 2. Bulk insert new roles
                             if all_batch_roles:
                                 await self.role_repo.create_batch(all_batch_roles, commit=False)
+
+                            for orgnr in sorted(processed_orgnrs):
+                                await self._record_roles_changed_event(
+                                    orgnr=orgnr,
+                                    source_event=latest_role_events_by_orgnr.get(orgnr),
+                                    role_count=role_counts_by_orgnr.get(orgnr, 0),
+                                )
 
                             # 3. Final commit for this batch
                             await self.db.commit()

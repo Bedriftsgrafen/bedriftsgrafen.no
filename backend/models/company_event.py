@@ -28,6 +28,7 @@ class CompanyEventType(enum.StrEnum):
     SUBUNIT_ADDRESS_CHANGED = "subunit_address_changed"
     SUBUNIT_INDUSTRY_CHANGED = "subunit_industry_changed"
     SUBUNIT_EMPLOYEE_COUNT_CHANGED = "subunit_employee_count_changed"
+    ROLES_CHANGED = "roles_changed"
 
 
 class CompanyEvent(Base):

@@ -38,6 +38,7 @@ EVENT_TYPE_TITLES: dict[str, str] = {
     "subunit_address_changed": "Underenhetsadresse endret",
     "subunit_industry_changed": "Underenhetens næringskode endret",
     "subunit_employee_count_changed": "Underenhetens antall ansatte endret",
+    "roles_changed": "Rolleinformasjon endret",
 }
 
 SYSTEM_STATE_LABELS: dict[str, dict[str, str]] = {

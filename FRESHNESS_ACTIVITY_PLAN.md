@@ -264,6 +264,8 @@ Definition of done:
 
 ### Phase F4d: Role Update Events, Privacy-First
 
+**Status:** Backend ledger slice implemented. Role CloudEvents now produce coarse `roles_changed` events after a successful role refresh for the affected orgnr. The event payload keeps CloudEvent metadata and role count only; person-level role deltas remain intentionally out of public activity feeds.
+
 Scope:
 
 - Use `/oppdateringer/roller` CloudEvents as the source of truth for role update signals.
@@ -279,9 +281,9 @@ Why coarse first:
 
 Definition of done:
 
-- Role cursor handling remains robust and idempotent.
-- Public UI says "Roller oppdatert" or "Rolleinformasjon endret", not "styreleder byttet" unless we have verified the actual diff.
-- Person-level role-change display has a documented GDPR/product decision before exposure.
+- [x] Role cursor handling remains robust and idempotent.
+- [x] Public/event-title copy says "Rolleinformasjon endret", not "styreleder byttet" or similar unverified diffs.
+- [ ] Person-level role-change display has a documented GDPR/product decision before exposure.
 
 ### Phase F4e: Public Business Changes Feed
 
@@ -316,6 +318,8 @@ Definition of done:
 
 ### Phase F4f: Backfill Strategy For Update-Derived Events
 
+**Status:** First backend maintenance slice implemented for company updates. `backend/scripts/replay_brreg_update_events.py` can dry-run or apply bounded Enhetsregisteret company update windows with `--from-id`/`--from-time`, optional `--to-id`/`--to-time`, required `--limit`, required `--batch-size`, and explicit `--apply` for writes. Replay progress is stored in `system_state.company_event_replay_latest_id`, separate from the live scheduler cursor.
+
 Scope:
 
 - Do not attempt a broad historical reconstruction of all company changes from current-state tables.
@@ -325,10 +329,23 @@ Scope:
 
 Definition of done:
 
-- Dry run reports candidate rows by event type and estimated writes.
-- Apply mode commits in small chunks and is idempotent.
-- No unbounded production backfill is possible.
+- [x] Dry run reports candidate rows by event type and estimated writes for company update rows.
+- [x] Apply mode commits in small chunks and is idempotent through `company_events` event keys/source IDs.
+- [x] No unbounded production backfill is possible for the implemented company replay script.
 - Backfill is optional; live forward history is acceptable if historical source rows are too expensive or noisy.
+
+Example dry-run:
+
+```bash
+cd backend
+.venv/bin/python scripts/replay_brreg_update_events.py \
+	--from-id 123456 \
+	--to-id 124000 \
+	--limit 1000 \
+	--batch-size 100
+```
+
+Apply requires `ENABLE_COMPANY_EVENT_LEDGER=true` and explicit `--apply`.
 
 ## Phase F5: True Brreg Kunngjoringer
 
@@ -424,10 +441,10 @@ Definition of done:
 
 ## Near-Term Recommended Next Slice
 
-Implement **F4d coarse role update events** next.
+Implement **F5a source/access decision for true Brreg kunngjoringer XML subscription** next.
 
-Recommended first event type:
+Recommended target:
 
-- `roles_changed`
+- decide whether XML subscription is worth pursuing now, and document source/access/legal constraints before any parser work
 
-Keep the first role slice privacy-first: use the role update stream as a coarse signal, store the affected organization and source event ID, and keep person-level role diffs out of public activity feeds until reviewed.
+Keep `/oppdateringer` wording strict until this gate passes: Brreg update-derived rows are not formal kunngjoringer.
