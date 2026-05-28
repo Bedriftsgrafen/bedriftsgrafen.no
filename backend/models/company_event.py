@@ -16,8 +16,18 @@ from database import Base
 class CompanyEventType(enum.StrEnum):
     COMPANY_REGISTERED = "company_registered"
     COMPANY_DELETED = "company_deleted"
+    COMPANY_REMOVED_FROM_OPEN_DATA = "company_removed_from_open_data"
     ACCOUNTING_ADDED = "accounting_added"
     EMPLOYEE_COUNT_CHANGED = "employee_count_changed"
+    NAME_CHANGED = "name_changed"
+    ADDRESS_CHANGED = "address_changed"
+    INDUSTRY_CHANGED = "industry_changed"
+    STATUS_CHANGED = "status_changed"
+    SUBUNIT_OPENED = "subunit_opened"
+    SUBUNIT_CLOSED = "subunit_closed"
+    SUBUNIT_ADDRESS_CHANGED = "subunit_address_changed"
+    SUBUNIT_INDUSTRY_CHANGED = "subunit_industry_changed"
+    SUBUNIT_EMPLOYEE_COUNT_CHANGED = "subunit_employee_count_changed"
 
 
 class CompanyEvent(Base):

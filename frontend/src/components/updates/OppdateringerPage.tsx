@@ -42,16 +42,30 @@ function formatDateTime(value: string | null | undefined) {
   }
 }
 
-export type OppdateringerTabId = 'oversikt' | 'nyetableringer' | 'konkurser' | 'regnskap' | 'ansatte' | 'datastatus'
+export type OppdateringerTabId = 'oversikt' | 'nyetableringer' | 'konkurser' | 'endringer' | 'regnskap' | 'ansatte' | 'datastatus'
 
 const tabs: { id: OppdateringerTabId; label: string; icon: LucideIcon }[] = [
   { id: 'oversikt', label: 'Oversikt', icon: Activity },
   { id: 'nyetableringer', label: 'Nyetableringer', icon: Building2 },
   { id: 'konkurser', label: 'Konkurser', icon: ShieldAlert },
+  { id: 'endringer', label: 'Endringer', icon: RefreshCw },
   { id: 'regnskap', label: 'Regnskap', icon: FileClock },
   { id: 'ansatte', label: 'Ansatte', icon: UsersRound },
   { id: 'datastatus', label: 'Datastatus', icon: Database },
 ]
+
+const fallbackBusinessChangesFeed: ActivityFeed = {
+  id: 'business_changes',
+  title: 'Virksomhetsendringer',
+  description: 'Navn, adresse, næringskode og statusendringer vises her etter at eventloggen har registrert dem.',
+  source: 'Brreg oppdateringsstrøm via Bedriftsgrafen eventlogg',
+  time_label: 'Brreg-oppdatering',
+  items: [],
+}
+
+function getBusinessChangesFeed(data: ActivityOverview) {
+  return data.business_changes ?? fallbackBusinessChangesFeed
+}
 
 export function OppdateringerPage({ activeTab = 'oversikt' }: { activeTab?: OppdateringerTabId }) {
   const { data, isLoading, error } = useActivityOverviewQuery(12)
@@ -122,6 +136,7 @@ export function OppdateringerPage({ activeTab = 'oversikt' }: { activeTab?: Oppd
 
 function ActivityContent({ data, activeTab }: { data: ActivityOverview; activeTab: OppdateringerTabId }) {
   const showOverview = activeTab === 'oversikt'
+  const businessChangesFeed = getBusinessChangesFeed(data)
 
   return (
     <div className="space-y-6">
@@ -147,6 +162,14 @@ function ActivityContent({ data, activeTab }: { data: ActivityOverview; activeTa
         />
       )}
 
+      {(showOverview || activeTab === 'endringer') && (
+        <ActivityFeedSection
+          feed={businessChangesFeed}
+          icon={RefreshCw}
+          color="teal"
+        />
+      )}
+
       {(showOverview || activeTab === 'regnskap') && (
         <ActivityFeedSection
           feed={data.accounting_updates}
@@ -169,6 +192,7 @@ function ActivityContent({ data, activeTab }: { data: ActivityOverview; activeTa
 }
 
 function ActivitySummary({ data }: { data: ActivityOverview }) {
+  const businessChangesFeed = getBusinessChangesFeed(data)
   const summaryItems = [
     {
       label: 'Nye virksomheter',
@@ -183,6 +207,13 @@ function ActivitySummary({ data }: { data: ActivityOverview }) {
       helper: 'Nyeste konkursdatoer',
       icon: ShieldAlert,
       color: 'bg-red-50 text-red-700 ring-red-100 dark:bg-red-500/15 dark:text-red-200 dark:ring-red-400/20',
+    },
+    {
+      label: 'Endringer',
+      value: formatNumber(businessChangesFeed.items.length),
+      helper: 'Fra Brreg-oppdateringer',
+      icon: RefreshCw,
+      color: 'bg-teal-50 text-teal-700 ring-teal-100 dark:bg-teal-500/15 dark:text-teal-200 dark:ring-teal-400/20',
     },
     {
       label: 'Regnskap',
@@ -215,7 +246,7 @@ function ActivitySummary({ data }: { data: ActivityOverview }) {
   ]
 
   return (
-    <section aria-label="Oppsummering" className="grid gap-4 sm:grid-cols-2 xl:grid-cols-6">
+    <section aria-label="Oppsummering" className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
       {summaryItems.map((item) => {
         const Icon = item.icon
         return (
@@ -246,13 +277,14 @@ function ActivityFeedSection({
 }: {
   feed: ActivityFeed
   icon: LucideIcon
-  color: 'green' | 'red' | 'blue' | 'amber'
+  color: 'green' | 'red' | 'blue' | 'amber' | 'teal'
   fullLink?: '/nyetableringer' | '/konkurser'
   fullLinkLabel?: string
 }) {
   const accent = {
     green: 'bg-emerald-50 text-emerald-700 ring-emerald-100 dark:bg-emerald-500/15 dark:text-emerald-200 dark:ring-emerald-400/20',
     red: 'bg-red-50 text-red-700 ring-red-100 dark:bg-red-500/15 dark:text-red-200 dark:ring-red-400/20',
+    teal: 'bg-teal-50 text-teal-700 ring-teal-100 dark:bg-teal-500/15 dark:text-teal-200 dark:ring-teal-400/20',
     blue: 'bg-sky-50 text-sky-700 ring-sky-100 dark:bg-sky-500/15 dark:text-sky-200 dark:ring-sky-400/20',
     amber: 'bg-amber-50 text-amber-800 ring-amber-100 dark:bg-amber-500/15 dark:text-amber-200 dark:ring-amber-400/20',
   }[color]
@@ -311,7 +343,7 @@ function ActivityRow({ item }: { item: ActivityCompanyItem }) {
       <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
         <div className="min-w-0">
           <div className="flex flex-wrap items-center gap-2">
-            <h3 className="min-w-0 break-words text-base font-semibold text-slate-950 group-hover:text-blue-800 dark:text-white dark:group-hover:text-blue-200">
+            <h3 className="min-w-0 wrap-break-word text-base font-semibold text-slate-950 group-hover:text-blue-800 dark:text-white dark:group-hover:text-blue-200">
               {item.navn || item.orgnr}
             </h3>
             {item.organisasjonsform && (
@@ -323,7 +355,7 @@ function ActivityRow({ item }: { item: ActivityCompanyItem }) {
           <p className="mt-1 text-sm text-slate-600 dark:text-slate-400">
             {item.orgnr} · {item.event_label}
           </p>
-          {nace && <p className="mt-1 break-words text-sm text-slate-600 dark:text-slate-400">{nace}</p>}
+          {nace && <p className="mt-1 wrap-break-word text-sm text-slate-600 dark:text-slate-400">{nace}</p>}
         </div>
 
         <dl className="grid shrink-0 grid-cols-2 gap-3 text-sm sm:min-w-64">

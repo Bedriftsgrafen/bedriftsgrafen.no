@@ -21,12 +21,23 @@ from utils.redis_cache import RedisCache
 
 ACTIVITY_CACHE_TTL_SECONDS = 120
 EVENT_CACHE_TTL_SECONDS = 300
+BUSINESS_CHANGE_EVENT_TYPES = ["name_changed", "address_changed", "industry_changed", "status_changed"]
 
 EVENT_TYPE_TITLES: dict[str, str] = {
     "company_registered": "Virksomhet registrert",
     "company_deleted": "Virksomhet slettet",
+    "company_removed_from_open_data": "Virksomhet fjernet fra åpne data",
     "accounting_added": "Regnskap lagt til",
     "employee_count_changed": "Antall ansatte endret",
+    "name_changed": "Navn endret",
+    "address_changed": "Adresse endret",
+    "industry_changed": "Næringskode endret",
+    "status_changed": "Status endret",
+    "subunit_opened": "Underenhet åpnet",
+    "subunit_closed": "Underenhet stengt",
+    "subunit_address_changed": "Underenhetsadresse endret",
+    "subunit_industry_changed": "Underenhetens næringskode endret",
+    "subunit_employee_count_changed": "Underenhetens antall ansatte endret",
 }
 
 SYSTEM_STATE_LABELS: dict[str, dict[str, str]] = {
@@ -63,7 +74,7 @@ class ActivityService:
         self.event_ledger_enabled = os.getenv("ENABLE_COMPANY_EVENT_LEDGER", "").lower() in {"1", "true", "yes"}
 
     async def get_overview(self, limit: int) -> ActivityOverviewResponse:
-        cache_key = f"overview:v2:{limit}"
+        cache_key = f"overview:v3:{limit}"
         cached = await self.cache.get(cache_key)
         if cached is not None:
             return ActivityOverviewResponse.model_validate(cached)
@@ -78,6 +89,14 @@ class ActivityService:
         )
         employee_rows = (
             await self.event_repository.get_latest_events_by_type_with_company("employee_count_changed", limit=limit)
+            if self.event_ledger_enabled
+            else []
+        )
+        business_change_rows = (
+            await self.event_repository.get_latest_events_by_types_with_company(
+                BUSINESS_CHANGE_EVENT_TYPES,
+                limit=limit,
+            )
             if self.event_ledger_enabled
             else []
         )
@@ -110,6 +129,14 @@ class ActivityService:
                     source="Enhetsregisteret via Brreg",
                     time_semantics="Kildedato fra Brreg. Status bør kontrolleres mot Brreg ved juridisk bruk.",
                 ),
+            ),
+            business_changes=ActivityFeed(
+                id="business_changes",
+                title="Virksomhetsendringer",
+                description="Navn, adresse, næringskode og statusendringer observert gjennom Brregs oppdateringsstrøm.",
+                source="Brreg oppdateringsstrøm via Bedriftsgrafen eventlogg",
+                time_label="Brreg-oppdatering",
+                items=self._build_business_change_event_items(business_change_rows),
             ),
             accounting_updates=ActivityFeed(
                 id="accounting_updates",
@@ -233,6 +260,62 @@ class ActivityService:
                     time_semantics=(
                         "Datoen viser når Bedriftsgrafen observerte eller importerte regnskapet, "
                         "ikke offisiell innsendingsdato hos Brreg."
+                    ),
+                )
+            )
+
+        return items
+
+    @classmethod
+    def _business_change_label(cls, row: dict[str, Any]) -> str:
+        event_type = row.get("event_type")
+        previous_value = row.get("previous_value") or {}
+        new_value = row.get("new_value") or {}
+
+        if event_type == "name_changed":
+            return "Navn endret"
+
+        if event_type == "address_changed":
+            return "Adresse endret"
+
+        if event_type == "industry_changed":
+            previous_code = (previous_value.get("naeringskode1") or {}).get("kode")
+            new_code = (new_value.get("naeringskode1") or {}).get("kode")
+            if previous_code and new_code and previous_code != new_code:
+                return f"Næringskode {previous_code} → {new_code}"
+            return "Næringskode endret"
+
+        if event_type == "status_changed":
+            if new_value.get("konkurs") is True:
+                return "Konkursstatus endret"
+            if new_value.get("under_avvikling") is True or new_value.get("under_tvangsavvikling") is True:
+                return "Avvikling registrert"
+            return "Status endret"
+
+        return EVENT_TYPE_TITLES.get(str(event_type), "Virksomhetsendring")
+
+    @classmethod
+    def _build_business_change_event_items(cls, rows: list[dict[str, Any]]) -> list[ActivityCompanyItem]:
+        items: list[ActivityCompanyItem] = []
+
+        for row in rows:
+            occurred_at = row.get("occurred_at")
+            observed_at = row.get("observed_at")
+            event_datetime = occurred_at or observed_at
+
+            items.append(
+                ActivityCompanyItem(
+                    orgnr=row["orgnr"],
+                    navn=row.get("navn"),
+                    organisasjonsform=row.get("organisasjonsform"),
+                    naeringskode=row.get("naeringskode"),
+                    antall_ansatte=row.get("antall_ansatte"),
+                    event_date=event_datetime.date() if event_datetime else None,
+                    event_label=cls._business_change_label(row),
+                    source=row.get("source") or "Enhetsregisteret via Brreg",
+                    time_semantics=(
+                        "Datoen viser tidspunktet i Brregs oppdateringsstrøm når tilgjengelig; "
+                        "ellers når Bedriftsgrafen observerte endringen. Dette er ikke en formell Brreg-kunngjøring."
                     ),
                 )
             )

@@ -54,6 +54,26 @@ const overviewResponse = {
     time_label: 'Konkursdato',
     items: [],
   },
+  business_changes: {
+    id: 'business_changes' as const,
+    title: 'Virksomhetsendringer',
+    description: 'Navn, adresse, næringskode og statusendringer observert gjennom Brregs oppdateringsstrøm.',
+    source: 'Brreg oppdateringsstrøm via Bedriftsgrafen eventlogg',
+    time_label: 'Brreg-oppdatering',
+    items: [
+      {
+        orgnr: '222333444',
+        navn: 'Endret Bedrift AS',
+        organisasjonsform: 'AS',
+        naeringskode: '70.220',
+        antall_ansatte: 8,
+        event_date: '2026-05-27',
+        event_label: 'Næringskode 62.010 → 70.220',
+        source: 'Enhetsregisteret via Brreg',
+        time_semantics: 'Datoen viser tidspunktet i Brregs oppdateringsstrøm.',
+      },
+    ],
+  },
   accounting_updates: {
     id: 'accounting_updates' as const,
     title: 'Nye regnskap hos Bedriftsgrafen',
@@ -127,9 +147,11 @@ describe('OppdateringerPage', () => {
     expect(screen.getByTestId('seo-head')).toBeInTheDocument()
     expect(screen.getByRole('heading', { name: /Siste oppdateringer/i })).toBeInTheDocument()
     expect(screen.getByRole('heading', { name: /Nye virksomheter/i })).toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: /Virksomhetsendringer/i })).toBeInTheDocument()
     expect(screen.getByRole('heading', { name: /Nye regnskap hos Bedriftsgrafen/i })).toBeInTheDocument()
     expect(screen.getByRole('heading', { name: /Endringer i ansatte/i })).toBeInTheDocument()
     expect(screen.getByText(/Test Bedrift AS/i)).toBeInTheDocument()
+    expect(screen.getByText(/Endret Bedrift AS/i)).toBeInTheDocument()
     expect(screen.getByText(/Regnskap Bedrift AS/i)).toBeInTheDocument()
     expect(screen.getByText(/Ansatt Bedrift AS/i)).toBeInTheDocument()
     expect(screen.getByRole('link', { name: /Test Bedrift AS/i })).toHaveAttribute('href', '/virksomhet/123456789')
@@ -144,7 +166,28 @@ describe('OppdateringerPage', () => {
     expect(screen.getByRole('heading', { name: /Datastatus/i })).toBeInTheDocument()
     expect(screen.getByText(/Brreg oppdateringsstrøm/i)).toBeInTheDocument()
     expect(screen.queryByText(/Test Bedrift AS/i)).not.toBeInTheDocument()
+    expect(screen.queryByText(/Endret Bedrift AS/i)).not.toBeInTheDocument()
     expect(screen.queryByText(/Regnskap Bedrift AS/i)).not.toBeInTheDocument()
     expect(screen.queryByText(/Ansatt Bedrift AS/i)).not.toBeInTheDocument()
+  })
+
+  it('can render the business changes tab by itself', () => {
+    render(<OppdateringerPage activeTab="endringer" />)
+
+    expect(screen.getByRole('heading', { name: /Virksomhetsendringer/i })).toBeInTheDocument()
+    expect(screen.getByText(/Endret Bedrift AS/i)).toBeInTheDocument()
+    expect(screen.queryByText(/Regnskap Bedrift AS/i)).not.toBeInTheDocument()
+    expect(screen.queryByText(/Ansatt Bedrift AS/i)).not.toBeInTheDocument()
+  })
+
+  it('renders safely while the backend has not been rebuilt with business changes yet', () => {
+    const { business_changes: _businessChanges, ...legacyOverviewResponse } = overviewResponse
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    vi.mocked(useActivityOverviewQuery).mockReturnValue({ data: legacyOverviewResponse, isLoading: false, error: null } as any)
+
+    render(<OppdateringerPage activeTab="endringer" />)
+
+    expect(screen.getByRole('heading', { name: /Virksomhetsendringer/i })).toBeInTheDocument()
+    expect(screen.getByText(/Ingen hendelser i denne feeden ennå/i)).toBeInTheDocument()
   })
 })

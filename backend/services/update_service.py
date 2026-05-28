@@ -18,7 +18,7 @@ from repositories.company_event_repository import CompanyEventRepository
 from repositories.role_repository import RoleRepository
 from repositories.subunit_repository import SubUnitRepository
 from repositories.system_repository import SystemRepository
-from schemas.brreg import FetchResult, UpdateBatchResult
+from schemas.brreg import BrregUpdateChange, FetchResult, SubunitFetchResult, UpdateBatchResult
 from services.brreg_api_service import BrregApiService
 from services.brreg_mappers import map_role_from_api, map_subunit_from_api
 from services.rate_limits import BRREG_RATE_LIMITER
@@ -29,6 +29,40 @@ logger = logging.getLogger(__name__)
 
 DB_COMMIT_CHUNK_SIZE = 100  # Commit every X records for efficiency
 UPDATE_PAGE_SIZE = 1000  # Max size allowed by API
+BRREG_COMPANY_EVENT_SOURCE = "Enhetsregisteret via Brreg"
+BRREG_SUBUNIT_EVENT_SOURCE = "Underenhetsregisteret via Brreg"
+BRREG_UPDATE_TIME_SEMANTICS = "Tidspunkt fra Brregs oppdateringsstrøm når tilgjengelig."
+BRREG_COMPANY_CHANGE_EVENT_PATHS: dict[str, tuple[str, ...]] = {
+    "name_changed": ("/navn",),
+    "address_changed": ("/postadresse", "/forretningsadresse"),
+    "industry_changed": (
+        "/naeringskode1",
+        "/naeringskode2",
+        "/naeringskode3",
+        "/hjelpeenhetskode",
+        "/aktivitet",
+    ),
+    "status_changed": (
+        "/konkurs",
+        "/konkursdato",
+        "/underAvvikling",
+        "/underTvangsavvikling",
+        "/underTvangsavviklingEllerTvangsopplosning",
+        "/slettedato",
+    ),
+}
+BRREG_SUBUNIT_CHANGE_EVENT_PATHS: dict[str, tuple[str, ...]] = {
+    "subunit_address_changed": ("/beliggenhetsadresse", "/postadresse"),
+    "subunit_industry_changed": (
+        "/naeringskode1",
+        "/naeringskode2",
+        "/naeringskode3",
+        "/hjelpeenhetskode",
+        "/aktivitet",
+    ),
+    "subunit_employee_count_changed": ("/antallAnsatte", "/harRegistrertAntallAnsatte"),
+}
+BRREG_EMPLOYEE_CHANGE_PATHS = ("/antallAnsatte", "/harRegistrertAntallAnsatte")
 
 
 class UpdateService:
@@ -66,6 +100,218 @@ class UpdateService:
         except ValueError:
             return None
         return datetime.combine(parsed_date, datetime.min.time(), tzinfo=UTC)
+
+    @staticmethod
+    def _source_change_path(change: BrregUpdateChange) -> str | None:
+        return change.path
+
+    @classmethod
+    def _change_matches_path_prefixes(cls, change: BrregUpdateChange, prefixes: tuple[str, ...]) -> bool:
+        path = cls._source_change_path(change)
+        if not path:
+            return False
+        return any(path == prefix or path.startswith(f"{prefix}/") for prefix in prefixes)
+
+    @classmethod
+    def _matching_change_paths(cls, changes: list[BrregUpdateChange], prefixes: tuple[str, ...]) -> list[str]:
+        paths: list[str] = []
+        for change in changes:
+            if cls._change_matches_path_prefixes(change, prefixes):
+                path = cls._source_change_path(change)
+                if path and path not in paths:
+                    paths.append(path)
+        return paths
+
+    @classmethod
+    def _company_update_event_types(cls, changes: list[BrregUpdateChange]) -> list[str]:
+        return [
+            event_type
+            for event_type, prefixes in BRREG_COMPANY_CHANGE_EVENT_PATHS.items()
+            if cls._matching_change_paths(changes, prefixes)
+        ]
+
+    @classmethod
+    def _subunit_update_event_types(cls, changes: list[BrregUpdateChange]) -> list[str]:
+        return [
+            event_type
+            for event_type, prefixes in BRREG_SUBUNIT_CHANGE_EVENT_PATHS.items()
+            if cls._matching_change_paths(changes, prefixes)
+        ]
+
+    @staticmethod
+    def _compact_code_value(value: Any) -> Any:
+        if not isinstance(value, dict):
+            return value
+
+        compacted = {key: value.get(key) for key in ("kode", "beskrivelse") if value.get(key) is not None}
+        return compacted or None
+
+    @staticmethod
+    def _date_to_iso(value: Any) -> Any:
+        return value.isoformat() if isinstance(value, date) else value
+
+    @classmethod
+    def _previous_company_event_value(cls, event_type: str, snapshot: dict[str, Any]) -> dict[str, Any]:
+        raw_data = snapshot.get("raw_data") or {}
+
+        if event_type == "name_changed":
+            return {"navn": snapshot.get("navn")}
+        if event_type == "address_changed":
+            return {
+                "postadresse": snapshot.get("postadresse"),
+                "forretningsadresse": snapshot.get("forretningsadresse"),
+            }
+        if event_type == "industry_changed":
+            return {
+                "naeringskode1": cls._compact_code_value(raw_data.get("naeringskode1"))
+                or {"kode": snapshot.get("naeringskode")},
+                "naeringskode2": cls._compact_code_value(raw_data.get("naeringskode2")),
+                "naeringskode3": cls._compact_code_value(raw_data.get("naeringskode3")),
+                "hjelpeenhetskode": cls._compact_code_value(raw_data.get("hjelpeenhetskode")),
+                "aktivitet": raw_data.get("aktivitet"),
+            }
+        if event_type == "status_changed":
+            return {
+                "konkurs": snapshot.get("konkurs"),
+                "konkursdato": cls._date_to_iso(snapshot.get("konkursdato")),
+                "under_avvikling": snapshot.get("under_avvikling"),
+                "under_tvangsavvikling": snapshot.get("under_tvangsavvikling"),
+            }
+
+        return {}
+
+    @classmethod
+    def _new_company_event_value(cls, event_type: str, company_data: dict[str, Any]) -> dict[str, Any]:
+        if event_type == "name_changed":
+            return {"navn": company_data.get("navn")}
+        if event_type == "address_changed":
+            return {
+                "postadresse": company_data.get("postadresse"),
+                "forretningsadresse": company_data.get("forretningsadresse"),
+            }
+        if event_type == "industry_changed":
+            return {
+                "naeringskode1": cls._compact_code_value(company_data.get("naeringskode1")),
+                "naeringskode2": cls._compact_code_value(company_data.get("naeringskode2")),
+                "naeringskode3": cls._compact_code_value(company_data.get("naeringskode3")),
+                "hjelpeenhetskode": cls._compact_code_value(company_data.get("hjelpeenhetskode")),
+                "aktivitet": company_data.get("aktivitet"),
+            }
+        if event_type == "status_changed":
+            return {
+                "konkurs": company_data.get("konkurs", False),
+                "konkursdato": company_data.get("konkursdato"),
+                "under_avvikling": company_data.get("underAvvikling", False),
+                "under_tvangsavvikling": company_data.get(
+                    "underTvangsavvikling",
+                    company_data.get("underTvangsavviklingEllerTvangsopplosning", False),
+                ),
+            }
+
+        return {}
+
+    @classmethod
+    def _build_brreg_update_payload(
+        cls,
+        *,
+        event_type: str,
+        source_change_type: str | None,
+        source_changes: list[BrregUpdateChange],
+    ) -> dict[str, Any]:
+        if event_type in {"employee_count_changed", "subunit_employee_count_changed"}:
+            matching_paths = cls._matching_change_paths(source_changes, BRREG_EMPLOYEE_CHANGE_PATHS)
+        else:
+            matching_paths = cls._matching_change_paths(
+                source_changes,
+                BRREG_COMPANY_CHANGE_EVENT_PATHS.get(event_type)
+                or BRREG_SUBUNIT_CHANGE_EVENT_PATHS.get(event_type, ()),
+            )
+
+        payload: dict[str, Any] = {"time_semantics": BRREG_UPDATE_TIME_SEMANTICS}
+        if source_change_type:
+            payload["source_change_type"] = source_change_type
+        if matching_paths:
+            payload["brreg_change_paths"] = matching_paths
+            payload["brreg_change_count"] = len(source_changes)
+
+        return payload
+
+    @classmethod
+    def _previous_subunit_event_value(cls, event_type: str, snapshot: dict[str, Any]) -> dict[str, Any]:
+        raw_data = snapshot.get("raw_data") or {}
+
+        if event_type == "subunit_address_changed":
+            return {
+                "beliggenhetsadresse": snapshot.get("beliggenhetsadresse"),
+                "postadresse": snapshot.get("postadresse"),
+            }
+        if event_type == "subunit_industry_changed":
+            return {
+                "naeringskode1": cls._compact_code_value(raw_data.get("naeringskode1"))
+                or {"kode": snapshot.get("naeringskode")},
+                "naeringskode2": cls._compact_code_value(raw_data.get("naeringskode2")),
+                "naeringskode3": cls._compact_code_value(raw_data.get("naeringskode3")),
+                "hjelpeenhetskode": cls._compact_code_value(raw_data.get("hjelpeenhetskode")),
+                "aktivitet": raw_data.get("aktivitet"),
+            }
+        if event_type == "subunit_employee_count_changed":
+            return {"antall_ansatte": snapshot.get("antall_ansatte")}
+
+        return {
+            "orgnr": snapshot.get("orgnr"),
+            "navn": snapshot.get("navn"),
+            "parent_orgnr": snapshot.get("parent_orgnr"),
+            "organisasjonsform": snapshot.get("organisasjonsform"),
+            "naeringskode": snapshot.get("naeringskode"),
+            "antall_ansatte": snapshot.get("antall_ansatte"),
+        }
+
+    @classmethod
+    def _new_subunit_event_value(
+        cls, event_type: str, subunit_data: dict[str, Any], parent_orgnr: str
+    ) -> dict[str, Any]:
+        if event_type == "subunit_address_changed":
+            return {
+                "beliggenhetsadresse": subunit_data.get("beliggenhetsadresse"),
+                "postadresse": subunit_data.get("postadresse"),
+            }
+        if event_type == "subunit_industry_changed":
+            return {
+                "naeringskode1": cls._compact_code_value(subunit_data.get("naeringskode1")),
+                "naeringskode2": cls._compact_code_value(subunit_data.get("naeringskode2")),
+                "naeringskode3": cls._compact_code_value(subunit_data.get("naeringskode3")),
+                "hjelpeenhetskode": cls._compact_code_value(subunit_data.get("hjelpeenhetskode")),
+                "aktivitet": subunit_data.get("aktivitet"),
+            }
+        if event_type == "subunit_employee_count_changed":
+            return {"antall_ansatte": subunit_data.get("antallAnsatte")}
+
+        organisasjonsform = subunit_data.get("organisasjonsform")
+        return {
+            "orgnr": subunit_data.get("organisasjonsnummer"),
+            "navn": subunit_data.get("navn"),
+            "parent_orgnr": parent_orgnr,
+            "organisasjonsform": organisasjonsform.get("kode") if isinstance(organisasjonsform, dict) else None,
+            "naeringskode1": cls._compact_code_value(subunit_data.get("naeringskode1")),
+            "antall_ansatte": subunit_data.get("antallAnsatte"),
+        }
+
+    def _build_subunit_event_payload(
+        self,
+        *,
+        event_type: str,
+        fetch_result: SubunitFetchResult,
+        parent_orgnr: str | None,
+    ) -> dict[str, Any]:
+        payload = self._build_brreg_update_payload(
+            event_type=event_type,
+            source_change_type=fetch_result.source_change_type,
+            source_changes=fetch_result.source_changes,
+        )
+        if parent_orgnr:
+            payload["parent_orgnr"] = parent_orgnr
+        payload["entity_type"] = "subunit"
+        return payload
 
     async def _record_company_event_safe(
         self,
@@ -200,9 +446,9 @@ class UpdateService:
         # Initial URL determination
         # Priority: start_id > since_date
         next_url: str | None = (
-            f"{BRREG_UPDATES_URL}?oppdateringsid={start_id}&size={min(page_size, 10000)}"
+            f"{BRREG_UPDATES_URL}?oppdateringsid={start_id}&includeChanges=true&size={min(page_size, 10000)}"
             if start_id is not None
-            else f"{BRREG_UPDATES_URL}?dato={since_iso}&size={min(page_size, 10000)}"
+            else f"{BRREG_UPDATES_URL}?dato={since_iso}&includeChanges=true&size={min(page_size, 10000)}"
         )
 
         async with httpx.AsyncClient(timeout=self.brreg_api.timeout) as http_client:
@@ -289,6 +535,7 @@ class UpdateService:
             endringstype = entity.get("endringstype", "")
             source_update_id = str(entity["oppdateringsid"]) if entity.get("oppdateringsid") is not None else None
             source_event_time = self._parse_brreg_datetime(entity.get("dato"))
+            source_changes = [BrregUpdateChange.model_validate(change) for change in entity.get("endringer") or []]
 
             # Validate orgnr format before making API calls
             if not orgnr or len(orgnr) != 9 or not orgnr.isdigit():
@@ -299,17 +546,19 @@ class UpdateService:
                     source_update_id=source_update_id,
                     source_event_time=source_event_time,
                     source_change_type=endringstype,
+                    source_changes=source_changes,
                 )
 
-            # Mark deletions for processing in _persist_chunk
-            if endringstype == "Sletting":
+            # Mark deletions/removals for processing in _persist_chunk
+            if endringstype in {"Sletting", "Fjernet"}:
                 return FetchResult(
                     orgnr=orgnr,
                     success=True,
-                    company_data=None,  # None signals deletion to _persist_chunk
+                    company_data=None,  # None signals deletion/removal to _persist_chunk
                     source_update_id=source_update_id,
                     source_event_time=source_event_time,
                     source_change_type=endringstype,
+                    source_changes=source_changes,
                 )
 
             async with semaphore:
@@ -326,6 +575,7 @@ class UpdateService:
                             source_update_id=source_update_id,
                             source_event_time=source_event_time,
                             source_change_type=endringstype,
+                            source_changes=source_changes,
                         )
                 except Exception as exc:
                     return FetchResult(
@@ -335,6 +585,7 @@ class UpdateService:
                         source_update_id=source_update_id,
                         source_event_time=source_event_time,
                         source_change_type=endringstype,
+                        source_changes=source_changes,
                     )
 
         tasks = [fetch_single(entity) for entity in entities]
@@ -357,7 +608,7 @@ class UpdateService:
         records_since_commit = 0
 
         sorted_results = sorted(fetch_results, key=lambda item: item.orgnr)
-        existing_employee_counts = await self._get_existing_employee_counts(
+        existing_company_snapshots = await self._get_existing_company_event_snapshots(
             [item.orgnr for item in sorted_results if item.success and item.company_data is not None]
         )
 
@@ -384,21 +635,29 @@ class UpdateService:
                 if fetch_result.company_data is None:
                     deleted_count = await self.company_repo.delete_by_orgnr(fetch_result.orgnr)
                     if deleted_count:
+                        event_type = (
+                            "company_removed_from_open_data"
+                            if fetch_result.source_change_type == "Fjernet"
+                            else "company_deleted"
+                        )
                         await self._record_company_event_safe(
                             orgnr=fetch_result.orgnr,
-                            event_type="company_deleted",
-                            source="Enhetsregisteret via Brreg",
+                            event_type=event_type,
+                            source=BRREG_COMPANY_EVENT_SOURCE,
                             source_update_id=fetch_result.source_update_id,
                             occurred_at=fetch_result.source_event_time,
-                            payload={
-                                "time_semantics": "Tidspunkt fra Brregs oppdateringsstrøm når tilgjengelig.",
-                            },
+                            payload=self._build_brreg_update_payload(
+                                event_type=event_type,
+                                source_change_type=fetch_result.source_change_type,
+                                source_changes=fetch_result.source_changes,
+                            ),
                         )
                         result.companies_deleted += 1
                         SYNC_OPERATIONS_TOTAL.labels(entity_type="company", operation_type="deleted").inc()
                     continue
 
-                previous_employee_count = existing_employee_counts.get(fetch_result.orgnr)
+                previous_snapshot = existing_company_snapshots.get(fetch_result.orgnr)
+                previous_employee_count = previous_snapshot.get("antall_ansatte") if previous_snapshot else None
                 new_employee_count = fetch_result.company_data.get("antallAnsatte")
 
                 # Persist company data
@@ -411,7 +670,7 @@ class UpdateService:
                     await self._record_company_event_safe(
                         orgnr=fetch_result.orgnr,
                         event_type="company_registered",
-                        source="Enhetsregisteret via Brreg",
+                        source=BRREG_COMPANY_EVENT_SOURCE,
                         source_update_id=fetch_result.source_update_id,
                         occurred_at=self._parse_brreg_date_as_datetime(
                             fetch_result.company_data.get("registreringsdatoEnhetsregisteret")
@@ -440,6 +699,8 @@ class UpdateService:
                     result.companies_updated += 1
                     SYNC_OPERATIONS_TOTAL.labels(entity_type="company", operation_type="updated").inc()
 
+                    await self._record_company_update_events_from_changes(fetch_result, previous_snapshot)
+
                     if (
                         previous_employee_count is not None
                         and new_employee_count is not None
@@ -448,14 +709,16 @@ class UpdateService:
                         await self._record_company_event_safe(
                             orgnr=fetch_result.orgnr,
                             event_type="employee_count_changed",
-                            source="Enhetsregisteret via Brreg",
+                            source=BRREG_COMPANY_EVENT_SOURCE,
                             source_update_id=fetch_result.source_update_id,
                             occurred_at=fetch_result.source_event_time,
                             previous_value={"antall_ansatte": previous_employee_count},
                             new_value={"antall_ansatte": new_employee_count},
-                            payload={
-                                "time_semantics": "Tidspunkt fra Brregs oppdateringsstrøm når tilgjengelig.",
-                            },
+                            payload=self._build_brreg_update_payload(
+                                event_type="employee_count_changed",
+                                source_change_type=fetch_result.source_change_type,
+                                source_changes=fetch_result.source_changes,
+                            ),
                         )
 
                 records_since_commit += 1
@@ -479,14 +742,321 @@ class UpdateService:
             await self.db.commit()
             logger.debug(f"Committed final chunk of {records_since_commit} records")
 
-    async def _get_existing_employee_counts(self, orgnrs: list[str]) -> dict[str, int | None]:
+    async def _get_existing_company_event_snapshots(self, orgnrs: list[str]) -> dict[str, dict[str, Any]]:
         if not orgnrs:
             return {}
 
         result = await self.db.execute(
-            select(models.Company.orgnr, models.Company.antall_ansatte).where(models.Company.orgnr.in_(orgnrs))
+            select(
+                models.Company.orgnr,
+                models.Company.navn,
+                models.Company.naeringskode,
+                models.Company.antall_ansatte,
+                models.Company.postadresse,
+                models.Company.forretningsadresse,
+                models.Company.konkurs,
+                models.Company.konkursdato,
+                models.Company.under_avvikling,
+                models.Company.under_tvangsavvikling,
+                models.Company.raw_data.label("raw_data"),
+            ).where(models.Company.orgnr.in_(orgnrs))
         )
-        return {row.orgnr: row.antall_ansatte for row in result.all()}
+        return {row["orgnr"]: dict(row) for row in result.mappings().all()}
+
+    async def _record_company_update_events_from_changes(
+        self,
+        fetch_result: FetchResult,
+        previous_snapshot: dict[str, Any] | None,
+    ) -> None:
+        if previous_snapshot is None or fetch_result.company_data is None:
+            return
+
+        for event_type in self._company_update_event_types(fetch_result.source_changes):
+            previous_value = self._previous_company_event_value(event_type, previous_snapshot)
+            new_value = self._new_company_event_value(event_type, fetch_result.company_data)
+            if previous_value == new_value:
+                continue
+
+            await self._record_company_event_safe(
+                orgnr=fetch_result.orgnr,
+                event_type=event_type,
+                source=BRREG_COMPANY_EVENT_SOURCE,
+                source_update_id=fetch_result.source_update_id,
+                occurred_at=fetch_result.source_event_time,
+                previous_value=previous_value,
+                new_value=new_value,
+                payload=self._build_brreg_update_payload(
+                    event_type=event_type,
+                    source_change_type=fetch_result.source_change_type,
+                    source_changes=fetch_result.source_changes,
+                ),
+            )
+
+    async def _fetch_subunit_update_details(self, entities: list[dict[str, Any]]) -> list[SubunitFetchResult]:
+        semaphore = asyncio.Semaphore(API_CONCURRENCY_LIMIT)
+
+        async def fetch_one(entity: dict[str, Any], _semaphore: asyncio.Semaphore = semaphore) -> SubunitFetchResult:
+            orgnr = entity.get("organisasjonsnummer") or "unknown"
+            source_update_id = str(entity["oppdateringsid"]) if entity.get("oppdateringsid") is not None else None
+            source_event_time = self._parse_brreg_datetime(entity.get("dato"))
+            source_change_type = entity.get("endringstype")
+            source_changes = [BrregUpdateChange.model_validate(change) for change in entity.get("endringer") or []]
+
+            if orgnr == "unknown":
+                return SubunitFetchResult(
+                    orgnr=orgnr,
+                    success=False,
+                    error="Missing subunit orgnr",
+                    source_update_id=source_update_id,
+                    source_event_time=source_event_time,
+                    source_change_type=source_change_type,
+                    source_changes=source_changes,
+                )
+
+            if source_change_type in {"Sletting", "Fjernet"}:
+                return SubunitFetchResult(
+                    orgnr=orgnr,
+                    success=True,
+                    subunit_data=None,
+                    source_update_id=source_update_id,
+                    source_event_time=source_event_time,
+                    source_change_type=source_change_type,
+                    source_changes=source_changes,
+                )
+
+            async with _semaphore:
+                try:
+                    async with BRREG_RATE_LIMITER:
+                        subunit_data = await self.brreg_api.fetch_subunit(orgnr)
+                    if subunit_data is None:
+                        return SubunitFetchResult(
+                            orgnr=orgnr,
+                            success=False,
+                            error="Subunit details not found",
+                            source_update_id=source_update_id,
+                            source_event_time=source_event_time,
+                            source_change_type=source_change_type,
+                            source_changes=source_changes,
+                        )
+                    return SubunitFetchResult(
+                        orgnr=orgnr,
+                        success=True,
+                        subunit_data=subunit_data,
+                        source_update_id=source_update_id,
+                        source_event_time=source_event_time,
+                        source_change_type=source_change_type,
+                        source_changes=source_changes,
+                    )
+                except Exception as ex:
+                    logger.warning(f"Failed to fetch subunit details for {orgnr}: {ex}", extra={"orgnr": orgnr})
+                    return SubunitFetchResult(
+                        orgnr=orgnr,
+                        success=False,
+                        error=str(ex),
+                        source_update_id=source_update_id,
+                        source_event_time=source_event_time,
+                        source_change_type=source_change_type,
+                        source_changes=source_changes,
+                    )
+
+        tasks = [fetch_one(entity) for entity in entities]
+        return list(await asyncio.gather(*tasks))
+
+    async def _get_existing_subunit_event_snapshots(self, orgnrs: list[str]) -> dict[str, dict[str, Any]]:
+        if not orgnrs:
+            return {}
+
+        result = await self.db.execute(
+            select(
+                models.SubUnit.orgnr,
+                models.SubUnit.parent_orgnr,
+                models.SubUnit.navn,
+                models.SubUnit.organisasjonsform,
+                models.SubUnit.naeringskode,
+                models.SubUnit.antall_ansatte,
+                models.SubUnit.beliggenhetsadresse,
+                models.SubUnit.postadresse,
+                models.SubUnit.registreringsdato_enhetsregisteret,
+                models.SubUnit.raw_data.label("raw_data"),
+            ).where(models.SubUnit.orgnr.in_(orgnrs))
+        )
+        return {row["orgnr"]: dict(row) for row in result.mappings().all()}
+
+    async def _record_subunit_opened_event(
+        self,
+        fetch_result: SubunitFetchResult,
+        parent_orgnr: str,
+    ) -> None:
+        if fetch_result.subunit_data is None:
+            return
+
+        await self._record_company_event_safe(
+            orgnr=fetch_result.orgnr,
+            event_type="subunit_opened",
+            source=BRREG_SUBUNIT_EVENT_SOURCE,
+            source_update_id=fetch_result.source_update_id,
+            occurred_at=self._parse_brreg_date_as_datetime(
+                fetch_result.subunit_data.get("registreringsdatoEnhetsregisteret")
+            )
+            or fetch_result.source_event_time,
+            new_value=self._new_subunit_event_value("subunit_opened", fetch_result.subunit_data, parent_orgnr),
+            payload=self._build_subunit_event_payload(
+                event_type="subunit_opened",
+                fetch_result=fetch_result,
+                parent_orgnr=parent_orgnr,
+            ),
+        )
+
+    async def _record_subunit_update_events_from_changes(
+        self,
+        fetch_result: SubunitFetchResult,
+        previous_snapshot: dict[str, Any] | None,
+        parent_orgnr: str,
+    ) -> None:
+        if previous_snapshot is None or fetch_result.subunit_data is None:
+            return
+
+        event_types = self._subunit_update_event_types(fetch_result.source_changes)
+        previous_employee_count = previous_snapshot.get("antall_ansatte")
+        new_employee_count = fetch_result.subunit_data.get("antallAnsatte")
+        if (
+            previous_employee_count is not None
+            and new_employee_count is not None
+            and previous_employee_count != new_employee_count
+            and "subunit_employee_count_changed" not in event_types
+        ):
+            event_types.append("subunit_employee_count_changed")
+
+        for event_type in event_types:
+            previous_value = self._previous_subunit_event_value(event_type, previous_snapshot)
+            new_value = self._new_subunit_event_value(event_type, fetch_result.subunit_data, parent_orgnr)
+            if previous_value == new_value:
+                continue
+
+            await self._record_company_event_safe(
+                orgnr=fetch_result.orgnr,
+                event_type=event_type,
+                source=BRREG_SUBUNIT_EVENT_SOURCE,
+                source_update_id=fetch_result.source_update_id,
+                occurred_at=fetch_result.source_event_time,
+                previous_value=previous_value,
+                new_value=new_value,
+                payload=self._build_subunit_event_payload(
+                    event_type=event_type,
+                    fetch_result=fetch_result,
+                    parent_orgnr=parent_orgnr,
+                ),
+            )
+
+    async def _delete_subunit_from_update(
+        self,
+        fetch_result: SubunitFetchResult,
+        previous_snapshot: dict[str, Any] | None,
+        result: UpdateBatchResult,
+    ) -> None:
+        deleted_count = await self.subunit_repo.delete_by_orgnr(fetch_result.orgnr)
+        if not deleted_count:
+            return
+
+        subunit_data = fetch_result.subunit_data or {}
+        parent_orgnr = subunit_data.get("overordnetEnhet") or (previous_snapshot or {}).get("parent_orgnr")
+        await self._record_company_event_safe(
+            orgnr=fetch_result.orgnr,
+            event_type="subunit_closed",
+            source=BRREG_SUBUNIT_EVENT_SOURCE,
+            source_update_id=fetch_result.source_update_id,
+            occurred_at=self._parse_brreg_date_as_datetime(subunit_data.get("slettedato"))
+            or fetch_result.source_event_time,
+            previous_value=self._previous_subunit_event_value("subunit_closed", previous_snapshot)
+            if previous_snapshot
+            else None,
+            new_value={"slettedato": subunit_data.get("slettedato")} if subunit_data.get("slettedato") else None,
+            payload=self._build_subunit_event_payload(
+                event_type="subunit_closed",
+                fetch_result=fetch_result,
+                parent_orgnr=str(parent_orgnr) if parent_orgnr else None,
+            ),
+        )
+        result.companies_deleted += 1
+        SYNC_OPERATIONS_TOTAL.labels(entity_type="subunit", operation_type="deleted").inc()
+
+    async def _persist_subunit_update_page(
+        self,
+        fetch_results: list[SubunitFetchResult],
+        result: UpdateBatchResult,
+    ) -> None:
+        sorted_results = sorted(fetch_results, key=lambda item: item.orgnr)
+        existing_subunit_snapshots = (
+            await self._get_existing_subunit_event_snapshots([item.orgnr for item in sorted_results if item.success])
+            if self.event_ledger_enabled
+            else {}
+        )
+        persist_candidates: list[tuple[SubunitFetchResult, dict[str, Any], str, dict[str, Any] | None]] = []
+
+        for fetch_result in sorted_results:
+            if not fetch_result.success:
+                result.api_errors += 1
+                if fetch_result.error:
+                    result.errors.append(f"{fetch_result.orgnr}: {fetch_result.error}")
+                continue
+
+            previous_snapshot = existing_subunit_snapshots.get(fetch_result.orgnr)
+            subunit_data = fetch_result.subunit_data
+            if subunit_data is None:
+                await self._delete_subunit_from_update(fetch_result, previous_snapshot, result)
+                continue
+
+            parent_orgnr = subunit_data.get("overordnetEnhet")
+            orgnr = subunit_data.get("organisasjonsnummer")
+
+            if not parent_orgnr:
+                is_deleted = (
+                    subunit_data.get("respons_klasse") == "SlettetUnderEnhet"
+                    or subunit_data.get("slettedato") is not None
+                )
+                if is_deleted:
+                    await self._delete_subunit_from_update(fetch_result, previous_snapshot, result)
+                    continue
+
+                logger.warning(f"Skipping subunit {orgnr} because it has no parent_orgnr (overordnetEnhet is missing).")
+                continue
+
+            parent_orgnr = str(parent_orgnr)
+            persist_candidates.append((fetch_result, subunit_data, parent_orgnr, previous_snapshot))
+
+        if not persist_candidates:
+            return
+
+        verified_parents = await self._ensure_parent_companies_exist([candidate[1] for candidate in persist_candidates])
+        subunits_to_save: list[models.SubUnit] = []
+        event_candidates: list[tuple[SubunitFetchResult, str, dict[str, Any] | None]] = []
+
+        for fetch_result, subunit_data, parent_orgnr, previous_snapshot in persist_candidates:
+            if parent_orgnr not in verified_parents:
+                logger.warning(
+                    f"Skipping subunit {subunit_data.get('organisasjonsnummer')} "
+                    f"because parent {parent_orgnr} is missing and could not be fetched."
+                )
+                continue
+
+            subunits_to_save.append(map_subunit_from_api(subunit_data, parent_orgnr))
+            event_candidates.append((fetch_result, parent_orgnr, previous_snapshot))
+
+        if not subunits_to_save:
+            return
+
+        saved_count = await self.subunit_repo.create_batch(subunits_to_save, commit=True)
+        if not saved_count:
+            return
+
+        for fetch_result, parent_orgnr, previous_snapshot in event_candidates:
+            result.companies_updated += 1
+            SYNC_OPERATIONS_TOTAL.labels(entity_type="subunit", operation_type="updated").inc()
+
+            if fetch_result.source_change_type == "Ny" and previous_snapshot is None:
+                await self._record_subunit_opened_event(fetch_result, parent_orgnr)
+            else:
+                await self._record_subunit_update_events_from_changes(fetch_result, previous_snapshot, parent_orgnr)
 
     async def _fetch_and_persist_financials(
         self,
@@ -567,9 +1137,9 @@ class UpdateService:
         )
 
         next_url: str | None = (
-            f"{BRREG_SUBUNIT_UPDATES_URL}?oppdateringsid={start_id}&size={min(page_size, 10000)}"
+            f"{BRREG_SUBUNIT_UPDATES_URL}?oppdateringsid={start_id}&includeChanges=true&size={min(page_size, 10000)}"
             if start_id is not None
-            else f"{BRREG_SUBUNIT_UPDATES_URL}?dato={since_iso}&size={min(page_size, 10000)}"
+            else f"{BRREG_SUBUNIT_UPDATES_URL}?dato={since_iso}&includeChanges=true&size={min(page_size, 10000)}"
         )
 
         pages_processed = 0
@@ -586,79 +1156,8 @@ class UpdateService:
                         data = response.json()
                         entities = data.get("_embedded", {}).get("oppdaterteUnderenheter", [])
 
-                        # Phase 1: Concurrent fetch subunit details
-                        semaphore = asyncio.Semaphore(API_CONCURRENCY_LIMIT)
-
-                        async def fetch_one(
-                            entity: dict[str, Any], _semaphore: asyncio.Semaphore = semaphore
-                        ) -> dict[str, Any] | None:
-                            orgnr = entity.get("organisasjonsnummer")
-                            if not orgnr:
-                                return None
-                            async with _semaphore:
-                                try:
-                                    return await self.brreg_api.fetch_subunit(orgnr)
-                                except Exception as ex:
-                                    logger.warning(
-                                        f"Failed to fetch subunit details for {orgnr}: {ex}", extra={"orgnr": orgnr}
-                                    )
-                                    return None
-
-                        fetch_tasks = [fetch_one(entity) for entity in entities]
-                        fetch_results = await asyncio.gather(*fetch_tasks)
-
-                        # Phase 2: Sequential persist
-                        all_subunits_data = [res for res in fetch_results if res]
-
-                        if all_subunits_data:
-                            # Ensure parents exist before saving subunits
-                            verified_parents = await self._ensure_parent_companies_exist(all_subunits_data)
-
-                            all_subunits = []
-                            for subunit_data in all_subunits_data:
-                                parent_orgnr = subunit_data.get("overordnetEnhet")
-                                orgnr = subunit_data.get("organisasjonsnummer")
-
-                                # Handle deleted subunits
-                                if not parent_orgnr:
-                                    # Brreg omits overordnetEnhet for deleted subunits
-                                    is_deleted = (
-                                        subunit_data.get("respons_klasse") == "SlettetUnderEnhet"
-                                        or subunit_data.get("slettedato") is not None
-                                    )
-
-                                    if is_deleted:
-                                        if orgnr:
-                                            deleted_count = await self.subunit_repo.delete_by_orgnr(orgnr)
-                                            if deleted_count:
-                                                result.companies_deleted += 1
-                                                SYNC_OPERATIONS_TOTAL.labels(
-                                                    entity_type="subunit", operation_type="deleted"
-                                                ).inc()
-                                        continue
-
-                                    logger.warning(
-                                        f"Skipping subunit {orgnr} "
-                                        f"because it has no parent_orgnr (overordnetEnhet is missing)."
-                                    )
-                                    continue
-
-                                # Convert to string for comparison
-                                parent_orgnr = str(parent_orgnr)
-
-                                if parent_orgnr not in verified_parents:
-                                    logger.warning(
-                                        f"Skipping subunit {subunit_data.get('organisasjonsnummer')} "
-                                        f"because parent {parent_orgnr} is missing and could not be fetched."
-                                    )
-                                    continue
-
-                                all_subunits.append(map_subunit_from_api(subunit_data, parent_orgnr))
-                                result.companies_updated += 1
-                                SYNC_OPERATIONS_TOTAL.labels(entity_type="subunit", operation_type="updated").inc()
-
-                            if all_subunits:
-                                await self.subunit_repo.create_batch(all_subunits, commit=True)
+                        fetch_results = await self._fetch_subunit_update_details(entities)
+                        await self._persist_subunit_update_page(fetch_results, result)
 
                         # Update latest ID from original entities
                         for entity in entities:
@@ -670,6 +1169,7 @@ class UpdateService:
                                     result.latest_oppdateringsid = max(result.latest_oppdateringsid, oppdateringsid)
 
                         result.companies_processed += len(entities)
+                        result.pages_fetched += 1
                         pages_processed += 1
                         logger.info(
                             f"Processed page {pages_processed} with {len(entities)} subunit updates",

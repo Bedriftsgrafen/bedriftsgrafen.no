@@ -5,7 +5,7 @@ import { OppdateringerPage, type OppdateringerTabId } from '../components/update
 
 export const Route = createFileRoute('/oppdateringer')({
   validateSearch: (search) => z.object({
-    tab: z.enum(['oversikt', 'nyetableringer', 'konkurser', 'regnskap', 'ansatte', 'datastatus']).optional().catch('oversikt'),
+    tab: z.enum(['oversikt', 'nyetableringer', 'konkurser', 'endringer', 'regnskap', 'ansatte', 'datastatus']).optional().catch('oversikt'),
   }).parse(search),
   component: OppdateringerRouteComponent,
 })

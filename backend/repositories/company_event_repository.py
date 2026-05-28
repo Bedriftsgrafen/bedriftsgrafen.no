@@ -145,3 +145,37 @@ class CompanyEventRepository:
         )
         result = await self.db.execute(stmt)
         return [dict(row) for row in result.mappings().all()]
+
+    async def get_latest_events_by_types_with_company(
+        self,
+        event_types: list[str],
+        *,
+        limit: int,
+    ) -> list[dict[str, Any]]:
+        if not event_types:
+            return []
+
+        stmt = (
+            select(
+                models.CompanyEvent.id,
+                models.CompanyEvent.orgnr,
+                models.CompanyEvent.event_type,
+                models.CompanyEvent.source,
+                models.CompanyEvent.source_update_id,
+                models.CompanyEvent.occurred_at,
+                models.CompanyEvent.observed_at,
+                models.CompanyEvent.previous_value,
+                models.CompanyEvent.new_value,
+                models.CompanyEvent.payload,
+                models.Company.navn,
+                models.Company.organisasjonsform,
+                models.Company.naeringskode,
+                models.Company.antall_ansatte,
+            )
+            .join(models.Company, models.Company.orgnr == models.CompanyEvent.orgnr)
+            .where(models.CompanyEvent.event_type.in_(event_types))
+            .order_by(models.CompanyEvent.observed_at.desc(), models.CompanyEvent.id.desc())
+            .limit(limit)
+        )
+        result = await self.db.execute(stmt)
+        return [dict(row) for row in result.mappings().all()]

@@ -105,9 +105,30 @@ async def test_get_overview_includes_event_backed_accounting_feed_when_enabled()
             }
         ],
     ]
+    service.event_repository.get_latest_events_by_types_with_company.return_value = [
+        {
+            "id": 3,
+            "orgnr": "123456789",
+            "event_type": "industry_changed",
+            "source": "Enhetsregisteret via Brreg",
+            "source_update_id": "update-2",
+            "occurred_at": datetime(2026, 5, 27, 10, 0, tzinfo=UTC),
+            "observed_at": datetime(2026, 5, 27, 12, 0, tzinfo=UTC),
+            "previous_value": {"naeringskode1": {"kode": "62.010"}},
+            "new_value": {"naeringskode1": {"kode": "70.220"}},
+            "payload": {"brreg_change_paths": ["/naeringskode1/kode"]},
+            "navn": "Test Bedrift AS",
+            "organisasjonsform": "AS",
+            "naeringskode": "70.220",
+            "antall_ansatte": 12,
+        }
+    ]
 
     response = await service.get_overview(limit=12)
 
+    assert response.business_changes.id == "business_changes"
+    assert response.business_changes.items[0].event_label == "Næringskode 62.010 → 70.220"
+    assert response.business_changes.items[0].source == "Enhetsregisteret via Brreg"
     assert response.accounting_updates.id == "accounting_updates"
     assert response.accounting_updates.items[0].orgnr == "123456789"
     assert response.accounting_updates.items[0].event_label == "Regnskap 2025 lagt til"
@@ -120,6 +141,7 @@ async def test_get_overview_includes_event_backed_accounting_feed_when_enabled()
     assert service.event_repository.get_latest_events_by_type_with_company.await_args_list[1].args == (
         "employee_count_changed",
     )
+    service.event_repository.get_latest_events_by_types_with_company.assert_awaited_once()
 
 
 @pytest.mark.asyncio
@@ -137,5 +159,7 @@ async def test_get_overview_skips_accounting_event_query_when_ledger_disabled():
     response = await service.get_overview(limit=12)
 
     assert response.accounting_updates.items == []
+    assert response.business_changes.items == []
     assert response.employee_changes.items == []
     service.event_repository.get_latest_events_by_type_with_company.assert_not_called()
+    service.event_repository.get_latest_events_by_types_with_company.assert_not_called()

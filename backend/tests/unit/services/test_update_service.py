@@ -10,7 +10,7 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
-from schemas.brreg import FetchResult, UpdateBatchResult
+from schemas.brreg import BrregUpdateEntity, FetchResult, SubunitFetchResult, UpdateBatchResult
 from services.update_service import UpdateService
 
 
@@ -37,7 +37,7 @@ def update_service(mock_db):
     service.role_repo = AsyncMock()
     service.system_repo = AsyncMock()
     service.company_repo = AsyncMock()
-    service._get_existing_employee_counts = AsyncMock(return_value={})
+    service._get_existing_company_event_snapshots = AsyncMock(return_value={})
     return service
 
 
@@ -120,6 +120,33 @@ class TestFetchUpdates:
             assert update_service._process_single_page.call_count == 2
             assert result["companies_processed"] == 0
 
+    @pytest.mark.asyncio
+    async def test_fetch_updates_requests_included_changes(self, update_service):
+        update_service._process_single_page = AsyncMock(return_value=None)
+
+        with patch("httpx.AsyncClient"):
+            await update_service.fetch_updates(start_id=123, page_size=10)
+
+        first_url = update_service._process_single_page.await_args.kwargs["url"]
+        assert "oppdateringsid=123" in first_url
+        assert "includeChanges=true" in first_url
+
+
+class TestBrregUpdateSchemas:
+    def test_update_entity_accepts_fjernet_and_changes(self):
+        entity = BrregUpdateEntity.model_validate(
+            {
+                "organisasjonsnummer": "123456789",
+                "oppdateringsid": 42,
+                "endringstype": "Fjernet",
+                "dato": "2026-05-27T12:00:00Z",
+                "endringer": [{"op": "replace", "path": "/navn", "value": "Nytt Navn AS"}],
+            }
+        )
+
+        assert entity.endringstype == "Fjernet"
+        assert entity.endringer[0].path == "/navn"
+
 
 @pytest.mark.asyncio
 async def test_persist_chunk_sorts_orgnrs(update_service):
@@ -147,6 +174,39 @@ async def test_persist_chunk_sorts_orgnrs(update_service):
 
 class TestFetchSubunitUpdates:
     """Tests for subunit update fetching with self-healing parent companies."""
+
+    @pytest.mark.asyncio
+    async def test_fetch_subunit_updates_requests_included_changes(self, update_service):
+        mock_page_response = MagicMock(status_code=200)
+        mock_page_response.json.return_value = {"_embedded": {"oppdaterteUnderenheter": []}, "_links": {}}
+
+        with patch("httpx.AsyncClient") as mock_client:
+            mock_client.return_value.__aenter__.return_value.get.return_value = mock_page_response
+            await update_service.fetch_subunit_updates(start_id=123, page_size=10)
+
+            first_url = mock_client.return_value.__aenter__.return_value.get.await_args.args[0]
+            assert "oppdateringsid=123" in first_url
+            assert "includeChanges=true" in first_url
+
+    @pytest.mark.asyncio
+    async def test_fetch_subunit_update_details_marks_deletion_without_fetch(self, update_service):
+        entities = [
+            {
+                "organisasjonsnummer": "123456789",
+                "oppdateringsid": 10,
+                "endringstype": "Sletting",
+                "dato": "2026-05-27T12:00:00Z",
+            }
+        ]
+
+        update_service.brreg_api.fetch_subunit = AsyncMock()
+
+        results = await update_service._fetch_subunit_update_details(entities)
+
+        assert results[0].success is True
+        assert results[0].subunit_data is None
+        assert results[0].source_change_type == "Sletting"
+        update_service.brreg_api.fetch_subunit.assert_not_called()
 
     @pytest.mark.asyncio
     async def test_fetch_subunit_updates_handles_missing_parents(self, update_service, mock_db):
@@ -209,6 +269,148 @@ class TestFetchSubunitUpdates:
             update_service.subunit_repo.delete_by_orgnr.assert_called_once_with("999")
             update_service.subunit_repo.create_batch.assert_not_called()
             assert result_dict["companies_deleted"] == 1
+
+    @pytest.mark.asyncio
+    async def test_persist_subunit_page_records_opened_event(self, update_service):
+        update_service.event_ledger_enabled = True
+        update_service._get_existing_subunit_event_snapshots = AsyncMock(return_value={})
+        update_service._ensure_parent_companies_exist = AsyncMock(return_value={"987654321"})
+        update_service.subunit_repo.create_batch = AsyncMock(return_value=1)
+        update_service._record_company_event_safe = AsyncMock()
+
+        fetch_results = [
+            SubunitFetchResult(
+                orgnr="123456789",
+                success=True,
+                subunit_data={
+                    "organisasjonsnummer": "123456789",
+                    "overordnetEnhet": "987654321",
+                    "navn": "Ny Avdeling",
+                    "organisasjonsform": {"kode": "BEDR"},
+                    "naeringskode1": {"kode": "47.111", "beskrivelse": "Butikkhandel"},
+                    "antallAnsatte": 5,
+                    "registreringsdatoEnhetsregisteret": "2026-05-26",
+                },
+                source_update_id="subunit-1",
+                source_change_type="Ny",
+            )
+        ]
+        result = UpdateBatchResult(since_date=date.today(), since_iso="2026-05-27T00:00:00.000Z")
+
+        await update_service._persist_subunit_update_page(fetch_results, result)
+
+        update_service._record_company_event_safe.assert_awaited_once()
+        event_kwargs = update_service._record_company_event_safe.await_args.kwargs
+        assert event_kwargs["orgnr"] == "123456789"
+        assert event_kwargs["event_type"] == "subunit_opened"
+        assert event_kwargs["source_update_id"] == "subunit-1"
+        assert event_kwargs["payload"]["parent_orgnr"] == "987654321"
+        assert event_kwargs["payload"]["entity_type"] == "subunit"
+        assert result.companies_updated == 1
+
+    @pytest.mark.asyncio
+    async def test_persist_subunit_page_records_grouped_change_events(self, update_service):
+        update_service.event_ledger_enabled = True
+        update_service._get_existing_subunit_event_snapshots = AsyncMock(
+            return_value={
+                "123456789": {
+                    "orgnr": "123456789",
+                    "parent_orgnr": "987654321",
+                    "navn": "Avdeling",
+                    "organisasjonsform": "BEDR",
+                    "naeringskode": "47.111",
+                    "antall_ansatte": 5,
+                    "beliggenhetsadresse": {"postnummer": "0101", "poststed": "OSLO"},
+                    "postadresse": None,
+                    "raw_data": {
+                        "naeringskode1": {"kode": "47.111", "beskrivelse": "Butikkhandel"},
+                        "aktivitet": "Gammel aktivitet",
+                    },
+                }
+            }
+        )
+        update_service._ensure_parent_companies_exist = AsyncMock(return_value={"987654321"})
+        update_service.subunit_repo.create_batch = AsyncMock(return_value=1)
+        update_service._record_company_event_safe = AsyncMock()
+
+        fetch_results = [
+            SubunitFetchResult(
+                orgnr="123456789",
+                success=True,
+                subunit_data={
+                    "organisasjonsnummer": "123456789",
+                    "overordnetEnhet": "987654321",
+                    "navn": "Avdeling",
+                    "organisasjonsform": {"kode": "BEDR"},
+                    "naeringskode1": {"kode": "62.010", "beskrivelse": "Programmeringstjenester"},
+                    "aktivitet": "Ny aktivitet",
+                    "antallAnsatte": 8,
+                    "beliggenhetsadresse": {"postnummer": "5003", "poststed": "BERGEN"},
+                },
+                source_update_id="subunit-2",
+                source_change_type="Endring",
+                source_changes=[
+                    {"path": "/beliggenhetsadresse/postnummer", "op": "replace"},
+                    {"path": "/naeringskode1/kode", "op": "replace"},
+                    {"path": "/antallAnsatte", "op": "replace"},
+                    {"path": "/ukjentFelt", "op": "replace"},
+                ],
+            )
+        ]
+        result = UpdateBatchResult(since_date=date.today(), since_iso="2026-05-27T00:00:00.000Z")
+
+        await update_service._persist_subunit_update_page(fetch_results, result)
+
+        event_types = [call.kwargs["event_type"] for call in update_service._record_company_event_safe.await_args_list]
+        assert event_types == [
+            "subunit_address_changed",
+            "subunit_industry_changed",
+            "subunit_employee_count_changed",
+        ]
+        first_payload = update_service._record_company_event_safe.await_args_list[0].kwargs["payload"]
+        assert first_payload["parent_orgnr"] == "987654321"
+        assert first_payload["brreg_change_paths"] == ["/beliggenhetsadresse/postnummer"]
+        assert first_payload["brreg_change_count"] == 4
+        assert result.companies_updated == 1
+
+    @pytest.mark.asyncio
+    async def test_persist_subunit_page_records_closed_event(self, update_service):
+        update_service.event_ledger_enabled = True
+        update_service._get_existing_subunit_event_snapshots = AsyncMock(
+            return_value={
+                "123456789": {
+                    "orgnr": "123456789",
+                    "parent_orgnr": "987654321",
+                    "navn": "Avdeling",
+                    "organisasjonsform": "BEDR",
+                    "naeringskode": "47.111",
+                    "antall_ansatte": 5,
+                }
+            }
+        )
+        update_service.subunit_repo.delete_by_orgnr = AsyncMock(return_value=1)
+        update_service._record_company_event_safe = AsyncMock()
+
+        fetch_results = [
+            SubunitFetchResult(
+                orgnr="123456789",
+                success=True,
+                subunit_data=None,
+                source_update_id="subunit-3",
+                source_event_time=None,
+                source_change_type="Fjernet",
+            )
+        ]
+        result = UpdateBatchResult(since_date=date.today(), since_iso="2026-05-27T00:00:00.000Z")
+
+        await update_service._persist_subunit_update_page(fetch_results, result)
+
+        update_service.subunit_repo.delete_by_orgnr.assert_awaited_once_with("123456789")
+        update_service._record_company_event_safe.assert_awaited_once()
+        event_kwargs = update_service._record_company_event_safe.await_args.kwargs
+        assert event_kwargs["event_type"] == "subunit_closed"
+        assert event_kwargs["payload"]["parent_orgnr"] == "987654321"
+        assert result.companies_deleted == 1
 
 
 @pytest.mark.asyncio
@@ -335,7 +537,7 @@ class TestFetchChunkDetails:
     async def test_fetch_chunk_details_fetches_concurrently(self, update_service):
         """_fetch_chunk_details should fetch company data for each update."""
         entities = [
-            {"organisasjonsnummer": "111111111", "oppdateringsid": 1},
+            {"organisasjonsnummer": "111111111", "oppdateringsid": 1, "endringer": [{"path": "/navn"}]},
             {"organisasjonsnummer": "222222222", "oppdateringsid": 2},
         ]
 
@@ -351,6 +553,7 @@ class TestFetchChunkDetails:
         assert len(result) == 2
         assert result[0].orgnr == "111111111"
         assert result[1].orgnr == "222222222"
+        assert result[0].source_changes[0].path == "/navn"
         assert update_service.brreg_api.fetch_company.call_count == 2
 
     @pytest.mark.asyncio
@@ -385,6 +588,25 @@ class TestFetchChunkDetails:
         assert result[0].success is True
         assert result[0].company_data is None
         # Should NOT call the API for deletions
+        update_service.brreg_api.fetch_company.assert_not_called()
+
+    @pytest.mark.asyncio
+    async def test_fetch_chunk_details_marks_fjernet_without_fetch(self, update_service):
+        entities = [
+            {
+                "organisasjonsnummer": "123456789",
+                "oppdateringsid": 1,
+                "endringstype": "Fjernet",
+            }
+        ]
+
+        update_service.brreg_api.fetch_company = AsyncMock()
+
+        result = await update_service._fetch_chunk_details(entities)
+
+        assert result[0].success is True
+        assert result[0].company_data is None
+        assert result[0].source_change_type == "Fjernet"
         update_service.brreg_api.fetch_company.assert_not_called()
 
 
@@ -440,12 +662,35 @@ class TestPersistChunk:
         assert result.companies_processed == 1
 
     @pytest.mark.asyncio
+    async def test_persist_chunk_records_fjernet_as_removed_from_open_data(self, update_service):
+        update_service.company_repo.delete_by_orgnr = AsyncMock(return_value=1)
+        update_service._record_company_event_safe = AsyncMock()
+
+        fetch_results = [
+            FetchResult(
+                orgnr="123456789",
+                success=True,
+                company_data=None,
+                source_update_id="update-1",
+                source_change_type="Fjernet",
+            )
+        ]
+        result = UpdateBatchResult(since_date=date.today(), since_iso="2026-01-26T00:00:00.000Z")
+
+        await update_service._persist_chunk(fetch_results, result)
+
+        update_service._record_company_event_safe.assert_awaited_once()
+        assert update_service._record_company_event_safe.await_args.kwargs["event_type"] == (
+            "company_removed_from_open_data"
+        )
+        assert result.companies_deleted == 1
+
+    @pytest.mark.asyncio
     async def test_persist_chunk_records_employee_count_change(self, update_service):
         company = MagicMock()
         company.last_polled_regnskap = date.today()
         update_service.company_repo.create_or_update = AsyncMock(return_value=company)
         update_service._record_company_event_safe = AsyncMock()
-        update_service._get_existing_employee_counts = AsyncMock(return_value={"123456789": 10})
 
         fetch_results = [
             FetchResult(
@@ -455,9 +700,13 @@ class TestPersistChunk:
                 source_update_id="update-1",
                 source_event_time=None,
                 source_change_type="Endring",
+                source_changes=[{"path": "/antallAnsatte", "op": "replace"}],
             )
         ]
         result = UpdateBatchResult(since_date=date.today(), since_iso="2026-01-26T00:00:00.000Z")
+        update_service._get_existing_company_event_snapshots = AsyncMock(
+            return_value={"123456789": {"antall_ansatte": 10}}
+        )
 
         await update_service._persist_chunk(fetch_results, result)
 
@@ -469,8 +718,77 @@ class TestPersistChunk:
             occurred_at=None,
             previous_value={"antall_ansatte": 10},
             new_value={"antall_ansatte": 14},
-            payload={"time_semantics": "Tidspunkt fra Brregs oppdateringsstrøm når tilgjengelig."},
+            payload={
+                "time_semantics": "Tidspunkt fra Brregs oppdateringsstrøm når tilgjengelig.",
+                "source_change_type": "Endring",
+                "brreg_change_paths": ["/antallAnsatte"],
+                "brreg_change_count": 1,
+            },
         )
+
+    @pytest.mark.asyncio
+    async def test_persist_chunk_records_company_update_events_from_source_changes(self, update_service):
+        company = MagicMock()
+        company.last_polled_regnskap = date.today()
+        update_service.company_repo.create_or_update = AsyncMock(return_value=company)
+        update_service._record_company_event_safe = AsyncMock()
+        update_service._get_existing_company_event_snapshots = AsyncMock(
+            return_value={
+                "123456789": {
+                    "navn": "Gammelt Navn AS",
+                    "postadresse": None,
+                    "forretningsadresse": {"postnummer": "0101", "poststed": "OSLO"},
+                    "naeringskode": "62.010",
+                    "antall_ansatte": 10,
+                    "konkurs": False,
+                    "konkursdato": None,
+                    "under_avvikling": False,
+                    "under_tvangsavvikling": False,
+                    "raw_data": {
+                        "naeringskode1": {"kode": "62.010", "beskrivelse": "Programmeringstjenester"},
+                        "aktivitet": "Gammel aktivitet",
+                    },
+                }
+            }
+        )
+
+        fetch_results = [
+            FetchResult(
+                orgnr="123456789",
+                success=True,
+                company_data={
+                    "organisasjonsnummer": "123456789",
+                    "navn": "Nytt Navn AS",
+                    "forretningsadresse": {"postnummer": "5003", "poststed": "BERGEN"},
+                    "naeringskode1": {"kode": "70.220", "beskrivelse": "Bedriftsrådgivning"},
+                    "aktivitet": "Ny aktivitet",
+                    "antallAnsatte": 10,
+                    "konkurs": True,
+                    "konkursdato": "2026-05-27",
+                    "underAvvikling": False,
+                    "underTvangsavvikling": False,
+                },
+                source_update_id="update-99",
+                source_change_type="Endring",
+                source_changes=[
+                    {"path": "/navn", "op": "replace"},
+                    {"path": "/forretningsadresse/postnummer", "op": "replace"},
+                    {"path": "/naeringskode1/kode", "op": "replace"},
+                    {"path": "/konkurs", "op": "replace"},
+                    {"path": "/ukjentFelt", "op": "replace"},
+                ],
+            )
+        ]
+        result = UpdateBatchResult(since_date=date.today(), since_iso="2026-01-26T00:00:00.000Z")
+
+        await update_service._persist_chunk(fetch_results, result)
+
+        event_types = [call.kwargs["event_type"] for call in update_service._record_company_event_safe.await_args_list]
+        assert event_types == ["name_changed", "address_changed", "industry_changed", "status_changed"]
+        first_payload = update_service._record_company_event_safe.await_args_list[0].kwargs["payload"]
+        assert first_payload["brreg_change_paths"] == ["/navn"]
+        assert first_payload["brreg_change_count"] == 5
+        assert result.companies_updated == 1
 
 
 class TestFetchAndPersistFinancials:

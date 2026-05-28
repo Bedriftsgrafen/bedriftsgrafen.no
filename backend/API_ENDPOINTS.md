@@ -150,7 +150,8 @@ Timeline/trend statistics.
 ### GET /v1/activity/overview
 Public freshness overview for `/oppdateringer`.
 - `limit` (default: 12, max: 24) — rows per live feed
-- Returns index-backed feeds for newest company registrations and bankruptcies, event-backed accounting updates from `company_events`, plus `system_state` data status.
+- Returns index-backed feeds for newest company registrations and bankruptcies, event-backed business changes/accounting/employee updates from `company_events`, plus `system_state` data status.
+- Business changes reflect selected Enhetsregisteret update-stream events such as name, address, industry, and status changes. They are not formal Brreg kunngjøringer.
 - Accounting activity reflects when Bedriftsgrafen observed/imported an accounting event, not official filing time at Brreg.
 
 ### GET /v1/activity/events/{orgnr}
@@ -159,6 +160,7 @@ Company event timeline backed by the `company_events` ledger.
 - `limit` (default: 25, max: 50)
 - `offset` (default: 0, max: 5000)
 - Returns durable events with source, source update ID, observed time, optional occurred time, and explicit timestamp semantics.
+- Subunit update events are stored under the subunit organization number with `payload.parent_orgnr`; parent-company timelines do not automatically include underenhet events.
 - The ledger table is introduced by Alembic migration `b8c9d0e1f2a3`; reads and ingestion writes are gated by `ENABLE_COMPANY_EVENT_LEDGER=true` until the migration is deliberately applied.
 
 ---

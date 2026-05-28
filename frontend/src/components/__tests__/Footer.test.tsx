@@ -17,6 +17,7 @@ describe('Footer', () => {
                 cache_ttl_seconds: 120,
                 new_companies: {} as never,
                 bankruptcies: {} as never,
+                business_changes: {} as never,
                 accounting_updates: {} as never,
                 employee_changes: {} as never,
                 data_status: [

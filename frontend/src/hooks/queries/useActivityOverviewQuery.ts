@@ -14,7 +14,7 @@ export type ActivityCompanyItem = {
 }
 
 export type ActivityFeed = {
-  id: 'new_companies' | 'bankruptcies' | 'accounting_updates' | 'employee_changes'
+  id: 'new_companies' | 'bankruptcies' | 'business_changes' | 'accounting_updates' | 'employee_changes'
   title: string
   description: string
   source: string
@@ -43,6 +43,7 @@ export type ActivityOverview = {
   cache_ttl_seconds: number
   new_companies: ActivityFeed
   bankruptcies: ActivityFeed
+  business_changes?: ActivityFeed | null
   accounting_updates: ActivityFeed
   employee_changes: ActivityFeed
   data_status: ActivityStatusItem[]

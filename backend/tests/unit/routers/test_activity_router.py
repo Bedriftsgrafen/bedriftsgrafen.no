@@ -62,6 +62,14 @@ def make_activity_response() -> ActivityOverviewResponse:
             time_label="Konkursdato",
             items=[],
         ),
+        business_changes=ActivityFeed(
+            id="business_changes",
+            title="Virksomhetsendringer",
+            description="Endringer fra Brregs oppdateringsstrøm.",
+            source="Brreg oppdateringsstrøm via Bedriftsgrafen eventlogg",
+            time_label="Brreg-oppdatering",
+            items=[],
+        ),
         accounting_updates=ActivityFeed(
             id="accounting_updates",
             title="Nye regnskap hos Bedriftsgrafen",

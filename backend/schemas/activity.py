@@ -5,7 +5,7 @@ from typing import Any, Literal
 
 from pydantic import BaseModel, ConfigDict
 
-ActivityFeedId = Literal["new_companies", "bankruptcies", "accounting_updates", "employee_changes"]
+ActivityFeedId = Literal["new_companies", "bankruptcies", "business_changes", "accounting_updates", "employee_changes"]
 DeferredFeedId = Literal["brreg_announcements"]
 
 
@@ -63,6 +63,7 @@ class ActivityOverviewResponse(BaseModel):
     cache_ttl_seconds: int
     new_companies: ActivityFeed
     bankruptcies: ActivityFeed
+    business_changes: ActivityFeed
     accounting_updates: ActivityFeed
     employee_changes: ActivityFeed
     data_status: list[ActivityStatusItem]

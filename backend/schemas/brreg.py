@@ -10,6 +10,16 @@ from typing import Any
 from pydantic import BaseModel, Field, field_validator
 
 
+class BrregUpdateChange(BaseModel):
+    """JSON Patch-like change item from Brreg update endpoints."""
+
+    op: str | None = None
+    path: str | None = None
+    value: Any | None = None
+
+    model_config = {"extra": "allow"}
+
+
 class BrregUpdateEntity(BaseModel):
     """Schema for a single entity in the updates (oppdateringer) endpoint.
 
@@ -18,8 +28,9 @@ class BrregUpdateEntity(BaseModel):
 
     organisasjonsnummer: str = Field(..., min_length=9, max_length=9)
     oppdateringsid: int
-    endringstype: str = Field(..., pattern=r"^(Ny|Endring|Sletting|Ukjent)$")
+    endringstype: str = Field(..., pattern=r"^(Ny|Endring|Sletting|Fjernet|Ukjent)$")
     dato: str  # ISO 8601 datetime string
+    endringer: list[BrregUpdateChange] = Field(default_factory=list)
 
     @field_validator("organisasjonsnummer")
     @classmethod
@@ -132,6 +143,20 @@ class FetchResult(BaseModel):
     source_update_id: str | None = None
     source_event_time: datetime | None = None
     source_change_type: str | None = None
+    source_changes: list[BrregUpdateChange] = Field(default_factory=list)
+
+
+class SubunitFetchResult(BaseModel):
+    """Result of fetching one subunit update with Brreg update metadata."""
+
+    orgnr: str
+    success: bool
+    subunit_data: dict[str, Any] | None = None
+    error: str | None = None
+    source_update_id: str | None = None
+    source_event_time: datetime | None = None
+    source_change_type: str | None = None
+    source_changes: list[BrregUpdateChange] = Field(default_factory=list)
 
 
 class UpdateBatchResult(BaseModel):

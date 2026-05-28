@@ -7,8 +7,10 @@ from schemas.brreg import (
     BrregNaeringskode,
     BrregOrganisasjonsform,
     BrregRegnskapsperiode,
+    BrregUpdateChange,
     BrregUpdateEntity,
     FetchResult,
+    SubunitFetchResult,
     UpdateBatchResult,
 )
 from schemas.companies import (
@@ -64,8 +66,10 @@ __all__ = [  # noqa: RUF022  -- grouped by category for readability
     "BrregNaeringskode",
     "BrregOrganisasjonsform",
     "BrregRegnskapsperiode",
+    "BrregUpdateChange",
     "BrregUpdateEntity",
     "FetchResult",
+    "SubunitFetchResult",
     "UpdateBatchResult",
     # Company schemas
     "AccountingBase",
