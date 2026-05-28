@@ -5,10 +5,8 @@ import {
   ArrowRight,
   Building2,
   CalendarClock,
-  CheckCircle2,
   Database,
   FileClock,
-  Info,
   RefreshCw,
   ShieldAlert,
   UsersRound,
@@ -65,6 +63,11 @@ const fallbackBusinessChangesFeed: ActivityFeed = {
 
 function getBusinessChangesFeed(data: ActivityOverview) {
   return data.business_changes ?? fallbackBusinessChangesFeed
+}
+
+function formatStatusValue(value: string | null | undefined) {
+  if (!value || /^\d{4}-\d{2}-\d{2}$/.test(value)) return 'Synkronisert'
+  return value
 }
 
 export function OppdateringerPage({ activeTab = 'oversikt' }: { activeTab?: OppdateringerTabId }) {
@@ -236,13 +239,6 @@ function ActivitySummary({ data }: { data: ActivityOverview }) {
       icon: Database,
       color: 'bg-blue-50 text-blue-700 ring-blue-100 dark:bg-blue-500/15 dark:text-blue-200 dark:ring-blue-400/20',
     },
-    {
-      label: 'Utsatte feeds',
-      value: formatNumber(data.deferred_feeds.length),
-      helper: 'Venter på datakilde',
-      icon: FileClock,
-      color: 'bg-amber-50 text-amber-800 ring-amber-100 dark:bg-amber-500/15 dark:text-amber-200 dark:ring-amber-400/20',
-    },
   ]
 
   return (
@@ -377,7 +373,7 @@ function ActivityRow({ item }: { item: ActivityCompanyItem }) {
 
 function DataStatusPanel({ data }: { data: ActivityOverview }) {
   return (
-    <section aria-labelledby="data-status-title" className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_minmax(320px,0.55fr)]">
+    <section aria-labelledby="data-status-title" className="space-y-6">
       <div className="rounded-2xl border border-slate-200 bg-white shadow-sm dark:border-slate-800 dark:bg-slate-900">
         <div className="border-b border-slate-200 p-5 dark:border-slate-800 sm:p-6">
           <div className="flex items-center gap-3">
@@ -390,6 +386,9 @@ function DataStatusPanel({ data }: { data: ActivityOverview }) {
               </h2>
               <p className="mt-1 text-sm leading-6 text-slate-600 dark:text-slate-300">
                 Synkroniseringer Bedriftsgrafen har registrert fra kildene sine.
+              </p>
+              <p className="mt-2 text-xs leading-5 text-slate-500 dark:text-slate-500">
+                Datoene viser når Bedriftsgrafen sist registrerte synkronisering fra kilden.
               </p>
             </div>
           </div>
@@ -405,7 +404,7 @@ function DataStatusPanel({ data }: { data: ActivityOverview }) {
                   <p className="mt-2 text-xs font-semibold uppercase tracking-[0.16em] text-slate-500 dark:text-slate-500">{item.source}</p>
                 </div>
                 <div className="shrink-0 rounded-lg bg-slate-50 px-3 py-2 text-sm dark:bg-slate-950">
-                  <span className="block font-semibold text-slate-950 dark:text-white">{item.value || 'Oppdatert'}</span>
+                  <span className="block font-semibold text-slate-950 dark:text-white">{formatStatusValue(item.value)}</span>
                   <span className="mt-1 block tabular-nums text-slate-600 dark:text-slate-400">{formatDateTime(item.updated_at)}</span>
                 </div>
               </div>
@@ -414,43 +413,6 @@ function DataStatusPanel({ data }: { data: ActivityOverview }) {
         </div>
       </div>
 
-      {data.deferred_feeds.length > 0 && (
-        <div className="rounded-2xl border border-slate-200 bg-white p-5 text-slate-800 shadow-sm dark:border-slate-800 dark:bg-slate-900 dark:text-slate-100 sm:p-6">
-        <div className="flex items-start gap-3">
-          <span className="mt-0.5 flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-blue-50 text-blue-700 ring-1 ring-blue-100 dark:bg-blue-500/15 dark:text-blue-200 dark:ring-blue-400/20">
-            <Info aria-hidden="true" className="h-5 w-5" />
-          </span>
-          <div>
-            <h2 className="text-lg font-bold text-slate-950 dark:text-white">Planlagt datakilde</h2>
-            {data.deferred_feeds.map((feed) => (
-              <div key={feed.id} className="mt-3 text-sm leading-6">
-                <p className="font-semibold">{feed.title}</p>
-                <p className="mt-1 text-slate-600 dark:text-slate-300">{feed.reason}</p>
-                <p className="mt-1 text-slate-600 dark:text-slate-300">{feed.requirement}</p>
-              </div>
-            ))}
-          </div>
-        </div>
-      </div>
-      )}
-
-      <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-800 dark:bg-slate-900 xl:col-span-2 sm:p-6">
-        <div className="flex items-start gap-3">
-          <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-slate-100 text-slate-700 ring-1 ring-slate-200 dark:bg-slate-800 dark:text-slate-200 dark:ring-slate-700">
-            <Info aria-hidden="true" className="h-5 w-5" />
-          </span>
-          <div>
-            <h2 className="font-semibold text-slate-950 dark:text-white">Tidsstempler</h2>
-            <p className="mt-1 text-sm leading-6 text-slate-600 dark:text-slate-300">
-              Registreringsdato og konkursdato kommer fra Brreg-kildene. Regnskaps- og ansattfeedene viser når Bedriftsgrafen observerte eller importerte hendelsen.
-            </p>
-            <p className="mt-3 inline-flex items-center gap-2 text-sm font-semibold text-emerald-700 dark:text-emerald-200">
-              <CheckCircle2 aria-hidden="true" className="h-4 w-4" />
-              Regnskaps- og ansattfeedene er eventlogg-støttet og bruker ikke skanning av store datatabeller ved lasting av siden.
-            </p>
-          </div>
-        </div>
-      </div>
     </section>
   )
 }

@@ -134,7 +134,7 @@ async def test_get_overview_includes_event_backed_accounting_feed_when_enabled()
     assert response.accounting_updates.items[0].event_label == "Regnskap 2025 lagt til"
     assert response.employee_changes.id == "employee_changes"
     assert response.employee_changes.items[0].event_label == "Ansatte 10 → 12"
-    assert response.deferred_feeds[0].id == "brreg_announcements"
+    assert response.deferred_feeds == []
     assert service.event_repository.get_latest_events_by_type_with_company.await_args_list[0].args == (
         "accounting_added",
     )
@@ -163,3 +163,31 @@ async def test_get_overview_skips_accounting_event_query_when_ledger_disabled():
     assert response.employee_changes.items == []
     service.event_repository.get_latest_events_by_type_with_company.assert_not_called()
     service.event_repository.get_latest_events_by_types_with_company.assert_not_called()
+
+
+@pytest.mark.asyncio
+async def test_get_overview_normalizes_status_values_for_public_copy():
+    service = ActivityService(AsyncMock())
+    service.event_ledger_enabled = False
+    service.cache = AsyncMock()
+    service.cache.get.return_value = None
+    service.repository = AsyncMock()
+    service.repository.get_latest_registered_companies.return_value = []
+    service.repository.get_latest_bankruptcies.return_value = []
+    service.repository.get_system_state.return_value = [
+        {
+            "key": "company_update_last_sync_date",
+            "value": "2026-05-28",
+            "updated_at": datetime(2026, 5, 28, 9, 55, tzinfo=UTC),
+        },
+        {
+            "key": "company_update_latest_id",
+            "value": "24497871",
+            "updated_at": datetime(2026, 5, 28, 9, 55, tzinfo=UTC),
+        },
+    ]
+    service.event_repository = AsyncMock()
+
+    response = await service.get_overview(limit=12)
+
+    assert [item.value for item in response.data_status] == ["Synkronisert", "Synkronisert"]

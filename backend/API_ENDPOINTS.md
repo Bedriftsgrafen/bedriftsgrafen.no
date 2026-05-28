@@ -150,7 +150,7 @@ Timeline/trend statistics.
 ### GET /v1/activity/overview
 Public freshness overview for `/oppdateringer`.
 - `limit` (default: 12, max: 24) — rows per live feed
-- Returns index-backed feeds for newest company registrations and bankruptcies, event-backed business changes/accounting/employee updates from `company_events`, plus `system_state` data status.
+- Returns index-backed feeds for newest company registrations and bankruptcies, event-backed business changes/accounting/employee updates from `company_events`, plus audience-facing `system_state` data status.
 - Business changes reflect selected Enhetsregisteret update-stream events such as name, address, industry, and status changes. They are not formal Brreg kunngjøringer.
 - Accounting activity reflects when Bedriftsgrafen observed/imported an accounting event, not official filing time at Brreg.
 

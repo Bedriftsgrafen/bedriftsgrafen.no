@@ -155,16 +155,19 @@ describe('OppdateringerPage', () => {
     expect(screen.getByText(/Regnskap Bedrift AS/i)).toBeInTheDocument()
     expect(screen.getByText(/Ansatt Bedrift AS/i)).toBeInTheDocument()
     expect(screen.getByRole('link', { name: /Test Bedrift AS/i })).toHaveAttribute('href', '/virksomhet/123456789')
-    expect(screen.getByText(/Planlagt datakilde/i)).toBeInTheDocument()
-    expect(screen.getByText(/Brreg-kunngjøringer/i)).toBeInTheDocument()
-    expect(screen.getByText(/Regnskaps- og ansattfeedene er eventlogg-støttet/i)).toBeInTheDocument()
+    expect(screen.queryByText(/Planlagt datakilde/i)).not.toBeInTheDocument()
+    expect(screen.queryByText(/Brreg-kunngjøringer/i)).not.toBeInTheDocument()
+    expect(screen.queryByText(/Tidsstempler/i)).not.toBeInTheDocument()
   })
 
   it('can render the data status tab without activity rows', () => {
     render(<OppdateringerPage activeTab="datastatus" />)
 
     expect(screen.getByRole('heading', { name: /Datastatus/i })).toBeInTheDocument()
+    expect(screen.getByText(/Datoene viser når Bedriftsgrafen sist registrerte synkronisering/i)).toBeInTheDocument()
+    expect(screen.getByText(/Synkronisert/i)).toBeInTheDocument()
     expect(screen.getByText(/Brreg oppdateringsstrøm/i)).toBeInTheDocument()
+    expect(screen.queryByText('2026-05-27')).not.toBeInTheDocument()
     expect(screen.queryByText(/Test Bedrift AS/i)).not.toBeInTheDocument()
     expect(screen.queryByText(/Endret Bedrift AS/i)).not.toBeInTheDocument()
     expect(screen.queryByText(/Regnskap Bedrift AS/i)).not.toBeInTheDocument()

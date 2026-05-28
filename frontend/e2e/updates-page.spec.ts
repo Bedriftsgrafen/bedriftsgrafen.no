@@ -63,6 +63,22 @@ const activityResponse = {
       },
     ],
   },
+  business_changes: {
+    id: 'business_changes',
+    title: 'Virksomhetsendringer',
+    description: 'Navn, adresse, næringskode og statusendringer observert gjennom Brregs oppdateringsstrøm.',
+    source: 'Brreg oppdateringsstrøm via Bedriftsgrafen eventlogg',
+    time_label: 'Brreg-oppdatering',
+    items: [],
+  },
+  employee_changes: {
+    id: 'employee_changes',
+    title: 'Endringer i ansatte',
+    description: 'Endringer i antall ansatte observert gjennom Brregs oppdateringsstrøm.',
+    source: 'Enhetsregisteret via Brreg',
+    time_label: 'Observert i Brreg-oppdatering',
+    items: [],
+  },
   data_status: [
     {
       key: 'company_update_last_sync_date',
@@ -73,14 +89,7 @@ const activityResponse = {
       source: 'Brreg oppdateringsstrøm',
     },
   ],
-  deferred_feeds: [
-    {
-      id: 'employee_changes',
-      title: 'Endringer i ansatte',
-      reason: 'Antall ansatte er foreløpig bare nåverdi i selskapsdataene.',
-      requirement: 'Skriv forrige og ny verdi til eventloggen under Brreg-oppdateringer før dette blir en offentlig feed.',
-    },
-  ],
+  deferred_feeds: [],
 }
 
 async function mockActivity(page: Page) {
@@ -139,11 +148,14 @@ test('renders updates hub with indexed feeds and dark-mode mobile-safe layout', 
   await expect(page.getByText('Test Bedrift AS')).toBeVisible()
   await expect(page.getByText('Avsluttet Firma AS')).toBeVisible()
   await expect(page.getByText('Regnskap Test AS')).toBeVisible()
-  await expect(page.getByText(/Neste hendelsesfeeder/i)).toBeVisible()
-  await expect(page.getByText(/Endringer i ansatte/i)).toBeVisible()
+  await expect(page.getByText(/Planlagt datakilde/i)).toBeHidden()
+  await expect(page.getByText(/Brreg-kunngjøringer/i)).toBeHidden()
+  await expect(page.getByText(/Tidsstempler/i)).toBeHidden()
 
   await page.getByRole('link', { name: /Datastatus/i }).click()
   await expect(page).toHaveURL(/tab=datastatus/)
+  await expect(page.getByText('Synkronisert')).toBeVisible()
+  await expect(page.getByText(/Datoene viser når Bedriftsgrafen sist registrerte synkronisering/i)).toBeVisible()
   await expect(page.getByText('Brreg oppdateringsstrøm')).toBeVisible()
   await expect(page.getByText('Test Bedrift AS')).toBeHidden()
   await expect(page.getByText('Regnskap Test AS')).toBeHidden()

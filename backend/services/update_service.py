@@ -723,7 +723,7 @@ class UpdateService:
                 # Check if this is a new company (never polled for financials)
                 is_new = company.last_polled_regnskap is None
 
-                if is_new and fetch_result.source_change_type == "Ny":
+                if fetch_result.source_change_type == "Ny":
                     await self._record_company_event_safe(
                         orgnr=fetch_result.orgnr,
                         event_type="company_registered",

@@ -10,7 +10,6 @@ from repositories.activity_repository import ActivityRepository
 from repositories.company_event_repository import CompanyEventRepository
 from schemas.activity import (
     ActivityCompanyItem,
-    ActivityDeferredFeed,
     ActivityFeed,
     ActivityOverviewResponse,
     ActivityStatusItem,
@@ -49,18 +48,18 @@ SYSTEM_STATE_LABELS: dict[str, dict[str, str]] = {
     },
     "company_update_latest_id": {
         "title": "Virksomhetsoppdateringer",
-        "description": "Importcursor for virksomheter er oppdatert hos Bedriftsgrafen.",
-        "source": "Bedriftsgrafen importjobb",
+        "description": "Siste virksomhetsoppdateringer fra Brreg er behandlet hos Bedriftsgrafen.",
+        "source": "Brreg via Bedriftsgrafen",
     },
     "subunit_update_latest_id": {
         "title": "Underenheter",
-        "description": "Importcursor for underenheter er oppdatert hos Bedriftsgrafen.",
-        "source": "Bedriftsgrafen importjobb",
+        "description": "Siste underenhetsoppdateringer fra Brreg er behandlet hos Bedriftsgrafen.",
+        "source": "Brreg via Bedriftsgrafen",
     },
     "role_update_latest_id": {
         "title": "Roller",
-        "description": "Importcursor for roller er oppdatert hos Bedriftsgrafen.",
-        "source": "Bedriftsgrafen importjobb",
+        "description": "Siste rolleoppdateringer fra Brreg er behandlet hos Bedriftsgrafen.",
+        "source": "Brreg via Bedriftsgrafen",
     },
 }
 
@@ -75,7 +74,7 @@ class ActivityService:
         self.event_ledger_enabled = os.getenv("ENABLE_COMPANY_EVENT_LEDGER", "").lower() in {"1", "true", "yes"}
 
     async def get_overview(self, limit: int) -> ActivityOverviewResponse:
-        cache_key = f"overview:v3:{limit}"
+        cache_key = f"overview:v4:{limit}"
         cached = await self.cache.get(cache_key)
         if cached is not None:
             return ActivityOverviewResponse.model_validate(cached)
@@ -156,14 +155,7 @@ class ActivityService:
                 items=self._build_employee_event_items(employee_rows),
             ),
             data_status=self._build_status_items(status_rows),
-            deferred_feeds=[
-                ActivityDeferredFeed(
-                    id="brreg_announcements",
-                    title="Brreg-kunngjøringer",
-                    reason="Kunngjøringer må hentes fra en godkjent kilde og normaliseres før publisering.",
-                    requirement="Ingest via offisiell XML/subscription eller annen godkjent kilde, med GDPR-vurdering før indeksering.",
-                ),
-            ],
+            deferred_feeds=[],
         )
 
         await self.cache.set(cache_key, overview.model_dump(mode="json"))
@@ -230,7 +222,7 @@ class ActivityService:
                     key=key,
                     title=metadata["title"],
                     description=metadata["description"],
-                    value=row.get("value") if key == "company_update_last_sync_date" else "Cursor oppdatert",
+                    value="Synkronisert",
                     updated_at=row.get("updated_at"),
                     source=metadata["source"],
                 )

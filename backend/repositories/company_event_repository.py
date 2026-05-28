@@ -172,7 +172,7 @@ class CompanyEventRepository:
                 models.Company.naeringskode,
                 models.Company.antall_ansatte,
             )
-            .join(models.Company, models.Company.orgnr == models.CompanyEvent.orgnr)
+            .outerjoin(models.Company, models.Company.orgnr == models.CompanyEvent.orgnr)
             .where(models.CompanyEvent.event_type.in_(event_types))
             .order_by(models.CompanyEvent.observed_at.desc(), models.CompanyEvent.id.desc())
             .limit(limit)

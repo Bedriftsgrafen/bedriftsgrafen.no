@@ -41,6 +41,9 @@ services:
       - DATABASE_URL_ASYNC=postgresql+asyncpg://${DATABASE_USER}:${DATABASE_PASSWORD}@db:5432/${DATABASE_NAME}
       - REDIS_HOST=redis
       - API_PORT=8001
+      # Dev shares prod DB, so scheduled writes must stay owned by bedriftsgrafen-worker.
+      - START_SCHEDULER=false
+      - ENABLE_COMPANY_EVENT_LEDGER=true
     deploy:
       resources:
         limits:

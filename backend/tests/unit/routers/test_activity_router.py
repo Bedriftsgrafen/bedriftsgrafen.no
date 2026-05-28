@@ -7,7 +7,6 @@ from fastapi.testclient import TestClient
 from main import app
 from schemas.activity import (
     ActivityCompanyItem,
-    ActivityDeferredFeed,
     ActivityFeed,
     ActivityOverviewResponse,
     ActivityStatusItem,
@@ -96,14 +95,7 @@ def make_activity_response() -> ActivityOverviewResponse:
                 source="Brreg oppdateringsstrøm",
             )
         ],
-        deferred_feeds=[
-            ActivityDeferredFeed(
-                id="brreg_announcements",
-                title="Brreg-kunngjøringer",
-                reason="Krever godkjent kilde.",
-                requirement="Ingest og normaliser kunngjøringer.",
-            )
-        ],
+        deferred_feeds=[],
     )
 
 
@@ -142,7 +134,7 @@ def test_get_activity_overview_success(client, mock_activity_service):
     assert data["new_companies"]["items"][0]["orgnr"] == "123456789"
     assert data["accounting_updates"]["id"] == "accounting_updates"
     assert data["employee_changes"]["id"] == "employee_changes"
-    assert data["deferred_feeds"][0]["id"] == "brreg_announcements"
+    assert data["deferred_feeds"] == []
     mock_activity_service.get_overview.assert_called_once_with(limit=12)
 
 

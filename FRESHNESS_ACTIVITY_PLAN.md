@@ -1,7 +1,7 @@
 # Freshness And Activity Plan
 
 **Date:** 2026-05-28
-**Status:** F0-F3b are live; F4a, the narrow company-event classifier slice of F4b, and the F4e business-change feed are implemented; true Brreg kunngjoringer remain deferred.
+**Status:** F0-F4f are live/implemented and public freshness UX is in hardening mode. True Brreg kunngjoringer are parked because the practical automated source is a paid XML/SFTP subscription; do not show them as a planned public feed until source access is actually approved.
 **Purpose:** Make Bedriftsgrafen feel current and alive without making false freshness claims, unsafe production queries, or unclear source/provenance claims.
 
 ## Current Status
@@ -16,14 +16,18 @@
 - Company-profile event timeline: implemented using `GET /v1/activity/events/{orgnr}`.
 - Brreg update-derived company events: schema support, `includeChanges=true`, `Fjernet` handling, and narrow event classification for name, address, industry, status, and employee-count changes are implemented in the backend.
 - `/oppdateringer` business-change feed: implemented as an event-backed `business_changes` feed and `Endringer` tab for selected company update events.
-- Brreg kunngjoringer: still deferred. Research on 2026-05-28 shows that Enhetsregisterets `oppdateringer` API is excellent for update-derived change events, but it is not the same thing as official kunngjoring texts.
+- `/oppdateringer` datastatus: normalized to audience-facing `Synkronisert` values with the sync timestamp shown as secondary context. The separate large timestamp explanation box has been removed.
+- Brreg `Ny` update rows now record `company_registered` events even when the company already existed locally from another import path.
+- Bounded 2026-05-28 data repair: newest 100,000 accounting rows were backfilled to zero missing `accounting_added` events after disabling the dev scheduler that had been writing to the shared DB without event-ledger writes. The current company replay window `24497870..24497876` was replayed to zero missing registration events.
+- Dev compose hardening: `backend-dev` now starts with `START_SCHEDULER=false` and `ENABLE_COMPANY_EVENT_LEDGER=true` because the dev stack shares the production database.
+- Brreg kunngjoringer: parked. Research on 2026-05-28 shows that Enhetsregisterets `oppdateringer` API is excellent for update-derived change events, but it is not the same thing as official kunngjoring texts. The useful automated kunngjoring source appears to require paid XML/SFTP access; the free email subscription is suitable for manual monitoring, not product ingestion.
 
 ## Decision
 
 Use two distinct lanes and label them honestly:
 
 1. **Brreg oppdateringer / change events**: use the official open JSON API from Enhetsregisteret to create richer event-ledger rows for names, addresses, industry codes, status changes, employee counts, subunits, and role update signals. These are not official kunngjoring texts.
-2. **Brreg kunngjoringer**: ingest only through Brreg's official subscription/XML path or another approved source path. Do not scrape the legacy `w2.brreg.no/kunngjoring` pages. Keep this deferred until source access, delivery format, retention, and GDPR handling are decided.
+2. **Brreg kunngjoringer**: ingest only through Brreg's official subscription/XML path or another approved source path. Do not scrape the legacy `w2.brreg.no/kunngjoring` pages. Keep this out of the public UI until source access, delivery format, retention, cost, and GDPR handling are approved.
 
 Do not add Gemini's suggested `virksomhet_oppdateringer` table. Bedriftsgrafen already has `company_events`, source-update idempotency, and event-type/observed-time indexes. Extend that ledger instead.
 
@@ -32,9 +36,10 @@ Do not add Gemini's suggested `virksomhet_oppdateringer` table. Bedriftsgrafen a
 Production observations on 2026-05-28:
 
 - `company_events` contains event-backed history and is the right serving surface for public activity feeds.
-- Current production event counts observed: `accounting_added` ~101k rows, `company_deleted` rows present, and employee-change rows are expected only when future Brreg updates change a previously known employee count.
-- `/v1/activity/overview?limit=3` returns active `accounting_updates`, active `employee_changes`, current data-status rows, and only `brreg_announcements` as a deferred feed.
+- Current production event counts observed after the latest bounded repair: `accounting_added` ~103.2k rows, `company_registered` rows present, `company_deleted` rows present, `roles_changed` rows present, and employee-change rows are expected only when future Brreg updates change a previously known employee count.
+- `/v1/activity/overview?limit=3` returns active `accounting_updates`, active `employee_changes`, current data-status rows, and no public deferred/planned-source card.
 - System cursors are fresh for company, subunit, and role updates.
+- The live database is on Alembic `c1d2e3f4a5b6`, which adds `idx_company_events_type_orgnr_source_update`, a partial maintenance index for larger replay/backfill checks.
 - `last_polled_regnskap` is a Bedriftsgrafen control timestamp. Keep labeling it as `Regnskap sist kontrollert`, never official filing time.
 - `regnskap.created_at` and `regnskap.updated_at` can support `lagt til hos Bedriftsgrafen`, but not `innsendt til Brreg` unless an official source timestamp is found.
 - Role data contains person-related public data and has display restrictions when aggregating person roles. Any role-change feed needs a GDPR/product review before person-level names are shown in public activity streams.
@@ -136,7 +141,7 @@ Implemented feeds:
 - Nye regnskap hos Bedriftsgrafen: event-backed from `company_events`.
 - Endringer i ansatte: event-backed feed slot from `company_events`, populated only for changes observed after activation.
 - Datastatus: `system_state` rows with source/provenance labels.
-- Deferred feed: true Brreg kunngjoringer.
+- No public planned-source/deferred card for true Brreg kunngjoringer while source access is parked.
 
 Query principle remains unchanged: request-time public feeds must use reviewed indexes or the event ledger.
 
@@ -165,7 +170,7 @@ Completed scope:
 
 Remaining cleanup for F3:
 
-- Update stale docs/comments that still describe accounting as deferred.
+- Keep historical accounting backfill dry-run-first and maintenance-window sized; the public feed does not need a full historical replay to remain credible now.
 - Consider adding an admin-only event-ledger diagnostics endpoint for event counts, latest ids, and ingest lag.
 
 ## Phase F4: Brreg Update-Derived Change Events
@@ -318,7 +323,7 @@ Definition of done:
 
 ### Phase F4f: Backfill Strategy For Update-Derived Events
 
-**Status:** First backend maintenance slice implemented for company updates. `backend/scripts/replay_brreg_update_events.py` can dry-run or apply bounded Enhetsregisteret company update windows with `--from-id`/`--from-time`, optional `--to-id`/`--to-time`, required `--limit`, required `--batch-size`, and explicit `--apply` for writes. Replay progress is stored in `system_state.company_event_replay_latest_id`, separate from the live scheduler cursor.
+**Status:** First backend maintenance slice implemented for company updates. `backend/scripts/replay_brreg_update_events.py` can dry-run or apply bounded Enhetsregisteret company update windows with `--from-id`/`--from-time`, optional `--to-id`/`--to-time`, required `--limit`, required `--batch-size`, and explicit `--apply` for writes. Replay progress is stored in `system_state.company_event_replay_latest_id`, separate from the live scheduler cursor. The current company replay window was repaired on 2026-05-28 after fixing `Ny` event recording for existing local companies.
 
 Scope:
 
@@ -353,6 +358,8 @@ Apply requires `ENABLE_COMPANY_EVENT_LEDGER=true` and explicit `--apply`.
 
 ### Phase F5a: Source Access Decision
 
+**Decision 2026-05-28:** Skip for now. Paid XML/SFTP access is not desired, and the free daily email option is not a reliable ingestion source for Bedriftsgrafen. Reopen only if paid source access becomes acceptable or Brreg publishes a free machine-readable kunngjoring API.
+
 Options:
 
 - **Email link subscription:** free and easy to order, but not good for automated ingestion because it delivers links via email. Good for manual monitoring only.
@@ -370,7 +377,7 @@ Definition of done:
 
 - A short source decision note exists in this plan or a dedicated ops doc.
 - No parser is built until the data contract is known.
-- `/oppdateringer` continues showing Brreg kunngjoringer as planned/deferred until this gate passes.
+- `/oppdateringer` does not show Brreg kunngjoringer as planned/deferred while this gate is parked.
 
 ### Phase F5b: Raw Announcement Ingestion Sandbox
 
@@ -416,7 +423,7 @@ Definition of done:
 
 Scope:
 
-- Activate the deferred `brreg_announcements` feed in `/v1/activity/overview` only after F5b/F5c are stable.
+- Add an official Brreg kunngjoring feed to `/v1/activity/overview` only after F5b/F5c are stable and source access is approved.
 - Add `/oppdateringer?tab=kunngjoringer` or replace the deferred card with an active feed.
 - Add company-profile timeline rows for official kunngjoringer.
 - Provide source links back to Brreg where available.
@@ -430,21 +437,10 @@ Definition of done:
 
 ## Implementation Order From Here
 
-1. **F4a:** Update schemas/types and source-language cleanup for Brreg update-derived events.
-2. **F4b:** Add company update classifier using `includeChanges=true`, local snapshots, and new event types.
-3. **F4e small UI slice:** Add `business_changes` feed to `/oppdateringer` once F4b has live rows.
-4. **F4c:** Add subunit update events.
-5. **F4d:** Add coarse role update events, keeping person-level detail hidden.
-6. **F4f:** Add optional dry-run replay/backfill for update-derived events.
-7. **F5a:** Make source/access decision for true Brreg kunngjoringer XML subscription.
-8. **F5b-F5d:** Ingest, normalize, and expose official kunngjoringer only after the source gate passes.
+Freshness is now mostly a maintenance and monitoring track rather than a product-build track.
 
-## Near-Term Recommended Next Slice
-
-Implement **F5a source/access decision for true Brreg kunngjoringer XML subscription** next.
-
-Recommended target:
-
-- decide whether XML subscription is worth pursuing now, and document source/access/legal constraints before any parser work
-
-Keep `/oppdateringer` wording strict until this gate passes: Brreg update-derived rows are not formal kunngjoringer.
+1. Treat broader accounting backfills beyond the newest 100k rows as optional maintenance. Run dry-runs first and apply only if the feed value justifies the write volume.
+2. Add lightweight event-ledger diagnostics for admins: event counts by type, newest observed rows, cursor lag, replay cursor, and recent write failures.
+3. Keep worker-forward history as the default for company, subunit, role, and accounting updates. Keep the dev scheduler disabled whenever dev shares the production database.
+4. Keep `/oppdateringer` wording strict: Brreg update-derived rows are not formal kunngjoringer.
+5. Reopen F5 only if paid XML/SFTP source access becomes acceptable or Brreg publishes a free machine-readable kunngjoring API.

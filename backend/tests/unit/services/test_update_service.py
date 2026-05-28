@@ -709,6 +709,38 @@ class TestPersistChunk:
         assert result.companies_processed == 1
 
     @pytest.mark.asyncio
+    async def test_persist_chunk_records_new_source_event_for_existing_company(self, update_service):
+        company = MagicMock()
+        company.last_polled_regnskap = date.today()
+        update_service.company_repo.create_or_update = AsyncMock(return_value=company)
+        update_service._record_company_event_safe = AsyncMock()
+        update_service._record_company_update_events_from_changes = AsyncMock()
+
+        fetch_results = [
+            FetchResult(
+                orgnr="123456789",
+                success=True,
+                company_data={
+                    "organisasjonsnummer": "123456789",
+                    "navn": "Test AS",
+                    "registreringsdatoEnhetsregisteret": "2026-05-28",
+                    "organisasjonsform": {"kode": "AS"},
+                    "antallAnsatte": 5,
+                },
+                source_update_id="24497872",
+                source_change_type="Ny",
+            )
+        ]
+        result = UpdateBatchResult(since_date=date.today(), since_iso="2026-01-26T00:00:00.000Z")
+
+        await update_service._persist_chunk(fetch_results, result)
+
+        update_service._record_company_event_safe.assert_awaited_once()
+        assert update_service._record_company_event_safe.await_args.kwargs["event_type"] == "company_registered"
+        assert update_service._record_company_event_safe.await_args.kwargs["source_update_id"] == "24497872"
+        assert result.companies_updated == 1
+
+    @pytest.mark.asyncio
     async def test_persist_chunk_skips_failed_fetches(self, update_service):
         """_persist_chunk should skip items that failed to fetch."""
         update_service.company_repo.create_or_update = AsyncMock()

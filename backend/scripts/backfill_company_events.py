@@ -47,13 +47,14 @@ WITH candidate_rows AS (
     WHERE NOT EXISTS (
         SELECT 1
         FROM company_events existing
+        WHERE existing.event_key = 'accounting_added:' || candidate_rows.orgnr || ':' || md5(candidate_rows.source_update_id)
+    )
+    AND NOT EXISTS (
+        SELECT 1
+        FROM company_events existing
         WHERE existing.event_type = 'accounting_added'
           AND existing.orgnr = candidate_rows.orgnr
-          AND (
-              existing.source_update_id = candidate_rows.source_update_id
-              OR existing.new_value ->> 'regnskap_id' = candidate_rows.id::text
-              OR existing.payload ->> 'regnskap_id' = candidate_rows.id::text
-          )
+          AND existing.source_update_id = candidate_rows.source_update_id
     )
 ), inserted AS (
     INSERT INTO company_events (
@@ -119,33 +120,47 @@ WITH candidate_rows AS (
     WHERE r.id <= :max_regnskap_id
     ORDER BY r.id DESC
     LIMIT :limit
-), matched_rows AS (
+), candidate_keys AS (
     SELECT
         candidate_rows.*,
-        existing.id AS event_id
+        'accounting_added:' || candidate_rows.orgnr || ':' || md5(candidate_rows.source_update_id) AS event_key
     FROM candidate_rows
-    LEFT JOIN LATERAL (
-        SELECT company_events.id
-        FROM company_events
-        WHERE company_events.event_type = 'accounting_added'
-          AND company_events.orgnr = candidate_rows.orgnr
-          AND (
-              company_events.source_update_id = candidate_rows.source_update_id
-              OR company_events.new_value ->> 'regnskap_id' = candidate_rows.id::text
-              OR company_events.payload ->> 'regnskap_id' = candidate_rows.id::text
-          )
-        LIMIT 1
-    ) existing ON true
 )
 SELECT
     COUNT(*) AS candidate_count,
-    COUNT(event_id) AS existing_event_count,
-    COUNT(*) FILTER (WHERE event_id IS NULL) AS missing_event_count,
+    COUNT(*) FILTER (
+        WHERE EXISTS (
+            SELECT 1
+            FROM company_events existing
+            WHERE existing.event_key = candidate_keys.event_key
+        )
+        OR EXISTS (
+            SELECT 1
+            FROM company_events existing
+            WHERE existing.event_type = 'accounting_added'
+              AND existing.orgnr = candidate_keys.orgnr
+              AND existing.source_update_id = candidate_keys.source_update_id
+        )
+    ) AS existing_event_count,
+    COUNT(*) FILTER (
+        WHERE NOT EXISTS (
+            SELECT 1
+            FROM company_events existing
+            WHERE existing.event_key = candidate_keys.event_key
+        )
+        AND NOT EXISTS (
+            SELECT 1
+            FROM company_events existing
+            WHERE existing.event_type = 'accounting_added'
+              AND existing.orgnr = candidate_keys.orgnr
+              AND existing.source_update_id = candidate_keys.source_update_id
+        )
+    ) AS missing_event_count,
     MIN(id) AS min_regnskap_id,
     MAX(id) AS max_regnskap_id,
     MIN(created_at) AS oldest_created_at,
     MAX(created_at) AS newest_created_at
-FROM matched_rows;
+FROM candidate_keys;
 """
 
 MISSING_PREVIEW_SQL = """
@@ -166,19 +181,25 @@ WITH candidate_rows AS (
     WHERE r.id <= :max_regnskap_id
     ORDER BY r.id DESC
     LIMIT :limit
+), candidate_keys AS (
+    SELECT
+        candidate_rows.*,
+        'accounting_added:' || candidate_rows.orgnr || ':' || md5(candidate_rows.source_update_id) AS event_key
+    FROM candidate_rows
 )
 SELECT id, orgnr, aar, periode_til, created_at, source_update_id
-FROM candidate_rows
+FROM candidate_keys
 WHERE NOT EXISTS (
     SELECT 1
     FROM company_events existing
+    WHERE existing.event_key = candidate_keys.event_key
+)
+  AND NOT EXISTS (
+    SELECT 1
+    FROM company_events existing
     WHERE existing.event_type = 'accounting_added'
-      AND existing.orgnr = candidate_rows.orgnr
-      AND (
-          existing.source_update_id = candidate_rows.source_update_id
-          OR existing.new_value ->> 'regnskap_id' = candidate_rows.id::text
-          OR existing.payload ->> 'regnskap_id' = candidate_rows.id::text
-      )
+      AND existing.orgnr = candidate_keys.orgnr
+      AND existing.source_update_id = candidate_keys.source_update_id
 )
 ORDER BY id DESC
 LIMIT :preview_limit;

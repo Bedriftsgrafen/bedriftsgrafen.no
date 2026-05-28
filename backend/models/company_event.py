@@ -46,6 +46,13 @@ class CompanyEvent(Base):
             sa_text("observed_at DESC"),
             sa_text("id DESC"),
         ),
+        Index(
+            "idx_company_events_type_orgnr_source_update",
+            "event_type",
+            "orgnr",
+            "source_update_id",
+            postgresql_where=sa_text("source_update_id IS NOT NULL"),
+        ),
         Index("idx_company_events_observed_brin", "observed_at", postgresql_using="brin"),
     )
 
