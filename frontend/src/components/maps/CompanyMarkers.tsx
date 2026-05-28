@@ -323,10 +323,10 @@ export function CompanyMarkers({
             if (registeredTo) params.registered_to = registeredTo;
 
             // Status flags (explicitly check for boolean)
-            if (isBankrupt !== null) params.is_bankrupt = isBankrupt;
-            if (inLiquidation !== null) params.in_liquidation = inLiquidation;
-            if (inForcedLiquidation !== null) params.in_forced_liquidation = inForcedLiquidation;
-            if (hasAccounting !== null) params.has_accounting = hasAccounting;
+            if (isBankrupt !== null && isBankrupt !== undefined) params.is_bankrupt = isBankrupt;
+            if (inLiquidation !== null && inLiquidation !== undefined) params.in_liquidation = inLiquidation;
+            if (inForcedLiquidation !== null && inForcedLiquidation !== undefined) params.in_forced_liquidation = inForcedLiquidation;
+            if (hasAccounting !== null && hasAccounting !== undefined) params.has_accounting = hasAccounting;
 
             const { data } = await apiClient.get<MarkersResponse>('/v1/companies/markers', {
                 params,

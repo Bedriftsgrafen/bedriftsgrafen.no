@@ -7,14 +7,17 @@ import { useDocumentTitle } from '../hooks/useDocumentTitle'
 import { CompanyModalOverlay } from '../components/company/CompanyModalOverlay'
 import { MapGuide } from '../components/maps/MapGuide'
 import { MapFilterValues } from '../types/map'
-import { COUNTIES } from '../constants/explorer'
-import { MUNICIPALITIES } from '../constants/municipalityCodes'
-import { mnokToNok } from '../utils/financials'
-import { useFilterStore, FilterValues } from '../store/filterStore'
+import { useFilterStore } from '../store/filterStore'
 import { cleanOrgnr } from '../utils/formatters'
-import { defaultMapFilters } from '../types/map'
 import { IndustryMap } from '../components/maps/IndustryMap'
 import type { KartSearch } from './kart'
+import {
+    buildMapFilterStoreUpdates,
+    buildMapFiltersFromRouteSearch,
+    buildMapRouteFilterUpdates,
+    buildMapRouteSearchUpdates,
+    type MapRouteSearchFilters,
+} from '../utils/mapRouteSearchSync'
 
 export const Route = createLazyFileRoute('/kart')({
     component: KartPage,
@@ -31,86 +34,52 @@ export function KartPage() {
         setRawSelectedCompanyOrgnr(cleanOrgnr(orgnr))
     }, [])
 
-    // Read filter state from store
-    const { naeringskode, searchQuery, setSearchQuery } = useFilterStore()
+    const routeSearch = useMemo((): MapRouteSearchFilters => ({
+        q: search.q,
+        nace: search.nace,
+        county: search.county,
+        county_code: search.county_code,
+        municipality: search.municipality,
+        municipality_code: search.municipality_code,
+        org_form: search.org_form,
+        revenue_min: search.revenue_min,
+        revenue_max: search.revenue_max,
+        employee_min: search.employee_min,
+        employee_max: search.employee_max,
+        profit_min: search.profit_min,
+        profit_max: search.profit_max,
+        is_bankrupt: search.is_bankrupt,
+        has_accounting: search.has_accounting,
+        in_liquidation: search.in_liquidation,
+        in_forced_liquidation: search.in_forced_liquidation,
+        show_per_capita: search.show_per_capita,
+    }), [search])
 
-    // Sync search query between store and URL
     useEffect(() => {
-        if (search.q !== undefined && search.q !== searchQuery) {
-            setSearchQuery(search.q || '')
+        const current = useFilterStore.getState()
+        const updates = buildMapRouteFilterUpdates(routeSearch, current, { clearMissing: true, moneyUnit: 'mnok' })
+
+        if (Object.keys(updates).length > 0) {
+            current.setAllFilters(updates)
         }
-    }, [search.q, searchQuery, setSearchQuery])
+    }, [routeSearch])
 
     // Map search params to MapFilterValues
-    const filters = useMemo((): MapFilterValues => ({
-        ...defaultMapFilters,
-        query: search.q || searchQuery || null,
-        naceCode: search.nace || naeringskode || null,
-        countyCode: search.county_code || null,
-        municipalityCode: search.municipality_code || null,
-        organizationForms: !search.org_form ? [] : (Array.isArray(search.org_form) ? search.org_form : [search.org_form as string]),
-        revenueMin: search.revenue_min != null ? (mnokToNok(search.revenue_min) ?? null) : null,
-        revenueMax: search.revenue_max != null ? (mnokToNok(search.revenue_max) ?? null) : null,
-        profitMin: search.profit_min != null ? (mnokToNok(search.profit_min) ?? null) : null,
-        profitMax: search.profit_max != null ? (mnokToNok(search.profit_max) ?? null) : null,
-        employeeMin: search.employee_min || null,
-        employeeMax: search.employee_max || null,
-        isBankrupt: search.is_bankrupt ?? null,
-        hasAccounting: search.has_accounting ?? null,
-        inLiquidation: search.in_liquidation ?? null,
-    }), [search, naeringskode, searchQuery])
+    const filters = useMemo((): MapFilterValues => (
+        buildMapFiltersFromRouteSearch(routeSearch, { moneyUnit: 'mnok' })
+    ), [routeSearch])
 
     // Handlers to update URL search params and filterStore
     const handleFilterChange = useCallback((updates: Partial<MapFilterValues>) => {
-        // Sync with filterStore for consistent views across tabs
-        const storeUpdates: Partial<FilterValues> = {}
-        if ('query' in updates) storeUpdates.searchQuery = updates.query || ''
-        if ('naceCode' in updates) storeUpdates.naeringskode = updates.naceCode || ''
-        if ('countyCode' in updates) storeUpdates.countyCode = updates.countyCode || ''
-        if ('municipalityCode' in updates) storeUpdates.municipalityCode = updates.municipalityCode || ''
-        if ('revenueMin' in updates) storeUpdates.revenueMin = updates.revenueMin
-        if ('revenueMax' in updates) storeUpdates.revenueMax = updates.revenueMax
-        if ('employeeMin' in updates) storeUpdates.employeeMin = updates.employeeMin
-        if ('employeeMax' in updates) storeUpdates.employeeMax = updates.employeeMax
-        if ('profitMin' in updates) storeUpdates.profitMin = updates.profitMin
-        if ('profitMax' in updates) storeUpdates.profitMax = updates.profitMax
-        if ('organizationForms' in updates) storeUpdates.organizationForms = updates.organizationForms || []
-        if ('isBankrupt' in updates) storeUpdates.isBankrupt = updates.isBankrupt
+        const storeUpdates = buildMapFilterStoreUpdates(updates)
 
         if (Object.keys(storeUpdates).length > 0) {
-            useFilterStore.setState(storeUpdates)
+            useFilterStore.getState().setAllFilters(storeUpdates)
         }
 
         navigate({
             search: (prev: KartSearch): KartSearch => {
-                const newSearch = { ...prev }
-
-                if ('query' in updates) newSearch.q = updates.query || undefined
-                if ('naceCode' in updates) newSearch.nace = updates.naceCode || undefined
-                if ('countyCode' in updates) {
-                    newSearch.county_code = updates.countyCode || undefined
-                    newSearch.municipality_code = undefined
-                    newSearch.county = updates.countyCode ? COUNTIES.find(c => c.code === updates.countyCode)?.name : undefined
-                    newSearch.municipality = undefined
-                }
-                if ('municipalityCode' in updates) {
-                    newSearch.municipality_code = updates.municipalityCode || undefined
-                    newSearch.municipality = updates.municipalityCode ? MUNICIPALITIES.find(m => m.code === updates.municipalityCode)?.name : undefined
-                }
-                if ('organizationForms' in updates) newSearch.org_form = (updates.organizationForms && updates.organizationForms.length > 0) ? updates.organizationForms : undefined
-
-                // Convert back to MNOK for URL
-                if ('revenueMin' in updates) newSearch.revenue_min = updates.revenueMin != null ? updates.revenueMin / 1_000_000 : undefined
-                if ('revenueMax' in updates) newSearch.revenue_max = updates.revenueMax != null ? updates.revenueMax / 1_000_000 : undefined
-                if ('profitMin' in updates) newSearch.profit_min = updates.profitMin != null ? updates.profitMin / 1_000_000 : undefined
-                if ('profitMax' in updates) newSearch.profit_max = updates.profitMax != null ? updates.profitMax / 1_000_000 : undefined
-                if ('employeeMin' in updates) newSearch.employee_min = updates.employeeMin ?? undefined
-                if ('employeeMax' in updates) newSearch.employee_max = updates.employeeMax ?? undefined
-                if ('isBankrupt' in updates) newSearch.is_bankrupt = updates.isBankrupt ?? undefined
-                if ('hasAccounting' in updates) newSearch.has_accounting = updates.hasAccounting ?? undefined
-                if ('inLiquidation' in updates) newSearch.in_liquidation = updates.inLiquidation ?? undefined
-
-                return newSearch
+                return { ...prev, ...buildMapRouteSearchUpdates(updates, { moneyUnit: 'mnok' }) }
             }
         })
     }, [navigate])
@@ -142,7 +111,7 @@ export function KartPage() {
 
 
 
-            <div className="rounded-2xl overflow-hidden border border-gray-100 shadow-sm h-[900px] md:h-[800px] relative">
+            <div className="relative h-225 overflow-hidden rounded-2xl border border-gray-100 shadow-sm md:h-200">
                 <IndustryMap
                     filters={filters}
                     onFilterChange={handleFilterChange}

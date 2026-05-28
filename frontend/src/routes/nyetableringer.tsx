@@ -1,6 +1,7 @@
 import { createFileRoute } from '@tanstack/react-router'
 
 import { z } from 'zod'
+import { booleanSearchParam } from '../utils/searchParamSchemas'
 
 const nyetableringerSearchSchema = z.object({
     period: z.enum(['30d', '90d', '1y']).optional().catch('1y'),
@@ -17,9 +18,11 @@ const nyetableringerSearchSchema = z.object({
     profit_max: z.coerce.number().optional(),
     employee_min: z.coerce.number().optional(),
     employee_max: z.coerce.number().optional(),
-    is_bankrupt: z.coerce.boolean().optional(),
-    has_accounting: z.coerce.boolean().optional(),
-    in_liquidation: z.coerce.boolean().optional(),
+    is_bankrupt: booleanSearchParam,
+    has_accounting: booleanSearchParam,
+    in_liquidation: booleanSearchParam,
+    in_forced_liquidation: booleanSearchParam,
+    show_per_capita: booleanSearchParam,
 })
 
 export type NyetableringerSearch = z.infer<typeof nyetableringerSearchSchema>

@@ -66,6 +66,8 @@ export const MapSidebar: React.FC<MapSidebarProps> = ({
         if (filters.profitMin !== null || filters.profitMax !== null) count++;
         if (filters.isBankrupt !== null) count++;
         if (filters.hasAccounting !== null) count++;
+        if (filters.inLiquidation !== null) count++;
+        if (filters.inForcedLiquidation !== null) count++;
         if (filters.query) count++;
         return count;
     }, [filters]);

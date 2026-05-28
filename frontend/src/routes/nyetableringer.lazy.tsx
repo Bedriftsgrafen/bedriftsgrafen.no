@@ -7,7 +7,7 @@ import { useCompanyStatsQuery } from '../hooks/queries/useCompanyStatsQuery'
 import { SEOHead } from '../components/layout'
 import { useDocumentTitle } from '../hooks/useDocumentTitle'
 import { NewCompaniesList } from '../components/newcompanies'
-import { MapFilterValues, defaultMapFilters } from '../types/map'
+import { MapFilterValues } from '../types/map'
 import { CompanyModalOverlay } from '../components/company/CompanyModalOverlay'
 import { CompanyListModal } from '../components/dashboard/CompanyListModal'
 import { SummaryCard, TabButton, TabContainer } from '../components/common'
@@ -18,10 +18,14 @@ import { API_BASE } from '../utils/apiClient'
 import { PeriodSelector } from '../components/common/PeriodSelector'
 import { RotatingAffiliateBanner } from '../components/ads/RotatingAffiliateBanner'
 import { GLOBAL_AFFILIATIONS } from '../constants/affiliations'
-import { useFilterStore, FilterValues } from '../store/filterStore'
-import { COUNTIES } from '../constants/explorer'
-import { MUNICIPALITIES } from '../constants/municipalityCodes'
-import { mnokToNok } from '../utils/financials'
+import { useFilterStore } from '../store/filterStore'
+import {
+    buildMapFilterStoreUpdates,
+    buildMapFiltersFromRouteSearch,
+    buildMapRouteFilterUpdates,
+    buildMapRouteSearchUpdates,
+    type MapRouteSearchFilters,
+} from '../utils/mapRouteSearchSync'
 
 // Lazy-load heavy components: IndustryMap (leaflet ~154KB), TrendChart (recharts ~325KB)
 const IndustryMap = lazy(() => import('../components/maps/IndustryMap').then(m => ({ default: m.IndustryMap })))
@@ -40,7 +44,8 @@ function NyetableringerPage() {
         period = '1y',
         nace, q, county_code, municipality_code, org_form,
         revenue_min, revenue_max, employee_min, employee_max,
-        profit_min, profit_max, is_bankrupt, has_accounting, in_liquidation
+        profit_min, profit_max, is_bankrupt, has_accounting, in_liquidation,
+        in_forced_liquidation, show_per_capita, county, municipality
     } = Route.useSearch()
     const navigate = Route.useNavigate()
     useDocumentTitle('Nyetableringer | Bedriftsgrafen.no')
@@ -52,89 +57,65 @@ function NyetableringerPage() {
     }, [])
     const [selectedIndustry, setSelectedIndustry] = useState<{ code: string; name: string } | null>(null)
 
-    // Read filter state from store
-    const { naeringskode, searchQuery, setSearchQuery } = useFilterStore()
+    const routeSearch = useMemo((): MapRouteSearchFilters => ({
+        q,
+        nace,
+        county,
+        county_code,
+        municipality,
+        municipality_code,
+        org_form,
+        revenue_min,
+        revenue_max,
+        employee_min,
+        employee_max,
+        profit_min,
+        profit_max,
+        is_bankrupt,
+        has_accounting,
+        in_liquidation,
+        in_forced_liquidation,
+        show_per_capita,
+    }), [q, nace, county, county_code, municipality, municipality_code, org_form, revenue_min, revenue_max, employee_min, employee_max, profit_min, profit_max, is_bankrupt, has_accounting, in_liquidation, in_forced_liquidation, show_per_capita])
 
-    // Sync search query between store and URL
     useEffect(() => {
-        if (q !== undefined && q !== searchQuery) {
-            setSearchQuery(q || '')
+        const current = useFilterStore.getState()
+        const updates = buildMapRouteFilterUpdates(routeSearch, current, {
+            clearMissing: true,
+            moneyUnit: 'mnok',
+            defaultOrganizationForms: ['AS'],
+        })
+
+        if (Object.keys(updates).length > 0) {
+            current.setAllFilters(updates)
         }
-    }, [q, searchQuery, setSearchQuery])
+    }, [routeSearch])
 
     // Map search params to MapFilterValues
     const mapFilters = useMemo((): MapFilterValues => ({
-        ...defaultMapFilters,
-        query: q || searchQuery || null,
-        naceCode: nace || naeringskode || null,
-        countyCode: county_code || null,
-        municipalityCode: municipality_code || null,
-        organizationForms: !org_form ? ['AS'] : (Array.isArray(org_form) ? org_form : [org_form as string]),
-        revenueMin: revenue_min != null ? mnokToNok(revenue_min) ?? null : null,
-        revenueMax: revenue_max != null ? mnokToNok(revenue_max) ?? null : null,
-        profitMin: profit_min != null ? mnokToNok(profit_min) ?? null : null,
-        profitMax: profit_max != null ? mnokToNok(profit_max) ?? null : null,
-        employeeMin: employee_min || null,
-        employeeMax: employee_max || null,
-        isBankrupt: is_bankrupt ?? null,
-        hasAccounting: has_accounting ?? null,
-        inLiquidation: in_liquidation ?? null,
+        ...buildMapFiltersFromRouteSearch(routeSearch, { moneyUnit: 'mnok', defaultOrganizationForms: ['AS'] }),
         foundedFrom: getStartingDate(period),
-    }), [period, q, nace, county_code, municipality_code, org_form, revenue_min, revenue_max, profit_min, profit_max, employee_min, employee_max, is_bankrupt, has_accounting, in_liquidation, naeringskode, searchQuery])
+    }), [period, routeSearch])
 
     const handleFilterChange = useCallback((updates: Partial<MapFilterValues>) => {
-        // Sync with filterStore
-        const storeUpdates: Partial<FilterValues> = {}
-        if ('query' in updates) storeUpdates.searchQuery = updates.query || ''
-        if ('naceCode' in updates) storeUpdates.naeringskode = updates.naceCode || ''
-        if ('countyCode' in updates) storeUpdates.countyCode = updates.countyCode || ''
-        if ('municipalityCode' in updates) storeUpdates.municipalityCode = updates.municipalityCode || ''
-        if ('revenueMin' in updates) storeUpdates.revenueMin = updates.revenueMin
-        if ('revenueMax' in updates) storeUpdates.revenueMax = updates.revenueMax
-        if ('employeeMin' in updates) storeUpdates.employeeMin = updates.employeeMin
-        if ('employeeMax' in updates) storeUpdates.employeeMax = updates.employeeMax
-        if ('profitMin' in updates) storeUpdates.profitMin = updates.profitMin
-        if ('profitMax' in updates) storeUpdates.profitMax = updates.profitMax
-        if ('organizationForms' in updates) storeUpdates.organizationForms = updates.organizationForms || []
+        const storeUpdates = buildMapFilterStoreUpdates(updates)
 
         if (Object.keys(storeUpdates).length > 0) {
-            useFilterStore.setState(storeUpdates)
+            useFilterStore.getState().setAllFilters(storeUpdates)
         }
 
         navigate({
             search: (prev) => {
-                const newSearch = { ...prev }
-                if ('query' in updates) newSearch.q = updates.query || undefined
-                if ('naceCode' in updates) newSearch.nace = updates.naceCode || undefined
-                if ('countyCode' in updates) {
-                    newSearch.county_code = updates.countyCode || undefined
-                    newSearch.municipality_code = undefined
-                    newSearch.county = updates.countyCode ? COUNTIES.find(c => c.code === updates.countyCode)?.name : undefined
-                }
-                if ('municipalityCode' in updates) {
-                    newSearch.municipality_code = updates.municipalityCode || undefined
-                    newSearch.municipality = updates.municipalityCode ? MUNICIPALITIES.find(m => m.code === updates.municipalityCode)?.name : undefined
-                }
-                if ('organizationForms' in updates) newSearch.org_form = (updates.organizationForms && updates.organizationForms.length > 0) ? updates.organizationForms : undefined
-
-                if ('revenueMin' in updates) newSearch.revenue_min = updates.revenueMin != null ? updates.revenueMin / 1_000_000 : undefined
-                if ('revenueMax' in updates) newSearch.revenue_max = updates.revenueMax != null ? updates.revenueMax / 1_000_000 : undefined
-                if ('profitMin' in updates) newSearch.profit_min = updates.profitMin != null ? updates.profitMin / 1_000_000 : undefined
-                if ('profitMax' in updates) newSearch.profit_max = updates.profitMax != null ? updates.profitMax / 1_000_000 : undefined
-                if ('employeeMin' in updates) newSearch.employee_min = updates.employeeMin ?? undefined
-                if ('employeeMax' in updates) newSearch.employee_max = updates.employeeMax ?? undefined
-                if ('isBankrupt' in updates) newSearch.is_bankrupt = updates.isBankrupt ?? undefined
-                if ('hasAccounting' in updates) newSearch.has_accounting = updates.hasAccounting ?? undefined
-                if ('inLiquidation' in updates) newSearch.in_liquidation = updates.inLiquidation ?? undefined
-
-                return newSearch
+                return { ...prev, ...buildMapRouteSearchUpdates(updates, { moneyUnit: 'mnok' }) }
             },
             replace: true
         })
     }, [navigate])
 
     const handleClearFilters = useCallback(() => {
-        useFilterStore.getState().clearFilters()
+        const store = useFilterStore.getState()
+        store.clearFilters()
+        store.setAllFilters({ organizationForms: ['AS'] })
         navigate({
             search: (prev) => ({ period: prev.period }),
             replace: true

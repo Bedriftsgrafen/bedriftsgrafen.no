@@ -1,11 +1,6 @@
 import { createFileRoute } from '@tanstack/react-router'
 import { z } from 'zod'
-
-const booleanParam = z.preprocess((value) => {
-    if (value === 'true') return true
-    if (value === 'false') return false
-    return value
-}, z.boolean().optional())
+import { booleanSearchParam } from '../utils/searchParamSchemas'
 
 // Search params schema - now includes tab for state persistence
 const searchSchema = z.object({
@@ -25,10 +20,11 @@ const searchSchema = z.object({
     employee_max: z.coerce.number().optional(),
     profit_min: z.coerce.number().optional(),
     profit_max: z.coerce.number().optional(),
-    is_bankrupt: booleanParam,
-    has_accounting: booleanParam,
-    in_liquidation: booleanParam,
-    in_forced_liquidation: booleanParam,
+    is_bankrupt: booleanSearchParam,
+    has_accounting: booleanSearchParam,
+    in_liquidation: booleanSearchParam,
+    in_forced_liquidation: booleanSearchParam,
+    show_per_capita: booleanSearchParam,
 })
 
 export const Route = createFileRoute('/bransjer')({

@@ -9,12 +9,11 @@ import { useMemo, useCallback, useEffect, lazy, Suspense } from 'react'
 import { BarChart3, Search, Map, Award, Loader2 } from 'lucide-react'
 import { TabButton, TabContainer } from '../components/common'
 import { MapFilterValues, defaultMapFilters } from '../types/map'
-import { COUNTIES } from '../constants/explorer'
-import { MUNICIPALITIES } from '../constants/municipalityCodes'
-import { useFilterStore, FilterValues } from '../store/filterStore'
+import { useFilterStore } from '../store/filterStore'
 import { formatMunicipalityName } from '../constants/municipalities'
 import { cleanOrgnr } from '../utils/formatters'
 import { buildBransjerRouteFilterUpdates } from '../utils/bransjerSearchSync'
+import { buildMapFilterStoreUpdates, buildMapRouteSearchUpdates } from '../utils/mapRouteSearchSync'
 
 // Lazy-load heavy components: IndustryMap (leaflet ~154KB) and ExplorerLayout (~56KB)
 // Only downloaded when the user activates the corresponding tab
@@ -37,7 +36,7 @@ function BransjerPage() {
         q, county_code, municipality_code, org_form,
         revenue_min, revenue_max, employee_min, employee_max,
         profit_min, profit_max, is_bankrupt, has_accounting, in_liquidation, in_forced_liquidation,
-        county, municipality
+        county, municipality, show_per_capita
     } = Route.useSearch()
 
     // Read filter state from store
@@ -64,6 +63,7 @@ function BransjerPage() {
             has_accounting,
             in_liquidation,
             in_forced_liquidation,
+            show_per_capita,
         }, current, { clearMissing: tab === 'search' || tab === 'map' })
 
         if (Object.keys(updates).length > 0) {
@@ -87,6 +87,7 @@ function BransjerPage() {
         has_accounting,
         in_liquidation,
         in_forced_liquidation,
+        show_per_capita,
         tab,
     ])
 
@@ -118,50 +119,11 @@ function BransjerPage() {
         hasAccounting: has_accounting ?? null,
         inLiquidation: in_liquidation ?? null,
         inForcedLiquidation: in_forced_liquidation ?? null,
-    }), [q, searchQuery, nace, naeringskode, county_code, municipality_code, org_form, revenue_min, revenue_max, employee_min, employee_max, profit_min, profit_max, is_bankrupt, has_accounting, in_liquidation, in_forced_liquidation])
+        showPerCapita: show_per_capita ?? false,
+    }), [q, searchQuery, nace, naeringskode, county_code, municipality_code, org_form, revenue_min, revenue_max, employee_min, employee_max, profit_min, profit_max, is_bankrupt, has_accounting, in_liquidation, in_forced_liquidation, show_per_capita])
 
     const handleFilterChange = useCallback((updates: Partial<MapFilterValues>) => {
-        // Sync with filterStore for consistent list/stats views
-        const storeUpdates: Partial<FilterValues> = {}
-        if ('query' in updates) storeUpdates.searchQuery = updates.query || ''
-        if ('naceCode' in updates) storeUpdates.naeringskode = updates.naceCode || ''
-        const nextCountyCode = 'countyCode' in updates ? updates.countyCode || '' : undefined
-        const nextMunicipalityCode = 'municipalityCode' in updates ? updates.municipalityCode || '' : undefined
-
-        if (nextMunicipalityCode) {
-            storeUpdates.municipalityCode = nextMunicipalityCode
-            storeUpdates.municipality = MUNICIPALITIES.find(m => m.code === nextMunicipalityCode)?.name ?? nextMunicipalityCode
-            storeUpdates.countyCode = ''
-            storeUpdates.county = ''
-        } else if (nextCountyCode) {
-            storeUpdates.countyCode = nextCountyCode
-            storeUpdates.county = COUNTIES.find(c => c.code === nextCountyCode)?.name ?? nextCountyCode
-            storeUpdates.municipalityCode = ''
-            storeUpdates.municipality = ''
-        } else if ('countyCode' in updates || 'municipalityCode' in updates) {
-            const clearCounty = 'countyCode' in updates
-            const clearMunicipality = 'municipalityCode' in updates
-            if (clearCounty) {
-                storeUpdates.countyCode = ''
-                storeUpdates.county = ''
-            }
-            if (clearMunicipality) {
-                storeUpdates.municipalityCode = ''
-                storeUpdates.municipality = ''
-            }
-        }
-
-        if ('revenueMin' in updates) storeUpdates.revenueMin = updates.revenueMin
-        if ('revenueMax' in updates) storeUpdates.revenueMax = updates.revenueMax
-        if ('employeeMin' in updates) storeUpdates.employeeMin = updates.employeeMin
-        if ('employeeMax' in updates) storeUpdates.employeeMax = updates.employeeMax
-        if ('profitMin' in updates) storeUpdates.profitMin = updates.profitMin
-        if ('profitMax' in updates) storeUpdates.profitMax = updates.profitMax
-        if ('organizationForms' in updates) storeUpdates.organizationForms = updates.organizationForms || []
-        if ('isBankrupt' in updates) storeUpdates.isBankrupt = updates.isBankrupt
-        if ('hasAccounting' in updates) storeUpdates.hasAccounting = updates.hasAccounting
-        if ('inLiquidation' in updates) storeUpdates.inLiquidation = updates.inLiquidation
-        if ('inForcedLiquidation' in updates) storeUpdates.inForcedLiquidation = updates.inForcedLiquidation
+        const storeUpdates = buildMapFilterStoreUpdates(updates)
 
         if (Object.keys(storeUpdates).length > 0) {
             useFilterStore.getState().setAllFilters(storeUpdates)
@@ -171,41 +133,7 @@ function BransjerPage() {
             to: '/bransjer',
             // eslint-disable-next-line @typescript-eslint/no-explicit-any
             search: (prev: any) => {
-                const newSearch: Record<string, unknown> = { ...prev }
-                if ('query' in updates) newSearch.q = updates.query || undefined
-                if ('naceCode' in updates) newSearch.nace = updates.naceCode || undefined
-                if (nextMunicipalityCode) {
-                    newSearch.municipality_code = nextMunicipalityCode
-                    newSearch.municipality = MUNICIPALITIES.find(m => m.code === nextMunicipalityCode)?.name
-                    newSearch.county_code = undefined
-                    newSearch.county = undefined
-                } else if (nextCountyCode) {
-                    newSearch.county_code = nextCountyCode
-                    newSearch.county = COUNTIES.find(c => c.code === nextCountyCode)?.name
-                    newSearch.municipality_code = undefined
-                    newSearch.municipality = undefined
-                } else if ('countyCode' in updates || 'municipalityCode' in updates) {
-                    if ('countyCode' in updates) {
-                        newSearch.county_code = undefined
-                        newSearch.county = undefined
-                    }
-                    if ('municipalityCode' in updates) {
-                        newSearch.municipality_code = undefined
-                        newSearch.municipality = undefined
-                    }
-                }
-                if ('organizationForms' in updates) newSearch.org_form = updates.organizationForms?.length ? updates.organizationForms : undefined
-                if ('revenueMin' in updates) newSearch.revenue_min = updates.revenueMin ?? undefined
-                if ('revenueMax' in updates) newSearch.revenue_max = updates.revenueMax ?? undefined
-                if ('employeeMin' in updates) newSearch.employee_min = updates.employeeMin ?? undefined
-                if ('employeeMax' in updates) newSearch.employee_max = updates.employeeMax ?? undefined
-                if ('profitMin' in updates) newSearch.profit_min = updates.profitMin ?? undefined
-                if ('profitMax' in updates) newSearch.profit_max = updates.profitMax ?? undefined
-                if ('isBankrupt' in updates) newSearch.is_bankrupt = updates.isBankrupt ?? undefined
-                if ('hasAccounting' in updates) newSearch.has_accounting = updates.hasAccounting ?? undefined
-                if ('inLiquidation' in updates) newSearch.in_liquidation = updates.inLiquidation ?? undefined
-                if ('inForcedLiquidation' in updates) newSearch.in_forced_liquidation = updates.inForcedLiquidation ?? undefined
-                return newSearch
+                return { ...prev, ...buildMapRouteSearchUpdates(updates) }
             },
             replace: true,
         })

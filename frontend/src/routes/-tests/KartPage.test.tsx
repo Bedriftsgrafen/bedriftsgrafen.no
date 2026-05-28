@@ -16,7 +16,6 @@ vi.mock('../../components/maps/MapGuide', () => ({
     MapGuide: () => <div data-testid="map-guide" />
 }))
 vi.mock('../../components/maps/IndustryMap', () => ({
-     
     IndustryMap: ({ onFilterChange }: any) => (
         <div data-testid="industry-map">
             <button data-testid="change-county" onClick={() => onFilterChange({ countyCode: '03' })}>
@@ -27,12 +26,48 @@ vi.mock('../../components/maps/IndustryMap', () => ({
 }))
 
 // Mock hooks & stores
+const mockSetAllFilters = vi.fn()
+const mockClearFilters = vi.fn()
+
+const filterState = {
+    searchQuery: '',
+    organizationForms: [],
+    naeringskode: '',
+    revenueMin: null,
+    revenueMax: null,
+    profitMin: null,
+    profitMax: null,
+    equityMin: null,
+    equityMax: null,
+    operatingProfitMin: null,
+    operatingProfitMax: null,
+    liquidityRatioMin: null,
+    liquidityRatioMax: null,
+    equityRatioMin: null,
+    equityRatioMax: null,
+    employeeMin: null,
+    employeeMax: null,
+    municipality: '',
+    municipalityCode: '',
+    county: '',
+    countyCode: '',
+    foundedFrom: null,
+    foundedTo: null,
+    bankruptFrom: null,
+    bankruptTo: null,
+    isBankrupt: null,
+    inLiquidation: null,
+    inForcedLiquidation: null,
+    hasAccounting: null,
+    sortBy: 'navn',
+    sortOrder: 'asc',
+    setAllFilters: mockSetAllFilters,
+    clearFilters: mockClearFilters,
+}
+
 vi.mock('../../store/filterStore', () => {
     const mockStore = vi.fn()
-         
-        ; (mockStore as any).setState = vi.fn()
-         
-        ; (mockStore as any).getState = () => ({ clearFilters: vi.fn() })
+    ; (mockStore as any).getState = () => filterState
     return { useFilterStore: mockStore }
 })
 vi.mock('lucide-react', () => ({ Map: () => <div /> }))
@@ -50,21 +85,9 @@ vi.mock('@tanstack/react-router', () => ({
 }))
 
 describe('KartPage', () => {
-    const mockSetSearchQuery = vi.fn()
-    const mockClearFilters = vi.fn()
-
     beforeEach(() => {
         vi.clearAllMocks()
-        const state = {
-            naeringskode: '',
-            searchQuery: '',
-            setSearchQuery: mockSetSearchQuery,
-            clearFilters: mockClearFilters
-        }
-         
-        vi.mocked(useFilterStore).mockImplementation((selector: any) =>
-            selector ? selector(state) : state
-        )
+        vi.mocked(useFilterStore).mockReturnValue(filterState as never)
     })
 
     it('renders and displays map components', () => {
@@ -78,7 +101,20 @@ describe('KartPage', () => {
         const changeButton = screen.getByTestId('change-county')
         fireEvent.click(changeButton)
 
-        expect(useFilterStore.setState).toHaveBeenCalled()
+        expect(mockSetAllFilters).toHaveBeenCalledWith({
+            county: 'Oslo',
+            countyCode: '03',
+            municipality: '',
+            municipalityCode: '',
+        })
         expect(mockNavigate).toHaveBeenCalled()
+
+        const navigateArg = mockNavigate.mock.calls[mockNavigate.mock.calls.length - 1]?.[0]
+        expect(navigateArg.search({ municipality_code: '0301', municipality: 'OSLO' })).toEqual({
+            municipality_code: undefined,
+            municipality: undefined,
+            county_code: '03',
+            county: 'Oslo',
+        })
     })
 })
