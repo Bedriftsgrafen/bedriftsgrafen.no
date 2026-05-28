@@ -1,4 +1,4 @@
-import { Activity, Building2, Building, MapPin, Users, Calendar, Briefcase, ChevronRight, AlertTriangle, ExternalLink, Home, Coins, Database } from 'lucide-react'
+import { Activity, Building2, Building, MapPin, Users, Calendar, Briefcase, ChevronRight, AlertTriangle, ExternalLink, Home, Coins, Database, LoaderCircle } from 'lucide-react'
 import { useMemo, lazy, Suspense } from 'react'
 import type { CompanyWithAccounting, Naeringskode } from '../../types'
 import { Link } from '@tanstack/react-router'
@@ -9,6 +9,7 @@ import { buildCompanyFreshnessItems, buildCompanyTimelineEvents, type CompanyTim
 import { ContactCard } from './ContactCard'
 import { AffiliateBanner } from '../ads/AffiliateBanner'
 import { AFFILIATIONS } from '../../constants/affiliations'
+import { useCompanyEventsQuery, type CompanyEventItem } from '../../hooks/queries/useCompanyEventsQuery'
 
 // Lazy-load LocationMap to avoid pulling leaflet (~154KB) into the main CompanyModal bundle
 const LocationMap = lazy(() => import('../common/LocationMap').then(m => ({ default: m.LocationMap })))
@@ -30,6 +31,7 @@ export function OverviewTab({ company, onOpenIndustry }: OverviewTabProps) {
 
   const timelineEvents = useMemo(() => buildCompanyTimelineEvents(company), [company])
   const freshnessItems = useMemo(() => buildCompanyFreshnessItems(company), [company])
+  const { data: companyEvents, isLoading: companyEventsLoading, error: companyEventsError } = useCompanyEventsQuery(company.orgnr, 6)
 
   const showAffiliateBanner = useMemo(() => {
     if (!company.stiftelsesdato) return false
@@ -413,7 +415,7 @@ export function OverviewTab({ company, onOpenIndustry }: OverviewTabProps) {
               Hendelser og datagrunnlag
             </h3>
             <p className="mt-1 text-sm text-gray-600 dark:text-slate-300">
-              Daterte hendelser og kildeinformasjon basert på data som allerede finnes hos Bedriftsgrafen.
+              Eventlogg, daterte kildesignaler og kildeinformasjon basert på data som allerede finnes hos Bedriftsgrafen.
             </p>
           </div>
           <a
@@ -428,36 +430,45 @@ export function OverviewTab({ company, onOpenIndustry }: OverviewTabProps) {
         </div>
 
         <div className="mt-6 grid gap-6 lg:grid-cols-[minmax(0,1.25fr)_minmax(260px,0.75fr)]">
-          <div>
-            <h4 className="text-sm font-semibold text-gray-900 dark:text-slate-100">Viktige hendelser</h4>
-            {timelineEvents.length > 0 ? (
-              <ol className="mt-4 space-y-4" aria-label="Tidslinje for virksomheten">
-                {timelineEvents.map((event) => (
-                  <li key={event.id} className="grid grid-cols-[2.75rem_minmax(0,1fr)] gap-3">
-                    <div className="flex flex-col items-center" aria-hidden="true">
-                      <span className={`flex h-9 w-9 items-center justify-center rounded-full ring-1 ${timelineToneClassNames[event.tone]}`}>
-                        <Calendar className="h-4 w-4" />
-                      </span>
-                      <span className="mt-2 h-full w-px bg-gray-200 dark:bg-slate-700" />
-                    </div>
-                    <div className="min-w-0 pb-2">
-                      <div className="flex flex-col gap-1 sm:flex-row sm:items-baseline sm:justify-between">
-                        <p className="font-medium text-gray-900 dark:text-slate-50">{event.title}</p>
-                        <time className="text-sm font-medium text-gray-600 dark:text-slate-300" dateTime={event.date}>
-                          {formatDate(event.date)}
-                        </time>
+          <div className="space-y-7">
+            <CompanyEventLedger
+              events={companyEvents?.events ?? []}
+              isLoading={companyEventsLoading}
+              hasError={Boolean(companyEventsError)}
+              hasMore={companyEvents?.has_more ?? false}
+            />
+
+            <div>
+              <h4 className="text-sm font-semibold text-gray-900 dark:text-slate-100">Viktige kildedatoer</h4>
+              {timelineEvents.length > 0 ? (
+                <ol className="mt-4 space-y-4" aria-label="Tidslinje for virksomheten">
+                  {timelineEvents.map((event) => (
+                    <li key={event.id} className="grid grid-cols-[2.75rem_minmax(0,1fr)] gap-3">
+                      <div className="flex flex-col items-center" aria-hidden="true">
+                        <span className={`flex h-9 w-9 items-center justify-center rounded-full ring-1 ${timelineToneClassNames[event.tone]}`}>
+                          <Calendar className="h-4 w-4" />
+                        </span>
+                        <span className="mt-2 h-full w-px bg-gray-200 dark:bg-slate-700" />
                       </div>
-                      <p className="mt-1 text-sm text-gray-600 dark:text-slate-300">{event.description}</p>
-                      <p className="mt-1 text-xs font-medium uppercase tracking-wide text-gray-400 dark:text-slate-500">{event.source}</p>
-                    </div>
-                  </li>
-                ))}
-              </ol>
-            ) : (
-              <p className="mt-4 rounded-lg bg-gray-50 px-4 py-3 text-sm text-gray-600 dark:bg-slate-800 dark:text-slate-300">
-                Ingen daterte hendelser er tilgjengelige for denne virksomheten ennå.
-              </p>
-            )}
+                      <div className="min-w-0 pb-2">
+                        <div className="flex flex-col gap-1 sm:flex-row sm:items-baseline sm:justify-between">
+                          <p className="font-medium text-gray-900 dark:text-slate-50">{event.title}</p>
+                          <time className="text-sm font-medium text-gray-600 dark:text-slate-300" dateTime={event.date}>
+                            {formatDate(event.date)}
+                          </time>
+                        </div>
+                        <p className="mt-1 text-sm text-gray-600 dark:text-slate-300">{event.description}</p>
+                        <p className="mt-1 text-xs font-medium uppercase tracking-wide text-gray-400 dark:text-slate-500">{event.source}</p>
+                      </div>
+                    </li>
+                  ))}
+                </ol>
+              ) : (
+                <p className="mt-4 rounded-lg bg-gray-50 px-4 py-3 text-sm text-gray-600 dark:bg-slate-800 dark:text-slate-300">
+                  Ingen daterte hendelser er tilgjengelige for denne virksomheten ennå.
+                </p>
+              )}
+            </div>
           </div>
 
           <div className="lg:border-l lg:border-gray-200 lg:pl-6 dark:lg:border-slate-800">
@@ -490,6 +501,129 @@ export function OverviewTab({ company, onOpenIndustry }: OverviewTabProps) {
           placement="overview_tab"
           {...AFFILIATIONS.TJENESTETORGET_ACCOUNTANT}
         />
+      )}
+    </div>
+  )
+}
+
+function formatEventDate(value: string | null | undefined) {
+  if (!value) return null
+  return formatDate(value)
+}
+
+function getEventObservedDate(event: CompanyEventItem) {
+  return formatEventDate(event.observed_at) ?? '-'
+}
+
+function getEventSourceDate(event: CompanyEventItem) {
+  if (!event.occurred_at || event.occurred_at === event.observed_at) return null
+  return formatEventDate(event.occurred_at)
+}
+
+function getNumberValue(value: Record<string, unknown> | null | undefined, key: string) {
+  const rawValue = value?.[key]
+  return typeof rawValue === 'number' ? rawValue : null
+}
+
+function getDisplayEventTitle(event: CompanyEventItem) {
+  if (event.event_type === 'accounting_added') {
+    const year = event.new_value?.aar
+    return typeof year === 'number' || typeof year === 'string' ? `Regnskap ${year} lagt til` : event.title
+  }
+
+  if (event.event_type === 'employee_count_changed') {
+    const previousCount = getNumberValue(event.previous_value, 'antall_ansatte')
+    const newCount = getNumberValue(event.new_value, 'antall_ansatte')
+    return previousCount !== null && newCount !== null ? `Ansatte ${previousCount} → ${newCount}` : event.title
+  }
+
+  return event.title
+}
+
+function getDisplayEventDescription(event: CompanyEventItem) {
+  if (event.event_type === 'accounting_added') {
+    const periodEnd = getEventSourceDate(event)
+    return periodEnd
+      ? `Regnskapsperioden slutter ${periodEnd}. Hendelsen er lagt i Bedriftsgrafens eventlogg.`
+      : 'Regnskapet er lagt i Bedriftsgrafens eventlogg.'
+  }
+
+  if (event.event_type === 'employee_count_changed') {
+    return 'Endringen er observert gjennom Brregs oppdateringsstrøm fra og med aktivering av eventloggen.'
+  }
+
+  return event.time_semantics
+}
+
+function CompanyEventLedger({
+  events,
+  isLoading,
+  hasError,
+  hasMore,
+}: {
+  events: CompanyEventItem[]
+  isLoading: boolean
+  hasError: boolean
+  hasMore: boolean
+}) {
+  return (
+    <div>
+      <div className="flex flex-col gap-1 sm:flex-row sm:items-start sm:justify-between">
+        <div>
+          <h4 className="text-sm font-semibold text-gray-900 dark:text-slate-100">Siste hendelser</h4>
+          <p className="mt-1 text-sm text-gray-600 dark:text-slate-300">
+            Skrevet til Bedriftsgrafens eventlogg ved import, kontrollert backfill eller Brreg-oppdatering.
+          </p>
+        </div>
+        <span className="inline-flex w-fit items-center rounded-full bg-blue-50 px-2.5 py-1 text-xs font-semibold text-blue-700 ring-1 ring-blue-200 dark:bg-blue-950/40 dark:text-blue-300 dark:ring-blue-800">
+          Eventlogg
+        </span>
+      </div>
+
+      {isLoading && (
+        <p className="mt-4 inline-flex items-center gap-2 rounded-lg bg-gray-50 px-4 py-3 text-sm text-gray-600 dark:bg-slate-800 dark:text-slate-300">
+          <LoaderCircle className="h-4 w-4 animate-spin" aria-hidden="true" />
+          Laster hendelseslogg...
+        </p>
+      )}
+
+      {!isLoading && hasError && (
+        <p className="mt-4 rounded-lg bg-amber-50 px-4 py-3 text-sm text-amber-800 ring-1 ring-amber-200 dark:bg-amber-950/40 dark:text-amber-200 dark:ring-amber-800">
+          Hendelsesloggen kunne ikke lastes akkurat nå. Kildedatoene under vises fortsatt.
+        </p>
+      )}
+
+      {!isLoading && !hasError && events.length === 0 && (
+        <p className="mt-4 rounded-lg bg-gray-50 px-4 py-3 text-sm text-gray-600 dark:bg-slate-800 dark:text-slate-300">
+          Ingen eventlogg-hendelser er registrert for denne virksomheten ennå.
+        </p>
+      )}
+
+      {!isLoading && !hasError && events.length > 0 && (
+        <ol className="mt-4 divide-y divide-gray-100 border-y border-gray-100 dark:divide-slate-800 dark:border-slate-800" aria-label="Eventlogg for virksomheten">
+          {events.map((event) => (
+            <li key={event.id} className="py-4 dark:bg-slate-900">
+              <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
+                <div className="min-w-0">
+                  <p className="font-medium text-gray-900 dark:text-slate-50">{getDisplayEventTitle(event)}</p>
+                  <p className="mt-1 text-sm text-gray-600 dark:text-slate-300">{getDisplayEventDescription(event)}</p>
+                </div>
+                <time className="shrink-0 text-sm font-semibold tabular-nums text-gray-700 dark:text-slate-200" dateTime={event.observed_at}>
+                  {getEventObservedDate(event)}
+                </time>
+              </div>
+              <p className="mt-2 text-xs font-medium uppercase tracking-wide text-gray-400 dark:text-slate-500">
+                {event.source} · observert hos Bedriftsgrafen
+              </p>
+            </li>
+          ))}
+        </ol>
+      )}
+
+      {!isLoading && !hasError && hasMore && (
+        <p className="mt-3 text-sm text-gray-600 dark:text-slate-300">
+          Flere hendelser finnes i eventloggen.
+        </p>
       )}
     </div>
   )

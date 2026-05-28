@@ -12,6 +12,11 @@ export const companyQueryKeys = {
   ] as const,
   details: () => [...companyQueryKeys.all, 'detail'] as const,
   detail: (orgnr: string) => [...companyQueryKeys.details(), orgnr] as const,
+  events: (orgnr: string, limit: number, offset: number) => [
+    ...companyQueryKeys.detail(orgnr),
+    'events',
+    { limit, offset },
+  ] as const,
   count: (filters?: Record<string, unknown>) => [
     ...companyQueryKeys.all,
     'count',

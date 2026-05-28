@@ -23,6 +23,10 @@ vi.mock('../../ads/AffiliateBanner', () => ({
     AffiliateBanner: () => <div data-testid="mock-affiliate-banner" />
 }))
 
+vi.mock('../../../hooks/queries/useCompanyEventsQuery', () => ({
+    useCompanyEventsQuery: () => ({ data: undefined, isLoading: false, error: null })
+}))
+
 // Test wrapper
 function createTestWrapper() {
     const queryClient = new QueryClient({
