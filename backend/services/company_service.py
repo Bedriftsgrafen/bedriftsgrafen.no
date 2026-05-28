@@ -1,5 +1,4 @@
 import asyncio
-import contextlib
 import hashlib
 import logging
 import os
@@ -26,6 +25,7 @@ from repositories.company_filter_builder import FilterParams
 from repositories.role_repository import RoleRepository
 from repositories.subunit_repository import SubUnitRepository
 from schemas.companies import AccountingWithKpis, MapMarker, Naeringskode
+from services.base_external_service import ExternalApiException
 from services.brreg_api_service import BrregApiService
 from services.brreg_mappers import map_subunit_from_api
 from services.dtos import CompanyFilterDTO
@@ -411,7 +411,7 @@ class CompanyService:
     async def get_subunits(self, parent_orgnr: str, force_refresh: bool = False) -> list[models.SubUnit]:
         """Get subunits for a company, syncing if missing."""
         if force_refresh:
-            await self._sync_subunits_from_api(parent_orgnr)
+            await self._sync_subunits_from_api(parent_orgnr, raise_errors=True)
         subunits = await self.subunit_repo.get_by_parent_orgnr(parent_orgnr)
         if not subunits and not force_refresh:
             await self._sync_subunits_from_api(parent_orgnr)
@@ -427,10 +427,13 @@ class CompanyService:
             "company_fetched": False,
             "financials_fetched": 0,
             "financials_skipped": 0,
+            "error_code": None,
             "errors": [],
         }
 
-        def _append_error(message: str) -> None:
+        def _append_error(message: str, error_code: str | None = None) -> None:
+            if error_code and result["error_code"] is None:
+                result["error_code"] = error_code
             errors = result["errors"]
             if len(errors) < 5:
                 errors.append(message)
@@ -440,7 +443,18 @@ class CompanyService:
                 errors.append(overflow_message)
 
         try:
-            data = await self.brreg_api.fetch_company(orgnr)
+            try:
+                data = await self.brreg_api.fetch_company(orgnr)
+            except ExternalApiException as e:
+                logger.warning(
+                    "brreg.company_fetch_failed orgnr=%s status=%s details=%s",
+                    sanitize_log(orgnr),
+                    getattr(e, "status_code", None),
+                    sanitize_log(e.details or e.message),
+                )
+                _append_error("Kunne ikke hente data fra Brønnøysundregistrene akkurat nå.", "BRREG_API_ERROR")
+                return result
+
             if not data:
                 _append_error("Virksomheten finnes ikke i Brønnøysundregistrene")
                 return result
@@ -449,16 +463,33 @@ class CompanyService:
             result["company_fetched"] = True
             await self._sync_subunits_from_api(orgnr)
 
-            with contextlib.suppress(Exception):
+            try:
                 from services.role_service import RoleService
 
                 await RoleService(self.db).get_roles(orgnr, force_refresh=True)
+            except ExternalApiException as e:
+                logger.warning(
+                    "brreg.roles_prefetch_failed orgnr=%s status=%s details=%s",
+                    sanitize_log(orgnr),
+                    getattr(e, "status_code", None),
+                    sanitize_log(e.details or e.message),
+                )
+            except Exception as e:
+                logger.warning("roles.prefetch_failed orgnr=%s error=%s", sanitize_log(orgnr), sanitize_log(e))
 
             if fetch_financials:
                 try:
                     statements = await self.brreg_api.fetch_financial_statements(orgnr)
-                except Exception as e:
-                    logger.error("financials.fetch_failed for %s: %s", orgnr, e)
+                except ExternalApiException as e:
+                    logger.warning(
+                        "brreg.financials_fetch_failed orgnr=%s status=%s details=%s",
+                        sanitize_log(orgnr),
+                        getattr(e, "status_code", None),
+                        sanitize_log(e.details or e.message),
+                    )
+                    _append_error("Kunne ikke hente regnskap fra Brønnøysund akkurat nå.", "BRREG_API_ERROR")
+                except Exception:
+                    logger.exception("financials.fetch_failed orgnr=%s", sanitize_log(orgnr))
                     _append_error("Kunne ikke hente regnskap fra Brønnøysund akkurat nå.")
                 else:
                     saved_count = 0
@@ -486,7 +517,9 @@ class CompanyService:
                                 _append_error("Et regnskapspost manglet regnskapsår og ble hoppet over.")
                             except Exception as e:
                                 skipped_count += 1
-                                logger.error("financials.statement_save_failed for %s: %s", orgnr, e)
+                                logger.error(
+                                    "financials.statement_save_failed orgnr=%s error=%s", sanitize_log(orgnr), e
+                                )
                                 _append_error("Et regnskapspost kunne ikke lagres.")
 
                     if not statements or saved_count > 0:
@@ -498,8 +531,8 @@ class CompanyService:
 
             if geocode and company.latitude is None:
                 await self.ensure_geocoded(company)
-        except Exception as e:
-            logger.error("fetch_and_store_company failed for %s: %s", orgnr, e)
+        except Exception:
+            logger.exception("fetch_and_store_company failed orgnr=%s", sanitize_log(orgnr))
             _append_error("Noe gikk galt under henting av data. Prøv igjen.")
         return result
 
@@ -513,15 +546,21 @@ class CompanyService:
             if coords:
                 await self.company_repo.update_coordinates(company.orgnr, coords[0], coords[1])
 
-    async def _sync_subunits_from_api(self, parent_orgnr: str) -> None:
+    async def _sync_subunits_from_api(self, parent_orgnr: str, raise_errors: bool = False) -> None:
         """Internal helper to sync subunits."""
         try:
             data = await self.brreg_api.fetch_subunits(parent_orgnr)
             if data:
                 subunits = [map_subunit_from_api(s, parent_orgnr) for s in data]
                 await self.subunit_repo.create_batch(subunits)
+        except ExternalApiException:
+            logger.warning("brreg.subunits_sync_failed parent_orgnr=%s", sanitize_log(parent_orgnr), exc_info=True)
+            if raise_errors:
+                raise
         except Exception as e:
-            logger.warning(f"Subunit sync failed: {e}")
+            logger.warning("subunits.sync_failed parent_orgnr=%s error=%s", sanitize_log(parent_orgnr), sanitize_log(e))
+            if raise_errors:
+                raise
 
     async def enrich_nace_codes(self, items: list[Any]) -> None:
         """Enrich NACE codes with descriptions."""

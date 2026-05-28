@@ -113,7 +113,7 @@ describe('SubUnitsTab - Error State', () => {
         render(<SubUnitsTab orgnr="123456789" />, { wrapper: createTestWrapper() })
 
         expect(screen.getByText('Kunne ikke laste avdelinger')).toBeInTheDocument()
-        expect(screen.getByText('Network error')).toBeInTheDocument()
+        expect(screen.getByText('Noe gikk galt. Prøv igjen.')).toBeInTheDocument()
     })
 
     it('shows retry button in error state and calls fetch on click', async () => {

@@ -43,6 +43,25 @@ export const toast = {
   info: (message: string) => useToastStore.getState().addToast('info', message),
 }
 
+export function withRequestReference(message: string, requestId?: string | null): string {
+  return requestId ? `${message} Referanse: ${requestId}.` : message
+}
+
+function getHeaderValue(headers: unknown, name: string): string | undefined {
+  if (!headers || typeof headers !== 'object') return undefined
+
+  const maybeHeaders = headers as Record<string, unknown> & { get?: (headerName: string) => unknown }
+  const value = typeof maybeHeaders.get === 'function'
+    ? maybeHeaders.get(name) ?? maybeHeaders.get(name.toLowerCase())
+    : maybeHeaders[name] ?? maybeHeaders[name.toLowerCase()]
+
+  return typeof value === 'string' && value.trim() ? value : undefined
+}
+
+function shouldIncludeRequestReference(status: number, code?: string): boolean {
+  return status >= 500 || code === 'BRREG_API_ERROR'
+}
+
 // Parse API errors into user-friendly messages
 export function getErrorMessage(error: unknown): string {
   if (axios.isAxiosError(error)) {
@@ -56,19 +75,30 @@ export function getErrorMessage(error: unknown): string {
     }
     // Server errors
     const status = error.response.status
+    const requestId = getHeaderValue(error.response.headers, 'X-Request-ID')
     // Prefer stable error code from API response over generic status fallback
     const responseCode = typeof error.response.data === 'object' && error.response.data !== null
       ? (error.response.data as { code?: string }).code
       : undefined
     if (responseCode) {
       const codeMessage = getMessageForCode(responseCode)
-      if (codeMessage) return codeMessage
+      if (codeMessage) {
+        return shouldIncludeRequestReference(status, responseCode)
+          ? withRequestReference(codeMessage, requestId)
+          : codeMessage
+      }
+    }
+    const detail = typeof error.response.data === 'object' && error.response.data !== null && 'detail' in error.response.data
+      ? error.response.data.detail
+      : undefined
+    if ((status === 502 || status === 503) && typeof detail === 'string' && detail.includes('Brønnøysund')) {
+      return withRequestReference('Kunne ikke hente data fra Brønnøysundregistrene. Prøv igjen.', requestId)
     }
     if (status === 404) {
       return 'Ressursen ble ikke funnet.'
     }
     if (status >= 500) {
-      return 'Serverfeil. Prøv igjen senere.'
+      return withRequestReference('Serverfeil. Prøv igjen senere.', requestId)
     }
     // Handle FastAPI validation errors (422) - detail is an array
     if (status === 422 && error.response.data) {
@@ -87,11 +117,8 @@ export function getErrorMessage(error: unknown): string {
       return 'Ugyldig forespørsel. Sjekk parametrene.'
     }
     // Use server message if available (simple string detail)
-    if (error.response.data && typeof error.response.data === 'object' && 'detail' in error.response.data) {
-      const detail = error.response.data.detail
-      if (typeof detail === 'string') {
-        return detail
-      }
+    if (typeof detail === 'string') {
+      return detail
     }
   }
   // Generic fallback

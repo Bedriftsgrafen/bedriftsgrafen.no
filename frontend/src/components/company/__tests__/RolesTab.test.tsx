@@ -117,7 +117,7 @@ describe('RolesTab - Error State', () => {
         render(<RolesTab orgnr="123456789" />, { wrapper: createTestWrapper() })
 
         expect(screen.getByText('Kunne ikke laste roller')).toBeInTheDocument()
-        expect(screen.getByText('Network error')).toBeInTheDocument()
+        expect(screen.getByText('Noe gikk galt. Prøv igjen.')).toBeInTheDocument()
     })
 
     it('shows retry button in error state', () => {

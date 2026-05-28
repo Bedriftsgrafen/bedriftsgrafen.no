@@ -35,9 +35,10 @@ export function useSubUnitsQuery(orgnr: string | undefined) {
    */
   const fetchFromBrreg = async () => {
     if (!orgnr) return
+    const queryKey = companyQueryKeys.subunits(orgnr)
 
     // Set loading state by invalidating
-    await queryClient.invalidateQueries({ queryKey: ['subunits', orgnr] })
+    await queryClient.invalidateQueries({ queryKey })
 
     // Fetch with force_refresh=true
     const response = await apiClient.get<SubUnitsResponse>(
@@ -46,7 +47,7 @@ export function useSubUnitsQuery(orgnr: string | undefined) {
     )
 
     // Update cache with fresh data
-    queryClient.setQueryData(['subunits', orgnr], response.data?.data || [])
+    queryClient.setQueryData(queryKey, response.data?.data || [])
 
     return response.data?.data || []
   }

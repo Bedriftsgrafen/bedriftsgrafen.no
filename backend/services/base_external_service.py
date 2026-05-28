@@ -26,10 +26,17 @@ _CIRCUIT_COOLDOWN_SECONDS = 300  # time the circuit stays open (5 min)
 class ExternalApiException(Exception):
     """Exception raised when an external API call fails."""
 
-    def __init__(self, message: str, service: str = "External API", details: str | None = None):
+    def __init__(
+        self,
+        message: str,
+        service: str = "External API",
+        details: str | None = None,
+        status_code: int | None = None,
+    ):
         self.message = message
         self.service = service
         self.details = details
+        self.status_code = status_code
         super().__init__(f"{service}: {message}" + (f" - {details}" if details else ""))
 
 
@@ -38,7 +45,10 @@ class RateLimitException(ExternalApiException):
 
     def __init__(self, service: str = "External API"):
         super().__init__(
-            message="Rate limit exceeded", service=service, details="Exhausted retries after rate limit errors"
+            message="Rate limit exceeded",
+            service=service,
+            details="Exhausted retries after rate limit errors",
+            status_code=429,
         )
 
 
@@ -277,6 +287,7 @@ class BaseExternalService:
                         message=f"Failed to fetch {context}",
                         service=self.SERVICE_NAME,
                         details=f"Status code: {response.status_code}",
+                        status_code=response.status_code,
                     )
 
             except (RateLimitException, ExternalApiException):  # fmt: skip

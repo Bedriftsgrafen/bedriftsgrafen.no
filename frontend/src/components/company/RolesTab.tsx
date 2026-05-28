@@ -3,6 +3,7 @@ import { Users, Briefcase, Building2, AlertCircle, Loader, RefreshCw, Crown, Use
 import { useRolesQuery, type Role } from '../../hooks/queries/useRolesQuery'
 import { Link } from '@tanstack/react-router'
 import { getLinkedInSearchUrl, get1881SearchUrl } from '../../utils/formatters'
+import { getErrorMessage } from '../../store/toastStore'
 import logo1881 from '../../img/1881-logo.png'
 import { AffiliateBanner } from '../ads/AffiliateBanner'
 import { AFFILIATIONS } from '../../constants/affiliations'
@@ -239,7 +240,7 @@ export function RolesTab({ orgnr, onCompanyClick }: RolesTabProps) {
             await fetchFromBrreg()
             setCooldown(true)
         } catch (err) {
-            setFetchError(err instanceof Error ? err.message : 'Kunne ikke hente fra Brønnøysund')
+            setFetchError(getErrorMessage(err))
         } finally {
             setIsManualFetching(false)
         }
@@ -262,7 +263,7 @@ export function RolesTab({ orgnr, onCompanyClick }: RolesTabProps) {
     }
 
     if (isError || fetchError) {
-        const errorMessage = fetchError || (error instanceof Error ? error.message : 'Prøv igjen senere')
+        const errorMessage = fetchError || getErrorMessage(error)
         return (
             <div className="p-4 bg-red-50 text-red-700 rounded-lg flex items-center justify-between gap-3">
                 <div className="flex items-center gap-3">

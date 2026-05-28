@@ -76,6 +76,7 @@ async def test_max_retries_exceeded(service, mock_httpx_client):
         await service.get_resource()
 
     assert "Failed to fetch" in str(exc.value)
+    assert exc.value.status_code == 500
     assert mock_httpx_client.get.call_count == 2
 
 
@@ -90,6 +91,7 @@ async def test_timeout_handling(service, mock_httpx_client):
         await service.get_resource()
 
     assert "Timeout fetching" in str(exc.value)
+    assert exc.value.status_code is None
 
 
 @pytest.mark.asyncio

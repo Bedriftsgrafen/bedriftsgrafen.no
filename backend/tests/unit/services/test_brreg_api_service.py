@@ -108,6 +108,19 @@ class TestFetchFinancialStatements:
         assert result == []
 
     @pytest.mark.asyncio
+    async def test_fetch_financial_statements_unexpected_shape_raises(self):
+        # Arrange
+        service = BrregApiService()
+        mock_response = MagicMock()
+        mock_response.status_code = 200
+        mock_response.json.return_value = {"message": "temporarily unavailable"}
+        service._get = AsyncMock(return_value=mock_response)
+
+        # Act & Assert
+        with pytest.raises(BrregApiException, match="Unexpected response shape"):
+            await service.fetch_financial_statements("123456789")
+
+    @pytest.mark.asyncio
     async def test_fetch_financial_statements_with_year_param(self):
         # Arrange
         service = BrregApiService()
@@ -165,6 +178,21 @@ class TestFetchAndHandle404:
         # Act & Assert
         with pytest.raises(BrregApiException):
             await service._fetch_and_handle_404("http://example.com", context="test")
+
+    @pytest.mark.asyncio
+    async def test_fetch_and_handle_404_wraps_invalid_json(self):
+        # Arrange
+        service = BrregApiService()
+        mock_response = MagicMock()
+        mock_response.status_code = 200
+        mock_response.json.side_effect = ValueError("bad json")
+        service._get = AsyncMock(return_value=mock_response)
+
+        # Act & Assert
+        with pytest.raises(BrregApiException, match="Invalid response") as exc:
+            await service._fetch_and_handle_404("http://example.com", context="test")
+
+        assert exc.value.service == "Brønnøysund"
 
 
 class TestFetchSubunit:
@@ -360,13 +388,29 @@ class TestFetchRoles:
         assert result == []
 
     @pytest.mark.asyncio
+    async def test_fetch_roles_missing_role_groups_raises(self):
+        # Arrange
+        service = BrregApiService()
+        mock_response = MagicMock()
+        mock_response.status_code = 200
+        mock_response.json.return_value = {"unexpected": []}
+        service._get = AsyncMock(return_value=mock_response)
+
+        # Act & Assert
+        with pytest.raises(BrregApiException, match="Unexpected response shape"):
+            await service.fetch_roles("123456789")
+
+    @pytest.mark.asyncio
     async def test_fetch_roles_handles_error_gracefully(self):
         # Arrange
         service = BrregApiService()
         service._get = AsyncMock(side_effect=Exception("Network error"))
 
-        with pytest.raises(BrregApiException, match="Network error"):
+        with pytest.raises(BrregApiException, match="Network error") as exc:
             await service.fetch_roles("123456789")
+
+        assert exc.value.service == "Brønnøysund"
+        assert exc.value.message == "Failed to fetch roles for 123456789"
 
 
 class TestParseFinancialData:

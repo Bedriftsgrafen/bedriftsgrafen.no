@@ -136,6 +136,7 @@ class FetchCompanyResponse(BaseModel):
     orgnr: str
     company_fetched: bool
     financials_fetched: int
+    error_code: str | None = None
     errors: list[str] = []
 
 

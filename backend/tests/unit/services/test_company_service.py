@@ -10,6 +10,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 import services.company_service as company_service_module
 from models import Company
+from services.base_external_service import ExternalApiException
 from services.company_service import CompanyService
 
 
@@ -326,7 +327,24 @@ async def test_fetch_and_store_company_not_found(service):
 
     # Assert
     assert result["company_fetched"] is False
+    assert result["error_code"] is None
     assert "Brønnøysund" in result["errors"][0]
+
+
+@pytest.mark.asyncio
+async def test_fetch_and_store_company_brreg_fetch_failure_returns_stable_error(service):
+    """Should return a stable Brreg error code when the primary source fetch fails."""
+    service.brreg_api.fetch_company.side_effect = ExternalApiException(
+        message="Timeout fetching company 123456789",
+        service="Brønnøysund",
+        details="Failed after 3 attempts",
+    )
+
+    result = await service.fetch_and_store_company("123456789")
+
+    assert result["company_fetched"] is False
+    assert result["error_code"] == "BRREG_API_ERROR"
+    assert result["errors"] == ["Kunne ikke hente data fra Brønnøysundregistrene akkurat nå."]
 
 
 @pytest.mark.asyncio
@@ -374,6 +392,35 @@ async def test_fetch_and_store_company_skips_invalid_financial_statements(MockRo
     )
     service.company_repo.update_last_polled_regnskap.assert_called_once_with("123456789")
     service.db.commit.assert_called_once()
+
+
+@pytest.mark.asyncio
+@patch("services.role_service.RoleService")
+async def test_fetch_and_store_company_financial_fetch_failure_returns_stable_error(MockRoleService, service):
+    """Should keep the company result but expose a stable Brreg code for financial source errors."""
+    mock_company_data = {"organisasjonsnummer": "123456789", "navn": "Test AS"}
+    service.brreg_api.fetch_company.return_value = mock_company_data
+
+    mock_company = MagicMock()
+    mock_company.latitude = 59.9
+    service.company_repo.create_or_update.return_value = mock_company
+
+    service.brreg_api.fetch_subunits.return_value = []
+    service.brreg_api.fetch_financial_statements.side_effect = ExternalApiException(
+        message="Unexpected response shape for financials 123456789",
+        service="Brønnøysund",
+        details="Expected list, got dict",
+    )
+
+    mock_role_instance = AsyncMock()
+    MockRoleService.return_value = mock_role_instance
+
+    result = await service.fetch_and_store_company("123456789")
+
+    assert result["company_fetched"] is True
+    assert result["financials_fetched"] == 0
+    assert result["error_code"] == "BRREG_API_ERROR"
+    assert result["errors"] == ["Kunne ikke hente regnskap fra Brønnøysund akkurat nå."]
 
 
 @pytest.mark.asyncio

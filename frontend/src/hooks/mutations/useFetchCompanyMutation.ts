@@ -1,6 +1,7 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query'
-import { useToastStore, getErrorMessage } from '../../store/toastStore'
-import { apiClient } from '../../utils/apiClient'
+import { useToastStore, getErrorMessage, withRequestReference } from '../../store/toastStore'
+import { apiClient, getResponseRequestId } from '../../utils/apiClient'
+import { getMessageForCode } from '../../utils/errorCodes'
 
 interface FetchCompanyParams {
   orgnr: string
@@ -10,7 +11,9 @@ interface FetchCompanyParams {
 interface FetchCompanyResponse {
   company_fetched: boolean
   financials_fetched: number
+  error_code?: string | null
   errors: string[]
+  request_id?: string
 }
 
 export function useFetchCompanyMutation() {
@@ -23,7 +26,7 @@ export function useFetchCompanyMutation() {
         `/v1/companies/${orgnr}/fetch`,
         { fetch_financials }
       )
-      return response.data
+      return { ...response.data, request_id: getResponseRequestId(response) }
     },
     // Local onError handles this mutation's toast — opt out of global handler
     // to prevent the global mutationCache.onError from firing a second toast.
@@ -35,7 +38,8 @@ export function useFetchCompanyMutation() {
       // Show appropriate toast based on result FIRST to ensure feedback
       if (data.errors.length > 0) {
         // If there are errors, show error
-        addToast('error', data.errors[0])
+        const codedMessage = data.error_code ? getMessageForCode(data.error_code) : undefined
+        addToast('error', withRequestReference(codedMessage ?? data.errors[0], data.request_id))
       } else if (!data.financials_fetched) {
         // No financial data found (0, null, undefined)
         addToast('warning', 'Fant ingen regnskapsdata hos Brønnøysundregistrene')

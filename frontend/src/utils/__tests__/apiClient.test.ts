@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { apiClient, API_BASE } from '../apiClient'
+import { apiClient, API_BASE, getResponseRequestId } from '../apiClient'
 
 describe('apiClient', () => {
     it('has correct base URL', () => {
@@ -29,5 +29,19 @@ describe('apiClient interceptors', () => {
         // Accessing axios internals for test verification
         const requestInterceptors = apiClient.interceptors.request as unknown as { handlers: unknown[] }
         expect(requestInterceptors.handlers?.length).toBeGreaterThan(0)
+    })
+})
+
+describe('getResponseRequestId', () => {
+    it('reads lower-case request id headers', () => {
+        expect(getResponseRequestId({ headers: { 'x-request-id': 'abc12345' } })).toBe('abc12345')
+    })
+
+    it('reads AxiosHeaders-style request id headers', () => {
+        const response = {
+            headers: { get: (name: string) => name === 'x-request-id' ? 'req777' : null },
+        } as unknown as Parameters<typeof getResponseRequestId>[0]
+
+        expect(getResponseRequestId(response)).toBe('req777')
     })
 })

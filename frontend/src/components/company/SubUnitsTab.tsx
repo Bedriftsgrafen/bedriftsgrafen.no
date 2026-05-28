@@ -1,6 +1,7 @@
 import { useState, useMemo, useDeferredValue } from 'react'
 import { MapPin, Users, Building, AlertCircle, Loader, Calendar, Search, X, ChevronRight } from 'lucide-react'
 import { useSubUnitsQuery } from '../../hooks/queries/useSubUnitsQuery'
+import { getErrorMessage } from '../../store/toastStore'
 import type { SubUnit } from '../../types'
 
 interface SubUnitsTabProps {
@@ -133,7 +134,7 @@ export function SubUnitsTab({ orgnr, onSubUnitClick }: SubUnitsTabProps) {
     try {
       await fetchFromBrreg()
     } catch (err) {
-      setFetchError(err instanceof Error ? err.message : 'Kunne ikke hente fra Brønnøysund')
+      setFetchError(getErrorMessage(err))
     } finally {
       setIsManualFetching(false)
     }
@@ -171,7 +172,7 @@ export function SubUnitsTab({ orgnr, onSubUnitClick }: SubUnitsTabProps) {
   }
 
   if (isError || fetchError) {
-    const errorMessage = fetchError || (error instanceof Error ? error.message : 'Prøv igjen senere')
+    const errorMessage = fetchError || getErrorMessage(error)
     return (
       <div className="p-4 bg-red-50 text-red-700 rounded-lg flex items-center justify-between gap-3">
         <div className="flex items-center gap-3">

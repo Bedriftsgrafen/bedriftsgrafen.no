@@ -173,6 +173,47 @@ describe('getErrorMessage', () => {
         expect(result).toContain('Serverfeil')
     })
 
+    it('adds request reference for server errors when response header is present', () => {
+        const error = {
+            isAxiosError: true,
+            message: 'Bad Gateway',
+            response: { status: 502, data: {}, headers: { 'x-request-id': 'abc12345' } },
+        }
+
+        const result = getErrorMessage(error)
+        expect(result).toBe('Serverfeil. Prøv igjen senere. Referanse: abc12345.')
+    })
+
+    it('uses Brreg-specific message and request reference for Brreg error code', () => {
+        const error = {
+            isAxiosError: true,
+            message: 'Bad Gateway',
+            response: {
+                status: 502,
+                data: { code: 'BRREG_API_ERROR', detail: 'Brønnøysund API error' },
+                headers: { 'x-request-id': 'brreg001' },
+            },
+        }
+
+        const result = getErrorMessage(error)
+        expect(result).toBe('Kunne ikke hente data fra Brønnøysundregistrene. Prøv igjen. Referanse: brreg001.')
+    })
+
+    it('maps Brreg HTTPException details to Brreg-specific message', () => {
+        const error = {
+            isAxiosError: true,
+            message: 'Bad Gateway',
+            response: {
+                status: 502,
+                data: { detail: 'Failed to fetch roles from Brønnøysund' },
+                headers: { 'x-request-id': 'roles99' },
+            },
+        }
+
+        const result = getErrorMessage(error)
+        expect(result).toBe('Kunne ikke hente data fra Brønnøysundregistrene. Prøv igjen. Referanse: roles99.')
+    })
+
     it('returns detail from response if available', () => {
         const error = {
             isAxiosError: true,

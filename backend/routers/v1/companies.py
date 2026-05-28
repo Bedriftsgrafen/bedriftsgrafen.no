@@ -27,6 +27,7 @@ from schemas.responses import (
     SubUnitResponse,
     SubUnitsWithMetadata,
 )
+from services.base_external_service import ExternalApiException
 from services.company_service import CompanyService
 from services.export_service import ExportService
 from services.nace_service import NaceService
@@ -422,7 +423,17 @@ async def get_company_subunits(
         force_refresh: Force fetch from API
     """
     service = CompanyService(db)
-    all_subunits = await service.get_subunits(orgnr, force_refresh=force_refresh)
+    try:
+        all_subunits = await service.get_subunits(orgnr, force_refresh=force_refresh)
+    except ExternalApiException as e:
+        logger.warning(
+            "External API error fetching subunits for %s: %s",
+            sanitize_log(orgnr),
+            sanitize_log(e.details or e.message),
+        )
+        raise BrregApiException(
+            "Kunne ikke hente avdelinger fra Brønnøysundregistrene", details=e.details or e.message
+        ) from e
 
     # Get parent company for metadata (reuse service to avoid double lookup)
     company = await service.get_company_with_accounting(orgnr)
@@ -470,9 +481,15 @@ async def get_company_roles(
 
         return RolesWithMetadata(data=role_responses, total=len(role_responses), metadata=build_response_metadata())
 
-    except BrregApiException as e:
-        logger.warning("External API error fetching roles for %s: %s", sanitize_log(orgnr), e)
-        raise HTTPException(status_code=502, detail="Failed to fetch roles from Brønnøysund")
+    except ExternalApiException as e:
+        logger.warning(
+            "External API error fetching roles for %s: %s",
+            sanitize_log(orgnr),
+            sanitize_log(e.details or e.message),
+        )
+        raise BrregApiException(
+            "Kunne ikke hente roller fra Brønnøysundregistrene", details=e.details or e.message
+        ) from e
     except Exception as e:
         logger.exception("Unexpected error fetching roles for %s: %s", sanitize_log(orgnr), e)
         raise HTTPException(status_code=500, detail="Internal server error")

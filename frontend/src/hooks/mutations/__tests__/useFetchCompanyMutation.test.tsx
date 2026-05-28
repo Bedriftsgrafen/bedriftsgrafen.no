@@ -7,18 +7,21 @@ import { useFetchCompanyMutation } from '../useFetchCompanyMutation'
 
 // ── Hoisted mocks (vi.mock factories run before module-level declarations) ───
 
-const { mockAddToast, mockPost } = vi.hoisted(() => ({
+const { mockAddToast, mockPost, mockGetResponseRequestId } = vi.hoisted(() => ({
   mockAddToast: vi.fn(),
   mockPost: vi.fn(),
+  mockGetResponseRequestId: vi.fn(),
 }))
 
 vi.mock('../../../utils/apiClient', () => ({
   apiClient: { post: mockPost },
+  getResponseRequestId: mockGetResponseRequestId,
 }))
 
 vi.mock('../../../store/toastStore', () => ({
   useToastStore: vi.fn(() => ({ addToast: mockAddToast })),
   getErrorMessage: vi.fn(() => 'global error message'),
+  withRequestReference: vi.fn((message: string, requestId?: string) => requestId ? `${message} Referanse: ${requestId}.` : message),
   toast: { error: vi.fn() },
 }))
 
@@ -49,6 +52,7 @@ function createWrapper() {
 
 beforeEach(() => {
   vi.clearAllMocks()
+  mockGetResponseRequestId.mockReturnValue(undefined)
 })
 
 describe('useFetchCompanyMutation error handling', () => {
@@ -119,5 +123,35 @@ describe('useFetchCompanyMutation error handling', () => {
     expect(errorCalls).toHaveLength(1)
     expect(errorCalls[0]).toEqual(['error', 'global error message'])
     expect(mockGlobalToast).not.toHaveBeenCalled()
+  })
+
+  it('uses stable Brreg code and request reference for successful fetch payload errors', async () => {
+    mockGetResponseRequestId.mockReturnValueOnce('abc12345')
+    mockPost.mockResolvedValueOnce({
+      data: {
+        company_fetched: false,
+        financials_fetched: 0,
+        error_code: 'BRREG_API_ERROR',
+        errors: ['Kunne ikke hente data fra Brønnøysundregistrene akkurat nå.'],
+      },
+      headers: { 'x-request-id': 'abc12345' },
+    })
+
+    const { result } = renderHook(() => useFetchCompanyMutation(), {
+      wrapper: createWrapper(),
+    })
+
+    act(() => {
+      result.current.mutate({ orgnr: '123456789' })
+    })
+
+    await waitFor(() => expect(result.current.isSuccess).toBe(true))
+
+    const errorCalls = (mockAddToast.mock.calls as [string, ...unknown[]][]).filter(([type]) => type === 'error')
+    expect(errorCalls).toHaveLength(1)
+    expect(errorCalls[0]).toEqual([
+      'error',
+      'Kunne ikke hente data fra Brønnøysundregistrene. Prøv igjen. Referanse: abc12345.',
+    ])
   })
 })

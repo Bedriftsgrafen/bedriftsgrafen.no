@@ -39,14 +39,28 @@ class BrregApiService(BaseExternalService):
             Company data as dict or None if not found
         """
         url = f"{self.ENHETSREGISTERET_BASE_URL}/enheter/{orgnr}"
-        return await self._fetch_and_handle_404(url, context=f"company {orgnr}")
+        data = await self._fetch_and_handle_404(url, context=f"company {orgnr}")
+        if data is not None and not isinstance(data, dict):
+            raise ExternalApiException(
+                message=f"Unexpected response shape for company {orgnr}",
+                service=self.SERVICE_NAME,
+                details=f"Expected object, got {type(data).__name__}",
+            )
+        return data
 
     async def fetch_subunit(self, orgnr: str) -> dict[str, Any] | None:
         """
         Fetch subunit (underenhet) details from Enhetsregisteret.
         """
         url = f"{self.ENHETSREGISTERET_BASE_URL}/underenheter/{orgnr}"
-        return await self._fetch_and_handle_404(url, context=f"subunit {orgnr}")
+        data = await self._fetch_and_handle_404(url, context=f"subunit {orgnr}")
+        if data is not None and not isinstance(data, dict):
+            raise ExternalApiException(
+                message=f"Unexpected response shape for subunit {orgnr}",
+                service=self.SERVICE_NAME,
+                details=f"Expected object, got {type(data).__name__}",
+            )
+        return data
 
     async def fetch_financial_statements(self, orgnr: str, year: int | None = None) -> list[dict[str, Any]]:
         """
@@ -67,7 +81,15 @@ class BrregApiService(BaseExternalService):
             params["regnskapsperiode.tilDato"] = f"{year}-12-31"
 
         data = await self._fetch_and_handle_404(url, params=params or None, context=f"financials {orgnr}")
-        return data if isinstance(data, list) else []
+        if data is None:
+            return []
+        if not isinstance(data, list):
+            raise ExternalApiException(
+                message=f"Unexpected response shape for financials {orgnr}",
+                service=self.SERVICE_NAME,
+                details=f"Expected list, got {type(data).__name__}",
+            )
+        return data
 
     async def _fetch_and_handle_404(
         self, url: str, params: dict[str, Any] | None = None, context: str = "request"
@@ -83,8 +105,11 @@ class BrregApiService(BaseExternalService):
             raise
         except Exception as e:
             logger.error(f"Unexpected error fetching {context}: {e}", exc_info=True)
-            # Re-raise so the service doesn't interpret this as "Deleted"
-            raise
+            raise ExternalApiException(
+                message=f"Invalid response while fetching {context}",
+                service=self.SERVICE_NAME,
+                details=str(e),
+            ) from e
 
     async def parse_financial_data(self, raw_data: dict[str, Any]) -> dict[str, Any]:
         """
@@ -219,6 +244,12 @@ class BrregApiService(BaseExternalService):
 
             data = response.json()
             all_roles = []
+            if not isinstance(data, dict) or "rollegrupper" not in data:
+                raise ExternalApiException(
+                    message=f"Unexpected response shape for roles {orgnr}",
+                    service=self.SERVICE_NAME,
+                    details="Missing rollegrupper",
+                )
             rollegrupper = data.get("rollegrupper", [])
 
             for gruppe in rollegrupper:
@@ -267,4 +298,8 @@ class BrregApiService(BaseExternalService):
             raise
         except Exception as e:
             logger.error(f"Error fetching roles for {orgnr}: {e!s}")
-            raise ExternalApiException(self.SERVICE_NAME, f"Failed to fetch roles for {orgnr}: {e!s}") from e
+            raise ExternalApiException(
+                message=f"Failed to fetch roles for {orgnr}",
+                service=self.SERVICE_NAME,
+                details=str(e),
+            ) from e
