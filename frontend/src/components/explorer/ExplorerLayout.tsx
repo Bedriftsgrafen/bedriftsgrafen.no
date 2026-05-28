@@ -15,7 +15,7 @@ import { useExplorerShortcuts } from '../../hooks/useExplorerShortcuts'
 import { useCompaniesQuery } from '../../hooks/queries/useCompaniesQuery'
 import { useCompanyStatsQuery } from '../../hooks/queries/useCompanyStatsQuery'
 import { useUiStore } from '../../store/uiStore'
-import { useFilterStore, type FilterValues } from '../../store/filterStore'
+import { useFilterStore } from '../../store/filterStore'
 import { useExplorerStore } from '../../store/explorerStore'
 import { isNumericSortField } from '../../constants/explorer'
 import { ComparisonModal } from '../comparison'
@@ -55,33 +55,7 @@ export const ExplorerLayout = memo(function ExplorerLayout({ onSelectCompany, on
             s.bankruptFrom !== null || s.bankruptTo !== null || s.isBankrupt !== null ||
             s.inLiquidation !== null || s.inForcedLiquidation !== null || s.hasAccounting !== null)
     )
-    const setMapFilters = useFilterStore((s) => s.setMapFilters)
     const setSort = useFilterStore((s) => s.setSort)
-
-    // Check for map filter from sessionStorage (region click from map)
-    useEffect(() => {
-        const mapFilterStr = sessionStorage.getItem('mapFilter');
-        if (mapFilterStr) {
-            try {
-                const mapFilter = JSON.parse(mapFilterStr);
-                const updates: Partial<FilterValues> = {};
-                if ('county' in mapFilter) updates.county = mapFilter.county || '';
-                if ('county_code' in mapFilter) updates.countyCode = mapFilter.county_code || '';
-                if ('municipality' in mapFilter) updates.municipality = mapFilter.municipality || '';
-                if ('municipality_code' in mapFilter) updates.municipalityCode = mapFilter.municipality_code || '';
-                if ('nace' in mapFilter) updates.naeringskode = mapFilter.nace || '';
-
-                if (Object.keys(updates).length > 0) {
-                    // Use setMapFilters to clear stale location filters first
-                    setMapFilters(updates);
-                }
-            } catch (e) {
-                logger.error('Failed to parse mapFilter:', e);
-            } finally {
-                sessionStorage.removeItem('mapFilter');
-            }
-        }
-    }, [setMapFilters]);
 
     // Explorer UI state
     const viewMode = useExplorerStore((s) => s.viewMode)

@@ -3,6 +3,13 @@ import { ChevronRight, MapPin } from 'lucide-react'
 import { Company } from '../../types'
 import { formatLargeCurrency } from '../../utils/formatters'
 
+function formatFoundedDate(date: string | null | undefined, options: Intl.DateTimeFormatOptions) {
+  if (!date) return null
+  const parsed = new Date(date)
+  if (Number.isNaN(parsed.getTime())) return null
+  return parsed.toLocaleDateString('no-NO', options)
+}
+
 interface TopCompanyListProps {
   companies: Company[]
   title?: string
@@ -105,13 +112,17 @@ export function NewestCompaniesList({
         <span className="text-xs font-black text-slate-500 uppercase tracking-widest">{subtitle}</span>
       </h3>
       <ul className="space-y-4" role="list">
-        {companies.map(company => (
+        {companies.map(company => {
+          const foundedDateLong = formatFoundedDate(company.stiftelsesdato, { day: '2-digit', month: 'long', year: 'numeric' })
+          const foundedDateShort = formatFoundedDate(company.stiftelsesdato, { day: '2-digit', month: 'short', year: 'numeric' })
+
+          return (
           <li key={company.orgnr}>
             <Link
               to="/virksomhet/$orgnr"
               params={{ orgnr: company.orgnr }}
               className="flex items-center justify-between p-6 bg-white hover:bg-slate-50 border border-slate-100 hover:border-blue-200 rounded-3xl transition-all group shadow-sm focus-visible:ring-2 focus-visible:ring-blue-600 outline-none hover:scale-[1.01]"
-              aria-label={`${company.navn}, stiftet ${new Date(company.stiftelsesdato || '').toLocaleDateString('no-NO', { day: '2-digit', month: 'long', year: 'numeric' })}`}
+              aria-label={foundedDateLong ? `${company.navn}, stiftet ${foundedDateLong}` : `${company.navn}, stiftelsesdato ukjent`}
             >
               <div className="flex items-center gap-4 md:gap-8 min-w-0">
                 <div className="h-12 w-12 rounded-2xl bg-slate-50 border border-slate-100 text-slate-400 flex items-center justify-center font-black text-xs group-hover:bg-blue-900 group-hover:text-white group-hover:border-blue-800 transition-all">
@@ -122,14 +133,15 @@ export function NewestCompaniesList({
                     {company.navn}
                   </p>
                   <p className="text-slate-500 text-xs font-black uppercase tracking-widest mt-1">
-                    Stiftet {new Date(company.stiftelsesdato || '').toLocaleDateString('no-NO', { day: '2-digit', month: 'short', year: 'numeric' })}
+                    {foundedDateShort ? `Stiftet ${foundedDateShort}` : 'Stiftelsesdato ukjent'}
                   </p>
                 </div>
               </div>
               <ChevronRight className="h-6 w-6 text-slate-200 group-hover:text-blue-600 group-hover:translate-x-1 transition-all" aria-hidden="true" />
             </Link>
           </li>
-        ))}
+          )
+        })}
       </ul>
 
       <Link

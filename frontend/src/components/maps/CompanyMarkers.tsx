@@ -13,6 +13,7 @@ import { useQuery } from '@tanstack/react-query';
 import { apiClient } from '../../utils/apiClient';
 import { MapPin, Users } from 'lucide-react';
 import { renderToString } from 'react-dom/server';
+import { hasMarkerFilters } from './markerFilters';
 
 // Types
 interface MapMarker {
@@ -260,8 +261,38 @@ export function CompanyMarkers({
 
     // Should we show markers?
     // Allow markers if we have NACE OR if we have other selective filters and are zoomed in
-    const hasActiveFilters = Boolean(naceCode) || (organizationForms && organizationForms.length > 0) || Boolean(municipalityCode || countyCode);
-    const shouldFetch = hasActiveFilters && zoom >= MIN_ZOOM_FOR_MARKERS && bounds;
+    const hasActiveFilters = hasMarkerFilters({
+        naceCode,
+        countyCode,
+        municipalityCode,
+        organizationForms,
+        revenueMin,
+        revenueMax,
+        profitMin,
+        profitMax,
+        equityMin,
+        equityMax,
+        operatingProfitMin,
+        operatingProfitMax,
+        liquidityRatioMin,
+        liquidityRatioMax,
+        equityRatioMin,
+        equityRatioMax,
+        employeeMin,
+        employeeMax,
+        foundedFrom,
+        foundedTo,
+        bankruptFrom,
+        bankruptTo,
+        registeredFrom,
+        registeredTo,
+        isBankrupt,
+        inLiquidation,
+        inForcedLiquidation,
+        hasAccounting,
+        query,
+    });
+    const shouldFetch = hasActiveFilters && zoom >= MIN_ZOOM_FOR_MARKERS && Boolean(bounds);
 
     // Fetch markers from API
     const { data, isLoading, isError } = useQuery({

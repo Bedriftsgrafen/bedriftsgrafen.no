@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useId, useRef } from 'react'
+import React, { useCallback, useId, useLayoutEffect, useRef } from 'react'
 import { X } from 'lucide-react'
 import { useBodyScrollLock } from '../../hooks/useBodyScrollLock'
 
@@ -67,7 +67,7 @@ export function Modal({
         preserveScrollAndClose()
     }
 
-    useEffect(() => {
+    useLayoutEffect(() => {
         if (!isOpen) return
 
         previousActiveElementRef.current = document.activeElement instanceof HTMLElement
