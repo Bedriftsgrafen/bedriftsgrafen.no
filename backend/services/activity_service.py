@@ -26,6 +26,7 @@ EVENT_TYPE_TITLES: dict[str, str] = {
     "company_registered": "Virksomhet registrert",
     "company_deleted": "Virksomhet slettet",
     "accounting_added": "Regnskap lagt til",
+    "employee_count_changed": "Antall ansatte endret",
 }
 
 SYSTEM_STATE_LABELS: dict[str, dict[str, str]] = {
@@ -62,7 +63,7 @@ class ActivityService:
         self.event_ledger_enabled = os.getenv("ENABLE_COMPANY_EVENT_LEDGER", "").lower() in {"1", "true", "yes"}
 
     async def get_overview(self, limit: int) -> ActivityOverviewResponse:
-        cache_key = f"overview:{limit}"
+        cache_key = f"overview:v2:{limit}"
         cached = await self.cache.get(cache_key)
         if cached is not None:
             return ActivityOverviewResponse.model_validate(cached)
@@ -72,6 +73,11 @@ class ActivityService:
         status_rows = await self.repository.get_system_state(list(SYSTEM_STATE_LABELS.keys()))
         accounting_rows = (
             await self.event_repository.get_latest_events_by_type_with_company("accounting_added", limit=limit)
+            if self.event_ledger_enabled
+            else []
+        )
+        employee_rows = (
+            await self.event_repository.get_latest_events_by_type_with_company("employee_count_changed", limit=limit)
             if self.event_ledger_enabled
             else []
         )
@@ -113,14 +119,16 @@ class ActivityService:
                 time_label="Lagt til hos Bedriftsgrafen",
                 items=self._build_accounting_event_items(accounting_rows),
             ),
+            employee_changes=ActivityFeed(
+                id="employee_changes",
+                title="Endringer i ansatte",
+                description="Endringer i antall ansatte observert gjennom Brregs oppdateringsstrøm fra og med aktivering av eventloggen.",
+                source="Enhetsregisteret via Brreg",
+                time_label="Observert i Brreg-oppdatering",
+                items=self._build_employee_event_items(employee_rows),
+            ),
             data_status=self._build_status_items(status_rows),
             deferred_feeds=[
-                ActivityDeferredFeed(
-                    id="employee_changes",
-                    title="Endringer i ansatte",
-                    reason="Antall ansatte er foreløpig bare nåverdi i selskapsdataene.",
-                    requirement="Skriv forrige og ny verdi til eventloggen under Brreg-oppdateringer før dette blir en offentlig feed.",
-                ),
                 ActivityDeferredFeed(
                     id="brreg_announcements",
                     title="Brreg-kunngjøringer",
@@ -225,6 +233,41 @@ class ActivityService:
                     time_semantics=(
                         "Datoen viser når Bedriftsgrafen observerte eller importerte regnskapet, "
                         "ikke offisiell innsendingsdato hos Brreg."
+                    ),
+                )
+            )
+
+        return items
+
+    @staticmethod
+    def _build_employee_event_items(rows: list[dict[str, Any]]) -> list[ActivityCompanyItem]:
+        items: list[ActivityCompanyItem] = []
+
+        for row in rows:
+            previous_value = row.get("previous_value") or {}
+            new_value = row.get("new_value") or {}
+            previous_count = previous_value.get("antall_ansatte")
+            new_count = new_value.get("antall_ansatte")
+            observed_at = row.get("observed_at")
+
+            if previous_count is not None and new_count is not None:
+                event_label = f"Ansatte {previous_count} → {new_count}"
+            else:
+                event_label = "Antall ansatte endret"
+
+            items.append(
+                ActivityCompanyItem(
+                    orgnr=row["orgnr"],
+                    navn=row.get("navn"),
+                    organisasjonsform=row.get("organisasjonsform"),
+                    naeringskode=row.get("naeringskode"),
+                    antall_ansatte=new_count if new_count is not None else row.get("antall_ansatte"),
+                    event_date=observed_at.date() if observed_at else None,
+                    event_label=event_label,
+                    source=row.get("source") or "Enhetsregisteret via Brreg",
+                    time_semantics=(
+                        "Datoen viser når Bedriftsgrafen observerte endringen i Brregs oppdateringsstrøm. "
+                        "Historiske endringer før eventloggen ble aktivert er ikke backfylt."
                     ),
                 )
             )

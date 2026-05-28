@@ -56,6 +56,21 @@ class CompanyEventRepository:
         notes: str | None = None,
         event_key: str | None = None,
     ) -> models.CompanyEvent:
+        if source_update_id is not None:
+            existing_by_source_result = await self.db.execute(
+                select(models.CompanyEvent)
+                .where(
+                    models.CompanyEvent.orgnr == orgnr,
+                    models.CompanyEvent.event_type == event_type,
+                    models.CompanyEvent.source_update_id == source_update_id,
+                )
+                .order_by(models.CompanyEvent.id.desc())
+                .limit(1)
+            )
+            existing_by_source = existing_by_source_result.scalar_one_or_none()
+            if existing_by_source is not None:
+                return existing_by_source
+
         resolved_event_key = event_key or self.build_event_key(
             orgnr=orgnr,
             event_type=event_type,
@@ -115,6 +130,7 @@ class CompanyEventRepository:
                 models.CompanyEvent.source_update_id,
                 models.CompanyEvent.occurred_at,
                 models.CompanyEvent.observed_at,
+                models.CompanyEvent.previous_value,
                 models.CompanyEvent.new_value,
                 models.CompanyEvent.payload,
                 models.Company.navn,

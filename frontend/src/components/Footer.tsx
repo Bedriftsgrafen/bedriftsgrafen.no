@@ -1,9 +1,43 @@
 import { ArrowUpRight, Database, Mail } from 'lucide-react'
+import type { ActivityStatusItem } from '../hooks/queries/useActivityOverviewQuery'
+import { useActivityOverviewQuery } from '../hooks/queries/useActivityOverviewQuery'
 import { BedriftsgrafenContactLink } from './contact'
 
 const CURRENT_YEAR = new Date().getFullYear()
 
+const footerDateFormatter = new Intl.DateTimeFormat('nb-NO', {
+  day: '2-digit',
+  month: '2-digit',
+  year: 'numeric',
+  hour: '2-digit',
+  minute: '2-digit',
+})
+
+function getLatestStatusDate(items: ActivityStatusItem[] | undefined) {
+  if (!items) return null
+
+  return items.reduce<string | null>((latest, item) => {
+    if (!item.updated_at) return latest
+    if (!latest) return item.updated_at
+
+    return new Date(item.updated_at).getTime() > new Date(latest).getTime() ? item.updated_at : latest
+  }, null)
+}
+
+function formatFooterDate(value: string | null) {
+  if (!value) return null
+
+  try {
+    return footerDateFormatter.format(new Date(value))
+  } catch {
+    return null
+  }
+}
+
 export function Footer() {
+  const { data } = useActivityOverviewQuery(1)
+  const latestStatusDate = formatFooterDate(getLatestStatusDate(data?.data_status))
+
   return (
     <footer className="mt-10 border-t border-slate-800 bg-slate-950 text-slate-300 pb-[env(safe-area-inset-bottom)] md:mt-12">
       <div className="mx-auto max-w-7xl px-4 py-12 sm:px-6 md:py-14">
@@ -85,6 +119,18 @@ export function Footer() {
               </a>
               .
             </p>
+            {latestStatusDate && (
+              <p className="mt-4 text-sm text-slate-300">
+                <span className="font-semibold text-slate-100">Sist oppdatert:</span> {latestStatusDate}
+              </p>
+            )}
+            <a
+              href="/oppdateringer?tab=datastatus"
+              className="mt-5 inline-flex items-center gap-2 rounded-xl border border-white/10 bg-white/5 px-4 py-3 text-sm font-medium text-slate-200 transition-colors hover:border-white/20 hover:bg-white/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-200 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-950"
+            >
+              Se datastatus og siste oppdateringer
+              <ArrowUpRight aria-hidden="true" className="h-4 w-4 text-slate-500" />
+            </a>
           </section>
 
           <section className="rounded-2xl border border-white/10 bg-white/5 p-5">

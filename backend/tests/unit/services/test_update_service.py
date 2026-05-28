@@ -37,6 +37,7 @@ def update_service(mock_db):
     service.role_repo = AsyncMock()
     service.system_repo = AsyncMock()
     service.company_repo = AsyncMock()
+    service._get_existing_employee_counts = AsyncMock(return_value={})
     return service
 
 
@@ -437,6 +438,39 @@ class TestPersistChunk:
         update_service.company_repo.delete_by_orgnr.assert_called_once_with("123456789")
         assert result.companies_deleted == 1
         assert result.companies_processed == 1
+
+    @pytest.mark.asyncio
+    async def test_persist_chunk_records_employee_count_change(self, update_service):
+        company = MagicMock()
+        company.last_polled_regnskap = date.today()
+        update_service.company_repo.create_or_update = AsyncMock(return_value=company)
+        update_service._record_company_event_safe = AsyncMock()
+        update_service._get_existing_employee_counts = AsyncMock(return_value={"123456789": 10})
+
+        fetch_results = [
+            FetchResult(
+                orgnr="123456789",
+                success=True,
+                company_data={"organisasjonsnummer": "123456789", "navn": "Test", "antallAnsatte": 14},
+                source_update_id="update-1",
+                source_event_time=None,
+                source_change_type="Endring",
+            )
+        ]
+        result = UpdateBatchResult(since_date=date.today(), since_iso="2026-01-26T00:00:00.000Z")
+
+        await update_service._persist_chunk(fetch_results, result)
+
+        update_service._record_company_event_safe.assert_awaited_once_with(
+            orgnr="123456789",
+            event_type="employee_count_changed",
+            source="Enhetsregisteret via Brreg",
+            source_update_id="update-1",
+            occurred_at=None,
+            previous_value={"antall_ansatte": 10},
+            new_value={"antall_ansatte": 14},
+            payload={"time_semantics": "Tidspunkt fra Brregs oppdateringsstrøm når tilgjengelig."},
+        )
 
 
 class TestFetchAndPersistFinancials:

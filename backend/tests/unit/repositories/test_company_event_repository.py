@@ -61,9 +61,11 @@ def test_build_event_key_changes_when_source_update_id_changes():
 async def test_record_event_returns_inserted_event():
     db = AsyncMock()
     inserted_event = make_event()
+    precheck_result = MagicMock()
+    precheck_result.scalar_one_or_none.return_value = None
     insert_result = MagicMock()
     insert_result.scalar_one_or_none.return_value = inserted_event
-    db.execute.return_value = insert_result
+    db.execute.side_effect = [precheck_result, insert_result]
 
     repository = CompanyEventRepository(db)
     result = await repository.record_event(
@@ -74,6 +76,26 @@ async def test_record_event_returns_inserted_event():
     )
 
     assert result is inserted_event
+    assert db.execute.await_count == 2
+
+
+@pytest.mark.asyncio
+async def test_record_event_returns_existing_event_on_duplicate_source_update_id():
+    db = AsyncMock()
+    existing_event = make_event()
+    precheck_result = MagicMock()
+    precheck_result.scalar_one_or_none.return_value = existing_event
+    db.execute.return_value = precheck_result
+
+    repository = CompanyEventRepository(db)
+    result = await repository.record_event(
+        orgnr="123456789",
+        event_type="accounting_added",
+        source="Regnskapsregisteret via Brreg",
+        source_update_id="journal-1",
+    )
+
+    assert result is existing_event
     assert db.execute.await_count == 1
 
 
@@ -92,7 +114,7 @@ async def test_record_event_returns_existing_event_on_duplicate_key():
         orgnr="123456789",
         event_type="accounting_added",
         source="Regnskapsregisteret via Brreg",
-        source_update_id="journal-1",
+        source_update_id=None,
     )
 
     assert result is existing_event

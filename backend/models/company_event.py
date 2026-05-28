@@ -17,6 +17,7 @@ class CompanyEventType(enum.StrEnum):
     COMPANY_REGISTERED = "company_registered"
     COMPANY_DELETED = "company_deleted"
     ACCOUNTING_ADDED = "accounting_added"
+    EMPLOYEE_COUNT_CHANGED = "employee_count_changed"
 
 
 class CompanyEvent(Base):
@@ -25,7 +26,7 @@ class CompanyEvent(Base):
     __tablename__ = "company_events"
 
     __table_args__ = (
-        CheckConstraint("orgnr ~ '^[0-9]{9}$'", name="ck_company_events_orgnr_9_digits"),
+        CheckConstraint("orgnr ~ '^[0-9]{9}$'", name="ck_company_events_orgnr_9_digits").ddl_if(dialect="postgresql"),
         Index("idx_company_events_event_key", "event_key", unique=True),
         Index("idx_company_events_orgnr_observed_id", "orgnr", sa_text("observed_at DESC"), sa_text("id DESC")),
         Index(

@@ -74,6 +74,26 @@ const overviewResponse = {
       },
     ],
   },
+  employee_changes: {
+    id: 'employee_changes' as const,
+    title: 'Endringer i ansatte',
+    description: 'Endringer i antall ansatte observert gjennom Brregs oppdateringsstrøm.',
+    source: 'Enhetsregisteret via Brreg',
+    time_label: 'Observert i Brreg-oppdatering',
+    items: [
+      {
+        orgnr: '555666777',
+        navn: 'Ansatt Bedrift AS',
+        organisasjonsform: 'AS',
+        naeringskode: '62.010',
+        antall_ansatte: 14,
+        event_date: '2026-05-27',
+        event_label: 'Ansatte 10 → 14',
+        source: 'Enhetsregisteret via Brreg',
+        time_semantics: 'Datoen viser når Bedriftsgrafen observerte endringen.',
+      },
+    ],
+  },
   data_status: [
     {
       key: 'company_update_last_sync_date',
@@ -86,10 +106,10 @@ const overviewResponse = {
   ],
   deferred_feeds: [
     {
-      id: 'employee_changes' as const,
-      title: 'Endringer i ansatte',
-      reason: 'Antall ansatte er foreløpig bare nåverdi.',
-      requirement: 'Skriv endringer til eventloggen før offentlig feed.',
+      id: 'brreg_announcements' as const,
+      title: 'Brreg-kunngjøringer',
+      reason: 'Kunngjøringer må hentes fra en godkjent kilde.',
+      requirement: 'Ingest og normaliser kunngjøringer før publisering.',
     },
   ],
 }
@@ -108,12 +128,14 @@ describe('OppdateringerPage', () => {
     expect(screen.getByRole('heading', { name: /Siste oppdateringer/i })).toBeInTheDocument()
     expect(screen.getByRole('heading', { name: /Nye virksomheter/i })).toBeInTheDocument()
     expect(screen.getByRole('heading', { name: /Nye regnskap hos Bedriftsgrafen/i })).toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: /Endringer i ansatte/i })).toBeInTheDocument()
     expect(screen.getByText(/Test Bedrift AS/i)).toBeInTheDocument()
     expect(screen.getByText(/Regnskap Bedrift AS/i)).toBeInTheDocument()
+    expect(screen.getByText(/Ansatt Bedrift AS/i)).toBeInTheDocument()
     expect(screen.getByRole('link', { name: /Test Bedrift AS/i })).toHaveAttribute('href', '/virksomhet/123456789')
-    expect(screen.getByText(/Neste hendelsesfeeder/i)).toBeInTheDocument()
-    expect(screen.getByText(/Endringer i ansatte/i)).toBeInTheDocument()
-    expect(screen.getByText(/Regnskapsfeeden er eventlogg-støttet/i)).toBeInTheDocument()
+    expect(screen.getByText(/Planlagt datakilde/i)).toBeInTheDocument()
+    expect(screen.getByText(/Brreg-kunngjøringer/i)).toBeInTheDocument()
+    expect(screen.getByText(/Regnskaps- og ansattfeedene er eventlogg-støttet/i)).toBeInTheDocument()
   })
 
   it('can render the data status tab without activity rows', () => {
@@ -123,5 +145,6 @@ describe('OppdateringerPage', () => {
     expect(screen.getByText(/Brreg oppdateringsstrøm/i)).toBeInTheDocument()
     expect(screen.queryByText(/Test Bedrift AS/i)).not.toBeInTheDocument()
     expect(screen.queryByText(/Regnskap Bedrift AS/i)).not.toBeInTheDocument()
+    expect(screen.queryByText(/Ansatt Bedrift AS/i)).not.toBeInTheDocument()
   })
 })

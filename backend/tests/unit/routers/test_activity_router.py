@@ -70,6 +70,14 @@ def make_activity_response() -> ActivityOverviewResponse:
             time_label="Lagt til hos Bedriftsgrafen",
             items=[],
         ),
+        employee_changes=ActivityFeed(
+            id="employee_changes",
+            title="Endringer i ansatte",
+            description="Endringer i antall ansatte.",
+            source="Enhetsregisteret via Brreg",
+            time_label="Observert i Brreg-oppdatering",
+            items=[],
+        ),
         data_status=[
             ActivityStatusItem(
                 key="company_update_last_sync_date",
@@ -82,10 +90,10 @@ def make_activity_response() -> ActivityOverviewResponse:
         ],
         deferred_feeds=[
             ActivityDeferredFeed(
-                id="employee_changes",
-                title="Endringer i ansatte",
-                reason="Krever historikk.",
-                requirement="Skriv endringer til eventloggen.",
+                id="brreg_announcements",
+                title="Brreg-kunngjøringer",
+                reason="Krever godkjent kilde.",
+                requirement="Ingest og normaliser kunngjøringer.",
             )
         ],
     )
@@ -125,7 +133,8 @@ def test_get_activity_overview_success(client, mock_activity_service):
     data = response.json()
     assert data["new_companies"]["items"][0]["orgnr"] == "123456789"
     assert data["accounting_updates"]["id"] == "accounting_updates"
-    assert data["deferred_feeds"][0]["id"] == "employee_changes"
+    assert data["employee_changes"]["id"] == "employee_changes"
+    assert data["deferred_feeds"][0]["id"] == "brreg_announcements"
     mock_activity_service.get_overview.assert_called_once_with(limit=12)
 
 

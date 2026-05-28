@@ -2,7 +2,6 @@ import { Link } from '@tanstack/react-router'
 import type { LucideIcon } from 'lucide-react'
 import {
   Activity,
-  AlertTriangle,
   ArrowRight,
   Building2,
   CalendarClock,
@@ -12,6 +11,7 @@ import {
   Info,
   RefreshCw,
   ShieldAlert,
+  UsersRound,
 } from 'lucide-react'
 import { SEOHead } from '../layout'
 import { ErrorState, LoadingState } from '../common'
@@ -42,13 +42,14 @@ function formatDateTime(value: string | null | undefined) {
   }
 }
 
-export type OppdateringerTabId = 'oversikt' | 'nyetableringer' | 'konkurser' | 'regnskap' | 'datastatus'
+export type OppdateringerTabId = 'oversikt' | 'nyetableringer' | 'konkurser' | 'regnskap' | 'ansatte' | 'datastatus'
 
 const tabs: { id: OppdateringerTabId; label: string; icon: LucideIcon }[] = [
   { id: 'oversikt', label: 'Oversikt', icon: Activity },
   { id: 'nyetableringer', label: 'Nyetableringer', icon: Building2 },
   { id: 'konkurser', label: 'Konkurser', icon: ShieldAlert },
   { id: 'regnskap', label: 'Regnskap', icon: FileClock },
+  { id: 'ansatte', label: 'Ansatte', icon: UsersRound },
   { id: 'datastatus', label: 'Datastatus', icon: Database },
 ]
 
@@ -154,6 +155,14 @@ function ActivityContent({ data, activeTab }: { data: ActivityOverview; activeTa
         />
       )}
 
+      {(showOverview || activeTab === 'ansatte') && (
+        <ActivityFeedSection
+          feed={data.employee_changes}
+          icon={UsersRound}
+          color="amber"
+        />
+      )}
+
       {(showOverview || activeTab === 'datastatus') && <DataStatusPanel data={data} />}
     </div>
   )
@@ -183,6 +192,13 @@ function ActivitySummary({ data }: { data: ActivityOverview }) {
       color: 'bg-sky-50 text-sky-700 ring-sky-100 dark:bg-sky-500/15 dark:text-sky-200 dark:ring-sky-400/20',
     },
     {
+      label: 'Ansatte',
+      value: formatNumber(data.employee_changes.items.length),
+      helper: 'Eventlogg fra Brreg',
+      icon: UsersRound,
+      color: 'bg-amber-50 text-amber-800 ring-amber-100 dark:bg-amber-500/15 dark:text-amber-200 dark:ring-amber-400/20',
+    },
+    {
       label: 'Datakilder',
       value: formatNumber(data.data_status.length),
       helper: 'Synkroniserte statuser',
@@ -192,14 +208,14 @@ function ActivitySummary({ data }: { data: ActivityOverview }) {
     {
       label: 'Utsatte feeds',
       value: formatNumber(data.deferred_feeds.length),
-      helper: 'Venter på indeks/eventlogg',
+      helper: 'Venter på datakilde',
       icon: FileClock,
       color: 'bg-amber-50 text-amber-800 ring-amber-100 dark:bg-amber-500/15 dark:text-amber-200 dark:ring-amber-400/20',
     },
   ]
 
   return (
-    <section aria-label="Oppsummering" className="grid gap-4 sm:grid-cols-2 xl:grid-cols-5">
+    <section aria-label="Oppsummering" className="grid gap-4 sm:grid-cols-2 xl:grid-cols-6">
       {summaryItems.map((item) => {
         const Icon = item.icon
         return (
@@ -230,7 +246,7 @@ function ActivityFeedSection({
 }: {
   feed: ActivityFeed
   icon: LucideIcon
-  color: 'green' | 'red' | 'blue'
+  color: 'green' | 'red' | 'blue' | 'amber'
   fullLink?: '/nyetableringer' | '/konkurser'
   fullLinkLabel?: string
 }) {
@@ -238,6 +254,7 @@ function ActivityFeedSection({
     green: 'bg-emerald-50 text-emerald-700 ring-emerald-100 dark:bg-emerald-500/15 dark:text-emerald-200 dark:ring-emerald-400/20',
     red: 'bg-red-50 text-red-700 ring-red-100 dark:bg-red-500/15 dark:text-red-200 dark:ring-red-400/20',
     blue: 'bg-sky-50 text-sky-700 ring-sky-100 dark:bg-sky-500/15 dark:text-sky-200 dark:ring-sky-400/20',
+    amber: 'bg-amber-50 text-amber-800 ring-amber-100 dark:bg-amber-500/15 dark:text-amber-200 dark:ring-amber-400/20',
   }[color]
 
   return (
@@ -365,23 +382,25 @@ function DataStatusPanel({ data }: { data: ActivityOverview }) {
         </div>
       </div>
 
-      <div className="rounded-2xl border border-amber-200 bg-amber-50 p-5 text-amber-950 shadow-sm dark:border-amber-400/25 dark:bg-amber-500/10 dark:text-amber-100 sm:p-6">
+      {data.deferred_feeds.length > 0 && (
+        <div className="rounded-2xl border border-slate-200 bg-white p-5 text-slate-800 shadow-sm dark:border-slate-800 dark:bg-slate-900 dark:text-slate-100 sm:p-6">
         <div className="flex items-start gap-3">
-          <span className="mt-0.5 flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-amber-100 text-amber-800 ring-1 ring-amber-200 dark:bg-amber-500/15 dark:text-amber-200 dark:ring-amber-400/25">
-            <AlertTriangle aria-hidden="true" className="h-5 w-5" />
+          <span className="mt-0.5 flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-blue-50 text-blue-700 ring-1 ring-blue-100 dark:bg-blue-500/15 dark:text-blue-200 dark:ring-blue-400/20">
+            <Info aria-hidden="true" className="h-5 w-5" />
           </span>
           <div>
-            <h2 className="text-lg font-bold">Neste hendelsesfeeder</h2>
+            <h2 className="text-lg font-bold text-slate-950 dark:text-white">Planlagt datakilde</h2>
             {data.deferred_feeds.map((feed) => (
               <div key={feed.id} className="mt-3 text-sm leading-6">
                 <p className="font-semibold">{feed.title}</p>
-                <p className="mt-1">{feed.reason}</p>
-                <p className="mt-1">{feed.requirement}</p>
+                <p className="mt-1 text-slate-600 dark:text-slate-300">{feed.reason}</p>
+                <p className="mt-1 text-slate-600 dark:text-slate-300">{feed.requirement}</p>
               </div>
             ))}
           </div>
         </div>
       </div>
+      )}
 
       <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-800 dark:bg-slate-900 xl:col-span-2 sm:p-6">
         <div className="flex items-start gap-3">
@@ -391,11 +410,11 @@ function DataStatusPanel({ data }: { data: ActivityOverview }) {
           <div>
             <h2 className="font-semibold text-slate-950 dark:text-white">Tidsstempler</h2>
             <p className="mt-1 text-sm leading-6 text-slate-600 dark:text-slate-300">
-              Registreringsdato og konkursdato kommer fra Brreg-kildene. Regnskapsfeeden viser når Bedriftsgrafen observerte eller importerte en regnskapshendelse.
+              Registreringsdato og konkursdato kommer fra Brreg-kildene. Regnskaps- og ansattfeedene viser når Bedriftsgrafen observerte eller importerte hendelsen.
             </p>
             <p className="mt-3 inline-flex items-center gap-2 text-sm font-semibold text-emerald-700 dark:text-emerald-200">
               <CheckCircle2 aria-hidden="true" className="h-4 w-4" />
-              Regnskapsfeeden er eventlogg-støttet og bruker ikke skanning av regnskapstabellen ved lasting av siden.
+              Regnskaps- og ansattfeedene er eventlogg-støttet og bruker ikke skanning av store datatabeller ved lasting av siden.
             </p>
           </div>
         </div>

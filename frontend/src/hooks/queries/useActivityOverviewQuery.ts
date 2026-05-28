@@ -14,7 +14,7 @@ export type ActivityCompanyItem = {
 }
 
 export type ActivityFeed = {
-  id: 'new_companies' | 'bankruptcies' | 'accounting_updates'
+  id: 'new_companies' | 'bankruptcies' | 'accounting_updates' | 'employee_changes'
   title: string
   description: string
   source: string
@@ -32,7 +32,7 @@ export type ActivityStatusItem = {
 }
 
 export type ActivityDeferredFeed = {
-  id: 'employee_changes' | 'brreg_announcements'
+  id: 'brreg_announcements'
   title: string
   reason: string
   requirement: string
@@ -44,6 +44,7 @@ export type ActivityOverview = {
   new_companies: ActivityFeed
   bankruptcies: ActivityFeed
   accounting_updates: ActivityFeed
+  employee_changes: ActivityFeed
   data_status: ActivityStatusItem[]
   deferred_feeds: ActivityDeferredFeed[]
 }

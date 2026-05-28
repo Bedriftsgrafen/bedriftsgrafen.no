@@ -6,7 +6,7 @@ from typing import Any
 
 import httpx
 from pydantic import ValidationError
-from sqlalchemy import text
+from sqlalchemy import select, text
 from sqlalchemy.ext.asyncio import AsyncSession
 
 import models
@@ -357,6 +357,9 @@ class UpdateService:
         records_since_commit = 0
 
         sorted_results = sorted(fetch_results, key=lambda item: item.orgnr)
+        existing_employee_counts = await self._get_existing_employee_counts(
+            [item.orgnr for item in sorted_results if item.success and item.company_data is not None]
+        )
 
         for fetch_result in sorted_results:
             result.companies_processed += 1
@@ -394,6 +397,9 @@ class UpdateService:
                         result.companies_deleted += 1
                         SYNC_OPERATIONS_TOTAL.labels(entity_type="company", operation_type="deleted").inc()
                     continue
+
+                previous_employee_count = existing_employee_counts.get(fetch_result.orgnr)
+                new_employee_count = fetch_result.company_data.get("antallAnsatte")
 
                 # Persist company data
                 company = await self.company_repo.create_or_update(fetch_result.company_data)
@@ -434,6 +440,24 @@ class UpdateService:
                     result.companies_updated += 1
                     SYNC_OPERATIONS_TOTAL.labels(entity_type="company", operation_type="updated").inc()
 
+                    if (
+                        previous_employee_count is not None
+                        and new_employee_count is not None
+                        and previous_employee_count != new_employee_count
+                    ):
+                        await self._record_company_event_safe(
+                            orgnr=fetch_result.orgnr,
+                            event_type="employee_count_changed",
+                            source="Enhetsregisteret via Brreg",
+                            source_update_id=fetch_result.source_update_id,
+                            occurred_at=fetch_result.source_event_time,
+                            previous_value={"antall_ansatte": previous_employee_count},
+                            new_value={"antall_ansatte": new_employee_count},
+                            payload={
+                                "time_semantics": "Tidspunkt fra Brregs oppdateringsstrøm når tilgjengelig.",
+                            },
+                        )
+
                 records_since_commit += 1
 
                 # Commit in chunks for efficiency (reduces transaction overhead)
@@ -454,6 +478,15 @@ class UpdateService:
         if records_since_commit > 0:
             await self.db.commit()
             logger.debug(f"Committed final chunk of {records_since_commit} records")
+
+    async def _get_existing_employee_counts(self, orgnrs: list[str]) -> dict[str, int | None]:
+        if not orgnrs:
+            return {}
+
+        result = await self.db.execute(
+            select(models.Company.orgnr, models.Company.antall_ansatte).where(models.Company.orgnr.in_(orgnrs))
+        )
+        return {row.orgnr: row.antall_ansatte for row in result.all()}
 
     async def _fetch_and_persist_financials(
         self,
