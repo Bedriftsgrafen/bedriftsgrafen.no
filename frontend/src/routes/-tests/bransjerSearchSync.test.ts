@@ -61,4 +61,29 @@ describe('buildBransjerRouteFilterUpdates', () => {
             countyCode: '',
         })
     })
+
+    it('clears stale store filters when the search URL has no filter params', () => {
+        expect(buildBransjerRouteFilterUpdates(
+            {},
+            {
+                ...emptyFilters,
+                searchQuery: 'bygg',
+                naeringskode: '58.11',
+                organizationForms: ['AS'],
+                county: 'Oslo',
+                countyCode: '03',
+                revenueMin: 100,
+                hasAccounting: true,
+            },
+            { clearMissing: true },
+        )).toEqual({
+            searchQuery: '',
+            naeringskode: '',
+            organizationForms: [],
+            county: '',
+            countyCode: '',
+            revenueMin: null,
+            hasAccounting: null,
+        })
+    })
 })

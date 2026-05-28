@@ -64,7 +64,7 @@ function BransjerPage() {
             has_accounting,
             in_liquidation,
             in_forced_liquidation,
-        }, current)
+        }, current, { clearMissing: tab === 'search' || tab === 'map' })
 
         if (Object.keys(updates).length > 0) {
             current.setAllFilters(updates)
@@ -87,14 +87,12 @@ function BransjerPage() {
         has_accounting,
         in_liquidation,
         in_forced_liquidation,
+        tab,
     ])
 
-    // Tab state persisted in URL - defaults to 'stats' unless mapFilter is present at mount
+    // Tab state persisted in URL - defaults to stats.
     const activeTab = useMemo(() => {
         if (tab) return tab as BransjerTab
-        if (typeof window !== 'undefined' && sessionStorage.getItem('mapFilter')) {
-            return 'search'
-        }
         return 'stats'
     }, [tab])
 
@@ -127,20 +125,32 @@ function BransjerPage() {
         const storeUpdates: Partial<FilterValues> = {}
         if ('query' in updates) storeUpdates.searchQuery = updates.query || ''
         if ('naceCode' in updates) storeUpdates.naeringskode = updates.naceCode || ''
-        if ('countyCode' in updates) {
-            const code = updates.countyCode || ''
-            storeUpdates.countyCode = code
-            storeUpdates.county = code ? (COUNTIES.find(c => c.code === code)?.name ?? code) : ''
-            storeUpdates.municipalityCode = ''
-            storeUpdates.municipality = ''
-        }
-        if ('municipalityCode' in updates) {
-            const code = updates.municipalityCode || ''
-            storeUpdates.municipalityCode = code
-            storeUpdates.municipality = code ? (MUNICIPALITIES.find(m => m.code === code)?.name ?? code) : ''
+        const nextCountyCode = 'countyCode' in updates ? updates.countyCode || '' : undefined
+        const nextMunicipalityCode = 'municipalityCode' in updates ? updates.municipalityCode || '' : undefined
+
+        if (nextMunicipalityCode) {
+            storeUpdates.municipalityCode = nextMunicipalityCode
+            storeUpdates.municipality = MUNICIPALITIES.find(m => m.code === nextMunicipalityCode)?.name ?? nextMunicipalityCode
             storeUpdates.countyCode = ''
             storeUpdates.county = ''
+        } else if (nextCountyCode) {
+            storeUpdates.countyCode = nextCountyCode
+            storeUpdates.county = COUNTIES.find(c => c.code === nextCountyCode)?.name ?? nextCountyCode
+            storeUpdates.municipalityCode = ''
+            storeUpdates.municipality = ''
+        } else if ('countyCode' in updates || 'municipalityCode' in updates) {
+            const clearCounty = 'countyCode' in updates
+            const clearMunicipality = 'municipalityCode' in updates
+            if (clearCounty) {
+                storeUpdates.countyCode = ''
+                storeUpdates.county = ''
+            }
+            if (clearMunicipality) {
+                storeUpdates.municipalityCode = ''
+                storeUpdates.municipality = ''
+            }
         }
+
         if ('revenueMin' in updates) storeUpdates.revenueMin = updates.revenueMin
         if ('revenueMax' in updates) storeUpdates.revenueMax = updates.revenueMax
         if ('employeeMin' in updates) storeUpdates.employeeMin = updates.employeeMin
@@ -164,17 +174,25 @@ function BransjerPage() {
                 const newSearch: Record<string, unknown> = { ...prev }
                 if ('query' in updates) newSearch.q = updates.query || undefined
                 if ('naceCode' in updates) newSearch.nace = updates.naceCode || undefined
-                if ('countyCode' in updates) {
-                    newSearch.county_code = updates.countyCode || undefined
-                    newSearch.county = updates.countyCode ? COUNTIES.find(c => c.code === updates.countyCode)?.name : undefined
-                    newSearch.municipality_code = undefined
-                    newSearch.municipality = undefined
-                }
-                if ('municipalityCode' in updates) {
-                    newSearch.municipality_code = updates.municipalityCode || undefined
-                    newSearch.municipality = updates.municipalityCode ? MUNICIPALITIES.find(m => m.code === updates.municipalityCode)?.name : undefined
+                if (nextMunicipalityCode) {
+                    newSearch.municipality_code = nextMunicipalityCode
+                    newSearch.municipality = MUNICIPALITIES.find(m => m.code === nextMunicipalityCode)?.name
                     newSearch.county_code = undefined
                     newSearch.county = undefined
+                } else if (nextCountyCode) {
+                    newSearch.county_code = nextCountyCode
+                    newSearch.county = COUNTIES.find(c => c.code === nextCountyCode)?.name
+                    newSearch.municipality_code = undefined
+                    newSearch.municipality = undefined
+                } else if ('countyCode' in updates || 'municipalityCode' in updates) {
+                    if ('countyCode' in updates) {
+                        newSearch.county_code = undefined
+                        newSearch.county = undefined
+                    }
+                    if ('municipalityCode' in updates) {
+                        newSearch.municipality_code = undefined
+                        newSearch.municipality = undefined
+                    }
                 }
                 if ('organizationForms' in updates) newSearch.org_form = updates.organizationForms?.length ? updates.organizationForms : undefined
                 if ('revenueMin' in updates) newSearch.revenue_min = updates.revenueMin ?? undefined
@@ -235,15 +253,20 @@ function BransjerPage() {
         const normalizedName = formatMunicipalityName(cleanName)
         const isCounty = regionCode.length === 2
 
-        sessionStorage.setItem('mapFilter', JSON.stringify({
-            county: isCounty ? normalizedName : '',
-            county_code: isCounty ? regionCode : '',
-            municipality: isCounty ? '' : normalizedName,
-            municipality_code: isCounty ? '' : regionCode,
-            nace: naceCode,
-        }))
-        setActiveTab('search')
-    }, [setActiveTab])
+        navigate({
+            to: '/bransjer',
+            search: (prev: Record<string, unknown>) => ({
+                ...prev,
+                tab: 'search',
+                nace: naceCode || undefined,
+                county: isCounty ? normalizedName : undefined,
+                county_code: isCounty ? regionCode : undefined,
+                municipality: isCounty ? undefined : normalizedName,
+                municipality_code: isCounty ? undefined : regionCode,
+            }),
+            replace: true,
+        })
+    }, [navigate])
 
     return (
         <>
@@ -348,7 +371,11 @@ function BransjerPage() {
             {activeTab === 'toplist' && <IndustryTopList naceCode={nace} onSelectCompany={setSelectedCompanyOrgnr} />}
             {activeTab === 'search' && (
                 <Suspense fallback={<div className="flex items-center justify-center py-16"><Loader2 className="h-8 w-8 animate-spin text-blue-600" /></div>}>
-                    <ExplorerLayout onSelectCompany={setSelectedCompanyOrgnr} />
+                    <ExplorerLayout
+                        onSelectCompany={setSelectedCompanyOrgnr}
+                        onFilterChange={handleFilterChange}
+                        onClearFilters={handleClearFilters}
+                    />
                 </Suspense>
             )}
             </div>

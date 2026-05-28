@@ -154,8 +154,10 @@ describe('filterStore', () => {
             expect(state.profitMax).toBeNull()
             expect(state.liquidityRatioMin).toBeNull()
             expect(state.municipality).toBe('')
+            expect(state.municipalityCode).toBe('')
             expect(state.isBankrupt).toBeNull()
             expect(state.hasAccounting).toBeNull()
+            expect(state.countyCode).toBe('')
             expect(state.sortBy).toBe('navn')
             expect(state.sortOrder).toBe('asc')
             expect(state.filterVersion).toBeGreaterThan(0)
@@ -186,8 +188,29 @@ describe('filterStore', () => {
         it('counts locations and dates correctly', () => {
             const store = useFilterStore.getState()
             store.setSearchQuery('test')                // 1
-            store.setCounty('Oslo', '03')               // 3 (county name + code, clears municipality)
-            expect(store.getActiveFilterCount()).toBe(3)
+            store.setCounty('Oslo', '03')               // 2 (county name/code counts as one filter)
+            expect(store.getActiveFilterCount()).toBe(2)
+        })
+
+        it('clears county code and municipality code as one location changes', () => {
+            const store = useFilterStore.getState()
+            store.setCounty('Oslo', '03')
+            store.setMunicipalityCode('0301')
+            const state = useFilterStore.getState()
+
+            expect(state.county).toBe('')
+            expect(state.countyCode).toBe('')
+            expect(state.municipalityCode).toBe('0301')
+            expect(state.getActiveFilterCount()).toBe(1)
+        })
+
+        it('preserves NACE when applying location-only map filters', () => {
+            const store = useFilterStore.getState()
+            store.setNaeringskode('58.11')
+            store.setMapFilters({ county: 'Oslo', countyCode: '03' })
+
+            expect(useFilterStore.getState().naeringskode).toBe('58.11')
+            expect(useFilterStore.getState().countyCode).toBe('03')
         })
     })
 

@@ -488,19 +488,19 @@ export function IndustryMap({
     }, [statsMap, level, onRegionClick, getValue, generateTooltip, selectedRegion]);
 
     if (geoDataError) return (
-        <div className="h-[600px] flex flex-col items-center justify-center border border-slate-200 rounded-xl bg-slate-50 gap-4">
+        <div className="h-150 flex flex-col items-center justify-center border border-slate-200 rounded-xl bg-slate-50 gap-4">
             <ErrorState title="Kartfeil" message={geoDataError} onRetry={() => setGeoData(null)} />
         </div>
     );
 
     if (!geoData) return (
-        <div className="h-[600px] bg-slate-50 rounded-xl flex items-center justify-center border border-slate-200">
+        <div className="h-150 bg-slate-50 rounded-xl flex items-center justify-center border border-slate-200">
             <LoadingState message="Laster kartdata..." />
         </div>
     );
 
     if (isError) return (
-        <div className="h-[600px] flex flex-col items-center justify-center border border-slate-200 rounded-xl bg-slate-50 gap-4">
+        <div className="h-150 flex flex-col items-center justify-center border border-slate-200 rounded-xl bg-slate-50 gap-4">
             <ErrorState title="Tjenestefeil" message="Kunne ikke hente statistikk" onRetry={() => refetch()} />
         </div>
     );
@@ -509,7 +509,7 @@ export function IndustryMap({
 
     return (
         <div className="flex flex-col md:flex-row h-full rounded-xl overflow-hidden border border-slate-200 shadow-xl bg-white">
-            <div className="flex-1 order-1 md:order-2 relative bg-slate-50 min-h-[400px]">
+            <div className="flex-1 order-1 md:order-2 relative bg-slate-50 min-h-100">
                 <div className="absolute top-4 right-4 z-1000">
                     <button
                         onClick={() => refetch()}
@@ -598,12 +598,23 @@ export function IndustryMap({
                         const normalizedName = formatMunicipalityName(name);
                         const isCounty = code.length === 2;
                         sessionStorage.setItem('mapFilter', JSON.stringify({
-                            county: isCounty ? code : '',
+                            county: isCounty ? normalizedName : '',
+                            county_code: isCounty ? code : '',
                             municipality: isCounty ? '' : normalizedName,
                             municipality_code: isCounty ? '' : code,
                             nace: selectedNace,
                         }));
-                        navigate({ to: '/bransjer', search: { nace: selectedNace || undefined } });
+                        navigate({
+                            to: '/bransjer',
+                            search: {
+                                tab: 'search',
+                                nace: selectedNace || undefined,
+                                county: isCounty ? normalizedName : undefined,
+                                county_code: isCounty ? code : undefined,
+                                municipality: isCounty ? undefined : normalizedName,
+                                municipality_code: isCounty ? undefined : code,
+                            },
+                        });
                     }
                 }}
                 filters={filters || {

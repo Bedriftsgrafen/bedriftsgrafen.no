@@ -10,6 +10,7 @@ export const ActiveFilterChips = memo(function ActiveFilterChips() {
   const naeringskode = useFilterStore(s => s.naeringskode)
   const municipality = useFilterStore(s => s.municipality)
   const county = useFilterStore(s => s.county)
+  const countyCode = useFilterStore(s => s.countyCode)
   const revenueMin = useFilterStore(s => s.revenueMin)
   const revenueMax = useFilterStore(s => s.revenueMax)
   const profitMin = useFilterStore(s => s.profitMin)
@@ -80,7 +81,12 @@ export const ActiveFilterChips = memo(function ActiveFilterChips() {
           )}
           {county && (
             <span className="px-2 py-1 bg-blue-50 text-blue-700 rounded border border-blue-100 shadow-sm">
-              Fylke: {COUNTIES.find(c => c.code === county)?.name || county}
+              Fylke: {COUNTIES.find(c => c.code === county || c.name === county)?.name || county}
+            </span>
+          )}
+          {countyCode && !county && (
+            <span className="px-2 py-1 bg-blue-50 text-blue-700 rounded border border-blue-100 shadow-sm">
+              Fylke (kode): {countyCode}
             </span>
           )}
           {(revenueMin !== null || revenueMax !== null) && (

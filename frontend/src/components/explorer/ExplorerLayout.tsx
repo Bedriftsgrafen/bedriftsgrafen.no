@@ -20,18 +20,23 @@ import { useExplorerStore } from '../../store/explorerStore'
 import { isNumericSortField } from '../../constants/explorer'
 import { ComparisonModal } from '../comparison'
 import { formatNumber, cleanOrgnr } from '../../utils/formatters'
+import type { MapFilterValues } from '../../types/map'
 
 /** Props for ExplorerLayout */
 interface ExplorerLayoutProps {
     /** Optional callback when a company is selected - if not provided, navigates to company page */
     onSelectCompany?: (orgnr: string) => void
+    /** Optional route-level filter sync for pages that keep filters in URL params */
+    onFilterChange?: (updates: Partial<MapFilterValues>) => void
+    /** Optional route-level clear handler for pages that keep filters in URL params */
+    onClearFilters?: () => void
 }
 
 /**
  * Main layout for the explorer page.
  * Two-column responsive layout with filter sidebar and results area.
  */
-export const ExplorerLayout = memo(function ExplorerLayout({ onSelectCompany }: ExplorerLayoutProps) {
+export const ExplorerLayout = memo(function ExplorerLayout({ onSelectCompany, onFilterChange, onClearFilters }: ExplorerLayoutProps) {
     const navigate = useNavigate()
 
     // UI state - selective subscriptions for minimal re-renders
@@ -42,8 +47,13 @@ export const ExplorerLayout = memo(function ExplorerLayout({ onSelectCompany }: 
     // Filter state - inline check to avoid getActiveFilterCount() which uses get() internally
     const hasActiveFilters = useFilterStore((s) =>
         !!(s.searchQuery || s.organizationForms.length > 0 || s.naeringskode ||
-            s.municipality || s.municipalityCode || s.county || s.revenueMin !== null || s.revenueMax !== null ||
-            s.employeeMin !== null || s.employeeMax !== null || s.isBankrupt !== null)
+            s.municipality || s.municipalityCode || s.county || s.countyCode ||
+            s.revenueMin !== null || s.revenueMax !== null || s.profitMin !== null || s.profitMax !== null ||
+            s.equityMin !== null || s.equityMax !== null || s.operatingProfitMin !== null || s.operatingProfitMax !== null ||
+            s.liquidityRatioMin !== null || s.liquidityRatioMax !== null || s.equityRatioMin !== null || s.equityRatioMax !== null ||
+            s.employeeMin !== null || s.employeeMax !== null || s.foundedFrom !== null || s.foundedTo !== null ||
+            s.bankruptFrom !== null || s.bankruptTo !== null || s.isBankrupt !== null ||
+            s.inLiquidation !== null || s.inForcedLiquidation !== null || s.hasAccounting !== null)
     )
     const setMapFilters = useFilterStore((s) => s.setMapFilters)
     const setSort = useFilterStore((s) => s.setSort)
@@ -55,20 +65,20 @@ export const ExplorerLayout = memo(function ExplorerLayout({ onSelectCompany }: 
             try {
                 const mapFilter = JSON.parse(mapFilterStr);
                 const updates: Partial<FilterValues> = {};
-                if (mapFilter.county) updates.county = mapFilter.county;
-                if (mapFilter.county_code) updates.countyCode = mapFilter.county_code;
-                if (mapFilter.municipality) updates.municipality = mapFilter.municipality;
-                if (mapFilter.municipality_code) updates.municipalityCode = mapFilter.municipality_code;
-                if (mapFilter.nace) updates.naeringskode = mapFilter.nace;
+                if ('county' in mapFilter) updates.county = mapFilter.county || '';
+                if ('county_code' in mapFilter) updates.countyCode = mapFilter.county_code || '';
+                if ('municipality' in mapFilter) updates.municipality = mapFilter.municipality || '';
+                if ('municipality_code' in mapFilter) updates.municipalityCode = mapFilter.municipality_code || '';
+                if ('nace' in mapFilter) updates.naeringskode = mapFilter.nace || '';
 
                 if (Object.keys(updates).length > 0) {
                     // Use setMapFilters to clear stale location filters first
                     setMapFilters(updates);
                 }
-                // Clear after applying
-                sessionStorage.removeItem('mapFilter');
             } catch (e) {
                 logger.error('Failed to parse mapFilter:', e);
+            } finally {
+                sessionStorage.removeItem('mapFilter');
             }
         }
     }, [setMapFilters]);
@@ -166,7 +176,7 @@ export const ExplorerLayout = memo(function ExplorerLayout({ onSelectCompany }: 
             {/* Sidebar - Filters */}
             <aside className="lg:w-80 shrink-0">
                 <div className="lg:sticky lg:top-4">
-                    <ExplorerFilters />
+                    <ExplorerFilters onFilterChange={onFilterChange} onClearFilters={onClearFilters} />
                 </div>
             </aside>
 
@@ -203,24 +213,29 @@ export const ExplorerLayout = memo(function ExplorerLayout({ onSelectCompany }: 
                     <div className="flex flex-wrap items-center gap-1 sm:gap-2">
                         <button
                             onClick={() => {
-                                // Store all active filters for map to pick up
                                 const state = useFilterStore.getState();
-                                sessionStorage.setItem('mapFilter', JSON.stringify({
-                                    county: state.county || '',
-                                    county_code: state.countyCode || '',
-                                    municipality: state.municipality || '',
-                                    municipality_code: state.municipalityCode || '',
-                                    nace: state.naeringskode || '',
-                                    org_form: state.organizationForms,
-                                    revenue_min: state.revenueMin,
-                                    revenue_max: state.revenueMax,
-                                    employee_min: state.employeeMin,
-                                    employee_max: state.employeeMax,
-                                }))
-
                                 navigate({
                                     to: '/bransjer',
-                                    search: { tab: 'map', nace: state.naeringskode || undefined },
+                                    search: {
+                                        tab: 'map',
+                                        q: state.searchQuery || undefined,
+                                        nace: state.naeringskode || undefined,
+                                        county: state.county || undefined,
+                                        county_code: state.countyCode || undefined,
+                                        municipality: state.municipality || undefined,
+                                        municipality_code: state.municipalityCode || undefined,
+                                        org_form: state.organizationForms.length > 0 ? state.organizationForms : undefined,
+                                        revenue_min: state.revenueMin ?? undefined,
+                                        revenue_max: state.revenueMax ?? undefined,
+                                        employee_min: state.employeeMin ?? undefined,
+                                        employee_max: state.employeeMax ?? undefined,
+                                        profit_min: state.profitMin ?? undefined,
+                                        profit_max: state.profitMax ?? undefined,
+                                        is_bankrupt: state.isBankrupt ?? undefined,
+                                        has_accounting: state.hasAccounting ?? undefined,
+                                        in_liquidation: state.inLiquidation ?? undefined,
+                                        in_forced_liquidation: state.inForcedLiquidation ?? undefined,
+                                    },
                                     replace: true
                                 })
                             }}

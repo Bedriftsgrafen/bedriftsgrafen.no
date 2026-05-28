@@ -11,6 +11,12 @@ import { COUNTIES } from '../../constants/explorer'
 import { formatMunicipalityName } from '../../constants/municipalities'
 import { useNaceName } from '../../hooks/useNaceName'
 import type { RangeFilterField } from '../../types/explorer'
+import type { MapFilterValues } from '../../types/map'
+
+interface ExplorerFiltersProps {
+    onFilterChange?: (updates: Partial<MapFilterValues>) => void
+    onClearFilters?: () => void
+}
 
 /** Props for the FilterSection helper component */
 interface FilterSectionProps {
@@ -40,7 +46,7 @@ const FilterSection = memo(function FilterSection({
  * Filter panel for the explorer page.
  * Manages NACE, region, organization form, and financial range filters.
  */
-export const ExplorerFilters = memo(function ExplorerFilters() {
+export const ExplorerFilters = memo(function ExplorerFilters({ onFilterChange, onClearFilters }: ExplorerFiltersProps) {
     // Shared filter state - using selectors for minimal re-renders
     const naeringskode = useFilterStore((s) => s.naeringskode)
     const municipality = useFilterStore((s) => s.municipality)
@@ -98,16 +104,26 @@ export const ExplorerFilters = memo(function ExplorerFilters() {
 
             switch (rangeField) {
                 case 'revenue':
-                    if (isMin) setRevenueRange(numValue, state.revenueMax)
+                    if (onFilterChange) {
+                        onFilterChange({
+                            revenueMin: isMin ? numValue : state.revenueMin,
+                            revenueMax: isMin ? state.revenueMax : numValue,
+                        })
+                    } else if (isMin) setRevenueRange(numValue, state.revenueMax)
                     else setRevenueRange(state.revenueMin, numValue)
                     break
                 case 'employee':
-                    if (isMin) setEmployeeRange(numValue, state.employeeMax)
+                    if (onFilterChange) {
+                        onFilterChange({
+                            employeeMin: isMin ? numValue : state.employeeMin,
+                            employeeMax: isMin ? state.employeeMax : numValue,
+                        })
+                    } else if (isMin) setEmployeeRange(numValue, state.employeeMax)
                     else setEmployeeRange(state.employeeMin, numValue)
                     break
             }
         },
-        [setRevenueRange, setEmployeeRange]
+        [onFilterChange, setRevenueRange, setEmployeeRange]
     )
 
     // Organization form toggle - uses getState() to avoid dependency on mutable state
@@ -117,10 +133,31 @@ export const ExplorerFilters = memo(function ExplorerFilters() {
             const newForms = currentForms.includes(value)
                 ? currentForms.filter((f) => f !== value)
                 : [...currentForms, value]
-            setOrganizationForms(newForms)
+            if (onFilterChange) onFilterChange({ organizationForms: newForms })
+            else setOrganizationForms(newForms)
         },
-        [setOrganizationForms]
+        [onFilterChange, setOrganizationForms]
     )
+
+    const handleNaceSelect = useCallback((code: string) => {
+        if (onFilterChange) onFilterChange({ naceCode: code })
+        else setNaeringskode(code)
+    }, [onFilterChange, setNaeringskode])
+
+    const handleMunicipalitySelect = useCallback((name: string, code: string) => {
+        if (onFilterChange) onFilterChange({ municipalityCode: code })
+        else setMunicipality(name, code)
+    }, [onFilterChange, setMunicipality])
+
+    const handleCountySelect = useCallback((name: string, code: string) => {
+        if (onFilterChange) onFilterChange({ countyCode: code })
+        else setCounty(name, code)
+    }, [onFilterChange, setCounty])
+
+    const handleClearFilters = useCallback(() => {
+        if (onClearFilters) onClearFilters()
+        else clearFilters()
+    }, [clearFilters, onClearFilters])
 
     // Modal handlers - stable references
     const openNaceModal = useCallback(() => setNaceModalOpen(true), [setNaceModalOpen])
@@ -135,7 +172,7 @@ export const ExplorerFilters = memo(function ExplorerFilters() {
                 <h2 className="text-lg font-semibold text-gray-900">Filtre</h2>
                 {activeFilters > 0 && (
                     <button
-                        onClick={clearFilters}
+                        onClick={handleClearFilters}
                         type="button"
                         className="flex items-center gap-1.5 text-sm text-gray-500 hover:text-gray-700 transition-colors"
                     >
@@ -238,7 +275,7 @@ export const ExplorerFilters = memo(function ExplorerFilters() {
                     isOpen={isNaceModalOpen}
                     onClose={closeNaceModal}
                     selectedCode={naeringskode}
-                    onSelect={setNaeringskode}
+                    onSelect={handleNaceSelect}
                 />
             )}
 
@@ -250,8 +287,8 @@ export const ExplorerFilters = memo(function ExplorerFilters() {
                     selectedMunicipalityCode={municipalityCode}
                     selectedCounty={county}
                     selectedCountyCode={countyCode}
-                    onSelectMunicipality={setMunicipality}
-                    onSelectCounty={setCounty}
+                    onSelectMunicipality={handleMunicipalitySelect}
+                    onSelectCounty={handleCountySelect}
                 />
             )}
         </div>
