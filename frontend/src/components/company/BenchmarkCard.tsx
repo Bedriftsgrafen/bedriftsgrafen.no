@@ -24,6 +24,18 @@ function truncateName(name: string, maxLength: number = 12): string {
     return name.slice(0, maxLength - 1) + '…'
 }
 
+function formatPercentileLabel(percentile: number | null): string | null {
+    if (percentile === null) return null
+    if (percentile >= 50) return `Topp ${Math.max(1, 100 - percentile)}%`
+    return `Bunn ${Math.max(1, percentile)}%`
+}
+
+function calculateRelativeDifference(metric: BenchmarkMetric): number | null {
+    if (metric.company_value === null || metric.industry_avg === null) return null
+    if (metric.industry_avg === 0) return metric.company_value === 0 ? 0 : null
+    return ((metric.company_value - metric.industry_avg) / Math.abs(metric.industry_avg)) * 100
+}
+
 /**
  * BenchmarkCard displays a single metric comparison between company and industry.
  *
@@ -48,15 +60,15 @@ export const BenchmarkCard = memo(function BenchmarkCard({
 
     if (metric.industry_avg === null) return null
 
-    // Calculate how much better/worse than average
-    // Handle division by zero if industry average is 0
-    let diffPercent = 0
-    if (metric.industry_avg !== 0 && metric.company_value !== null) {
-        diffPercent = ((metric.company_value - metric.industry_avg) / Math.abs(metric.industry_avg)) * 100
-    }
+    const percentileLabel = formatPercentileLabel(metric.percentile)
+    const diffPercent = calculateRelativeDifference(metric)
+    const percentileTone = metric.percentile !== null && metric.percentile >= 50
 
-    const isPositive = diffPercent > 0
-    const diffColor = isPositive ? 'text-green-600' : 'text-red-600'
+    const diffColor = diffPercent === null || diffPercent === 0
+        ? 'text-gray-500'
+        : diffPercent > 0
+            ? 'text-green-600'
+            : 'text-red-600'
 
     return (
         <div className="bg-white rounded-lg border border-gray-200 p-4 shadow-sm">
@@ -71,15 +83,12 @@ export const BenchmarkCard = memo(function BenchmarkCard({
                             <span className="text-lg font-bold text-gray-900">
                                 {formatter(metric.company_value)}
                             </span>
-                            {metric.percentile !== null && (
-                                <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${metric.percentile >= 50
+                            {percentileLabel && (
+                                <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${percentileTone
                                     ? 'bg-green-100 text-green-700'
                                     : 'bg-yellow-100 text-yellow-700'
                                     }`}>
-                                    {metric.percentile >= 50
-                                        ? `Topp ${100 - metric.percentile}%`
-                                        : `Bunn ${metric.percentile}%`
-                                    }
+                                    {percentileLabel}
                                 </span>
                             )}
                         </div>
@@ -112,9 +121,14 @@ export const BenchmarkCard = memo(function BenchmarkCard({
             </div>
 
             <div className="mt-2 text-xs text-center text-gray-500">
-                <span className={`font-medium ${diffColor}`}>
-                    {isPositive ? '+' : ''}{diffPercent.toFixed(1)}%
-                </span>
+                {diffPercent !== null && (
+                    <>
+                        <span className={`font-medium ${diffColor}`}>
+                            {diffPercent > 0 ? '+' : ''}{diffPercent.toFixed(1)}%
+                        </span>
+                        {' '}
+                    </>
+                )}
                 {' '}vs bransjesnitt ({formatter(metric.industry_avg)})
             </div>
         </div>

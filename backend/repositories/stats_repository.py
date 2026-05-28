@@ -3,7 +3,7 @@ from collections.abc import Sequence
 from datetime import datetime
 from typing import Any, Literal
 
-from sqlalchemy import and_, case, func, literal_column, select
+from sqlalchemy import and_, case, false, func, literal_column, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 import models
@@ -89,6 +89,9 @@ class StatsRepository:
         if combined.company_count and combined.company_count > 0:
             combined.avg_revenue = (combined.total_revenue or 0.0) / combined.company_count
             combined.avg_profit = (combined.total_profit or 0.0) / combined.company_count
+            combined.avg_employees = (
+                sum(((s.avg_employees or 0.0) * (s.company_count or 0)) for s in stats) / combined.company_count
+            )
             # Operating margin is harder to aggregate accurately without weights, but let's use weighted average
             if combined.total_revenue and combined.total_revenue > 0:
                 total_margin_revenue = sum(((s.avg_operating_margin or 0.0) * (s.total_revenue or 0.0)) for s in stats)
@@ -223,7 +226,9 @@ class StatsRepository:
                 func.count(func.distinct(models.Company.orgnr)).label("company_count"),
                 func.avg(models.LatestAccountings.salgsinntekter).label("avg_revenue"),
                 func.avg(models.LatestAccountings.aarsresultat).label("avg_profit"),
-                func.avg(models.Company.antall_ansatte).label("avg_employees"),
+                func.avg(case((models.Company.antall_ansatte > 0, models.Company.antall_ansatte), else_=None)).label(
+                    "avg_employees"
+                ),
                 func.avg(
                     case(
                         (
@@ -271,6 +276,119 @@ class StatsRepository:
             avg_operating_margin=row.avg_operating_margin,
             median_revenue=row.median_revenue,
         )
+
+    def _benchmark_peer_filters(self, nace_code: str, municipality_code: str | None) -> list[Any]:
+        nace_filter: Any
+        if len(nace_code) == 1 and nace_code in NACE_SECTION_MAPPING:
+            nace_filter = func.left(models.Company.naeringskode, 2).in_(NACE_SECTION_MAPPING[nace_code])
+        elif len(nace_code) > 2:
+            nace_filter = models.Company.naeringskode == nace_code
+        else:
+            nace_filter = func.left(models.Company.naeringskode, 2) == nace_code
+
+        filters: list[Any] = [nace_filter, models.Company.naeringskode.isnot(None)]
+
+        if municipality_code:
+            filters.extend(
+                [
+                    func.coalesce(
+                        func.nullif(models.Company.forretningsadresse["kommunenummer"].astext, ""),
+                        func.nullif(models.Company.postadresse["kommunenummer"].astext, ""),
+                    )
+                    == municipality_code,
+                    models.Company.konkurs.is_(False),
+                ]
+            )
+        elif len(nace_code) > 2:
+            filters.append(models.Company.organisasjonsform != "KBO")
+        else:
+            filters.extend(
+                [
+                    models.Company.konkurs.isnot(True),
+                    models.Company.under_avvikling.isnot(True),
+                    models.Company.under_tvangsavvikling.isnot(True),
+                ]
+            )
+
+        return filters
+
+    @staticmethod
+    def _percentile_from_counts(value_count: int | None, total_count: int | None) -> int | None:
+        if value_count is None or total_count is None or total_count <= 0:
+            return None
+        return max(0, min(100, round((value_count / total_count) * 100)))
+
+    async def get_benchmark_percentiles(
+        self,
+        nace_code: str,
+        *,
+        municipality_code: str | None = None,
+        company_revenue: float | None = None,
+        company_profit: float | None = None,
+        company_employees: int | None = None,
+        company_operating_margin: float | None = None,
+    ) -> dict[str, int | None]:
+        """Calculate exact percentile ranks against the selected peer group."""
+        operating_margin = (models.LatestAccountings.driftsresultat / models.LatestAccountings.salgsinntekter) * 100
+        operating_margin_valid = and_(
+            models.LatestAccountings.salgsinntekter >= 50000,
+            models.LatestAccountings.driftsresultat.isnot(None),
+            (models.LatestAccountings.driftsresultat / models.LatestAccountings.salgsinntekter).between(-1.0, 1.0),
+        )
+
+        query = (
+            select(
+                func.count().filter(models.LatestAccountings.salgsinntekter > 0).label("revenue_total"),
+                func.count()
+                .filter(
+                    and_(
+                        models.LatestAccountings.salgsinntekter > 0,
+                        models.LatestAccountings.salgsinntekter <= company_revenue,
+                    )
+                    if company_revenue is not None
+                    else false()
+                )
+                .label("revenue_lte"),
+                func.count().filter(models.LatestAccountings.aarsresultat.isnot(None)).label("profit_total"),
+                func.count()
+                .filter(
+                    and_(
+                        models.LatestAccountings.aarsresultat.isnot(None),
+                        models.LatestAccountings.aarsresultat <= company_profit,
+                    )
+                    if company_profit is not None
+                    else false()
+                )
+                .label("profit_lte"),
+                func.count().filter(models.Company.antall_ansatte > 0).label("employees_total"),
+                func.count()
+                .filter(
+                    and_(models.Company.antall_ansatte > 0, models.Company.antall_ansatte <= company_employees)
+                    if company_employees is not None and company_employees > 0
+                    else false()
+                )
+                .label("employees_lte"),
+                func.count().filter(operating_margin_valid).label("operating_margin_total"),
+                func.count()
+                .filter(
+                    and_(operating_margin_valid, operating_margin <= company_operating_margin)
+                    if company_operating_margin is not None
+                    else false()
+                )
+                .label("operating_margin_lte"),
+            )
+            .select_from(models.Company)
+            .outerjoin(models.LatestAccountings, models.Company.orgnr == models.LatestAccountings.orgnr)
+            .where(and_(*self._benchmark_peer_filters(nace_code, municipality_code)))
+        )
+
+        row = (await self.db.execute(query)).one()
+        return {
+            "revenue": self._percentile_from_counts(row.revenue_lte, row.revenue_total),
+            "profit": self._percentile_from_counts(row.profit_lte, row.profit_total),
+            "employees": self._percentile_from_counts(row.employees_lte, row.employees_total),
+            "operating_margin": self._percentile_from_counts(row.operating_margin_lte, row.operating_margin_total),
+        }
 
     async def get_filtered_geography_stats(
         self,

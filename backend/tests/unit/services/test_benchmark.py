@@ -29,7 +29,8 @@ async def test_get_industry_benchmark_success():
         median_revenue=800000.0,
         avg_profit=100000.0,
         total_employees=1000,  # avg_employees will be 10.0
-        avg_operating_margin=0.10,
+        avg_employees=10.0,
+        avg_operating_margin=10.0,
     )
 
     # Mock Company Data (Financials + Employees)
@@ -42,6 +43,12 @@ async def test_get_industry_benchmark_success():
 
     # Configure repository returns
     service.stats_repo.get_industry_stats.return_value = mock_industry_stats
+    service.stats_repo.get_benchmark_percentiles.return_value = {
+        "revenue": 92,
+        "profit": 40,
+        "employees": 87,
+        "operating_margin": 55,
+    }
     service.company_repo.get_company_with_latest_financials.return_value = (mock_financials, mock_employees)
 
     # Act
@@ -52,17 +59,18 @@ async def test_get_industry_benchmark_success():
     assert result["orgnr"] == "123456789"
     assert result["nace_division"] == "62"
 
-    # Revenue: 2M vs 1M avg -> Ratio 2.0 -> Percentile 95
     assert result["revenue"]["company_value"] == 2000000.0
-    assert result["revenue"]["percentile"] == 95
+    assert result["revenue"]["percentile"] == 92
 
-    # Profit: 50k vs 100k avg -> Ratio 0.5 -> Percentile 25
     assert result["profit"]["company_value"] == 50000.0
-    assert result["profit"]["percentile"] == 25
+    assert result["profit"]["percentile"] == 40
 
-    # Employees: 20 vs 10 avg -> Ratio 2.0 -> Percentile 95
     assert result["employees"]["company_value"] == 20
-    assert result["employees"]["percentile"] == 95
+    assert result["employees"]["industry_avg"] == 10.0
+    assert result["employees"]["percentile"] == 87
+    assert result["operating_margin"]["company_value"] == 10.0
+    assert result["operating_margin"]["industry_avg"] == 10.0
+    assert result["operating_margin"]["percentile"] == 55
 
 
 @pytest.mark.asyncio
@@ -108,13 +116,20 @@ async def test_get_industry_benchmark_fallback():
         median_revenue=800.0,
         avg_profit=100.0,
         total_employees=5000,  # avg_employees=10.0
-        avg_operating_margin=0.1,
+        avg_employees=10.0,
+        avg_operating_margin=10.0,
     )
 
     # Subclass returns None
     service.stats_repo.get_industry_subclass_stats.return_value = None
     # Division returns stats
     service.stats_repo.get_industry_stats.return_value = mock_division_stats
+    service.stats_repo.get_benchmark_percentiles.return_value = {
+        "revenue": 80,
+        "profit": 95,
+        "employees": 90,
+        "operating_margin": 75,
+    }
 
     # Mock Company
     mock_financials = MagicMock()
@@ -160,10 +175,17 @@ async def test_get_industry_benchmark_subclass_success():
         median_revenue=4000.0,
         avg_profit=500.0,
         total_employees=250,  # avg_employees=5.0
-        avg_operating_margin=0.2,
+        avg_employees=5.0,
+        avg_operating_margin=20.0,
     )
 
     service.stats_repo.get_industry_subclass_stats.return_value = mock_subclass_stats
+    service.stats_repo.get_benchmark_percentiles.return_value = {
+        "revenue": 20,
+        "profit": 35,
+        "employees": 55,
+        "operating_margin": 30,
+    }
 
     # Mock Company
     mock_financials = MagicMock()
@@ -185,3 +207,48 @@ async def test_get_industry_benchmark_subclass_success():
     service.stats_repo.get_industry_subclass_stats.assert_called_with("62.010")
     # Should NOT satisfy fallback
     service.stats_repo.get_industry_stats.assert_not_called()
+
+
+@pytest.mark.asyncio
+async def test_get_industry_benchmark_excludes_company_operating_margin_outliers():
+    db = AsyncMock(spec=AsyncSession)
+    service = StatsService(db)
+
+    service.stats_repo = AsyncMock()
+    service.company_repo = AsyncMock()
+
+    service.stats_repo.get_industry_stats.return_value = IndustryStats(
+        nace_division="62",
+        company_count=100,
+        avg_revenue=1000000.0,
+        median_revenue=800000.0,
+        avg_profit=100000.0,
+        total_employees=1000,
+        avg_employees=10.0,
+        avg_operating_margin=10.0,
+    )
+    service.stats_repo.get_benchmark_percentiles.return_value = {
+        "revenue": 90,
+        "profit": 90,
+        "employees": 90,
+        "operating_margin": None,
+    }
+
+    mock_financials = MagicMock()
+    mock_financials.salgsinntekter = 100000.0
+    mock_financials.aarsresultat = 50000.0
+    mock_financials.driftsresultat = 150000.0
+    service.company_repo.get_company_with_latest_financials.return_value = (mock_financials, 10)
+
+    result = await service.get_industry_benchmark("62", "123456789")
+
+    assert result is not None
+    assert result["operating_margin"]["company_value"] is None
+    service.stats_repo.get_benchmark_percentiles.assert_awaited_once_with(
+        "62",
+        municipality_code=None,
+        company_revenue=100000.0,
+        company_profit=50000.0,
+        company_employees=10,
+        company_operating_margin=None,
+    )

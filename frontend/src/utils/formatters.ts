@@ -110,6 +110,15 @@ export function formatPercent(value: number | null | undefined, decimals = 1): s
   return `${(value * 100).toFixed(decimals)}%`
 }
 
+// Format dimensionless ratios, e.g. Likviditetsgrad 1 = 1.21
+export function formatRatio(value: number | null | undefined, decimals = 2): string {
+  if (value === null || value === undefined) return '-'
+  return new Intl.NumberFormat('nb-NO', {
+    minimumFractionDigits: decimals,
+    maximumFractionDigits: decimals,
+  }).format(value)
+}
+
 // Format percentage value (when value is already a percentage, e.g., 7.3 for 7.3%)
 export function formatPercentValue(value: number | null | undefined, decimals = 1): string {
   if (value === null || value === undefined) return '-'

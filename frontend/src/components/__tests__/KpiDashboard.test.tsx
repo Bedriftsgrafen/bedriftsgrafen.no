@@ -48,8 +48,8 @@ describe('KpiDashboard', () => {
     it('renders KPI cards with correct values', () => {
         render(<KpiDashboard data={mockData} />)
 
-        // Check KPI values - these are now formatted as percentages
-        expect(screen.getByText('200.0%')).toBeInTheDocument() // Likviditetsgrad (2.0 * 100)
+        // Liquidity ratio is a ratio, not a percentage
+        expect(screen.getByText('2,00')).toBeInTheDocument()
         expect(screen.getByText('11.0%')).toBeInTheDocument() // EBITDA-margin
         expect(screen.getByText('28.0%')).toBeInTheDocument() // Egenkapitalandel
     })
@@ -57,8 +57,8 @@ describe('KpiDashboard', () => {
     it('applies correct color classes based on values', () => {
         render(<KpiDashboard data={mockData} />)
 
-        // Likviditetsgrad 200% should be green
-        const liquidityValue = screen.getByText('200.0%')
+        // Likviditetsgrad 2.0 should be green
+        const liquidityValue = screen.getByText('2,00')
         expect(liquidityValue).toHaveClass('text-green-700')
 
         // EBITDA margin 11% should be green

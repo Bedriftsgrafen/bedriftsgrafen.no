@@ -450,12 +450,15 @@ class TestParseFinancialData:
                 "aarsresultat": 400000,
             },
             "eiendeler": {
+                "sumEiendeler": 3000000,
                 "omloepsmidler": {"sumOmloepsmidler": 1000000},
                 "anleggsmidler": {"sumAnleggsmidler": 2000000},
             },
             "egenkapitalGjeld": {
+                "sumEgenkapitalGjeld": 3000000,
                 "egenkapital": {"sumEgenkapital": 1500000},
                 "gjeldOversikt": {
+                    "sumGjeld": 1500000,
                     "kortsiktigGjeld": {"sumKortsiktigGjeld": 500000},
                     "langsiktigGjeld": {"sumLangsiktigGjeld": 1000000},
                 },
@@ -475,9 +478,12 @@ class TestParseFinancialData:
         assert result["avskrivninger"] == 100000
         assert result["omloepsmidler"] == 1000000
         assert result["anleggsmidler"] == 2000000
+        assert result["sum_eiendeler"] == 3000000
         assert result["egenkapital"] == 1500000
+        assert result["gjeld"] == 1500000
         assert result["kortsiktig_gjeld"] == 500000
         assert result["langsiktig_gjeld"] == 1000000
+        assert result["sum_egenkapital_gjeld"] == 3000000
 
     @pytest.mark.asyncio
     async def test_parse_empty_financial_data(self):

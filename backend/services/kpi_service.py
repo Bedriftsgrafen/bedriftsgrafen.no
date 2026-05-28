@@ -37,6 +37,37 @@ class KpiService:
         return result if math.isfinite(result) else None
 
     @staticmethod
+    def _first_finite_positive(*values: float | None) -> float | None:
+        for value in values:
+            if value is not None and value > 0 and math.isfinite(value):
+                return value
+        return None
+
+    @staticmethod
+    def _total_debt(accounting: models.Accounting) -> float | None:
+        total_gjeld = getattr(accounting, "gjeld", None)
+        if total_gjeld is not None:
+            return total_gjeld
+
+        kortsiktig = accounting.kortsiktig_gjeld
+        langsiktig = accounting.langsiktig_gjeld
+        if kortsiktig is None and langsiktig is None:
+            return None
+
+        return (kortsiktig or 0) + (langsiktig or 0)
+
+    @staticmethod
+    def _total_capital(accounting: models.Accounting) -> float | None:
+        egenkapital = accounting.egenkapital
+        total_debt = KpiService._total_debt(accounting)
+        debt_based_total = egenkapital + total_debt if egenkapital is not None and total_debt is not None else None
+        return KpiService._first_finite_positive(
+            getattr(accounting, "sum_eiendeler", None),
+            getattr(accounting, "sum_egenkapital_gjeld", None),
+            debt_based_total,
+        )
+
+    @staticmethod
     def calculate_likviditetsgrad1(accounting: models.Accounting) -> float | None:
         """
         Calculate Liquidity Ratio 1 (Current Ratio)
@@ -77,12 +108,13 @@ class KpiService:
     def calculate_egenkapitalandel(accounting: models.Accounting) -> float | None:
         """
         Calculate Equity Ratio
-        Formula: egenkapital / (egenkapital + total_gjeld)
+        Formula: egenkapital / totalkapital
+
+        Negative and zero equity are meaningful solvency signals and should be returned.
         """
-        if accounting.egenkapital is None or accounting.egenkapital <= 0:
+        if accounting.egenkapital is None:
             return None
-        total_gjeld = (accounting.kortsiktig_gjeld or 0) + (accounting.langsiktig_gjeld or 0)
-        total_kapital = accounting.egenkapital + total_gjeld
+        total_kapital = KpiService._total_capital(accounting)
         return KpiService._safe_divide(accounting.egenkapital, total_kapital)
 
     @staticmethod
@@ -106,7 +138,12 @@ class KpiService:
 
         Only calculated when sum_eiendeler > 0
         """
-        sum_eiendeler = (accounting.anleggsmidler or 0) + (accounting.omloepsmidler or 0)
+        sum_eiendeler = KpiService._first_finite_positive(
+            getattr(accounting, "sum_eiendeler", None),
+            (accounting.anleggsmidler or 0) + (accounting.omloepsmidler or 0),
+        )
+        if sum_eiendeler is None:
+            return None
         if sum_eiendeler <= 0:
             return None
         return KpiService._safe_divide(accounting.aarsresultat, sum_eiendeler)

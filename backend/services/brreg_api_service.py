@@ -134,11 +134,14 @@ class BrregApiService(BaseExternalService):
             "driftsresultat": None,
             "salgsinntekter": None,
             "egenkapital": None,
+            "gjeld": None,
             "omloepsmidler": None,
             "kortsiktig_gjeld": None,
             "avskrivninger": None,
             "anleggsmidler": None,
             "langsiktig_gjeld": None,
+            "sum_eiendeler": None,
+            "sum_egenkapital_gjeld": None,
         }
 
         try:
@@ -177,10 +180,13 @@ class BrregApiService(BaseExternalService):
             gjeld = egenkapital_gjeld.get("gjeldOversikt", {})
 
             parsed["egenkapital"] = self._extract_value(egenkapital_data, "sumEgenkapital")
+            parsed["gjeld"] = self._extract_value(gjeld, "sumGjeld")
             parsed["omloepsmidler"] = self._extract_value(eiendeler.get("omloepsmidler", {}), "sumOmloepsmidler")
             parsed["anleggsmidler"] = self._extract_value(eiendeler.get("anleggsmidler", {}), "sumAnleggsmidler")
+            parsed["sum_eiendeler"] = self._extract_value(eiendeler, "sumEiendeler")
             parsed["kortsiktig_gjeld"] = self._extract_value(gjeld.get("kortsiktigGjeld", {}), "sumKortsiktigGjeld")
             parsed["langsiktig_gjeld"] = self._extract_value(gjeld.get("langsiktigGjeld", {}), "sumLangsiktigGjeld")
+            parsed["sum_egenkapital_gjeld"] = self._extract_value(egenkapital_gjeld, "sumEgenkapitalGjeld")
 
         except Exception as e:
             logger.error(f"Error parsing financial data: {e!s}")

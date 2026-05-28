@@ -47,12 +47,15 @@ class AccountingRepository:
 
     @staticmethod
     def _calculate_gjeldsgrad(
-        egenkapital: float | None, kortsiktig: float | None, langsiktig: float | None
+        egenkapital: float | None,
+        kortsiktig: float | None,
+        langsiktig: float | None,
+        gjeld: float | None = None,
     ) -> float | None:
         """Calculate debt ratio (gjeldsgrad) = total debt / equity."""
         if egenkapital is None or egenkapital == 0:
             return None
-        total_gjeld = (kortsiktig or 0) + (langsiktig or 0)
+        total_gjeld = gjeld if gjeld is not None else (kortsiktig or 0) + (langsiktig or 0)
         try:
             ratio = total_gjeld / egenkapital
             if not math.isfinite(ratio):
@@ -300,9 +303,10 @@ class AccountingRepository:
 
             # Calculate gjeldsgrad using helper method (DRY)
             egenkapital = self._validate_numeric(parsed_data.get("egenkapital"))
+            gjeld = self._validate_numeric(parsed_data.get("gjeld"))
             kortsiktig = self._validate_numeric(parsed_data.get("kortsiktig_gjeld"))
             langsiktig = self._validate_numeric(parsed_data.get("langsiktig_gjeld"))
-            gjeldsgrad = self._calculate_gjeldsgrad(egenkapital, kortsiktig, langsiktig)
+            gjeldsgrad = self._calculate_gjeldsgrad(egenkapital, kortsiktig, langsiktig, gjeld)
 
             # Prepare data for upsert
             # Note: likviditetsgrad1, ebitda_margin, and egenkapitalandel are generated columns
@@ -317,11 +321,14 @@ class AccountingRepository:
                 "driftsresultat": self._validate_numeric(parsed_data.get("driftsresultat")),
                 "salgsinntekter": self._validate_numeric(parsed_data.get("salgsinntekter")),
                 "egenkapital": egenkapital,
+                "gjeld": gjeld,
                 "omloepsmidler": self._validate_numeric(parsed_data.get("omloepsmidler")),
                 "kortsiktig_gjeld": kortsiktig,
                 "avskrivninger": self._validate_numeric(parsed_data.get("avskrivninger")),
                 "anleggsmidler": self._validate_numeric(parsed_data.get("anleggsmidler")),
+                "sum_eiendeler": self._validate_numeric(parsed_data.get("sum_eiendeler")),
                 "langsiktig_gjeld": langsiktig,
+                "sum_egenkapital_gjeld": self._validate_numeric(parsed_data.get("sum_egenkapital_gjeld")),
                 "gjeldsgrad": gjeldsgrad,
                 "raw_data": raw_data,
             }
@@ -341,11 +348,14 @@ class AccountingRepository:
                     "driftsresultat": insert_stmt.excluded.driftsresultat,
                     "salgsinntekter": insert_stmt.excluded.salgsinntekter,
                     "egenkapital": insert_stmt.excluded.egenkapital,
+                    "gjeld": insert_stmt.excluded.gjeld,
                     "omloepsmidler": insert_stmt.excluded.omloepsmidler,
                     "kortsiktig_gjeld": insert_stmt.excluded.kortsiktig_gjeld,
                     "avskrivninger": insert_stmt.excluded.avskrivninger,
                     "anleggsmidler": insert_stmt.excluded.anleggsmidler,
+                    "sum_eiendeler": insert_stmt.excluded.sum_eiendeler,
                     "langsiktig_gjeld": insert_stmt.excluded.langsiktig_gjeld,
+                    "sum_egenkapital_gjeld": insert_stmt.excluded.sum_egenkapital_gjeld,
                     "gjeldsgrad": insert_stmt.excluded.gjeldsgrad,
                     "raw_data": insert_stmt.excluded.raw_data,
                 },

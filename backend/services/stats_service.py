@@ -16,22 +16,6 @@ from schemas.stats import GeoAveragesResponse, GeoLevel, GeoMetric, GeoStatRespo
 
 logger = logging.getLogger(__name__)
 
-# Percentile estimation thresholds (assumes normal distribution)
-# Maps ratio (company_value / industry_avg) to estimated percentile
-# Higher granularity for better UX (top 1%, 2%, 5%, etc.)
-PERCENTILE_THRESHOLDS = [
-    (3.0, 99),  # Top 1% (3x average or more)
-    (2.5, 98),  # Top 2%
-    (2.0, 95),  # Top 5%
-    (1.7, 90),  # Top 10%
-    (1.5, 85),  # Top 15%
-    (1.2, 70),  # Top 30%
-    (1.0, 55),  # Above average
-    (0.8, 40),  # Below average
-    (0.5, 25),  # Bottom 25%
-    (0.3, 10),  # Bottom 10%
-]
-
 
 class StatsService:
     """Service for statistics calculations and queries."""
@@ -431,24 +415,6 @@ class StatsService:
             )
             return None
 
-        # 4. Calculate percentile rankings (simple estimation based on averages)
-        def calc_percentile(company_val: float | None, avg_val: float | None) -> int | None:
-            """Estimate percentile based on comparison to average.
-
-            Note: This is a simplified estimation assuming normal distribution.
-            For skewed distributions (like revenue), this is an approximation.
-            Consider using actual percentile calculations from DB for more accuracy.
-            """
-            if company_val is None or avg_val is None or avg_val == 0:
-                return None
-
-            # Calculate percentile from ratio using predefined thresholds
-            ratio = company_val / avg_val
-            for threshold, percentile in PERCENTILE_THRESHOLDS:
-                if ratio >= threshold:
-                    return percentile
-            return 10  # Below all thresholds
-
         # Build response
         company_revenue = company_financials.salgsinntekter if company_financials else None
         company_profit = company_financials.aarsresultat if company_financials else None
@@ -457,8 +423,19 @@ class StatsService:
         # Calculate operating margin for company (as percentage to match industry_stats)
         # Industry stats store margin as percentage (driftsresultat / salgsinntekter * 100)
         company_op_margin = None
-        if company_revenue and company_op_result is not None and company_revenue > 0:
-            company_op_margin = (company_op_result / company_revenue) * 100
+        if company_revenue and company_op_result is not None and company_revenue >= 50000:
+            calculated_margin = (company_op_result / company_revenue) * 100
+            if -100 <= calculated_margin <= 100:
+                company_op_margin = calculated_margin
+
+        percentiles = await self.stats_repo.get_benchmark_percentiles(
+            used_nace_code,
+            municipality_code=municipality_code if is_municipal else None,
+            company_revenue=company_revenue,
+            company_profit=company_profit,
+            company_employees=company_employees,
+            company_operating_margin=company_op_margin,
+        )
 
         return {
             "orgnr": orgnr,
@@ -470,25 +447,25 @@ class StatsService:
                 "company_value": company_revenue,
                 "industry_avg": industry_stats.avg_revenue,
                 "industry_median": industry_stats.median_revenue,
-                "percentile": calc_percentile(company_revenue, industry_stats.avg_revenue),
+                "percentile": percentiles.get("revenue"),
             },
             "profit": {
                 "company_value": company_profit,
                 "industry_avg": industry_stats.avg_profit,
                 "industry_median": None,
-                "percentile": calc_percentile(company_profit, industry_stats.avg_profit),
+                "percentile": percentiles.get("profit"),
             },
             "employees": {
                 "company_value": company_employees,
                 "industry_avg": industry_stats.avg_employees,
                 "industry_median": None,
-                "percentile": calc_percentile(company_employees, industry_stats.avg_employees),
+                "percentile": percentiles.get("employees"),
             },
             "operating_margin": {
                 "company_value": company_op_margin,
                 "industry_avg": industry_stats.avg_operating_margin,
                 "industry_median": None,
-                "percentile": calc_percentile(company_op_margin, industry_stats.avg_operating_margin),
+                "percentile": percentiles.get("operating_margin"),
             },
         }
 

@@ -2,6 +2,7 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import {
     formatNOK,
     formatPercent,
+    formatRatio,
     formatLargeNumber,
     formatDistanceToNow,
     getKpiDescription,
@@ -61,6 +62,17 @@ describe('formatters', () => {
 
         it('handles values over 100%', () => {
             expect(formatPercent(1.5)).toBe('150.0%')
+        })
+    })
+
+    describe('formatRatio', () => {
+        it('formats ratios with Norwegian decimal separator', () => {
+            expect(formatRatio(1.211)).toBe('1,21')
+        })
+
+        it('returns dash for nullish values', () => {
+            expect(formatRatio(null)).toBe('-')
+            expect(formatRatio(undefined)).toBe('-')
         })
     })
 

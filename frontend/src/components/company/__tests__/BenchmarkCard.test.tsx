@@ -43,6 +43,50 @@ describe('BenchmarkCard', () => {
         expect(screen.getByText(/vs bransjesnitt \(800 kr\)/)).toBeInTheDocument()
     })
 
+    it('uses Topp 1% instead of Topp 0% for percentile 100', () => {
+        render(
+            <BenchmarkCard
+                title="Ansatte"
+                metric={{ ...defaultMetric, percentile: 100 }}
+                icon={<Landmark />}
+                formatter={mockFormatter}
+                color="bg-blue-500"
+            />
+        )
+
+        expect(screen.getByText('Topp 1%')).toBeInTheDocument()
+        expect(screen.queryByText('Topp 0%')).not.toBeInTheDocument()
+    })
+
+    it('does not show a fake 0 percent delta when industry average is zero', () => {
+        render(
+            <BenchmarkCard
+                title="Resultat"
+                metric={{ ...defaultMetric, company_value: 100, industry_avg: 0, percentile: null }}
+                icon={<Landmark />}
+                formatter={mockFormatter}
+                color="bg-red-500"
+            />
+        )
+
+        expect(screen.queryByText(/0\.0%/)).not.toBeInTheDocument()
+        expect(screen.getByText(/vs bransjesnitt \(0 kr\)/)).toBeInTheDocument()
+    })
+
+    it('handles negative industry averages without inverting the comparison direction', () => {
+        render(
+            <BenchmarkCard
+                title="Resultat"
+                metric={{ ...defaultMetric, company_value: -50, industry_avg: -100, percentile: 75 }}
+                icon={<Landmark />}
+                formatter={mockFormatter}
+                color="bg-red-500"
+            />
+        )
+
+        expect(screen.getByText(/\+50\.0%/)).toBeInTheDocument()
+    })
+
     it('renders with null company_value (Bankrupt case)', () => {
         const bankruptMetric = {
             company_value: null,

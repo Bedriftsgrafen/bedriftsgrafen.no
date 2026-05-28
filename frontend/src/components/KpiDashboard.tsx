@@ -1,9 +1,17 @@
 import { memo } from 'react'
 import { AccountingWithKpis } from '../types'
-import { formatNOK, formatPercent, formatLargeNumber, getKpiDescription, getKpiColor } from '../utils/formatters'
+import { formatNOK, formatPercent, formatLargeNumber, formatRatio, getKpiDescription, getKpiColor } from '../utils/formatters'
 
 interface Props {
   data: AccountingWithKpis
+}
+
+const PERCENT_KPI_KEYS = new Set(['ebitda_margin', 'egenkapitalandel', 'resultatgrad', 'totalkapitalrentabilitet'])
+
+function formatKpiValue(key: string, value: number | null): string {
+  if (key === 'likviditetsgrad1') return formatRatio(value)
+  if (PERCENT_KPI_KEYS.has(key)) return formatPercent(value, 1)
+  return formatLargeNumber(value)
 }
 
 export const KpiDashboard = memo(function KpiDashboard({ data }: Props) {
@@ -46,9 +54,7 @@ export const KpiDashboard = memo(function KpiDashboard({ data }: Props) {
                 <div>
                   <div className="text-sm font-medium text-gray-700">{name}</div>
                   <div className={`text-2xl md:text-3xl font-bold mt-1 tabular-nums ${color}`}>
-                    {key.includes('margin') || key.includes('grad') || key.includes('andel') || key.includes('rentabilitet')
-                      ? formatPercent(value, 1)
-                      : formatLargeNumber(value)}
+                    {formatKpiValue(key, value)}
                   </div>
                 </div>
               </div>

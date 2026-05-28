@@ -171,6 +171,9 @@ class TestEgenkapitalandel:
     def test_calculate_egenkapitalandel_valid(self):
         accounting = MagicMock()
         accounting.egenkapital = 3000000
+        accounting.gjeld = None
+        accounting.sum_eiendeler = None
+        accounting.sum_egenkapital_gjeld = None
         accounting.kortsiktig_gjeld = 1000000
         accounting.langsiktig_gjeld = 2000000
 
@@ -181,6 +184,9 @@ class TestEgenkapitalandel:
     def test_calculate_egenkapitalandel_none_gjeld_uses_zero(self):
         accounting = MagicMock()
         accounting.egenkapital = 3000000
+        accounting.gjeld = 0
+        accounting.sum_eiendeler = None
+        accounting.sum_egenkapital_gjeld = None
         accounting.kortsiktig_gjeld = None
         accounting.langsiktig_gjeld = None
 
@@ -188,20 +194,50 @@ class TestEgenkapitalandel:
         # 3M / (3M + 0 + 0) = 1.0
         assert result == 1.0
 
-    def test_calculate_egenkapitalandel_negative_egenkapital_returns_none(self):
+    def test_calculate_egenkapitalandel_negative_egenkapital_is_meaningful(self):
         accounting = MagicMock()
         accounting.egenkapital = -500000
+        accounting.gjeld = None
+        accounting.sum_eiendeler = 1000000
+        accounting.sum_egenkapital_gjeld = None
         accounting.kortsiktig_gjeld = 1000000
         accounting.langsiktig_gjeld = 500000
 
         result = KpiService.calculate_egenkapitalandel(accounting)
-        assert result is None
+        assert result == -0.5
 
-    def test_calculate_egenkapitalandel_zero_egenkapital_returns_none(self):
+    def test_calculate_egenkapitalandel_zero_egenkapital_returns_zero(self):
         accounting = MagicMock()
         accounting.egenkapital = 0
+        accounting.gjeld = None
+        accounting.sum_eiendeler = 1500000
+        accounting.sum_egenkapital_gjeld = None
         accounting.kortsiktig_gjeld = 1000000
         accounting.langsiktig_gjeld = 500000
+
+        result = KpiService.calculate_egenkapitalandel(accounting)
+        assert result == 0
+
+    def test_calculate_egenkapitalandel_uses_official_total_capital_first(self):
+        accounting = MagicMock()
+        accounting.egenkapital = 250000
+        accounting.gjeld = None
+        accounting.sum_eiendeler = 1000000
+        accounting.sum_egenkapital_gjeld = 1100000
+        accounting.kortsiktig_gjeld = None
+        accounting.langsiktig_gjeld = None
+
+        result = KpiService.calculate_egenkapitalandel(accounting)
+        assert result == 0.25
+
+    def test_calculate_egenkapitalandel_missing_total_capital_returns_none(self):
+        accounting = MagicMock()
+        accounting.egenkapital = 3000000
+        accounting.gjeld = None
+        accounting.sum_eiendeler = None
+        accounting.sum_egenkapital_gjeld = None
+        accounting.kortsiktig_gjeld = None
+        accounting.langsiktig_gjeld = None
 
         result = KpiService.calculate_egenkapitalandel(accounting)
         assert result is None
@@ -249,6 +285,7 @@ class TestTotalkapitalrentabilitet:
     def test_calculate_totalkapitalrentabilitet_valid(self):
         accounting = MagicMock()
         accounting.aarsresultat = 500000
+        accounting.sum_eiendeler = None
         accounting.anleggsmidler = 3000000
         accounting.omloepsmidler = 2000000
 
@@ -259,6 +296,7 @@ class TestTotalkapitalrentabilitet:
     def test_calculate_totalkapitalrentabilitet_zero_eiendeler_returns_none(self):
         accounting = MagicMock()
         accounting.aarsresultat = 500000
+        accounting.sum_eiendeler = None
         accounting.anleggsmidler = 0
         accounting.omloepsmidler = 0
 
@@ -268,12 +306,23 @@ class TestTotalkapitalrentabilitet:
     def test_calculate_totalkapitalrentabilitet_none_eiendeler_uses_zero(self):
         accounting = MagicMock()
         accounting.aarsresultat = 500000
+        accounting.sum_eiendeler = None
         accounting.anleggsmidler = None
         accounting.omloepsmidler = 2000000
 
         result = KpiService.calculate_totalkapitalrentabilitet(accounting)
         # 500K / (0 + 2M) = 0.25
         assert result == 0.25
+
+    def test_calculate_totalkapitalrentabilitet_prefers_sum_eiendeler(self):
+        accounting = MagicMock()
+        accounting.aarsresultat = 500000
+        accounting.sum_eiendeler = 10000000
+        accounting.anleggsmidler = 3000000
+        accounting.omloepsmidler = 2000000
+
+        result = KpiService.calculate_totalkapitalrentabilitet(accounting)
+        assert result == 0.05
 
 
 class TestCalculateAllKpis:
@@ -286,6 +335,9 @@ class TestCalculateAllKpis:
         accounting.salgsinntekter = 5000000
         accounting.aarsresultat = 800000
         accounting.egenkapital = 3000000
+        accounting.gjeld = None
+        accounting.sum_eiendeler = None
+        accounting.sum_egenkapital_gjeld = None
         accounting.kortsiktig_gjeld = 1000000
         accounting.langsiktig_gjeld = 1000000
         accounting.omloepsmidler = 2000000
@@ -308,6 +360,9 @@ class TestCalculateAllKpis:
         accounting.salgsinntekter = 5000000
         accounting.aarsresultat = 800000
         accounting.egenkapital = 3000000
+        accounting.gjeld = None
+        accounting.sum_eiendeler = None
+        accounting.sum_egenkapital_gjeld = None
         accounting.kortsiktig_gjeld = 1000000
         accounting.langsiktig_gjeld = 1000000
         accounting.omloepsmidler = 2000000
