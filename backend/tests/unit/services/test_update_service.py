@@ -412,6 +412,30 @@ class TestFetchSubunitUpdates:
         assert event_kwargs["payload"]["parent_orgnr"] == "987654321"
         assert result.companies_deleted == 1
 
+    @pytest.mark.asyncio
+    async def test_persist_subunit_page_advances_cursor_after_successful_upsert(self, update_service):
+        update_service.event_ledger_enabled = False
+        update_service._ensure_parent_companies_exist = AsyncMock(return_value={"987654321"})
+        update_service.subunit_repo.create_batch = AsyncMock(return_value=1)
+
+        fetch_results = [
+            SubunitFetchResult(
+                orgnr="123456789",
+                success=True,
+                subunit_data={
+                    "organisasjonsnummer": "123456789",
+                    "overordnetEnhet": "987654321",
+                    "navn": "Avdeling",
+                },
+                source_update_id="42",
+            )
+        ]
+        result = UpdateBatchResult(since_date=date.today(), since_iso="2026-05-27T00:00:00.000Z")
+
+        await update_service._persist_subunit_update_page(fetch_results, result)
+
+        assert result.latest_oppdateringsid == 42
+
 
 @pytest.mark.asyncio
 async def test_ensure_parent_companies_exist_sorts_missing_orgnrs(update_service, mock_db):
@@ -589,6 +613,30 @@ class TestFetchRoleUpdates:
         assert update_service._record_company_event_safe.await_args.kwargs["source_update_id"] == "505"
         assert result["latest_oppdateringsid"] == 505
 
+    async def test_fetch_role_updates_does_not_advance_cursor_on_role_fetch_failure(self, update_service, mock_db):
+        mock_resp = MagicMock(status_code=200)
+        mock_resp.json.return_value = [
+            {
+                "id": "500",
+                "time": "2026-05-27T12:00:00Z",
+                "data": {"organisasjonsnummer": "987654321"},
+            }
+        ]
+
+        update_service.company_repo.get_existing_orgnrs = AsyncMock(return_value={"987654321"})
+        update_service.subunit_repo.get_existing_orgnrs = AsyncMock(return_value=set())
+        update_service.brreg_api.fetch_roles = AsyncMock(side_effect=Exception("role API down"))
+        update_service.report_sync_error = AsyncMock()
+
+        with patch("httpx.AsyncClient") as mock_client:
+            mock_client.return_value.__aenter__.return_value.get.return_value = mock_resp
+
+            result = await update_service.fetch_role_updates(since_date=date(2026, 5, 27), page_size=10)
+
+        assert result["latest_oppdateringsid"] is None
+        update_service.system_repo.set_state.assert_not_called()
+        update_service.report_sync_error.assert_awaited_once()
+
     async def test_report_sync_error_smart_filtering(self, update_service, mock_db):
         mock_db.execute = AsyncMock(return_value=MagicMock(scalar_one_or_none=lambda: None))
 
@@ -753,6 +801,50 @@ class TestPersistChunk:
 
         update_service.company_repo.create_or_update.assert_not_called()
         assert result.api_errors == 1
+
+    @pytest.mark.asyncio
+    async def test_persist_chunk_advances_cursor_only_for_committed_successes(self, update_service):
+        company = MagicMock()
+        company.last_polled_regnskap = date.today()
+        update_service.company_repo.create_or_update = AsyncMock(return_value=company)
+        update_service.report_sync_error = AsyncMock()
+        update_service._fetch_and_persist_financials = AsyncMock()
+
+        fetch_results = [
+            FetchResult(
+                orgnr="111111111",
+                success=True,
+                company_data={"organisasjonsnummer": "111111111"},
+                source_update_id="2",
+            ),
+            FetchResult(orgnr="999999999", success=False, error="API timeout", source_update_id="99"),
+        ]
+        result = UpdateBatchResult(since_date=date.today(), since_iso="2026-01-26T00:00:00.000Z")
+
+        await update_service._persist_chunk(fetch_results, result)
+
+        assert result.latest_oppdateringsid == 2
+        update_service.db.commit.assert_awaited()
+
+    @pytest.mark.asyncio
+    async def test_persist_chunk_does_not_advance_cursor_on_db_error(self, update_service):
+        update_service.company_repo.create_or_update = AsyncMock(side_effect=Exception("DB down"))
+        update_service._fetch_and_persist_financials = AsyncMock()
+
+        fetch_results = [
+            FetchResult(
+                orgnr="111111111",
+                success=True,
+                company_data={"organisasjonsnummer": "111111111"},
+                source_update_id="7",
+            )
+        ]
+        result = UpdateBatchResult(since_date=date.today(), since_iso="2026-01-26T00:00:00.000Z")
+
+        await update_service._persist_chunk(fetch_results, result)
+
+        assert result.latest_oppdateringsid is None
+        update_service.db.rollback.assert_awaited()
 
     @pytest.mark.asyncio
     async def test_persist_chunk_deletes_company_on_none_data(self, update_service):

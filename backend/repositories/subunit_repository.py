@@ -128,6 +128,8 @@ class SubUnitRepository:
                     "beliggenhetsadresse": s.beliggenhetsadresse,
                     "postadresse": s.postadresse,
                     "stiftelsesdato": s.stiftelsesdato,
+                    "registreringsdato_enhetsregisteret": s.registreringsdato_enhetsregisteret,
+                    "data": s.raw_data,
                 }
 
             values = list(values_map.values())
@@ -154,6 +156,8 @@ class SubUnitRepository:
                     "beliggenhetsadresse": stmt.excluded.beliggenhetsadresse,
                     "postadresse": stmt.excluded.postadresse,
                     "stiftelsesdato": stmt.excluded.stiftelsesdato,
+                    "registreringsdato_enhetsregisteret": stmt.excluded.registreringsdato_enhetsregisteret,
+                    "data": stmt.excluded.data,
                     "updated_at": func.now(),
                 },
             )

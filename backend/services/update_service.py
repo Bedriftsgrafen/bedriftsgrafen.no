@@ -151,6 +151,17 @@ class UpdateService:
     def _date_to_iso(value: Any) -> Any:
         return value.isoformat() if isinstance(value, date) else value
 
+    @staticmethod
+    def _mark_latest_oppdateringsid(result: UpdateBatchResult, source_update_id: str | int | None) -> None:
+        if source_update_id is None:
+            return
+        try:
+            update_id = int(source_update_id)
+        except TypeError, ValueError:
+            return
+        if result.latest_oppdateringsid is None or update_id > result.latest_oppdateringsid:
+            result.latest_oppdateringsid = update_id
+
     @classmethod
     def _previous_company_event_value(cls, event_type: str, snapshot: dict[str, Any]) -> dict[str, Any]:
         raw_data = snapshot.get("raw_data") or {}
@@ -570,13 +581,6 @@ class UpdateService:
 
             # Metadata tracking
             result.pages_fetched += 1
-            for entity in entities:
-                oppdateringsid = entity.get("oppdateringsid")
-                if oppdateringsid:
-                    if result.latest_oppdateringsid is None:
-                        result.latest_oppdateringsid = oppdateringsid
-                    else:
-                        result.latest_oppdateringsid = max(result.latest_oppdateringsid, oppdateringsid)
 
             return data.get("_links", {}).get("next", {}).get("href")
 
@@ -663,6 +667,12 @@ class UpdateService:
             result: Aggregate result tracker to update
         """
         records_since_commit = 0
+        pending_update_ids: list[str | int | None] = []
+
+        def publish_committed_update_ids() -> None:
+            for update_id in pending_update_ids:
+                self._mark_latest_oppdateringsid(result, update_id)
+            pending_update_ids.clear()
 
         sorted_results = sorted(fetch_results, key=lambda item: item.orgnr)
         existing_company_snapshots = await self._get_existing_company_event_snapshots(
@@ -711,6 +721,13 @@ class UpdateService:
                         )
                         result.companies_deleted += 1
                         SYNC_OPERATIONS_TOTAL.labels(entity_type="company", operation_type="deleted").inc()
+                    pending_update_ids.append(fetch_result.source_update_id)
+                    records_since_commit += 1
+                    if records_since_commit >= DB_COMMIT_CHUNK_SIZE:
+                        await self.db.commit()
+                        publish_committed_update_ids()
+                        records_since_commit = 0
+                        logger.debug(f"Committed chunk of {DB_COMMIT_CHUNK_SIZE} records")
                     continue
 
                 previous_snapshot = existing_company_snapshots.get(fetch_result.orgnr)
@@ -779,10 +796,12 @@ class UpdateService:
                         )
 
                 records_since_commit += 1
+                pending_update_ids.append(fetch_result.source_update_id)
 
                 # Commit in chunks for efficiency (reduces transaction overhead)
                 if records_since_commit >= DB_COMMIT_CHUNK_SIZE:
                     await self.db.commit()
+                    publish_committed_update_ids()
                     records_since_commit = 0
                     logger.debug(f"Committed chunk of {DB_COMMIT_CHUNK_SIZE} records")
 
@@ -792,11 +811,13 @@ class UpdateService:
                 logger.error(f"Database error persisting {fetch_result.orgnr}: {e}")
                 # Rollback the failed transaction
                 await self.db.rollback()
+                pending_update_ids.clear()
                 records_since_commit = 0  # Reset counter after rollback
 
         # Final commit for remaining records
         if records_since_commit > 0:
             await self.db.commit()
+            publish_committed_update_ids()
             logger.debug(f"Committed final chunk of {records_since_commit} records")
 
     async def _get_existing_company_event_snapshots(self, orgnrs: list[str]) -> dict[str, dict[str, Any]]:
@@ -1061,6 +1082,7 @@ class UpdateService:
             subunit_data = fetch_result.subunit_data
             if subunit_data is None:
                 await self._delete_subunit_from_update(fetch_result, previous_snapshot, result)
+                self._mark_latest_oppdateringsid(result, fetch_result.source_update_id)
                 continue
 
             parent_orgnr = subunit_data.get("overordnetEnhet")
@@ -1073,6 +1095,7 @@ class UpdateService:
                 )
                 if is_deleted:
                     await self._delete_subunit_from_update(fetch_result, previous_snapshot, result)
+                    self._mark_latest_oppdateringsid(result, fetch_result.source_update_id)
                     continue
 
                 logger.warning(f"Skipping subunit {orgnr} because it has no parent_orgnr (overordnetEnhet is missing).")
@@ -1107,6 +1130,7 @@ class UpdateService:
             return
 
         for fetch_result, parent_orgnr, previous_snapshot in event_candidates:
+            self._mark_latest_oppdateringsid(result, fetch_result.source_update_id)
             result.companies_updated += 1
             SYNC_OPERATIONS_TOTAL.labels(entity_type="subunit", operation_type="updated").inc()
 
@@ -1215,15 +1239,6 @@ class UpdateService:
 
                         fetch_results = await self._fetch_subunit_update_details(entities)
                         await self._persist_subunit_update_page(fetch_results, result)
-
-                        # Update latest ID from original entities
-                        for entity in entities:
-                            oppdateringsid = entity.get("oppdateringsid")
-                            if oppdateringsid:
-                                if result.latest_oppdateringsid is None:
-                                    result.latest_oppdateringsid = oppdateringsid
-                                else:
-                                    result.latest_oppdateringsid = max(result.latest_oppdateringsid, oppdateringsid)
 
                         result.companies_processed += len(entities)
                         result.pages_fetched += 1
@@ -1424,6 +1439,7 @@ class UpdateService:
                         all_batch_roles: list[models.Role] = []
                         role_counts_by_orgnr: dict[str, int] = {}
                         processed_orgnrs: set[str] = set()
+                        role_sync_failed = False
 
                         # Sort orgnrs to ensure consistent lock acquisition order and prevent deadlocks
                         sorted_orgnrs_to_sync = sorted(orgnrs_to_sync)
@@ -1456,6 +1472,7 @@ class UpdateService:
                                 processed_orgnrs.add(orgnr)
 
                             except Exception as e:
+                                role_sync_failed = True
                                 error_msg = f"Failed to sync roles: {e!s}"
                                 logger.error(f"{error_msg} for {orgnr}")
                                 status_code = getattr(e, "status_code", None) if hasattr(e, "status_code") else None
@@ -1483,10 +1500,14 @@ class UpdateService:
                             await self.db.commit()
 
                             # Save progress to prevent repeating if next batch fails or run times out
-                            if last_seen_id:
+                            if last_seen_id and not role_sync_failed:
                                 await self.system_repo.set_state("role_update_latest_id", str(last_seen_id))
 
                         result.companies_processed += len(events)
+                        if role_sync_failed:
+                            logger.warning("Role updates had sync errors; not advancing role update cursor")
+                            break
+
                         result.latest_oppdateringsid = last_seen_id
                         # If we got a full batch, continue to next batch
                         if len(events) >= params["size"]:

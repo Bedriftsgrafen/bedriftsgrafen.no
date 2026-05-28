@@ -365,11 +365,8 @@ class TestFetchRoles:
         service = BrregApiService()
         service._get = AsyncMock(side_effect=Exception("Network error"))
 
-        # Act
-        result = await service.fetch_roles("123456789")
-
-        # Assert - should return empty list, not raise
-        assert result == []
+        with pytest.raises(BrregApiException, match="Network error"):
+            await service.fetch_roles("123456789")
 
 
 class TestParseFinancialData:

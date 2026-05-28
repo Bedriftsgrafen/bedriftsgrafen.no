@@ -170,3 +170,20 @@ async def test_get_roles_handles_invalid_role_data(role_service):
 
     # Should have 2 valid roles (None entry causes exception in mapper, gets skipped)
     assert len(result) >= 1  # At least the valid ones should be returned
+
+
+@pytest.mark.asyncio
+async def test_get_roles_preserves_cache_when_api_roles_cannot_be_parsed(role_service):
+    """Should not delete cached roles when a non-empty API payload is malformed."""
+    cached_role = Role(orgnr="123", type_kode="STALE")
+    role_service.role_repo.is_cache_valid = AsyncMock(return_value=False)
+    role_service.role_repo.delete_by_orgnr = AsyncMock()
+    role_service.role_repo.create_batch = AsyncMock()
+    role_service.role_repo.get_by_orgnr = AsyncMock(return_value=[cached_role])
+    role_service.brreg_api.fetch_roles = AsyncMock(return_value=[None])
+
+    result = await role_service.get_roles("123")
+
+    assert result == [cached_role]
+    role_service.role_repo.delete_by_orgnr.assert_not_called()
+    role_service.role_repo.create_batch.assert_not_called()

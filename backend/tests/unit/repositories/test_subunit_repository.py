@@ -1,6 +1,8 @@
+from datetime import date
 from unittest.mock import AsyncMock, MagicMock
 
 import pytest
+from sqlalchemy.dialects import postgresql
 
 import models
 from repositories.subunit_repository import SubUnitRepository
@@ -87,6 +89,24 @@ async def test_create_batch_with_duplicates(repo, mock_db_session):
     # Should return 1 because the input had two items but they were for the same orgnr
     assert count == 1
     assert mock_db_session.execute.called
+
+
+@pytest.mark.asyncio
+async def test_create_batch_preserves_source_fields(repo, mock_db_session):
+    unit = models.SubUnit()
+    unit.orgnr = "111111111"
+    unit.navn = "Test Unit"
+    unit.parent_orgnr = "999999999"
+    unit.registreringsdato_enhetsregisteret = date(2024, 1, 2)
+    unit.raw_data = {"organisasjonsnummer": "111111111", "registreringsdatoEnhetsregisteret": "2024-01-02"}
+
+    count = await repo.create_batch([unit])
+
+    assert count == 1
+    stmt = mock_db_session.execute.await_args.args[0]
+    compiled = str(stmt.compile(dialect=postgresql.dialect()))
+    assert "registreringsdato_enhetsregisteret" in compiled
+    assert "data" in compiled
 
 
 @pytest.mark.asyncio

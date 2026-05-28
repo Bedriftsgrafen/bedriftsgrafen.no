@@ -65,9 +65,6 @@ class RoleService:
                 await self.role_repo.delete_by_orgnr(orgnr)
                 return []
 
-            # Delete old roles and insert new ones
-            await self.role_repo.delete_by_orgnr(orgnr, commit=False)
-
             # Parse API response into Role models using shared mapper
             new_roles = []
             for role_data in api_roles:
@@ -76,6 +73,12 @@ class RoleService:
                 except Exception as e:
                     logger.warning(f"Error parsing role: {e}")
                     continue
+
+            if not new_roles:
+                raise ValueError(f"Role API returned {len(api_roles)} entries, but none could be parsed")
+
+            # Delete old roles only after the replacement payload has parsed successfully
+            await self.role_repo.delete_by_orgnr(orgnr, commit=False)
 
             # Save to database
             await self.role_repo.create_batch(new_roles, commit=True)

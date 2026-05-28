@@ -267,4 +267,4 @@ class BrregApiService(BaseExternalService):
             raise
         except Exception as e:
             logger.error(f"Error fetching roles for {orgnr}: {e!s}")
-            return []
+            raise ExternalApiException(self.SERVICE_NAME, f"Failed to fetch roles for {orgnr}: {e!s}") from e
