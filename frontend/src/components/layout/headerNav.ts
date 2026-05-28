@@ -26,6 +26,7 @@ export type HeaderRouteTo =
   | '/nyetableringer'
   | '/konkurser'
   | '/oppdateringer'
+  | '/datakilder'
   | '/regioner'
   | '/fylker'
   | '/kommuner'
@@ -213,8 +214,7 @@ const ABOUT_ITEM: HeaderNavItem = {
 const DATA_SOURCES_ITEM: HeaderNavItem = {
   id: 'data-sources',
   label: 'Datakilder',
-  to: '/om',
-  hash: 'datakilder',
+  to: '/datakilder',
   icon: Database,
   topBar: 'menu-only',
 }
@@ -280,6 +280,7 @@ export const HEADER_STATIC_ENTRY_ROUTES = [
   '/nyetableringer',
   '/konkurser',
   '/oppdateringer',
+  '/datakilder',
   '/regioner',
   '/fylker',
   '/kommuner',
@@ -359,7 +360,7 @@ export function isHeaderNavItemActive(
   }
 
   if (item.id === 'data-sources') {
-    return false
+    return pathname === '/datakilder'
   }
 
   return pathname === item.to

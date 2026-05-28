@@ -1,4 +1,4 @@
-import { ArrowUpRight, Database, Mail } from 'lucide-react'
+import { ArrowUpRight, Database, Mail, Scale, ShieldCheck } from 'lucide-react'
 import type { ActivityStatusItem } from '../hooks/queries/useActivityOverviewQuery'
 import { useActivityOverviewQuery } from '../hooks/queries/useActivityOverviewQuery'
 import { BedriftsgrafenContactLink } from './contact'
@@ -131,6 +131,13 @@ export function Footer() {
               Se datastatus og siste oppdateringer
               <ArrowUpRight aria-hidden="true" className="h-4 w-4 text-slate-500" />
             </a>
+            <a
+              href="/datakilder"
+              className="mt-3 inline-flex items-center gap-2 rounded-xl border border-white/10 bg-white/5 px-4 py-3 text-sm font-medium text-slate-200 transition-colors hover:border-white/20 hover:bg-white/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-200 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-950"
+            >
+              Les om datakilder og datakvalitet
+              <ArrowUpRight aria-hidden="true" className="h-4 w-4 text-slate-500" />
+            </a>
           </section>
 
           <section className="rounded-2xl border border-white/10 bg-white/5 p-5">
@@ -178,9 +185,28 @@ export function Footer() {
           </section>
         </div>
 
-        <div className="mt-8 border-t border-white/10 pt-6 text-sm text-slate-300 sm:flex sm:items-center sm:justify-between">
-          <p>© {CURRENT_YEAR} Bedriftsgrafen.no. Alle rettigheter reservert.</p>
-          <p className="mt-2 sm:mt-0">Bygget for raske søk, sammenligning og innsikt i norske virksomheter.</p>
+        <div className="mt-8 border-t border-white/10 pt-6">
+          <p className="max-w-3xl text-sm leading-7 text-slate-300">
+            Informasjonen er hentet fra offentlige kilder og kan inneholde feil, forsinkelser eller mangler. Bruk ikke Bedriftsgrafen.no som eneste grunnlag for juridiske, finansielle eller andre viktige beslutninger.
+          </p>
+
+          <div className="mt-5 flex flex-col gap-4 text-sm text-slate-300 sm:flex-row sm:items-center sm:justify-between">
+            <p>© {CURRENT_YEAR} Bedriftsgrafen.no</p>
+            <nav aria-label="Tillit og vilkår" className="flex flex-wrap gap-x-4 gap-y-2">
+              <a href="/datakilder" className="inline-flex items-center gap-1.5 font-medium text-slate-200 transition-colors hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-200 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-950">
+                <Database className="h-4 w-4 text-blue-300" aria-hidden="true" />
+                Datakilder
+              </a>
+              <a href="/personvern" className="inline-flex items-center gap-1.5 font-medium text-slate-200 transition-colors hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-200 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-950">
+                <ShieldCheck className="h-4 w-4 text-blue-300" aria-hidden="true" />
+                Personvern
+              </a>
+              <a href="/vilkar" className="inline-flex items-center gap-1.5 font-medium text-slate-200 transition-colors hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-200 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-950">
+                <Scale className="h-4 w-4 text-blue-300" aria-hidden="true" />
+                Vilkår
+              </a>
+            </nav>
+          </div>
         </div>
       </div>
     </footer>

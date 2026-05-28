@@ -125,7 +125,7 @@ describe('Header', () => {
       ['Personsøk', '/person?tab=sok'],
       ['Persontopplister', '/person?tab=topplister'],
       ['Om Bedriftsgrafen', '/om'],
-      ['Datakilder', '/om#datakilder'],
+      ['Datakilder', '/datakilder'],
     ]
 
     for (const [label, href] of expectedLinks) {

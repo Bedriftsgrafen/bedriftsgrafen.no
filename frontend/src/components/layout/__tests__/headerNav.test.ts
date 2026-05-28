@@ -63,6 +63,7 @@ describe('headerNav', () => {
     ['/person', { tab: 'sok' }, ['person-search']],
     ['/person', { tab: 'topplister' }, ['person-toplists']],
     ['/person/ola-nordmann/1980', {}, ['people']],
+    ['/datakilder', {}, ['data-sources']],
   ])('marks the right menu item active for %s', (pathname, search, expectedIds) => {
     expect(getActiveItemIds(pathname, search)).toEqual(expectedIds)
   })
@@ -72,7 +73,7 @@ describe('headerNav', () => {
     const dataSources = menuItems.find((item) => item.id === 'data-sources')
 
     expect(personSearch ? getHeaderItemHref(personSearch) : '').toBe('/person?tab=sok')
-    expect(dataSources ? getHeaderItemHref(dataSources) : '').toBe('/om#datakilder')
+    expect(dataSources ? getHeaderItemHref(dataSources) : '').toBe('/datakilder')
   })
 
   it('keeps top-level shortcuts active across their tabbed subpages', () => {

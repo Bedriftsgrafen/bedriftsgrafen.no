@@ -60,5 +60,20 @@ describe('Footer', () => {
             'href',
             '/oppdateringer?tab=datastatus'
         )
+        expect(screen.getByRole('link', { name: /Les om datakilder og datakvalitet/i })).toHaveAttribute(
+            'href',
+            '/datakilder'
+        )
+    })
+
+    it('links to trust and legal pages with a visible source disclaimer', () => {
+        render(<Footer />)
+
+        expect(screen.getByText(/kan inneholde feil, forsinkelser eller mangler/i)).toBeInTheDocument()
+        const legalNav = screen.getByRole('navigation', { name: 'Tillit og vilkår' })
+        expect(legalNav).toBeInTheDocument()
+        expect(within(legalNav).getByRole('link', { name: /Datakilder/i })).toHaveAttribute('href', '/datakilder')
+        expect(within(legalNav).getByRole('link', { name: /Personvern/i })).toHaveAttribute('href', '/personvern')
+        expect(within(legalNav).getByRole('link', { name: /Vilkår/i })).toHaveAttribute('href', '/vilkar')
     })
 })

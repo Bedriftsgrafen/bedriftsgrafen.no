@@ -35,6 +35,7 @@ function AboutPage() {
                                     <p className="text-sm text-gray-600 dark:text-slate-300">
                                         All data hentes fra offentlige API-er. Vi lagrer og bearbeider
                                         informasjon for å tilby raske søk og historiske analyser.
+                                        {' '}<a href="/datakilder" className="font-medium text-blue-600 hover:underline dark:text-blue-300">Les mer om datakilder og datakvalitet</a>.
                                     </p>
                                 </div>
                             </div>

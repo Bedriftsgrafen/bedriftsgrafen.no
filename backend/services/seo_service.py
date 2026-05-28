@@ -167,6 +167,10 @@ STATIC_ROUTES = [
     "kart",
     "sammenlign",
     "om",
+    "oppdateringer",
+    "datakilder",
+    "personvern",
+    "vilkar",
 ]
 
 

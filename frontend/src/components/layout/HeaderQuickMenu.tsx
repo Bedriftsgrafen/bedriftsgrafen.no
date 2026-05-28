@@ -72,7 +72,7 @@ export function HeaderNavLink({
     case 'about':
       return <Link to="/om" {...commonProps}>{children}</Link>
     case 'data-sources':
-      return <Link to="/om" hash="datakilder" {...commonProps}>{children}</Link>
+      return <Link to="/datakilder" {...commonProps}>{children}</Link>
   }
 }
 

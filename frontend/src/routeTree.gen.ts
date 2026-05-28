@@ -9,9 +9,11 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
+import { Route as VilkarRouteImport } from './routes/vilkar'
 import { Route as UtforskRouteImport } from './routes/utforsk'
 import { Route as SammenlignRouteImport } from './routes/sammenlign'
 import { Route as RegionerRouteImport } from './routes/regioner'
+import { Route as PersonvernRouteImport } from './routes/personvern'
 import { Route as PersonerRouteImport } from './routes/personer'
 import { Route as PersonRouteImport } from './routes/person'
 import { Route as OppdateringerRouteImport } from './routes/oppdateringer'
@@ -21,6 +23,7 @@ import { Route as KonkurserRouteImport } from './routes/konkurser'
 import { Route as KommunerRouteImport } from './routes/kommuner'
 import { Route as KartRouteImport } from './routes/kart'
 import { Route as FylkerRouteImport } from './routes/fylker'
+import { Route as DatakilderRouteImport } from './routes/datakilder'
 import { Route as BransjerRouteImport } from './routes/bransjer'
 import { Route as SplatRouteImport } from './routes/$'
 import { Route as IndexRouteImport } from './routes/index'
@@ -32,6 +35,11 @@ import { Route as BransjeCodeRouteImport } from './routes/bransje.$code'
 import { Route as BedriftOrgnrRouteImport } from './routes/bedrift.$orgnr'
 import { Route as PersonNameBirthdateRouteImport } from './routes/person.$name.$birthdate'
 
+const VilkarRoute = VilkarRouteImport.update({
+  id: '/vilkar',
+  path: '/vilkar',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const UtforskRoute = UtforskRouteImport.update({
   id: '/utforsk',
   path: '/utforsk',
@@ -47,6 +55,11 @@ const RegionerRoute = RegionerRouteImport.update({
   path: '/regioner',
   getParentRoute: () => rootRouteImport,
 } as any).lazy(() => import('./routes/regioner.lazy').then((d) => d.Route))
+const PersonvernRoute = PersonvernRouteImport.update({
+  id: '/personvern',
+  path: '/personvern',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const PersonerRoute = PersonerRouteImport.update({
   id: '/personer',
   path: '/personer',
@@ -94,6 +107,11 @@ const FylkerRoute = FylkerRouteImport.update({
   path: '/fylker',
   getParentRoute: () => rootRouteImport,
 } as any).lazy(() => import('./routes/fylker.lazy').then((d) => d.Route))
+const DatakilderRoute = DatakilderRouteImport.update({
+  id: '/datakilder',
+  path: '/datakilder',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const BransjerRoute = BransjerRouteImport.update({
   id: '/bransjer',
   path: '/bransjer',
@@ -153,6 +171,7 @@ export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/$': typeof SplatRoute
   '/bransjer': typeof BransjerRoute
+  '/datakilder': typeof DatakilderRoute
   '/fylker': typeof FylkerRoute
   '/kart': typeof KartRoute
   '/kommuner': typeof KommunerRoute
@@ -162,9 +181,11 @@ export interface FileRoutesByFullPath {
   '/oppdateringer': typeof OppdateringerRoute
   '/person': typeof PersonRouteWithChildren
   '/personer': typeof PersonerRoute
+  '/personvern': typeof PersonvernRoute
   '/regioner': typeof RegionerRoute
   '/sammenlign': typeof SammenlignRoute
   '/utforsk': typeof UtforskRoute
+  '/vilkar': typeof VilkarRoute
   '/bedrift/$orgnr': typeof BedriftOrgnrRoute
   '/bransje/$code': typeof BransjeCodeRoute
   '/fylke/$code': typeof FylkeCodeRoute
@@ -177,6 +198,7 @@ export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/$': typeof SplatRoute
   '/bransjer': typeof BransjerRoute
+  '/datakilder': typeof DatakilderRoute
   '/fylker': typeof FylkerRoute
   '/kart': typeof KartRoute
   '/kommuner': typeof KommunerRoute
@@ -185,9 +207,11 @@ export interface FileRoutesByTo {
   '/om': typeof OmRoute
   '/oppdateringer': typeof OppdateringerRoute
   '/personer': typeof PersonerRoute
+  '/personvern': typeof PersonvernRoute
   '/regioner': typeof RegionerRoute
   '/sammenlign': typeof SammenlignRoute
   '/utforsk': typeof UtforskRoute
+  '/vilkar': typeof VilkarRoute
   '/bedrift/$orgnr': typeof BedriftOrgnrRoute
   '/bransje/$code': typeof BransjeCodeRoute
   '/fylke/$code': typeof FylkeCodeRoute
@@ -201,6 +225,7 @@ export interface FileRoutesById {
   '/': typeof IndexRoute
   '/$': typeof SplatRoute
   '/bransjer': typeof BransjerRoute
+  '/datakilder': typeof DatakilderRoute
   '/fylker': typeof FylkerRoute
   '/kart': typeof KartRoute
   '/kommuner': typeof KommunerRoute
@@ -210,9 +235,11 @@ export interface FileRoutesById {
   '/oppdateringer': typeof OppdateringerRoute
   '/person': typeof PersonRouteWithChildren
   '/personer': typeof PersonerRoute
+  '/personvern': typeof PersonvernRoute
   '/regioner': typeof RegionerRoute
   '/sammenlign': typeof SammenlignRoute
   '/utforsk': typeof UtforskRoute
+  '/vilkar': typeof VilkarRoute
   '/bedrift/$orgnr': typeof BedriftOrgnrRoute
   '/bransje/$code': typeof BransjeCodeRoute
   '/fylke/$code': typeof FylkeCodeRoute
@@ -227,6 +254,7 @@ export interface FileRouteTypes {
     | '/'
     | '/$'
     | '/bransjer'
+    | '/datakilder'
     | '/fylker'
     | '/kart'
     | '/kommuner'
@@ -236,9 +264,11 @@ export interface FileRouteTypes {
     | '/oppdateringer'
     | '/person'
     | '/personer'
+    | '/personvern'
     | '/regioner'
     | '/sammenlign'
     | '/utforsk'
+    | '/vilkar'
     | '/bedrift/$orgnr'
     | '/bransje/$code'
     | '/fylke/$code'
@@ -251,6 +281,7 @@ export interface FileRouteTypes {
     | '/'
     | '/$'
     | '/bransjer'
+    | '/datakilder'
     | '/fylker'
     | '/kart'
     | '/kommuner'
@@ -259,9 +290,11 @@ export interface FileRouteTypes {
     | '/om'
     | '/oppdateringer'
     | '/personer'
+    | '/personvern'
     | '/regioner'
     | '/sammenlign'
     | '/utforsk'
+    | '/vilkar'
     | '/bedrift/$orgnr'
     | '/bransje/$code'
     | '/fylke/$code'
@@ -274,6 +307,7 @@ export interface FileRouteTypes {
     | '/'
     | '/$'
     | '/bransjer'
+    | '/datakilder'
     | '/fylker'
     | '/kart'
     | '/kommuner'
@@ -283,9 +317,11 @@ export interface FileRouteTypes {
     | '/oppdateringer'
     | '/person'
     | '/personer'
+    | '/personvern'
     | '/regioner'
     | '/sammenlign'
     | '/utforsk'
+    | '/vilkar'
     | '/bedrift/$orgnr'
     | '/bransje/$code'
     | '/fylke/$code'
@@ -299,6 +335,7 @@ export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   SplatRoute: typeof SplatRoute
   BransjerRoute: typeof BransjerRoute
+  DatakilderRoute: typeof DatakilderRoute
   FylkerRoute: typeof FylkerRoute
   KartRoute: typeof KartRoute
   KommunerRoute: typeof KommunerRoute
@@ -308,9 +345,11 @@ export interface RootRouteChildren {
   OppdateringerRoute: typeof OppdateringerRoute
   PersonRoute: typeof PersonRouteWithChildren
   PersonerRoute: typeof PersonerRoute
+  PersonvernRoute: typeof PersonvernRoute
   RegionerRoute: typeof RegionerRoute
   SammenlignRoute: typeof SammenlignRoute
   UtforskRoute: typeof UtforskRoute
+  VilkarRoute: typeof VilkarRoute
   BedriftOrgnrRoute: typeof BedriftOrgnrRoute
   BransjeCodeRoute: typeof BransjeCodeRoute
   FylkeCodeRoute: typeof FylkeCodeRoute
@@ -320,6 +359,13 @@ export interface RootRouteChildren {
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
+    '/vilkar': {
+      id: '/vilkar'
+      path: '/vilkar'
+      fullPath: '/vilkar'
+      preLoaderRoute: typeof VilkarRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/utforsk': {
       id: '/utforsk'
       path: '/utforsk'
@@ -339,6 +385,13 @@ declare module '@tanstack/react-router' {
       path: '/regioner'
       fullPath: '/regioner'
       preLoaderRoute: typeof RegionerRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/personvern': {
+      id: '/personvern'
+      path: '/personvern'
+      fullPath: '/personvern'
+      preLoaderRoute: typeof PersonvernRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/personer': {
@@ -402,6 +455,13 @@ declare module '@tanstack/react-router' {
       path: '/fylker'
       fullPath: '/fylker'
       preLoaderRoute: typeof FylkerRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/datakilder': {
+      id: '/datakilder'
+      path: '/datakilder'
+      fullPath: '/datakilder'
+      preLoaderRoute: typeof DatakilderRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/bransjer': {
@@ -494,6 +554,7 @@ const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   SplatRoute: SplatRoute,
   BransjerRoute: BransjerRoute,
+  DatakilderRoute: DatakilderRoute,
   FylkerRoute: FylkerRoute,
   KartRoute: KartRoute,
   KommunerRoute: KommunerRoute,
@@ -503,9 +564,11 @@ const rootRouteChildren: RootRouteChildren = {
   OppdateringerRoute: OppdateringerRoute,
   PersonRoute: PersonRouteWithChildren,
   PersonerRoute: PersonerRoute,
+  PersonvernRoute: PersonvernRoute,
   RegionerRoute: RegionerRoute,
   SammenlignRoute: SammenlignRoute,
   UtforskRoute: UtforskRoute,
+  VilkarRoute: VilkarRoute,
   BedriftOrgnrRoute: BedriftOrgnrRoute,
   BransjeCodeRoute: BransjeCodeRoute,
   FylkeCodeRoute: FylkeCodeRoute,
