@@ -262,6 +262,25 @@ class TestFetchSubunits:
         assert result[0]["organisasjonsnummer"] == "111111111"
 
     @pytest.mark.asyncio
+    async def test_fetch_subunits_handles_null_next_link(self):
+        # Arrange
+        service = BrregApiService()
+        mock_response = MagicMock()
+        mock_response.status_code = 200
+        mock_response.json.return_value = {
+            "_embedded": {"underenheter": [{"organisasjonsnummer": "111111111"}]},
+            "_links": {"next": None},
+        }
+        service._get = AsyncMock(return_value=mock_response)
+
+        # Act
+        result = await service.fetch_subunits("987654321")
+
+        # Assert
+        assert len(result) == 1
+        assert service._get.call_count == 1
+
+    @pytest.mark.asyncio
     async def test_fetch_subunits_pagination(self):
         # Arrange
         service = BrregApiService()

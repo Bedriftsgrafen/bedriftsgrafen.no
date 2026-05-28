@@ -188,6 +188,16 @@ class UpdateService:
         for update_id in eligible_update_ids:
             cls._mark_latest_oppdateringsid(result, update_id)
 
+    @staticmethod
+    def _extract_next_link(data: dict[str, Any]) -> str | None:
+        links = data.get("_links") or {}
+        next_link = links.get("next") or {}
+        if not isinstance(next_link, dict):
+            return None
+
+        href = next_link.get("href")
+        return href if isinstance(href, str) and href else None
+
     @classmethod
     def _previous_company_event_value(cls, event_type: str, snapshot: dict[str, Any]) -> dict[str, Any]:
         raw_data = snapshot.get("raw_data") or {}
@@ -608,7 +618,7 @@ class UpdateService:
             # Metadata tracking
             result.pages_fetched += 1
 
-            return data.get("_links", {}).get("next", {}).get("href")
+            return self._extract_next_link(data)
 
     async def _fetch_chunk_details(self, entities: list[dict[str, Any]]) -> list[FetchResult]:
         """Fetch details for a chunk of companies concurrently.
@@ -948,8 +958,8 @@ class UpdateService:
                     if subunit_data is None:
                         return SubunitFetchResult(
                             orgnr=orgnr,
-                            success=False,
-                            error="Subunit details not found",
+                            success=True,
+                            subunit_data=None,
                             source_update_id=source_update_id,
                             source_event_time=source_event_time,
                             source_change_type=source_change_type,
@@ -1312,7 +1322,7 @@ class UpdateService:
                             f"Processed page {pages_processed} with {len(entities)} subunit updates",
                             extra={"batch_size": len(entities)},
                         )
-                        next_url = data.get("_links", {}).get("next", {}).get("href")
+                        next_url = self._extract_next_link(data)
 
                     except Exception as e:
                         logger.exception(f"Error in subunit updates: {e}")
@@ -1420,6 +1430,9 @@ class UpdateService:
 
                         # Extract unique orgnrs from the event batch
                         orgnrs_to_sync = set()
+                        event_update_ids_by_orgnr: dict[str, list[int]] = {}
+                        committed_update_ids: list[int] = []
+                        failed_update_ids: list[int] = []
                         latest_role_events_by_orgnr = self._latest_role_events_by_orgnr(events)
                         last_seen_id = after_id
                         for event in events:
@@ -1431,6 +1444,10 @@ class UpdateService:
                                 current_id = int(event.get("id"))
                                 if last_seen_id is None or current_id > last_seen_id:
                                     last_seen_id = current_id
+                                if orgnr:
+                                    event_update_ids_by_orgnr.setdefault(orgnr, []).append(current_id)
+                                else:
+                                    committed_update_ids.append(current_id)
                             except ValueError, TypeError:  # Non-integer event ID — skip tracking
                                 pass
 
@@ -1504,7 +1521,6 @@ class UpdateService:
                         all_batch_roles: list[models.Role] = []
                         role_counts_by_orgnr: dict[str, int] = {}
                         processed_orgnrs: set[str] = set()
-                        role_sync_failed = False
 
                         # Sort orgnrs to ensure consistent lock acquisition order and prevent deadlocks
                         sorted_orgnrs_to_sync = sorted(orgnrs_to_sync)
@@ -1513,6 +1529,7 @@ class UpdateService:
                             # Skip companies that still don't exist (couldn't be fetched)
                             if orgnr not in existing_orgnrs:
                                 logger.warning(f"Skipping role sync for {orgnr}: company not found in bedrifter table")
+                                committed_update_ids.extend(event_update_ids_by_orgnr.get(orgnr, []))
                                 continue
 
                             try:
@@ -1535,9 +1552,10 @@ class UpdateService:
                                 result.companies_updated += 1
                                 SYNC_OPERATIONS_TOTAL.labels(entity_type="role", operation_type="updated").inc()
                                 processed_orgnrs.add(orgnr)
+                                committed_update_ids.extend(event_update_ids_by_orgnr.get(orgnr, []))
 
                             except Exception as e:
-                                role_sync_failed = True
+                                failed_update_ids.extend(event_update_ids_by_orgnr.get(orgnr, []))
                                 error_msg = f"Failed to sync roles: {e!s}"
                                 logger.error(f"{error_msg} for {orgnr}")
                                 status_code = getattr(e, "status_code", None) if hasattr(e, "status_code") else None
@@ -1564,19 +1582,20 @@ class UpdateService:
                             # 3. Final commit for this batch
                             await self.db.commit()
 
-                            # Save progress to prevent repeating if next batch fails or run times out
-                            if last_seen_id and not role_sync_failed:
-                                await self.system_repo.set_state("role_update_latest_id", str(last_seen_id))
+                        self._publish_contiguous_update_ids(result, committed_update_ids, failed_update_ids)
+                        if result.latest_oppdateringsid:
+                            await self.system_repo.set_state("role_update_latest_id", str(result.latest_oppdateringsid))
 
                         result.companies_processed += len(events)
-                        if role_sync_failed:
-                            logger.warning("Role updates had sync errors; not advancing role update cursor")
+                        if failed_update_ids:
+                            logger.warning(
+                                "Role updates had sync errors; advanced cursor only through contiguous successes"
+                            )
                             break
 
-                        result.latest_oppdateringsid = last_seen_id
                         # If we got a full batch, continue to next batch
                         if len(events) >= params["size"]:
-                            params["afterId"] = last_seen_id
+                            params["afterId"] = result.latest_oppdateringsid or last_seen_id
                             params.pop("afterTime", None)
                         else:
                             break

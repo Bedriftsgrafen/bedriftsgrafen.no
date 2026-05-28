@@ -27,6 +27,16 @@ MAX_BATCH_SIZE = 1_000
 DEFAULT_PREVIEW_LIMIT = 20
 
 
+def extract_next_link(data: dict[str, Any]) -> str | None:
+    links = data.get("_links") or {}
+    next_link = links.get("next") or {}
+    if not isinstance(next_link, dict):
+        return None
+
+    href = next_link.get("href")
+    return href if isinstance(href, str) and href else None
+
+
 @dataclass(frozen=True)
 class ReplayCandidate:
     orgnr: str
@@ -198,19 +208,20 @@ def event_identity_pairs(candidates: list[ReplayCandidate]) -> set[tuple[str, st
 async def fetch_company_update_rows(args: argparse.Namespace) -> tuple[list[dict[str, Any]], int]:
     from constants.urls import BRREG_UPDATES_URL
 
-    params: dict[str, Any] | None = {
+    initial_params: dict[str, Any] = {
         "includeChanges": "true",
         "size": min(args.batch_size, MAX_BATCH_SIZE),
         "sort": "id,ASC",
     }
     if args.from_id is not None:
-        params["oppdateringsid"] = max(args.from_id - 1, 0)
+        initial_params["oppdateringsid"] = max(args.from_id - 1, 0)
     else:
-        params["dato"] = args.from_time
+        initial_params["dato"] = args.from_time
 
     rows: list[dict[str, Any]] = []
     pages_fetched = 0
     next_url: str | None = BRREG_UPDATES_URL
+    params: dict[str, Any] | None = initial_params
     stop = False
 
     async with httpx.AsyncClient(timeout=args.api_timeout) as http_client:
@@ -239,7 +250,7 @@ async def fetch_company_update_rows(args: argparse.Namespace) -> tuple[list[dict
                     stop = True
                     break
 
-            next_url = data.get("_links", {}).get("next", {}).get("href")
+            next_url = extract_next_link(data)
 
     return rows, pages_fetched
 

@@ -662,6 +662,36 @@ class TestFetchRoleUpdates:
         update_service.system_repo.set_state.assert_not_called()
         update_service.report_sync_error.assert_awaited_once()
 
+    async def test_fetch_role_updates_advances_cursor_to_success_before_failure(self, update_service, mock_db):
+        mock_resp = MagicMock(status_code=200)
+        mock_resp.json.return_value = [
+            {
+                "id": "500",
+                "time": "2026-05-27T12:00:00Z",
+                "data": {"organisasjonsnummer": "111111111"},
+            },
+            {
+                "id": "505",
+                "time": "2026-05-27T13:00:00Z",
+                "data": {"organisasjonsnummer": "222222222"},
+            },
+        ]
+
+        update_service.company_repo.get_existing_orgnrs = AsyncMock(return_value={"111111111", "222222222"})
+        update_service.subunit_repo.get_existing_orgnrs = AsyncMock(return_value=set())
+        update_service.brreg_api.fetch_roles = AsyncMock(side_effect=[[], Exception("role API down")])
+        update_service.report_sync_error = AsyncMock()
+        update_service._record_company_event_safe = AsyncMock()
+
+        with patch("httpx.AsyncClient") as mock_client:
+            mock_client.return_value.__aenter__.return_value.get.return_value = mock_resp
+
+            result = await update_service.fetch_role_updates(since_date=date(2026, 5, 27), page_size=10)
+
+        assert result["latest_oppdateringsid"] == 500
+        update_service.system_repo.set_state.assert_awaited_once_with("role_update_latest_id", "500")
+        update_service.report_sync_error.assert_awaited_once()
+
     async def test_report_sync_error_smart_filtering(self, update_service, mock_db):
         mock_db.execute = AsyncMock(return_value=MagicMock(scalar_one_or_none=lambda: None))
 

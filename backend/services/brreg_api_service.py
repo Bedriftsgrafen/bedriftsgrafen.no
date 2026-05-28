@@ -16,6 +16,16 @@ logger = logging.getLogger(__name__)
 BrregApiException = ExternalApiException
 
 
+def _extract_next_link(data: dict[str, Any]) -> str:
+    links = data.get("_links") or {}
+    next_link = links.get("next") or {}
+    if not isinstance(next_link, dict):
+        return ""
+
+    href = next_link.get("href")
+    return href if isinstance(href, str) else ""
+
+
 class BrregApiService(BaseExternalService):
     """
     Service for fetching data from Brønnøysundregistrene APIs:
@@ -218,7 +228,7 @@ class BrregApiService(BaseExternalService):
                     all_subunits.extend(subunits)
                     logger.debug(f"Fetched {len(subunits)} subunits for {parent_orgnr}, page {page_count}")
 
-                url = data["_links"]["next"]["href"] if "_links" in data and "next" in data["_links"] else ""
+                url = _extract_next_link(data)
 
             except Exception as e:
                 logger.error(f"Error fetching subunits for {parent_orgnr}: {e!s}")

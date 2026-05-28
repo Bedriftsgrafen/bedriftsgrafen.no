@@ -171,7 +171,9 @@ app.add_middleware(
 @app.exception_handler(BedriftsgrafenException)
 async def bedriftsgrafen_exception_handler(request: Request, exc: BedriftsgrafenException):
     """Global exception handler for domain exceptions"""
-    logger.error(
+    log_level = logging.ERROR if exc.status_code >= 500 else logging.INFO
+    logger.log(
+        log_level,
         f"Domain exception: {exc.message}",
         extra={"status_code": exc.status_code, "path": request.url.path, "exception_type": exc.__class__.__name__},
     )

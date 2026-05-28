@@ -103,6 +103,7 @@ Application observability notes:
 - Backend and worker expose token-protected Prometheus metrics at `/metrics` for internal scraping.
 - Brreg upstream calls emit `bedriftsgrafen_brreg_api_requests_total{endpoint,status_code}`.
 - Frontend React ErrorBoundary reports production client crashes to `/api/v1/client-errors`; the backend writes sanitized `client_error` lines to Docker stdout for Loki and to `/app/logs/client_errors.log` for local inspection.
+- The host `backend/logs` bind mount must be writable by container uid/gid `1000:1000`: `mkdir -p backend/logs && sudo chown 1000:1000 backend/logs`.
 
 The observability stack is separate from the production app stack:
 

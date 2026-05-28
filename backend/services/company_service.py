@@ -17,7 +17,7 @@ from constants.concurrency import (
     SEARCH_CACHE_TTL,
 )
 from database import AsyncSessionLocal
-from exceptions import ValidationException
+from exceptions import CompanyNotFoundException, ValidationException
 from repositories.accounting_repository import AccountingRepository
 from repositories.company import CompanyRepository, CompanyWithFinancials
 from repositories.company_event_repository import CompanyEventRepository
@@ -198,6 +198,9 @@ class CompanyService:
         """Fetch company by orgnr with financials eager loaded. Falls back to subunit lookup if main fails."""
         try:
             return await self.company_repo.get_by_orgnr(orgnr)
+        except CompanyNotFoundException:
+            logger.debug("company.with_accounting.primary_not_found", extra={"orgnr": sanitize_log(orgnr)})
+            return await self.get_company_detail(orgnr)
         except Exception:
             logger.warning(
                 "get_by_orgnr failed for %s, falling back to subunit lookup", sanitize_log(orgnr), exc_info=True
@@ -206,16 +209,18 @@ class CompanyService:
 
     async def get_company_detail(self, orgnr: str) -> models.Company | Any | None:
         """Get enriched company details with parent name lookup and subunit fallback."""
-        company: models.Company | dict[str, Any] | None
+        company: models.Company | dict[str, Any] | None = None
+        subunit: Any | None = None
         try:
             company = await self.company_repo.get_by_orgnr(orgnr)
+        except CompanyNotFoundException:
+            logger.debug("company.get_detail.primary_not_found", extra={"orgnr": sanitize_log(orgnr)})
+            subunit = await self.subunit_repo.get_by_orgnr(orgnr)
         except Exception:
             logger.warning("get_by_orgnr failed for %s, trying subunit fallback", sanitize_log(orgnr), exc_info=True)
             subunit = await self.subunit_repo.get_by_orgnr(orgnr)
-            if not subunit:
-                logger.debug("company.get_detail.both_lookups_failed", extra={"orgnr": sanitize_log(orgnr)})
-                return None
 
+        if subunit:
             # Map SubUnit to a Company-compatible dictionary for Pydantic
             # This allows the frontend to open sub-units in the same Modal
             logger.info("Using SubUnit fallback for %s", sanitize_log(orgnr))
