@@ -61,6 +61,17 @@ class AccountingRepository:
         except ZeroDivisionError, OverflowError:
             return None
 
+    @staticmethod
+    def _source_identity(raw_data: dict[str, Any] | None) -> tuple[str | None, str | None]:
+        if not raw_data:
+            return None, None
+        source_id = raw_data.get("id")
+        journalnr = raw_data.get("journalnr")
+        return (
+            str(source_id) if source_id is not None else None,
+            str(journalnr) if journalnr is not None else None,
+        )
+
     async def get_by_orgnr(self, orgnr: str) -> Sequence[models.Accounting]:
         """Get all accounting records for a company.
 
@@ -196,6 +207,8 @@ class AccountingRepository:
             return accounting
         except AccountingNotFoundException:
             raise
+        except ValidationException:
+            raise
         except Exception as e:
             logger.error(f"Database error fetching accounting for {orgnr} year {year}: {e}")
             raise DatabaseException(f"Failed to fetch accounting for {orgnr} year {year}", original_error=e)
@@ -258,12 +271,33 @@ class AccountingRepository:
         periode_fra = self._parse_date(parsed_data.get("periode_fra"))
         periode_til = self._parse_date(parsed_data.get("periode_til"))
 
-        # Fallback: if periode_til is missing, use Dec 31 of the year
-        # This ensures unique constraint (orgnr, periode_til) can work
         if periode_til is None:
-            periode_til = date(int(year), 12, 31)
+            raise ValidationException("Financial data must include fiscal period end date (periode_til)")
 
         try:
+            existing_result = await self.db.execute(
+                select(models.Accounting).where(
+                    models.Accounting.orgnr == orgnr,
+                    models.Accounting.periode_til == periode_til,
+                )
+            )
+            existing = existing_result.scalar_one_or_none()
+            if existing is not None:
+                new_source_id, new_journalnr = self._source_identity(raw_data)
+                existing_source_id, existing_journalnr = self._source_identity(existing.raw_data)
+                source_id_matches = new_source_id is not None and new_source_id == existing_source_id
+                journalnr_matches = new_journalnr is not None and new_journalnr == existing_journalnr
+                source_id_conflicts = (
+                    new_source_id is not None and existing_source_id is not None and new_source_id != existing_source_id
+                )
+                journalnr_conflicts = (
+                    new_journalnr is not None and existing_journalnr is not None and new_journalnr != existing_journalnr
+                )
+                if (source_id_conflicts or journalnr_conflicts) and not (source_id_matches or journalnr_matches):
+                    raise ValidationException(
+                        "Financial data conflicts with an existing statement for the same fiscal period"
+                    )
+
             # Calculate gjeldsgrad using helper method (DRY)
             egenkapital = self._validate_numeric(parsed_data.get("egenkapital"))
             kortsiktig = self._validate_numeric(parsed_data.get("kortsiktig_gjeld"))
@@ -327,6 +361,8 @@ class AccountingRepository:
             return accounting
 
         except AccountingNotFoundException:
+            raise
+        except ValidationException:
             raise
         except Exception as e:
             if autocommit:

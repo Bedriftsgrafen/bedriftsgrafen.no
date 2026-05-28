@@ -310,6 +310,9 @@ async def test_fetch_and_store_company(MockRoleService, service):
     # Assert
     assert result["company_fetched"] is True
     assert result["orgnr"] == "123456789"
+    assert result["financials_fetched"] == 0
+    service.company_repo.update_last_polled_regnskap.assert_called_once_with("123456789")
+    service.db.commit.assert_called_once()
 
 
 @pytest.mark.asyncio

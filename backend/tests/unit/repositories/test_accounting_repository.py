@@ -41,11 +41,19 @@ async def test_create_or_update_validation_missing_year(accounting_repo):
 
 
 @pytest.mark.asyncio
+async def test_create_or_update_validation_missing_period_end(accounting_repo):
+    with pytest.raises(ValidationException, match="period end date"):
+        await accounting_repo.create_or_update("123", {"aar": 2023}, {})
+
+
+@pytest.mark.asyncio
 async def test_create_or_update_success(accounting_repo, mock_db):
     # Arrange
     row_mock = MagicMock()
     row_mock.scalar_one.return_value = "AccountingObject"
-    mock_db.execute.return_value = row_mock
+    existing_mock = MagicMock()
+    existing_mock.scalar_one_or_none.return_value = None
+    mock_db.execute.side_effect = [existing_mock, row_mock]
 
     # Mock retrieval after insert
     accounting_repo.get_by_orgnr_and_year = AsyncMock(return_value="AccountingObject")
@@ -53,6 +61,7 @@ async def test_create_or_update_success(accounting_repo, mock_db):
     data = {
         "aar": 2023,
         "total_inntekt": "1000",
+        "periode_til": "2023-12-31",
         "egenkapital": "500",
         "kortsiktig_gjeld": "200",
         "langsiktig_gjeld": "100",
@@ -63,8 +72,43 @@ async def test_create_or_update_success(accounting_repo, mock_db):
 
     # Assert
     assert result == "AccountingObject"
-    mock_db.execute.assert_called()
+    assert mock_db.execute.call_count == 2
     mock_db.commit.assert_called()
+
+
+@pytest.mark.asyncio
+async def test_create_or_update_rejects_conflicting_statement_identity(accounting_repo, mock_db):
+    existing_statement = MagicMock()
+    existing_statement.raw_data = {"id": "old-source", "journalnr": "old-journal"}
+    existing_mock = MagicMock()
+    existing_mock.scalar_one_or_none.return_value = existing_statement
+    mock_db.execute.return_value = existing_mock
+
+    data = {"aar": 2023, "periode_til": "2023-12-31"}
+    raw_data = {"id": "new-source", "journalnr": "new-journal"}
+
+    with pytest.raises(ValidationException, match="conflicts with an existing statement"):
+        await accounting_repo.create_or_update("123", data, raw_data)
+
+    mock_db.commit.assert_not_called()
+
+
+@pytest.mark.asyncio
+async def test_create_or_update_allows_adding_identity_to_legacy_statement(accounting_repo, mock_db):
+    existing_statement = MagicMock()
+    existing_statement.raw_data = {}
+    existing_mock = MagicMock()
+    existing_mock.scalar_one_or_none.return_value = existing_statement
+    row_mock = MagicMock()
+    row_mock.scalar_one.return_value = "AccountingObject"
+    mock_db.execute.side_effect = [existing_mock, row_mock]
+
+    data = {"aar": 2023, "periode_til": "2023-12-31"}
+    raw_data = {"id": "new-source", "journalnr": "new-journal"}
+
+    result = await accounting_repo.create_or_update("123", data, raw_data)
+
+    assert result == "AccountingObject"
 
 
 def test_calculate_gjeldsgrad_calculation():
@@ -224,7 +268,7 @@ async def test_create_or_update_error_rollback(accounting_repo, mock_db):
 
     mock_db.execute.side_effect = Exception("DB error")
 
-    data = {"aar": 2023}
+    data = {"aar": 2023, "periode_til": "2023-12-31"}
 
     with pytest.raises(DatabaseException):
         await accounting_repo.create_or_update("123", data, {}, autocommit=True)

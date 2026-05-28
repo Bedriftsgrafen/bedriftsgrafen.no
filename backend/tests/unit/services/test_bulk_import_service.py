@@ -1,6 +1,7 @@
 from unittest.mock import AsyncMock, MagicMock
 
 import pytest
+from sqlalchemy.dialects import postgresql
 
 from services.bulk_import_service import BulkImportService
 
@@ -92,6 +93,21 @@ async def test_process_single_company_success(service, mock_company_service):
     assert result["error"] is None
     # Ensure geocoding was disabled for bulk import
     mock_company_service.fetch_and_store_company.assert_awaited_with("123456789", fetch_financials=True, geocode=False)
+
+
+@pytest.mark.asyncio
+async def test_process_single_company_marks_partial_source_errors_failed(service, mock_company_service):
+    """Bulk import should retry items when secondary source fetches fail."""
+    mock_company_service.fetch_and_store_company.return_value = {
+        "company_fetched": True,
+        "financials_fetched": 0,
+        "errors": ["Kunne ikke hente regnskap fra Brønnøysund akkurat nå."],
+    }
+
+    result = await service.process_single_company("123456789")
+
+    assert result["company_fetched"] is True
+    assert result["error"] == "Kunne ikke hente regnskap fra Brønnøysund akkurat nå."
 
 
 @pytest.mark.asyncio
@@ -221,6 +237,19 @@ class TestWorker:
 
         # Assert - should have tried to fetch
         assert mock_db_session.execute.call_count >= 1
+
+    @pytest.mark.asyncio
+    async def test_claim_next_queue_item_uses_skip_locked(self, service, mock_db_session):
+        """Workers should claim queue rows atomically to avoid duplicate processing."""
+        mock_db_session.execute.return_value.scalar_one_or_none.return_value = None
+
+        result = await service._claim_next_queue_item()
+
+        assert result is None
+        stmt = mock_db_session.execute.await_args.args[0]
+        compiled = str(stmt.compile(dialect=postgresql.dialect()))
+        assert "UPDATE bulk_import_queue" in compiled
+        assert "FOR UPDATE SKIP LOCKED" in compiled
 
     @pytest.mark.asyncio
     async def test_worker_processes_and_marks_completed(self, service, mock_db_session, mock_company_service):

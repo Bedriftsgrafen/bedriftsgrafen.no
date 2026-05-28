@@ -461,9 +461,9 @@ class CompanyService:
                     logger.error("financials.fetch_failed for %s: %s", orgnr, e)
                     _append_error("Kunne ikke hente regnskap fra Brønnøysund akkurat nå.")
                 else:
+                    saved_count = 0
+                    skipped_count = 0
                     if statements:
-                        saved_count = 0
-                        skipped_count = 0
                         for statement in statements:
                             try:
                                 parsed = await self.brreg_api.parse_financial_data(statement)
@@ -489,12 +489,12 @@ class CompanyService:
                                 logger.error("financials.statement_save_failed for %s: %s", orgnr, e)
                                 _append_error("Et regnskapspost kunne ikke lagres.")
 
-                        if saved_count > 0:
-                            await self.company_repo.update_last_polled_regnskap(orgnr)
-                            await self.db.commit()
+                    if not statements or saved_count > 0:
+                        await self.company_repo.update_last_polled_regnskap(orgnr)
+                        await self.db.commit()
 
-                        result["financials_fetched"] = saved_count
-                        result["financials_skipped"] = skipped_count
+                    result["financials_fetched"] = saved_count
+                    result["financials_skipped"] = skipped_count
 
             if geocode and company.latitude is None:
                 await self.ensure_geocoded(company)

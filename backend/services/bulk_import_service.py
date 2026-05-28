@@ -120,7 +120,7 @@ class BulkImportService:
             result["company_fetched"] = service_result["company_fetched"]
             result["financials_count"] = service_result["financials_fetched"]
 
-            if service_result["errors"] and not result["company_fetched"]:
+            if service_result["errors"]:
                 result["error"] = "; ".join(service_result["errors"])
 
         except Exception as e:
@@ -140,24 +140,11 @@ class BulkImportService:
         logger.info(f"Worker {worker_id} started")
 
         while True:
-            # Fetch next pending item (ordered by priority desc)
-            result = await self.db.execute(
-                select(BulkImportQueue)
-                .filter(BulkImportQueue.status == ImportStatus.PENDING)
-                .order_by(BulkImportQueue.priority.desc(), BulkImportQueue.queued_at)
-                .limit(1)
-            )
-            queue_item = result.scalar_one_or_none()
+            queue_item = await self._claim_next_queue_item()
 
             if not queue_item:
                 logger.info(f"Worker {worker_id}: No more items in queue")
                 break
-
-            # Mark as in progress
-            queue_item.status = ImportStatus.IN_PROGRESS
-            queue_item.started_at = datetime.now(UTC)
-            queue_item.attempt_count = (queue_item.attempt_count or 0) + 1
-            await self.db.commit()
 
             # Rate limiting
             async with semaphore:
@@ -195,6 +182,32 @@ class BulkImportService:
 
         logger.info(f"Worker {worker_id} finished")
 
+    async def _claim_next_queue_item(self) -> BulkImportQueue | None:
+        """Atomically claim the next pending queue item for one worker."""
+        next_queue_item = (
+            select(BulkImportQueue.orgnr)
+            .where(BulkImportQueue.status == ImportStatus.PENDING)
+            .order_by(BulkImportQueue.priority.desc(), BulkImportQueue.queued_at)
+            .with_for_update(skip_locked=True)
+            .limit(1)
+            .cte("next_queue_item")
+        )
+        claim_stmt = (
+            update(BulkImportQueue)
+            .where(BulkImportQueue.orgnr == next_queue_item.c.orgnr)
+            .values(
+                status=ImportStatus.IN_PROGRESS,
+                started_at=datetime.now(UTC),
+                attempt_count=BulkImportQueue.attempt_count + 1,
+            )
+            .returning(BulkImportQueue)
+        )
+
+        result = await self.db.execute(claim_stmt)
+        queue_item = result.scalar_one_or_none()
+        await self.db.commit()
+        return queue_item
+
     async def start_bulk_import(self, batch_name: str = "default") -> dict[str, Any]:
         """
         Start the bulk import process with multiple workers
@@ -219,14 +232,25 @@ class BulkImportService:
 
         logger.info(f"Starting bulk import batch '{batch_name}' with {batch.total_companies} companies")
 
-        # Create semaphore for rate limiting
-        semaphore = asyncio.Semaphore(self.requests_per_second)
+        if batch.total_companies:
+            from database import AsyncSessionLocal
 
-        # Create and run workers
-        workers = [asyncio.create_task(self.worker(i, semaphore)) for i in range(self.max_concurrent_workers)]
+            # Create semaphore for rate limiting
+            semaphore = asyncio.Semaphore(self.requests_per_second)
 
-        # Wait for all workers to complete
-        await asyncio.gather(*workers)
+            async def run_worker(worker_id: int) -> None:
+                async with AsyncSessionLocal() as worker_db:
+                    worker_service = BulkImportService(worker_db)
+                    worker_service.requests_per_second = self.requests_per_second
+                    worker_service.max_concurrent_workers = self.max_concurrent_workers
+                    worker_service.batch_size = self.batch_size
+                    await worker_service.worker(worker_id, semaphore)
+
+            # Create and run workers with independent sessions; AsyncSession is not task-safe.
+            workers = [asyncio.create_task(run_worker(i)) for i in range(self.max_concurrent_workers)]
+
+            # Wait for all workers to complete
+            await asyncio.gather(*workers)
 
         # Update batch statistics
         batch.completed_at = datetime.now(UTC)

@@ -436,6 +436,31 @@ class TestFetchSubunitUpdates:
 
         assert result.latest_oppdateringsid == 42
 
+    @pytest.mark.asyncio
+    async def test_persist_subunit_page_does_not_advance_past_earlier_failed_update(self, update_service):
+        update_service.event_ledger_enabled = False
+        update_service._ensure_parent_companies_exist = AsyncMock(return_value={"987654321"})
+        update_service.subunit_repo.create_batch = AsyncMock(return_value=1)
+
+        fetch_results = [
+            SubunitFetchResult(orgnr="111111111", success=False, error="API timeout", source_update_id="2"),
+            SubunitFetchResult(
+                orgnr="222222222",
+                success=True,
+                subunit_data={
+                    "organisasjonsnummer": "222222222",
+                    "navn": "Avdeling",
+                    "overordnetEnhet": "987654321",
+                },
+                source_update_id="99",
+            ),
+        ]
+        result = UpdateBatchResult(since_date=date.today(), since_iso="2026-05-27T00:00:00.000Z")
+
+        await update_service._persist_subunit_update_page(fetch_results, result)
+
+        assert result.latest_oppdateringsid is None
+
 
 @pytest.mark.asyncio
 async def test_ensure_parent_companies_exist_sorts_missing_orgnrs(update_service, mock_db):
@@ -824,6 +849,30 @@ class TestPersistChunk:
         await update_service._persist_chunk(fetch_results, result)
 
         assert result.latest_oppdateringsid == 2
+        update_service.db.commit.assert_awaited()
+
+    @pytest.mark.asyncio
+    async def test_persist_chunk_does_not_advance_cursor_past_earlier_failed_update(self, update_service):
+        company = MagicMock()
+        company.last_polled_regnskap = date.today()
+        update_service.company_repo.create_or_update = AsyncMock(return_value=company)
+        update_service.report_sync_error = AsyncMock()
+        update_service._fetch_and_persist_financials = AsyncMock()
+
+        fetch_results = [
+            FetchResult(orgnr="111111111", success=False, error="API timeout", source_update_id="2"),
+            FetchResult(
+                orgnr="222222222",
+                success=True,
+                company_data={"organisasjonsnummer": "222222222"},
+                source_update_id="99",
+            ),
+        ]
+        result = UpdateBatchResult(since_date=date.today(), since_iso="2026-01-26T00:00:00.000Z")
+
+        await update_service._persist_chunk(fetch_results, result)
+
+        assert result.latest_oppdateringsid is None
         update_service.db.commit.assert_awaited()
 
     @pytest.mark.asyncio

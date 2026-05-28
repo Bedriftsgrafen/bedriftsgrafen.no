@@ -152,15 +152,41 @@ class UpdateService:
         return value.isoformat() if isinstance(value, date) else value
 
     @staticmethod
-    def _mark_latest_oppdateringsid(result: UpdateBatchResult, source_update_id: str | int | None) -> None:
+    def _parse_oppdateringsid(source_update_id: str | int | None) -> int | None:
         if source_update_id is None:
-            return
+            return None
         try:
-            update_id = int(source_update_id)
+            return int(source_update_id)
         except TypeError, ValueError:
+            return None
+
+    @classmethod
+    def _mark_latest_oppdateringsid(cls, result: UpdateBatchResult, source_update_id: str | int | None) -> None:
+        update_id = cls._parse_oppdateringsid(source_update_id)
+        if update_id is None:
             return
         if result.latest_oppdateringsid is None or update_id > result.latest_oppdateringsid:
             result.latest_oppdateringsid = update_id
+
+    @classmethod
+    def _publish_contiguous_update_ids(
+        cls,
+        result: UpdateBatchResult,
+        committed_update_ids: list[int],
+        failed_update_ids: list[int],
+    ) -> None:
+        if not committed_update_ids:
+            return
+
+        eligible_update_ids = committed_update_ids
+        if failed_update_ids:
+            first_failed_update_id = min(failed_update_ids)
+            eligible_update_ids = [
+                update_id for update_id in committed_update_ids if update_id < first_failed_update_id
+            ]
+
+        for update_id in eligible_update_ids:
+            cls._mark_latest_oppdateringsid(result, update_id)
 
     @classmethod
     def _previous_company_event_value(cls, event_type: str, snapshot: dict[str, Any]) -> dict[str, Any]:
@@ -667,11 +693,12 @@ class UpdateService:
             result: Aggregate result tracker to update
         """
         records_since_commit = 0
-        pending_update_ids: list[str | int | None] = []
+        pending_update_ids: list[int] = []
+        committed_update_ids: list[int] = []
+        failed_update_ids: list[int] = []
 
-        def publish_committed_update_ids() -> None:
-            for update_id in pending_update_ids:
-                self._mark_latest_oppdateringsid(result, update_id)
+        def remember_committed_update_ids() -> None:
+            committed_update_ids.extend(pending_update_ids)
             pending_update_ids.clear()
 
         sorted_results = sorted(fetch_results, key=lambda item: item.orgnr)
@@ -683,6 +710,9 @@ class UpdateService:
             result.companies_processed += 1
 
             if not fetch_result.success:
+                update_id = self._parse_oppdateringsid(fetch_result.source_update_id)
+                if update_id is not None:
+                    failed_update_ids.append(update_id)
                 if "Skipped" in (fetch_result.error or ""):
                     result.companies_skipped += 1
                 else:
@@ -721,11 +751,13 @@ class UpdateService:
                         )
                         result.companies_deleted += 1
                         SYNC_OPERATIONS_TOTAL.labels(entity_type="company", operation_type="deleted").inc()
-                    pending_update_ids.append(fetch_result.source_update_id)
+                    update_id = self._parse_oppdateringsid(fetch_result.source_update_id)
+                    if update_id is not None:
+                        pending_update_ids.append(update_id)
                     records_since_commit += 1
                     if records_since_commit >= DB_COMMIT_CHUNK_SIZE:
                         await self.db.commit()
-                        publish_committed_update_ids()
+                        remember_committed_update_ids()
                         records_since_commit = 0
                         logger.debug(f"Committed chunk of {DB_COMMIT_CHUNK_SIZE} records")
                     continue
@@ -796,16 +828,21 @@ class UpdateService:
                         )
 
                 records_since_commit += 1
-                pending_update_ids.append(fetch_result.source_update_id)
+                update_id = self._parse_oppdateringsid(fetch_result.source_update_id)
+                if update_id is not None:
+                    pending_update_ids.append(update_id)
 
                 # Commit in chunks for efficiency (reduces transaction overhead)
                 if records_since_commit >= DB_COMMIT_CHUNK_SIZE:
                     await self.db.commit()
-                    publish_committed_update_ids()
+                    remember_committed_update_ids()
                     records_since_commit = 0
                     logger.debug(f"Committed chunk of {DB_COMMIT_CHUNK_SIZE} records")
 
             except Exception as e:
+                update_id = self._parse_oppdateringsid(fetch_result.source_update_id)
+                if update_id is not None:
+                    failed_update_ids.append(update_id)
                 result.db_errors += 1
                 result.errors.append(f"DB error {fetch_result.orgnr}: {e!s}")
                 logger.error(f"Database error persisting {fetch_result.orgnr}: {e}")
@@ -817,8 +854,10 @@ class UpdateService:
         # Final commit for remaining records
         if records_since_commit > 0:
             await self.db.commit()
-            publish_committed_update_ids()
+            remember_committed_update_ids()
             logger.debug(f"Committed final chunk of {records_since_commit} records")
+
+        self._publish_contiguous_update_ids(result, committed_update_ids, failed_update_ids)
 
     async def _get_existing_company_event_snapshots(self, orgnrs: list[str]) -> dict[str, dict[str, Any]]:
         if not orgnrs:
@@ -1064,6 +1103,8 @@ class UpdateService:
         result: UpdateBatchResult,
     ) -> None:
         sorted_results = sorted(fetch_results, key=lambda item: item.orgnr)
+        committed_update_ids: list[int] = []
+        failed_update_ids: list[int] = []
         existing_subunit_snapshots = (
             await self._get_existing_subunit_event_snapshots([item.orgnr for item in sorted_results if item.success])
             if self.event_ledger_enabled
@@ -1073,6 +1114,9 @@ class UpdateService:
 
         for fetch_result in sorted_results:
             if not fetch_result.success:
+                update_id = self._parse_oppdateringsid(fetch_result.source_update_id)
+                if update_id is not None:
+                    failed_update_ids.append(update_id)
                 result.api_errors += 1
                 if fetch_result.error:
                     result.errors.append(f"{fetch_result.orgnr}: {fetch_result.error}")
@@ -1082,7 +1126,9 @@ class UpdateService:
             subunit_data = fetch_result.subunit_data
             if subunit_data is None:
                 await self._delete_subunit_from_update(fetch_result, previous_snapshot, result)
-                self._mark_latest_oppdateringsid(result, fetch_result.source_update_id)
+                update_id = self._parse_oppdateringsid(fetch_result.source_update_id)
+                if update_id is not None:
+                    committed_update_ids.append(update_id)
                 continue
 
             parent_orgnr = subunit_data.get("overordnetEnhet")
@@ -1095,16 +1141,22 @@ class UpdateService:
                 )
                 if is_deleted:
                     await self._delete_subunit_from_update(fetch_result, previous_snapshot, result)
-                    self._mark_latest_oppdateringsid(result, fetch_result.source_update_id)
+                    update_id = self._parse_oppdateringsid(fetch_result.source_update_id)
+                    if update_id is not None:
+                        committed_update_ids.append(update_id)
                     continue
 
                 logger.warning(f"Skipping subunit {orgnr} because it has no parent_orgnr (overordnetEnhet is missing).")
+                update_id = self._parse_oppdateringsid(fetch_result.source_update_id)
+                if update_id is not None:
+                    failed_update_ids.append(update_id)
                 continue
 
             parent_orgnr = str(parent_orgnr)
             persist_candidates.append((fetch_result, subunit_data, parent_orgnr, previous_snapshot))
 
         if not persist_candidates:
+            self._publish_contiguous_update_ids(result, committed_update_ids, failed_update_ids)
             return
 
         verified_parents = await self._ensure_parent_companies_exist([candidate[1] for candidate in persist_candidates])
@@ -1117,20 +1169,31 @@ class UpdateService:
                     f"Skipping subunit {subunit_data.get('organisasjonsnummer')} "
                     f"because parent {parent_orgnr} is missing and could not be fetched."
                 )
+                update_id = self._parse_oppdateringsid(fetch_result.source_update_id)
+                if update_id is not None:
+                    failed_update_ids.append(update_id)
                 continue
 
             subunits_to_save.append(map_subunit_from_api(subunit_data, parent_orgnr))
             event_candidates.append((fetch_result, parent_orgnr, previous_snapshot))
 
         if not subunits_to_save:
+            self._publish_contiguous_update_ids(result, committed_update_ids, failed_update_ids)
             return
 
         saved_count = await self.subunit_repo.create_batch(subunits_to_save, commit=True)
         if not saved_count:
+            for fetch_result, _, _ in event_candidates:
+                update_id = self._parse_oppdateringsid(fetch_result.source_update_id)
+                if update_id is not None:
+                    failed_update_ids.append(update_id)
+            self._publish_contiguous_update_ids(result, committed_update_ids, failed_update_ids)
             return
 
         for fetch_result, parent_orgnr, previous_snapshot in event_candidates:
-            self._mark_latest_oppdateringsid(result, fetch_result.source_update_id)
+            update_id = self._parse_oppdateringsid(fetch_result.source_update_id)
+            if update_id is not None:
+                committed_update_ids.append(update_id)
             result.companies_updated += 1
             SYNC_OPERATIONS_TOTAL.labels(entity_type="subunit", operation_type="updated").inc()
 
@@ -1138,6 +1201,8 @@ class UpdateService:
                 await self._record_subunit_opened_event(fetch_result, parent_orgnr)
             else:
                 await self._record_subunit_update_events_from_changes(fetch_result, previous_snapshot, parent_orgnr)
+
+        self._publish_contiguous_update_ids(result, committed_update_ids, failed_update_ids)
 
     async def _fetch_and_persist_financials(
         self,
