@@ -26,6 +26,9 @@ class TestClientErrorsEndpoint:
             response = client.post("/v1/client-errors", json=VALID_PAYLOAD)
         assert response.status_code == 204
         mock_logger.error.assert_called_once()
+        assert mock_logger.error.call_args.args[0] == "client_error %s"
+        assert "client_message" in mock_logger.error.call_args.args[1]
+        assert "client_url" in mock_logger.error.call_args.args[1]
 
     def test_minimal_payload_returns_204(self):
         """Only required fields: message and url."""
@@ -58,7 +61,7 @@ class TestClientErrorsEndpoint:
         """Bearer token in message should be redacted before logging."""
         logged_extra = {}
 
-        def capture_extra(msg, extra=None, **kwargs):
+        def capture_extra(*args, extra=None, **kwargs):
             if extra:
                 logged_extra.update(extra)
 
@@ -79,7 +82,7 @@ class TestClientErrorsEndpoint:
         """11-digit Norwegian fødselsnummer should be redacted."""
         logged_extra = {}
 
-        def capture_extra(msg, extra=None, **kwargs):
+        def capture_extra(*args, extra=None, **kwargs):
             if extra:
                 logged_extra.update(extra)
 
@@ -100,7 +103,7 @@ class TestClientErrorsEndpoint:
         """Email addresses in stack traces should be redacted."""
         logged_extra = {}
 
-        def capture_extra(msg, extra=None, **kwargs):
+        def capture_extra(*args, extra=None, **kwargs):
             if extra:
                 logged_extra.update(extra)
 

@@ -85,12 +85,12 @@ def setup_logging(level: int = logging.INFO) -> None:
 def _setup_client_error_logger() -> None:
     """Configure a separate rotating file handler for client-side errors.
 
-    Writes to a configurable file path:
+    Writes to stdout for Docker/Loki collection and to a configurable file path:
     - CLIENT_ERRORS_LOG_PATH if set
     - /tmp/client_errors.log as safe container default
 
     Uses 10 MB max, 5 rotations (= 50 MB).
-    Does NOT propagate to the root logger so client errors stay in their own file.
+    Does NOT propagate to the root logger so client errors avoid duplicate stdout lines.
     """
     global _client_error_logger_init_failed
 
@@ -101,6 +101,14 @@ def _setup_client_error_logger() -> None:
     if _client_error_logger_init_failed:
         # Previous setup attempt already failed in this process.
         return
+
+    stdout_handler = logging.StreamHandler(sys.stdout)
+    stdout_handler.setFormatter(StructuredFormatter())
+    stdout_handler.addFilter(ContextFilter())
+    stdout_handler.setLevel(logging.ERROR)
+    client_logger.addHandler(stdout_handler)
+    client_logger.setLevel(logging.ERROR)
+    client_logger.propagate = False
 
     default_log_path = os.path.join(tempfile.gettempdir(), "client_errors.log")
     log_path = os.getenv("CLIENT_ERRORS_LOG_PATH", default_log_path)
@@ -118,9 +126,7 @@ def _setup_client_error_logger() -> None:
         handler.setFormatter(StructuredFormatter())
         handler.addFilter(ContextFilter())
         client_logger.addHandler(handler)
-        client_logger.setLevel(logging.ERROR)
-        client_logger.propagate = False  # keep client errors out of stdout
     except OSError as e:
-        # Non-fatal: log to main logger and continue (e.g. read-only filesystem in tests)
+        # Non-fatal: stdout logging still works, so Docker/Loki keeps receiving reports.
         _client_error_logger_init_failed = True
         logging.getLogger(__name__).warning("Could not create client_errors.log at %s: %s", log_path, e)

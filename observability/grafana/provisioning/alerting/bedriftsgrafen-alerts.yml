@@ -324,7 +324,7 @@ groups:
                 type: prometheus
                 uid: prometheus
               editorMode: code
-              expr: sum(rate(http_requests_total{job="bedriftsgrafen-api",status=~"5.."}[5m]))
+              expr: sum(rate(http_requests_total{job="bedriftsgrafen-api",status=~"5.."}[5m])) or vector(0)
               instant: true
               intervalMs: 1000
               maxDataPoints: 43200

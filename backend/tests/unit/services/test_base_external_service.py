@@ -21,6 +21,17 @@ class _MockExternalService(BaseExternalService):
         return await self._get(f"{self.BASE_URL}/resource")
 
 
+class _MockBrregService(BaseExternalService):
+    SERVICE_NAME = "Brønnøysund"
+    BASE_URL = "http://test.com"
+
+    async def get_company(self):
+        return await self._get(f"{self.BASE_URL}/company", context="company 123456789")
+
+    async def get_roles(self):
+        return await self._get(f"{self.BASE_URL}/roles", context="roles 123456789")
+
+
 @pytest.fixture
 def mock_httpx_client():
     client = AsyncMock(spec=httpx.AsyncClient)
@@ -92,6 +103,38 @@ async def test_timeout_handling(service, mock_httpx_client):
 
     assert "Timeout fetching" in str(exc.value)
     assert exc.value.status_code is None
+
+
+@pytest.mark.asyncio
+async def test_brreg_request_metric_records_success(mock_httpx_client):
+    mock_response = MagicMock(spec=httpx.Response)
+    mock_response.status_code = 200
+    mock_httpx_client.get.return_value = mock_response
+
+    service = _MockBrregService(client=mock_httpx_client)
+
+    with patch("services.base_external_service.BRREG_API_REQUESTS_TOTAL") as mock_metric:
+        response = await service.get_company()
+
+    assert response.status_code == 200
+    mock_metric.labels.assert_called_once_with(endpoint="company", status_code="200")
+    mock_metric.labels.return_value.inc.assert_called_once_with()
+
+
+@pytest.mark.asyncio
+async def test_brreg_request_metric_records_timeout(mock_httpx_client):
+    mock_httpx_client.get.side_effect = httpx.TimeoutException("Timeout")
+
+    service = _MockBrregService(client=mock_httpx_client)
+    service.RETRY_DELAY = 0.001
+    service.RETRY_ATTEMPTS = 1
+
+    with patch("services.base_external_service.BRREG_API_REQUESTS_TOTAL") as mock_metric:
+        with pytest.raises(ExternalApiException):
+            await service.get_roles()
+
+    mock_metric.labels.assert_called_once_with(endpoint="roles", status_code="timeout")
+    mock_metric.labels.return_value.inc.assert_called_once_with()
 
 
 @pytest.mark.asyncio

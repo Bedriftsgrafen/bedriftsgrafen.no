@@ -23,6 +23,7 @@ services:
       - DB_POOL_SIZE=8
       - DB_MAX_OVERFLOW=5
       - ENABLE_COMPANY_EVENT_LEDGER=true
+      - CLIENT_ERRORS_LOG_PATH=/app/logs/client_errors.log
     volumes:
       - ./scripts:/app/ops_scripts:ro
       - ./backend/logs:/app/logs
@@ -71,6 +72,7 @@ services:
       - DB_STATEMENT_TIMEOUT=60000
       - REDIS_HOST=bedriftsgrafen-redis
       - ENABLE_COMPANY_EVENT_LEDGER=true
+      - CLIENT_ERRORS_LOG_PATH=/app/logs/client_errors.log
     command: [ "uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000", "--workers", "1" ]
     volumes:
       - ./scripts:/app/ops_scripts:ro

@@ -316,7 +316,7 @@
       "targets": [
         {
           "editorMode": "code",
-          "expr": "sum(rate(http_requests_total{job=\"bedriftsgrafen-api\"}[5m]))",
+          "expr": "sum(rate(http_requests_total{job=\"bedriftsgrafen-api\"}[5m])) or vector(0)",
           "legendFormat": "Requests",
           "range": true,
           "refId": "A"
@@ -361,7 +361,7 @@
       "targets": [
         {
           "editorMode": "code",
-          "expr": "sum(rate(http_requests_total{job=\"bedriftsgrafen-api\",status=~\"5..\"}[5m]))",
+          "expr": "sum(rate(http_requests_total{job=\"bedriftsgrafen-api\",status=~\"5..\"}[5m])) or vector(0)",
           "legendFormat": "5xx",
           "range": true,
           "refId": "A"
@@ -461,7 +461,7 @@
       "targets": [
         {
           "editorMode": "code",
-          "expr": "sum(rate(container_cpu_usage_seconds_total{name=~\"bedriftsgrafen-.+\"}[5m])) by (name) * 100",
+          "expr": "sum(rate(container_cpu_usage_seconds_total{name=~\"bedriftsgrafen-(backend|worker|frontend|db|redis)\"}[5m])) by (name) * 100",
           "legendFormat": "{{name}}",
           "range": true,
           "refId": "A"
@@ -511,7 +511,7 @@
       "targets": [
         {
           "editorMode": "code",
-          "expr": "container_memory_working_set_bytes{name=~\"bedriftsgrafen-.+|monitoring-.+\"}",
+          "expr": "container_memory_working_set_bytes{name=~\"bedriftsgrafen-(backend|worker|frontend|db|redis)|monitoring-.+\"}",
           "legendFormat": "{{name}}",
           "range": true,
           "refId": "A"

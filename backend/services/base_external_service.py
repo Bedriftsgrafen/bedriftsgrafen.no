@@ -14,6 +14,7 @@ from typing import Any
 import httpx
 
 from constants.concurrency import CONNECT_TIMEOUT, DEFAULT_EXTERNAL_TIMEOUT
+from utils.metrics import BRREG_API_REQUESTS_TOTAL
 
 logger = logging.getLogger(__name__)
 
@@ -211,6 +212,14 @@ class BaseExternalService:
                 _CIRCUIT_COOLDOWN_SECONDS,
             )
 
+    def _record_external_request_metric(self, context: str, status_code: int | str) -> None:
+        """Record Brreg upstream request outcomes with low-cardinality labels."""
+        if self.SERVICE_NAME != "Brønnøysund":
+            return
+
+        endpoint = (context.split(maxsplit=1)[0] if context else "request").lower()
+        BRREG_API_REQUESTS_TOTAL.labels(endpoint=endpoint, status_code=str(status_code)).inc()
+
     async def _request_with_retry(
         self,
         method: str,
@@ -228,6 +237,7 @@ class BaseExternalService:
         Raises exceptions for other errors after retries exhausted.
         """
         if self._is_circuit_open():
+            self._record_external_request_metric(context, "circuit_open")
             raise ExternalApiException(
                 message=f"Circuit open — too many consecutive failures for {context}",
                 service=self.SERVICE_NAME,
@@ -244,6 +254,8 @@ class BaseExternalService:
                 else:
                     async with httpx.AsyncClient(timeout=self.timeout) as client:
                         response = await self._perform_request(client, method, url, params, json, data, headers)
+
+                self._record_external_request_metric(context, response.status_code)
 
                 # Success, Not Found, or Gone - return to caller to handle
                 # 410 (Gone) is common for deleted Brreg companies
@@ -295,6 +307,7 @@ class BaseExternalService:
 
             except httpx.TimeoutException:
                 self._record_failure()
+                self._record_external_request_metric(context, "timeout")
                 logger.debug(
                     "%s: timeout for %s (attempt %d/%d)",
                     self.SERVICE_NAME,
@@ -320,6 +333,7 @@ class BaseExternalService:
 
             except Exception as e:
                 self._record_failure()
+                self._record_external_request_metric(context, "exception")
                 logger.error("%s: error fetching %s: %s", self.SERVICE_NAME, context, e)
                 if attempt == self.RETRY_ATTEMPTS - 1:
                     raise ExternalApiException(

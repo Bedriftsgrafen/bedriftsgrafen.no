@@ -1,6 +1,7 @@
 """Unit tests for logging configuration helpers."""
 
 import logging
+from logging.handlers import RotatingFileHandler
 from unittest.mock import patch
 
 from utils import logging_config
@@ -26,6 +27,11 @@ def test_setup_client_error_logger_uses_env_path(monkeypatch, tmp_path):
 
     client_logger = logging.getLogger("bedriftsgrafen.client_errors")
     assert client_logger.handlers
+    assert any(isinstance(handler, RotatingFileHandler) for handler in client_logger.handlers)
+    assert any(
+        isinstance(handler, logging.StreamHandler) and not isinstance(handler, RotatingFileHandler)
+        for handler in client_logger.handlers
+    )
     assert client_logger.propagate is False
 
 
@@ -40,5 +46,8 @@ def test_setup_client_error_logger_logs_warning_only_once(monkeypatch, caplog):
             logging_config._setup_client_error_logger()
 
     warnings = [rec for rec in caplog.records if "Could not create client_errors.log" in rec.message]
+    client_logger = logging.getLogger("bedriftsgrafen.client_errors")
     assert len(warnings) == 1
     assert logging_config._client_error_logger_init_failed is True
+    assert client_logger.handlers
+    assert client_logger.propagate is False

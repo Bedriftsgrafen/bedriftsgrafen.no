@@ -98,6 +98,12 @@ Bedriftsgrafen uses a lightweight Grafana stack for production signals:
 - **postgres_exporter**: PostgreSQL health, locks, connections, vacuum, temp files, and WAL signals
 - **Docker socket proxy**: read-limited Docker API access for Alloy log discovery
 
+Application observability notes:
+
+- Backend and worker expose token-protected Prometheus metrics at `/metrics` for internal scraping.
+- Brreg upstream calls emit `bedriftsgrafen_brreg_api_requests_total{endpoint,status_code}`.
+- Frontend React ErrorBoundary reports production client crashes to `/api/v1/client-errors`; the backend writes sanitized `client_error` lines to Docker stdout for Loki and to `/app/logs/client_errors.log` for local inspection.
+
 The observability stack is separate from the production app stack:
 
 ```bash
@@ -150,6 +156,14 @@ docker logs --tail 100 monitoring-prometheus
 docker logs --tail 100 monitoring-loki
 docker logs --tail 100 monitoring-alloy
 docker logs --tail 100 monitoring-postgres-exporter
+```
+
+Useful spot checks:
+
+```bash
+docker exec monitoring-prometheus wget -qO- 'http://localhost:9090/api/v1/query?query=up' | python3 -m json.tool
+docker exec monitoring-prometheus wget -qO- 'http://monitoring-loki:3100/loki/api/v1/query_range?query=%7Bcontainer%3D%22bedriftsgrafen-backend%22%7D%20%7C%3D%20%22client_error%22&limit=5&direction=backward' | python3 -m json.tool
+docker exec monitoring-prometheus wget -qO- 'http://localhost:9090/api/v1/query?query=sum%20by%20(endpoint%2Cstatus_code)%20(rate(bedriftsgrafen_brreg_api_requests_total%5B5m%5D))' | python3 -m json.tool
 ```
 
 If aliases are loaded, use `observe-discord-test` to send a safe test message and `observe-target-summary` to list unhealthy Prometheus targets.
