@@ -1,0 +1,12 @@
+[Unit]
+Description=Bedriftsgrafen.no Safe Disk Cleanup
+After=docker.service
+Wants=docker.service
+
+[Service]
+Type=oneshot
+WorkingDirectory=/home/k1sso/bedriftsgrafen.no
+ExecStart=/home/k1sso/bedriftsgrafen.no/scripts/disk-cleanup.sh
+User=root
+StandardOutput=journal
+StandardError=journal

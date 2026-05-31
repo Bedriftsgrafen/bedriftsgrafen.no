@@ -28,6 +28,12 @@ echo "💿 Disk Space:"
 df -h / | tail -1 | awk '{print "  Root: " $3 " used / " $2 " total (" $5 " used)"}'
 df -h "${PROJECT_ROOT}" | tail -1 | awk '{print "  Project: " $3 " used / " $2 " total (" $5 " used)"}'
 du -sh "${PROJECT_ROOT}/backups" 2>/dev/null | awk '{print "  Backups: " $1}'
+if command -v docker >/dev/null 2>&1 && docker info >/dev/null 2>&1; then
+    docker system df | sed 's/^/  Docker: /'
+fi
+if command -v journalctl >/dev/null 2>&1; then
+    journalctl --disk-usage 2>/dev/null | sed 's/^/  Journal: /'
+fi
 echo ""
 
 # 4. Shared Memory

@@ -78,9 +78,11 @@ Likely causes: large sorts, hash joins, materialized view refreshes, missing ind
 ## Root Disk Usage High
 
 1. Check disk: `df -h /` and `docker system df`.
-2. Check Docker volumes before pruning anything: `docker volume ls`.
-3. Prefer safe cleanup first: old build cache and unused images. Do not prune volumes unless you have verified what they contain.
-4. Check whether logs are growing unexpectedly: `docker ps --size` and `du -sh logs backend/logs observability 2>/dev/null`.
+2. Run safe cleanup first: `scripts/disk-cleanup.sh` from the repository root.
+3. Check Docker volumes before pruning anything: `docker system df -v` and `docker volume ls -qf dangling=true`.
+4. Inspect any large dangling volume read-only before deletion: `docker run --rm --user 0 -v <volume>:/mnt:ro --entrypoint sh bedriftsgrafen-backend -lc 'du -sh /mnt; find /mnt -maxdepth 2 -mindepth 1 -printf "%y %p\n" | head -50'`.
+5. Check whether logs are growing unexpectedly: `docker ps --size`, `journalctl --disk-usage`, and `du -sh logs backend/logs observability 2>/dev/null`.
+6. If user caches are the pressure source, review `~/.gemini/antigravity/browser_recordings`, `~/.npm`, `~/.cache`, and `~/.vscode-server` manually before deleting user data.
 
 Likely causes: Docker build cache, old images, large PostgreSQL data, Loki/Prometheus retention growth, log volume growth.
 

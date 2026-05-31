@@ -259,13 +259,23 @@ df -h /                                                           # Disk space
 
 ### Disk Cleanup
 
-Use these before adding new services or after repeated rebuilds:
+Safe recurring cleanup is available as a systemd timer. It prunes old Docker build cache, old unused images, stopped containers, journald, and known regenerable user caches. It reports dangling Docker volumes but does not delete them automatically.
+
+```bash
+sudo cp scripts/bedriftsgrafen-disk-cleanup.service /etc/systemd/system/
+sudo cp scripts/bedriftsgrafen-disk-cleanup.timer /etc/systemd/system/
+sudo systemctl daemon-reload
+sudo systemctl enable --now bedriftsgrafen-disk-cleanup.timer
+systemctl list-timers bedriftsgrafen-disk-cleanup.timer
+journalctl -u bedriftsgrafen-disk-cleanup.service -n 100 --no-pager
+```
+
+Run the same cleanup manually before adding new services or after repeated rebuilds:
 
 ```bash
 df -h /
 docker system df
-docker builder prune -af                 # Safe: removes build cache only
-docker image prune -a --filter "until=168h" -f
+scripts/disk-cleanup.sh
 ```
 
 Review unused volumes before deleting them. They can contain old project data even when Docker marks them dangling:
@@ -273,6 +283,8 @@ Review unused volumes before deleting them. They can contain old project data ev
 ```bash
 docker system df -v
 docker volume ls -qf dangling=true
+docker run --rm --user 0 -v <volume>:/mnt:ro --entrypoint sh bedriftsgrafen-backend \
+  -lc 'du -sh /mnt; find /mnt -maxdepth 2 -mindepth 1 -printf "%y %p\n" | head -50'
 # Only after review:
 docker volume prune -f
 ```
@@ -295,6 +307,9 @@ docker compose restart bedriftsgrafen-db
 
 **Disk space full:**
 ```bash
-find backups -name "*.sql.gz" -mtime +7 -delete
-docker system prune -a
+df -h /
+docker system df
+scripts/disk-cleanup.sh
+docker system df -v        # Review dangling volumes before deleting anything
+journalctl --disk-usage
 ```
