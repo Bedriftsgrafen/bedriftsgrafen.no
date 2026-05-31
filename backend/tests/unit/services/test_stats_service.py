@@ -9,7 +9,7 @@ from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 
-from services.stats_service import PERCENTILE_THRESHOLDS, StatsService
+from services.stats_service import StatsService
 
 
 class TestStatsServiceInit:
@@ -158,20 +158,6 @@ class TestGetMunicipalityStats:
         assert len(result) >= 1
 
 
-class TestPercentileEstimation:
-    """Tests for percentile estimation logic."""
-
-    def test_percentile_thresholds_ordered_correctly(self):
-        """Thresholds should be ordered from highest ratio to lowest."""
-        ratios = [t[0] for t in PERCENTILE_THRESHOLDS]
-        assert ratios == sorted(ratios, reverse=True)
-
-    def test_percentile_thresholds_percentiles_descending(self):
-        """Percentiles should decrease as ratios decrease."""
-        percentiles = [t[1] for t in PERCENTILE_THRESHOLDS]
-        assert percentiles == sorted(percentiles, reverse=True)
-
-
 class TestNaceFallback:
     """Tests for NACE truncation fallback logic."""
 
@@ -312,6 +298,9 @@ class TestGetIndustryBenchmark:
         mock_financials.driftsresultat = 800000
 
         service.company_repo.get_company_with_latest_financials = AsyncMock(return_value=(mock_financials, 25))
+        service.stats_repo.get_benchmark_percentiles = AsyncMock(
+            return_value={"revenue": 82.5, "profit": 75.0, "employees": 90.0, "operating_margin": 65.0}
+        )
 
         # Act
         result = await service.get_industry_benchmark("62", "123456789")
@@ -321,7 +310,18 @@ class TestGetIndustryBenchmark:
         assert result["nace_code"] == "62"
         assert result["company_count"] == 500
         assert result["revenue"]["company_value"] == 10000000
-        assert result["revenue"]["percentile"] is not None  # Should have percentile
+        assert result["revenue"]["percentile"] == 82.5
+        assert result["profit"]["percentile"] == 75.0
+        assert result["employees"]["percentile"] == 90.0
+        assert result["operating_margin"]["percentile"] == 65.0
+        service.stats_repo.get_benchmark_percentiles.assert_awaited_once_with(
+            "62",
+            municipality_code=None,
+            company_revenue=10000000,
+            company_profit=1000000,
+            company_employees=25,
+            company_operating_margin=8.0,
+        )
 
     @pytest.mark.asyncio
     async def test_returns_none_when_no_industry_data(self):
@@ -355,6 +355,9 @@ class TestGetIndustryBenchmark:
         service.stats_repo.get_industry_subclass_stats = AsyncMock(return_value=None)
         service.stats_repo.get_industry_stats = AsyncMock(return_value=mock_industry_stats)
         service.company_repo.get_company_with_latest_financials = AsyncMock(return_value=(None, None))
+        service.stats_repo.get_benchmark_percentiles = AsyncMock(
+            return_value={"revenue": None, "profit": None, "employees": None, "operating_margin": None}
+        )
 
         # Act
         result = await service.get_industry_benchmark("62.010", "123456789")

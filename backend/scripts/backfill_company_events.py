@@ -238,6 +238,12 @@ def parse_args() -> argparse.Namespace:
         default=120_000,
         help="Transaction-local statement timeout for each maintenance write chunk.",
     )
+    parser.add_argument(
+        "--max-regnskap-id",
+        type=int,
+        default=None,
+        help="Inspect rows at or below this regnskap.id. Defaults to the current maximum id.",
+    )
     args = parser.parse_args()
     if args.apply and args.dry_run:
         parser.error("--apply and --dry-run cannot be used together")
@@ -251,6 +257,7 @@ async def backfill_accounting_events(
     preview_limit: int,
     batch_size: int,
     statement_timeout_ms: int,
+    max_regnskap_id_override: int | None = None,
 ) -> int:
     from database import AsyncSessionLocal
 
@@ -262,10 +269,13 @@ async def backfill_accounting_events(
         raise ValueError("--batch-size must be between 1 and 10000")
     if statement_timeout_ms < 5_000 or statement_timeout_ms > 600_000:
         raise ValueError("--statement-timeout-ms must be between 5000 and 600000")
+    if max_regnskap_id_override is not None and max_regnskap_id_override < 1:
+        raise ValueError("--max-regnskap-id must be positive")
 
     async with AsyncSessionLocal() as db:
         max_id_result = await db.execute(text(MAX_REGNSKAP_ID_SQL))
-        max_regnskap_id = int(max_id_result.scalar_one())
+        actual_max_regnskap_id = int(max_id_result.scalar_one())
+        max_regnskap_id = min(max_regnskap_id_override or actual_max_regnskap_id, actual_max_regnskap_id)
 
         if dry_run:
             summary_result = await db.execute(text(SUMMARY_SQL), {"limit": limit, "max_regnskap_id": max_regnskap_id})
@@ -281,6 +291,7 @@ async def backfill_accounting_events(
                         "mode": "dry-run",
                         "limit": limit,
                         "preview_limit": preview_limit,
+                        "actual_max_regnskap_id": actual_max_regnskap_id,
                         "max_regnskap_id": max_regnskap_id,
                         **summary,
                         "preview": preview,
@@ -320,6 +331,7 @@ async def backfill_accounting_events(
                     "mode": "apply",
                     "inserted_count": inserted_count,
                     "inspected_limit": limit,
+                    "actual_max_regnskap_id": actual_max_regnskap_id,
                     "max_regnskap_id": max_regnskap_id,
                     "batch_size": batch_size,
                     "batches": batches,
@@ -342,5 +354,6 @@ if __name__ == "__main__":
             preview_limit=args.preview_limit,
             batch_size=args.batch_size,
             statement_timeout_ms=args.statement_timeout_ms,
+            max_regnskap_id_override=args.max_regnskap_id,
         )
     )
