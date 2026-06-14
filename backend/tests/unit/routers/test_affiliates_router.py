@@ -24,6 +24,9 @@ def client() -> TestClient:
         ("tjenestetorget", "TJENESTETORGET_SPORINGSLENKE"),
         ("klikklaan", "KLIKKLAAN_SPORINGSLENKE"),
         ("zensum", "ZENSUM_SPORINGSLENKE"),
+        ("rentesjekk", "RENTESJEKK_SPORINGSLENKE"),
+        ("tjenestetorget-forsikring", "TJENESTETORGET_FORSIKRING_SPORINGSLENKE"),
+        ("uscore", "USCORE_SPORINGSLENKE"),
     ],
 )
 def test_affiliate_redirect_uses_expected_env_var(client: TestClient, affiliate_id: str, env_var: str):

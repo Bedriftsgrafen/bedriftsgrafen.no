@@ -13,6 +13,9 @@ AFFILIATE_ENV_VARS: dict[str, str] = {
     "tjenestetorget": "TJENESTETORGET_SPORINGSLENKE",
     "klikklaan": "KLIKKLAAN_SPORINGSLENKE",
     "zensum": "ZENSUM_SPORINGSLENKE",
+    "rentesjekk": "RENTESJEKK_SPORINGSLENKE",
+    "tjenestetorget-forsikring": "TJENESTETORGET_FORSIKRING_SPORINGSLENKE",
+    "uscore": "USCORE_SPORINGSLENKE",
 }
 
 ENV_FILE_CANDIDATES = (

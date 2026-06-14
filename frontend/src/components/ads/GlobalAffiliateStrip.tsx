@@ -1,8 +1,20 @@
 import { AffiliateBanner } from './AffiliateBanner'
 import { AffiliateLegalNotes } from './AffiliateLegalNotes'
-import { GLOBAL_AFFILIATIONS } from '../../constants/affiliations'
+import { ALL_AFFILIATIONS, GLOBAL_AFFILIATION_LIMIT } from '../../constants/affiliations'
+import { selectRotatingAffiliations } from '../../utils/affiliateRotation'
 
-export function GlobalAffiliateStrip() {
+interface GlobalAffiliateStripProps {
+    rotationDate?: Date
+}
+
+export function GlobalAffiliateStrip({ rotationDate }: GlobalAffiliateStripProps) {
+    const visibleAffiliations = selectRotatingAffiliations(
+        ALL_AFFILIATIONS,
+        'global_sitewide',
+        GLOBAL_AFFILIATION_LIMIT,
+        rotationDate
+    )
+
     return (
         <section
             aria-labelledby="global-affiliate-heading"
@@ -22,7 +34,7 @@ export function GlobalAffiliateStrip() {
                 </div>
 
                 <div className="grid grid-cols-[repeat(auto-fit,minmax(min(100%,18rem),1fr))] gap-4">
-                    {GLOBAL_AFFILIATIONS.map((affiliation) => (
+                    {visibleAffiliations.map((affiliation) => (
                         <AffiliateBanner
                             key={affiliation.id}
                             bannerId={`global_${affiliation.id}`}
@@ -32,7 +44,7 @@ export function GlobalAffiliateStrip() {
                     ))}
                 </div>
 
-                <AffiliateLegalNotes affiliations={GLOBAL_AFFILIATIONS} className="mt-4" />
+                <AffiliateLegalNotes affiliations={visibleAffiliations} className="mt-4" />
             </div>
         </section>
     )

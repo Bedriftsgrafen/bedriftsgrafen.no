@@ -19,3 +19,18 @@ export function selectRotatingAffiliation(
     const index = hashString(`${placement}:${dayKey}`) % candidates.length
     return candidates[index]
 }
+
+export function selectRotatingAffiliations(
+    candidates: Affiliation[],
+    placement: string,
+    limit: number,
+    rotationDate = new Date()
+): Affiliation[] {
+    if (candidates.length === 0 || limit <= 0) return []
+    if (limit >= candidates.length) return [...candidates]
+
+    const dayKey = Math.floor(rotationDate.getTime() / 86_400_000)
+    const startIndex = hashString(`${placement}:${dayKey}`) % candidates.length
+
+    return Array.from({ length: limit }, (_, offset) => candidates[(startIndex + offset) % candidates.length])
+}

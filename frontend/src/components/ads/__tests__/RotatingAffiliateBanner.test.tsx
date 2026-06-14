@@ -1,7 +1,7 @@
 import { render, screen } from '@testing-library/react'
 import { describe, expect, it, vi } from 'vitest'
 import { AFFILIATIONS, GLOBAL_AFFILIATIONS } from '../../../constants/affiliations'
-import { selectRotatingAffiliation } from '../../../utils/affiliateRotation'
+import { selectRotatingAffiliation, selectRotatingAffiliations } from '../../../utils/affiliateRotation'
 import { RotatingAffiliateBanner } from '../RotatingAffiliateBanner'
 
 vi.mock('../../../utils/analytics', () => ({
@@ -17,6 +17,15 @@ describe('RotatingAffiliateBanner', () => {
 
         expect(first).toBe(second)
         expect(GLOBAL_AFFILIATIONS).toContain(first)
+    })
+
+    it('selects a stable capped list of unique affiliations', () => {
+        const rotationDate = new Date('2026-06-14T12:00:00Z')
+        const selected = selectRotatingAffiliations(GLOBAL_AFFILIATIONS, 'global_sitewide', 2, rotationDate)
+
+        expect(selected).toHaveLength(2)
+        expect(new Set(selected.map((affiliation) => affiliation.id)).size).toBe(2)
+        expect(selected).toEqual(selectRotatingAffiliations(GLOBAL_AFFILIATIONS, 'global_sitewide', 2, rotationDate))
     })
 
     it('renders only the selected single affiliate', () => {

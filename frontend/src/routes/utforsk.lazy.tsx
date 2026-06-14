@@ -7,7 +7,7 @@ import { CompanyList } from '../components/CompanyList'
 import { Pagination } from '../components/common'
 import { ExportButton } from '../components/explorer'
 import { RotatingAffiliateBanner } from '../components/ads/RotatingAffiliateBanner'
-import { GLOBAL_AFFILIATIONS } from '../constants/affiliations'
+import { ALL_AFFILIATIONS } from '../constants/affiliations'
 import { useFilterParams } from '../hooks/useFilterParams'
 import { useCompaniesQuery } from '../hooks/queries/useCompaniesQuery'
 import { useCompanyStatsQuery } from '../hooks/queries/useCompanyStatsQuery'
@@ -156,7 +156,7 @@ export function UtforskPage() {
 
             <RotatingAffiliateBanner
                 placement="utforsk_top"
-                candidates={GLOBAL_AFFILIATIONS}
+                candidates={ALL_AFFILIATIONS}
                 className="mb-8"
             />
 

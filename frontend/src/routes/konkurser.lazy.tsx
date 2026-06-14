@@ -17,7 +17,7 @@ import { getStartingDate } from '../utils/dates'
 import { API_BASE } from '../utils/apiClient'
 import { PeriodSelector } from '../components/common/PeriodSelector'
 import { RotatingAffiliateBanner } from '../components/ads/RotatingAffiliateBanner'
-import { AFFILIATIONS, GLOBAL_AFFILIATIONS, type AffiliateCopyOverrides } from '../constants/affiliations'
+import { AFFILIATIONS, ALL_AFFILIATIONS, type AffiliateCopyOverrides } from '../constants/affiliations'
 import { useFilterStore } from '../store/filterStore'
 import {
     buildMapFilterStoreUpdates,
@@ -217,7 +217,7 @@ function KonkurserPage() {
 
             <RotatingAffiliateBanner
                 placement="konkurser_top"
-                candidates={GLOBAL_AFFILIATIONS}
+                candidates={ALL_AFFILIATIONS}
                 className="mb-6"
                 copyOverrides={KONKURS_AFFILIATE_COPY}
             />

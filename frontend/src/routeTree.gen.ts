@@ -25,6 +25,7 @@ import { Route as KartRouteImport } from './routes/kart'
 import { Route as FylkerRouteImport } from './routes/fylker'
 import { Route as DatakilderRouteImport } from './routes/datakilder'
 import { Route as BransjerRouteImport } from './routes/bransjer'
+import { Route as AffiliatesRouteImport } from './routes/affiliates'
 import { Route as SplatRouteImport } from './routes/$'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as PersonIndexRouteImport } from './routes/person.index'
@@ -117,6 +118,11 @@ const BransjerRoute = BransjerRouteImport.update({
   path: '/bransjer',
   getParentRoute: () => rootRouteImport,
 } as any).lazy(() => import('./routes/bransjer.lazy').then((d) => d.Route))
+const AffiliatesRoute = AffiliatesRouteImport.update({
+  id: '/affiliates',
+  path: '/affiliates',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const SplatRoute = SplatRouteImport.update({
   id: '/$',
   path: '/$',
@@ -170,6 +176,7 @@ const PersonNameBirthdateRoute = PersonNameBirthdateRouteImport.update({
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/$': typeof SplatRoute
+  '/affiliates': typeof AffiliatesRoute
   '/bransjer': typeof BransjerRoute
   '/datakilder': typeof DatakilderRoute
   '/fylker': typeof FylkerRoute
@@ -197,6 +204,7 @@ export interface FileRoutesByFullPath {
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/$': typeof SplatRoute
+  '/affiliates': typeof AffiliatesRoute
   '/bransjer': typeof BransjerRoute
   '/datakilder': typeof DatakilderRoute
   '/fylker': typeof FylkerRoute
@@ -224,6 +232,7 @@ export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/$': typeof SplatRoute
+  '/affiliates': typeof AffiliatesRoute
   '/bransjer': typeof BransjerRoute
   '/datakilder': typeof DatakilderRoute
   '/fylker': typeof FylkerRoute
@@ -253,6 +262,7 @@ export interface FileRouteTypes {
   fullPaths:
     | '/'
     | '/$'
+    | '/affiliates'
     | '/bransjer'
     | '/datakilder'
     | '/fylker'
@@ -280,6 +290,7 @@ export interface FileRouteTypes {
   to:
     | '/'
     | '/$'
+    | '/affiliates'
     | '/bransjer'
     | '/datakilder'
     | '/fylker'
@@ -306,6 +317,7 @@ export interface FileRouteTypes {
     | '__root__'
     | '/'
     | '/$'
+    | '/affiliates'
     | '/bransjer'
     | '/datakilder'
     | '/fylker'
@@ -334,6 +346,7 @@ export interface FileRouteTypes {
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   SplatRoute: typeof SplatRoute
+  AffiliatesRoute: typeof AffiliatesRoute
   BransjerRoute: typeof BransjerRoute
   DatakilderRoute: typeof DatakilderRoute
   FylkerRoute: typeof FylkerRoute
@@ -471,6 +484,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof BransjerRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/affiliates': {
+      id: '/affiliates'
+      path: '/affiliates'
+      fullPath: '/affiliates'
+      preLoaderRoute: typeof AffiliatesRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/$': {
       id: '/$'
       path: '/$'
@@ -553,6 +573,7 @@ const PersonRouteWithChildren =
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   SplatRoute: SplatRoute,
+  AffiliatesRoute: AffiliatesRoute,
   BransjerRoute: BransjerRoute,
   DatakilderRoute: DatakilderRoute,
   FylkerRoute: FylkerRoute,

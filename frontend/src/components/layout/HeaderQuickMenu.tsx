@@ -73,6 +73,8 @@ export function HeaderNavLink({
       return <Link to="/om" {...commonProps}>{children}</Link>
     case 'data-sources':
       return <Link to="/datakilder" {...commonProps}>{children}</Link>
+    case 'affiliates':
+      return <Link to="/affiliates" {...commonProps}>{children}</Link>
   }
 }
 

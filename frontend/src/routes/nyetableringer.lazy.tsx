@@ -17,7 +17,7 @@ import { getStartingDate } from '../utils/dates'
 import { API_BASE } from '../utils/apiClient'
 import { PeriodSelector } from '../components/common/PeriodSelector'
 import { RotatingAffiliateBanner } from '../components/ads/RotatingAffiliateBanner'
-import { GLOBAL_AFFILIATIONS } from '../constants/affiliations'
+import { ALL_AFFILIATIONS } from '../constants/affiliations'
 import { useFilterStore } from '../store/filterStore'
 import {
     buildMapFilterStoreUpdates,
@@ -217,7 +217,7 @@ function NyetableringerPage() {
 
             <RotatingAffiliateBanner
                 placement="nyetableringer_top"
-                candidates={GLOBAL_AFFILIATIONS}
+                candidates={ALL_AFFILIATIONS}
                 className="mb-6"
             />
 

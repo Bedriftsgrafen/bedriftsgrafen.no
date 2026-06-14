@@ -5,6 +5,7 @@ import {
   Activity,
   ArrowLeftRight,
   Award,
+  BadgePercent,
   BarChart3,
   Building2,
   Database,
@@ -27,6 +28,7 @@ export type HeaderRouteTo =
   | '/konkurser'
   | '/oppdateringer'
   | '/datakilder'
+  | '/affiliates'
   | '/regioner'
   | '/fylker'
   | '/kommuner'
@@ -219,6 +221,14 @@ const DATA_SOURCES_ITEM: HeaderNavItem = {
   topBar: 'menu-only',
 }
 
+const AFFILIATES_ITEM: HeaderNavItem = {
+  id: 'affiliates',
+  label: 'Affiliates',
+  to: '/affiliates',
+  icon: BadgePercent,
+  topBar: 'menu-only',
+}
+
 export const HEADER_TOP_NAV_ITEMS: readonly HeaderNavItem[] = [
   SEARCH_ITEM,
   INDUSTRIES_ITEM,
@@ -267,7 +277,7 @@ export const HEADER_QUICK_MENU_GROUPS: readonly HeaderNavGroup[] = [
   {
     id: 'about',
     label: 'Om',
-    items: [ABOUT_ITEM, DATA_SOURCES_ITEM],
+    items: [ABOUT_ITEM, DATA_SOURCES_ITEM, AFFILIATES_ITEM],
   },
 ]
 
@@ -281,6 +291,7 @@ export const HEADER_STATIC_ENTRY_ROUTES = [
   '/konkurser',
   '/oppdateringer',
   '/datakilder',
+  '/affiliates',
   '/regioner',
   '/fylker',
   '/kommuner',

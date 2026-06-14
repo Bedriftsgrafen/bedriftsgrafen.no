@@ -1,4 +1,4 @@
-import { ArrowUpRight, Database, Mail, Scale, ShieldCheck } from 'lucide-react'
+import { ArrowUpRight, BadgePercent, Database, Mail, Scale, ShieldCheck } from 'lucide-react'
 import type { ActivityStatusItem } from '../hooks/queries/useActivityOverviewQuery'
 import { useActivityOverviewQuery } from '../hooks/queries/useActivityOverviewQuery'
 import { BedriftsgrafenContactLink } from './contact'
@@ -204,6 +204,10 @@ export function Footer() {
               <a href="/vilkar" className="inline-flex items-center gap-1.5 font-medium text-slate-200 transition-colors hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-200 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-950">
                 <Scale className="h-4 w-4 text-blue-300" aria-hidden="true" />
                 Vilkår
+              </a>
+              <a href="/affiliates" className="inline-flex items-center gap-1.5 font-medium text-slate-200 transition-colors hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-200 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-950">
+                <BadgePercent className="h-4 w-4 text-blue-300" aria-hidden="true" />
+                Affiliates
               </a>
             </nav>
           </div>

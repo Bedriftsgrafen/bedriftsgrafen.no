@@ -7,7 +7,7 @@ import { formatNumber, formatCurrency, formatPercentValue } from '../../utils/fo
 import { createRouteCode } from '../../utils/slugify';
 import { SummaryCard, SortableHeader, LoadingState, ErrorState } from '../common';
 import { RotatingAffiliateBanner } from '../ads/RotatingAffiliateBanner';
-import { GLOBAL_AFFILIATIONS } from '../../constants/affiliations';
+import { ALL_AFFILIATIONS } from '../../constants/affiliations';
 import { NaceHierarchyBrowser } from './NaceHierarchyBrowser';
 
 // ============================================================================
@@ -348,7 +348,7 @@ export const IndustryDashboard = ({ initialNace }: IndustryDashboardProps) => {
 
                 <RotatingAffiliateBanner
                     placement="industry_dashboard_top"
-                    candidates={GLOBAL_AFFILIATIONS}
+                    candidates={ALL_AFFILIATIONS}
                     className="mb-6"
                 />
 
