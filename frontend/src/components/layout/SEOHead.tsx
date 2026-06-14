@@ -85,7 +85,7 @@ function generateWebPageJsonLd(title: string, description: string, url: string):
     url,
     isPartOf: {
       '@type': 'WebSite',
-      name: 'Bedriftsgrafen.no',
+      name: SEO_DEFAULTS.siteName,
       url: SEO_DEFAULTS.siteUrl,
     },
   }
@@ -156,14 +156,14 @@ export function SEOHead({
       <meta property="og:url" content={currentUrl} />
       <meta property="og:title" content={title} />
       <meta property="og:description" content={description} />
-      <meta property="og:site_name" content="Bedriftsgrafen.no" />
+      <meta property="og:site_name" content={SEO_DEFAULTS.siteName} />
       <meta 
         property="og:image" 
         content={finalOgImage} 
       />
       <meta property="og:image:width" content="1200" />
       <meta property="og:image:height" content="630" />
-      <meta property="og:image:alt" content={companyName ? `Analyse av ${companyName}` : "Bedriftsgrafen.no - Analyse av norske virksomheter"} />
+      <meta property="og:image:alt" content={companyName ? `Analyse av ${companyName}` : `${SEO_DEFAULTS.siteName} - Analyse av norske virksomheter`} />
       <meta property="og:locale" content="nb_NO" />
 
       {/* Twitter Card */}

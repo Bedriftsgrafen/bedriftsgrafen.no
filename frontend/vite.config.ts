@@ -4,9 +4,31 @@ import react from '@vitejs/plugin-react'
 import { tanstackRouter } from '@tanstack/router-plugin/vite'
 import { visualizer } from 'rollup-plugin-visualizer'
 
+const DEFAULT_SITE_URL = 'https://bedriftsgrafen.no'
+const DEFAULT_SITE_NAME = 'Bedriftsgrafen.no'
+
+function getSiteUrl(): string {
+  return (process.env.VITE_SITE_URL?.trim().replace(/\/+$/, '') || DEFAULT_SITE_URL)
+}
+
+function getSiteName(): string {
+  return process.env.VITE_SITE_NAME?.trim() || DEFAULT_SITE_NAME
+}
+
 // https://vitejs.dev/config/
 export default defineConfig({
   plugins: [
+    {
+      name: 'site-metadata-defaults',
+      transformIndexHtml(html) {
+        const siteUrl = getSiteUrl()
+        const siteName = getSiteName()
+
+        return html
+          .replaceAll(DEFAULT_SITE_URL, siteUrl)
+          .replaceAll(DEFAULT_SITE_NAME, siteName)
+      },
+    },
     tanstackRouter({
       routesDirectory: './src/routes',
       generatedRouteTree: './src/routeTree.gen.ts',
