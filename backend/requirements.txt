@@ -44,7 +44,7 @@ faker==40.15.0
     # via
     #   bedriftsgrafen-backend (pyproject.toml)
     #   polyfactory
-fastapi==0.136.0
+fastapi==0.137.0
     # via bedriftsgrafen-backend (pyproject.toml)
 freezegun==1.5.5
     # via bedriftsgrafen-backend (pyproject.toml)
@@ -105,11 +105,11 @@ prometheus-client==0.25.0
     # via prometheus-fastapi-instrumentator
 prometheus-fastapi-instrumentator==7.1.0
     # via bedriftsgrafen-backend (pyproject.toml)
-pydantic==2.13.3
+pydantic==2.13.4
     # via
     #   bedriftsgrafen-backend (pyproject.toml)
     #   fastapi
-pydantic-core==2.46.3
+pydantic-core==2.47.0
     # via pydantic
 pygments==2.20.0
     # via pytest
@@ -174,7 +174,7 @@ tzlocal==5.3.1
     # via apscheduler
 urllib3==2.6.3
     # via requests
-uvicorn[standard]==0.45.0
+uvicorn[standard]==0.49.0
     # via bedriftsgrafen-backend (pyproject.toml)
 uvloop==0.22.1
     # via uvicorn
