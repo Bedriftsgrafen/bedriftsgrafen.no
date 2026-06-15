@@ -192,7 +192,7 @@ jobs:
           no-cache: true
 
       - name: Run Trivy (table, visible in logs)
-        uses: aquasecurity/trivy-action@0.35.0
+        uses: aquasecurity/trivy-action@v0.36.0
         with:
           image-ref: ${{ matrix.image }}:latest
           format: 'table'
@@ -202,7 +202,7 @@ jobs:
           trivyignores: '.trivyignore'
 
       - name: Run Trivy vulnerability scanner
-        uses: aquasecurity/trivy-action@0.35.0
+        uses: aquasecurity/trivy-action@v0.36.0
         with:
           image-ref: ${{ matrix.image }}:latest
           format: 'sarif'
@@ -222,7 +222,7 @@ jobs:
 
       - name: Run Trivy JSON report
         if: always()
-        uses: aquasecurity/trivy-action@0.35.0
+        uses: aquasecurity/trivy-action@v0.36.0
         with:
           image-ref: ${{ matrix.image }}:latest
           format: 'json'
