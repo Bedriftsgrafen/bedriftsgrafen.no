@@ -172,7 +172,7 @@ typing-inspection==0.4.2
     #   pydantic
 tzlocal==5.3.1
     # via apscheduler
-urllib3==2.6.3
+urllib3==2.7.0
     # via requests
 uvicorn[standard]==0.45.0
     # via bedriftsgrafen-backend (pyproject.toml)
