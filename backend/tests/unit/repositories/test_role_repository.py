@@ -85,7 +85,7 @@ class TestIsCacheValid:
     @pytest.mark.asyncio
     async def test_invalid_when_no_timestamp(self, repo, mock_db_session):
         """Cache is invalid when no roles exist."""
-        mock_db_session.execute.return_value.scalar_one_or_none.return_value = None
+        repo.get_refresh_timestamp = AsyncMock(return_value=None)
 
         assert await repo.is_cache_valid("123") is False
 
@@ -94,7 +94,7 @@ class TestIsCacheValid:
         """Cache is valid when updated within 7 days."""
 
         fresh = datetime.now(UTC) - timedelta(days=1)
-        mock_db_session.execute.return_value.scalar_one_or_none.return_value = fresh
+        repo.get_refresh_timestamp = AsyncMock(return_value=fresh)
 
         assert await repo.is_cache_valid("123") is True
 
@@ -103,7 +103,7 @@ class TestIsCacheValid:
         """Cache is invalid when older than 7 days."""
 
         stale = datetime.now(UTC) - timedelta(days=8)
-        mock_db_session.execute.return_value.scalar_one_or_none.return_value = stale
+        repo.get_refresh_timestamp = AsyncMock(return_value=stale)
 
         assert await repo.is_cache_valid("123") is False
 
@@ -112,10 +112,35 @@ class TestIsCacheValid:
         """Cache is invalid at exactly 7 days boundary."""
 
         boundary = datetime.now(UTC) - timedelta(days=7)
-        mock_db_session.execute.return_value.scalar_one_or_none.return_value = boundary
+        repo.get_refresh_timestamp = AsyncMock(return_value=boundary)
 
         # At exactly 7 days, cache should be invalid
         assert await repo.is_cache_valid("123") is False
+
+    @pytest.mark.asyncio
+    async def test_empty_role_set_uses_last_polled_marker(self, repo, mock_db_session):
+        """A successful empty response remains cached without role rows."""
+        repo.get_cache_timestamp = AsyncMock(return_value=None)
+        mock_db_session.execute.return_value.scalar_one_or_none.return_value = datetime.now(UTC).date()
+
+        timestamp = await repo.get_refresh_timestamp("123")
+
+        assert timestamp is not None
+        assert timestamp.date() == datetime.now(UTC).date()
+        assert await repo.is_cache_valid("123") is True
+
+    @pytest.mark.asyncio
+    async def test_company_exists_fails_closed_on_database_error(self, repo, mock_db_session):
+        mock_db_session.execute.side_effect = Exception("DB Error")
+
+        assert await repo.company_exists("123") is False
+
+    @pytest.mark.asyncio
+    async def test_mark_cache_refreshed_updates_company_and_commits(self, repo, mock_db_session):
+        await repo.mark_cache_refreshed("123")
+
+        mock_db_session.execute.assert_awaited_once()
+        mock_db_session.commit.assert_awaited_once()
 
 
 # ============================================================================

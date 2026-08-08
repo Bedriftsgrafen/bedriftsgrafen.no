@@ -3,7 +3,7 @@ import hashlib
 import logging
 import os
 import time
-from datetime import UTC, date, datetime
+from datetime import UTC, date, datetime, timedelta
 from typing import Any
 
 from sqlalchemy import select
@@ -27,13 +27,22 @@ from repositories.subunit_repository import SubUnitRepository
 from schemas.companies import AccountingWithKpis, MapMarker, Naeringskode
 from services.base_external_service import ExternalApiException
 from services.brreg_api_service import BrregApiService
+from services.brreg_egress_guard import brreg_traffic_class
 from services.brreg_mappers import map_subunit_from_api
 from services.dtos import CompanyFilterDTO
 from services.geocoding_service import GeocodingService
 from services.kpi_service import KpiService
 from services.nace_service import NaceService
+from services.subunit_refresh_lock import (
+    SubunitRefreshLockConfig,
+    SubunitRefreshLockError,
+    load_subunit_refresh_lock_config,
+    release_subunit_refresh_lock,
+    try_acquire_subunit_refresh_lock,
+)
 from utils.cache import AsyncLRUCache
 from utils.logging_config import sanitize_log
+from utils.metrics import BRREG_CACHE_EVENTS_TOTAL
 from utils.redis_cache import RedisCache
 
 logger = logging.getLogger(__name__)
@@ -64,6 +73,30 @@ parent_name_cache = AsyncLRUCache(
     maxsize=PARENT_NAME_CACHE_SIZE, ttl=PARENT_NAME_CACHE_TTL
 )  # 1h cache for parent names
 SIMILAR_SLOW_LOG_THRESHOLD_MS = _read_similar_slow_threshold_ms()
+DEFAULT_SUBUNIT_FORCE_REFRESH_COOLDOWN_SECONDS = 60
+
+
+def _read_int_env(name: str, default: int) -> int:
+    raw = os.getenv(name)
+    if raw is None or raw.strip() == "":
+        return default
+    try:
+        return int(raw)
+    except ValueError:
+        return default
+
+
+def subunit_force_refresh_cooldown_seconds() -> int:
+    # BESLUTNING: No Brreg source defines a force-refresh cooldown. Default
+    # matches the existing role endpoint cooldown and is configurable.
+    return max(
+        0,
+        _read_int_env(
+            "SUBUNIT_FORCE_REFRESH_COOLDOWN_SECONDS",
+            DEFAULT_SUBUNIT_FORCE_REFRESH_COOLDOWN_SECONDS,
+        ),
+    )
+
 
 # Lock to prevent thundering herd on stats computation
 _stats_lock = asyncio.Lock()
@@ -413,15 +446,142 @@ class CompanyService:
         """Fuzzy search for subunits."""
         return await self.subunit_repo.search_by_name(query, limit)
 
-    async def get_subunits(self, parent_orgnr: str, force_refresh: bool = False) -> list[models.SubUnit]:
-        """Get subunits for a company, syncing if missing."""
-        if force_refresh:
-            await self._sync_subunits_from_api(parent_orgnr, raise_errors=True)
+    @staticmethod
+    def _record_subunit_cache_event(result: str, traffic_class: str) -> None:
+        BRREG_CACHE_EVENTS_TOTAL.labels(
+            endpoint="subunits",
+            traffic_class=traffic_class,
+            result=result,
+        ).inc()
+
+    async def _get_cached_subunits(self, parent_orgnr: str, traffic_class: str) -> list[models.SubUnit]:
         subunits = await self.subunit_repo.get_by_parent_orgnr(parent_orgnr)
-        if not subunits and not force_refresh:
-            await self._sync_subunits_from_api(parent_orgnr)
-            subunits = await self.subunit_repo.get_by_parent_orgnr(parent_orgnr)
+        self._record_subunit_cache_event("hit" if subunits else "negative_hit", traffic_class)
         return subunits
+
+    async def _subunit_force_refresh_in_cooldown(self, parent_orgnr: str) -> bool:
+        cooldown_seconds = subunit_force_refresh_cooldown_seconds()
+        if cooldown_seconds <= 0:
+            return False
+
+        last_update = await self.subunit_repo.get_refresh_timestamp(parent_orgnr)
+        if not last_update:
+            return False
+        last_update = last_update if last_update.tzinfo else last_update.replace(tzinfo=UTC)
+        elapsed = datetime.now(UTC) - last_update
+        if elapsed >= timedelta(seconds=cooldown_seconds):
+            return False
+
+        logger.info(
+            "Skipping subunit force refresh for %s (last successful refresh %ds ago)",
+            sanitize_log(parent_orgnr),
+            max(0, int(elapsed.total_seconds())),
+        )
+        return True
+
+    async def _subunit_stale_or_raise(
+        self,
+        parent_orgnr: str,
+        traffic_class: str,
+        error: Exception,
+    ) -> list[models.SubUnit]:
+        cached = await self.subunit_repo.get_by_parent_orgnr(parent_orgnr)
+        if cached:
+            logger.info("Returning stale cached subunits for %s", sanitize_log(parent_orgnr))
+            self._record_subunit_cache_event("stale_fallback", traffic_class)
+            return cached
+
+        if isinstance(error, ExternalApiException):
+            raise error
+        raise ExternalApiException(
+            message=f"Could not refresh subunits for {parent_orgnr}",
+            service="Brønnøysund",
+            details=str(error),
+        ) from error
+
+    async def _release_subunit_read_transaction(self) -> None:
+        try:
+            await self.db.rollback()
+        except Exception:
+            logger.warning("subunits.read_transaction_release_failed", exc_info=True)
+
+    async def _wait_for_subunit_refresh(
+        self,
+        parent_orgnr: str,
+        *,
+        force_refresh: bool,
+        traffic_class: str,
+        lock_config: SubunitRefreshLockConfig,
+    ) -> list[models.SubUnit]:
+        deadline = time.monotonic() + lock_config.wait_timeout_seconds
+        while time.monotonic() < deadline:
+            sleep_seconds = min(lock_config.poll_interval_seconds, max(0.0, deadline - time.monotonic()))
+            if sleep_seconds > 0:
+                await asyncio.sleep(sleep_seconds)
+
+            if not force_refresh and await self.subunit_repo.is_cache_valid(parent_orgnr):
+                return await self._get_cached_subunits(parent_orgnr, traffic_class)
+            if force_refresh and await self._subunit_force_refresh_in_cooldown(parent_orgnr):
+                return await self._get_cached_subunits(parent_orgnr, traffic_class)
+            await self._release_subunit_read_transaction()
+
+        return await self._subunit_stale_or_raise(
+            parent_orgnr,
+            traffic_class,
+            ExternalApiException(
+                message=f"Timed out waiting for subunit refresh lock for {parent_orgnr}",
+                service="Brønnøysund",
+                details="Another worker is refreshing this parent orgnr",
+            ),
+        )
+
+    async def get_subunits(self, parent_orgnr: str, force_refresh: bool = False) -> list[models.SubUnit]:
+        """Get subunits for a company, syncing with negative cache and single-flight."""
+        traffic_class = brreg_traffic_class()
+
+        if not force_refresh and await self.subunit_repo.is_cache_valid(parent_orgnr):
+            return await self._get_cached_subunits(parent_orgnr, traffic_class)
+
+        if not force_refresh:
+            self._record_subunit_cache_event("miss", traffic_class)
+
+        if not await self.subunit_repo.parent_company_exists(parent_orgnr):
+            logger.info("Skipping subunit refresh for unknown parent company %s", sanitize_log(parent_orgnr))
+            self._record_subunit_cache_event("uncacheable", traffic_class)
+            return []
+
+        if force_refresh and await self._subunit_force_refresh_in_cooldown(parent_orgnr):
+            return await self._get_cached_subunits(parent_orgnr, traffic_class)
+
+        await self._release_subunit_read_transaction()
+
+        lock_config = load_subunit_refresh_lock_config()
+        try:
+            lock = await try_acquire_subunit_refresh_lock(parent_orgnr, config=lock_config)
+        except SubunitRefreshLockError as exc:
+            return await self._subunit_stale_or_raise(parent_orgnr, traffic_class, exc)
+
+        if lock is None:
+            return await self._wait_for_subunit_refresh(
+                parent_orgnr,
+                force_refresh=force_refresh,
+                traffic_class=traffic_class,
+                lock_config=lock_config,
+            )
+
+        try:
+            if not force_refresh and await self.subunit_repo.is_cache_valid(parent_orgnr):
+                return await self._get_cached_subunits(parent_orgnr, traffic_class)
+            if force_refresh and await self._subunit_force_refresh_in_cooldown(parent_orgnr):
+                return await self._get_cached_subunits(parent_orgnr, traffic_class)
+
+            await self._release_subunit_read_transaction()
+            await self._sync_subunits_from_api(parent_orgnr, raise_errors=True)
+            return await self._get_cached_subunits(parent_orgnr, traffic_class)
+        except Exception as exc:
+            return await self._subunit_stale_or_raise(parent_orgnr, traffic_class, exc)
+        finally:
+            await release_subunit_refresh_lock(lock, config=lock_config)
 
     async def fetch_and_store_company(
         self, orgnr: str, fetch_financials: bool = True, geocode: bool = True
@@ -555,14 +715,28 @@ class CompanyService:
         """Internal helper to sync subunits."""
         try:
             data = await self.brreg_api.fetch_subunits(parent_orgnr)
+            subunits: list[models.SubUnit] = []
             if data:
-                subunits = [map_subunit_from_api(s, parent_orgnr) for s in data]
-                await self.subunit_repo.create_batch(subunits)
+                for item in data:
+                    subunits.append(map_subunit_from_api(item, parent_orgnr))
+
+                expected_count = len({subunit.orgnr for subunit in subunits if subunit.parent_orgnr})
+                saved_count = await self.subunit_repo.create_batch(subunits, commit=False)
+                if saved_count != expected_count:
+                    raise RuntimeError(
+                        f"Only saved {saved_count} of {expected_count} subunits for parent {parent_orgnr}"
+                    )
+
+            updated_count = await self.subunit_repo.mark_cache_refreshed(parent_orgnr, commit=True)
+            if updated_count < 1:
+                raise RuntimeError(f"Could not mark subunit cache refreshed for unknown parent {parent_orgnr}")
         except ExternalApiException:
+            await self.db.rollback()
             logger.warning("brreg.subunits_sync_failed parent_orgnr=%s", sanitize_log(parent_orgnr), exc_info=True)
             if raise_errors:
                 raise
         except Exception as e:
+            await self.db.rollback()
             logger.warning("subunits.sync_failed parent_orgnr=%s error=%s", sanitize_log(parent_orgnr), sanitize_log(e))
             if raise_errors:
                 raise

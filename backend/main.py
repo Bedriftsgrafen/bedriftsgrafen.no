@@ -6,6 +6,7 @@ from contextlib import asynccontextmanager
 from fastapi import Depends, FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
+from prometheus_client import CONTENT_TYPE_LATEST, REGISTRY, CollectorRegistry, generate_latest, multiprocess
 from prometheus_fastapi_instrumentator import Instrumentator
 from slowapi.errors import RateLimitExceeded
 from slowapi.middleware import SlowAPIMiddleware
@@ -140,7 +141,7 @@ async def rate_limit_handler(request: Request, exc: RateLimitExceeded):
     return JSONResponse(
         status_code=429,
         content={
-            "detail": "Rate limit exceeded. Maximum 100 requests per minute allowed.",
+            "detail": "Rate limit exceeded. Try again after the indicated delay.",
             "code": "RATE_LIMITED",
             "retry_after": exc.headers.get("retry-after", "60") if exc.headers else "60",
         },
@@ -281,10 +282,31 @@ def metrics_token_matches(provided_token: str, expected_token: str) -> bool:
     return bool(provided_token and expected_token and secrets.compare_digest(provided_token, expected_token))
 
 
+def metrics_registry() -> CollectorRegistry:
+    """Return the registry to export on /metrics.
+
+    Uvicorn runs several worker processes, and each one keeps its own
+    in-process registry. A scrape reaches whichever worker answers, so the
+    counters appear to jump between per-worker values; Prometheus reads every
+    downward step as a counter reset and extrapolates, which inflates rate()
+    and increase() far above the real traffic.
+
+    When PROMETHEUS_MULTIPROC_DIR is set, prometheus_client writes per-process
+    files that MultiProcessCollector aggregates into one consistent view. With
+    the variable unset (dev, tests) the default single-process registry is
+    correct as-is.
+    """
+    if not os.getenv("PROMETHEUS_MULTIPROC_DIR"):
+        return REGISTRY
+
+    registry = CollectorRegistry()
+    multiprocess.MultiProcessCollector(registry)
+    return registry
+
+
 @app.get("/metrics", include_in_schema=False)
 async def metrics_endpoint(request: Request):
     """Prometheus metrics endpoint, secured with a metrics token."""
-    from prometheus_client import CONTENT_TYPE_LATEST, generate_latest
     from starlette.responses import Response
 
     key = request.query_params.get("key", "")
@@ -295,7 +317,7 @@ async def metrics_endpoint(request: Request):
         metrics_token_matches(key, METRICS_TOKEN) or metrics_token_matches(bearer_token, METRICS_TOKEN)
     ):
         return JSONResponse(status_code=403, content={"detail": "Forbidden"})
-    return Response(content=generate_latest(), media_type=CONTENT_TYPE_LATEST)
+    return Response(content=generate_latest(metrics_registry()), media_type=CONTENT_TYPE_LATEST)
 
 
 @app.get("/")

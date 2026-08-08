@@ -15,7 +15,11 @@ def mock_db():
 
 @pytest.fixture
 def role_service(mock_db):
-    return RoleService(mock_db)
+    service = RoleService(mock_db)
+    service.role_repo.company_exists = AsyncMock(return_value=True)
+    service.role_repo.acquire_refresh_lock = AsyncMock()
+    service.role_repo.mark_cache_refreshed = AsyncMock()
+    return service
 
 
 @pytest.mark.asyncio
@@ -39,7 +43,7 @@ async def test_get_roles_fetch_api_success(role_service):
     # Arrange
     role_service.role_repo.is_cache_valid = AsyncMock(return_value=False)
     role_service.role_repo.delete_by_orgnr = AsyncMock()
-    role_service.role_repo.create_batch = AsyncMock()
+    role_service.role_repo.create_batch = AsyncMock(return_value=1)
 
     api_data = [
         {"type_kode": "DAGL", "type_beskrivelse": "Daglig leder", "person_navn": "Ola Nordmann", "rekkefoelge": 1}
@@ -53,6 +57,7 @@ async def test_get_roles_fetch_api_success(role_service):
     assert len(result) == 1
     assert result[0].type_kode == "DAGL"
     role_service.brreg_api.fetch_roles.assert_called_with("123")
+    role_service.role_repo.acquire_refresh_lock.assert_awaited_once_with("123")
     role_service.role_repo.delete_by_orgnr.assert_called()
     role_service.role_repo.create_batch.assert_called()
 
@@ -93,7 +98,8 @@ async def test_get_roles_empty_api_response(role_service):
     result = await role_service.get_roles("123")
 
     assert result == []
-    role_service.role_repo.delete_by_orgnr.assert_called_once_with("123")
+    role_service.role_repo.delete_by_orgnr.assert_called_once_with("123", commit=False)
+    role_service.role_repo.mark_cache_refreshed.assert_awaited_once_with("123", commit=True)
 
 
 @pytest.mark.asyncio
@@ -103,9 +109,9 @@ async def test_get_roles_force_refresh(role_service):
 
     # Simulate last update was more than 60s ago
     old_time = datetime.now(UTC) - timedelta(seconds=120)
-    role_service.role_repo.get_cache_timestamp = AsyncMock(return_value=old_time)
+    role_service.role_repo.get_refresh_timestamp = AsyncMock(return_value=old_time)
     role_service.role_repo.delete_by_orgnr = AsyncMock()
-    role_service.role_repo.create_batch = AsyncMock()
+    role_service.role_repo.create_batch = AsyncMock(return_value=1)
 
     api_data = [{"type_kode": "DAGL", "type_beskrivelse": "Daglig leder", "person_navn": "Test", "rekkefoelge": 1}]
     role_service.brreg_api.fetch_roles = AsyncMock(return_value=api_data)
@@ -123,7 +129,7 @@ async def test_get_roles_force_refresh_throttled(role_service):
 
     # Simulate last update was 30s ago (within throttle window)
     recent_time = datetime.now(UTC) - timedelta(seconds=30)
-    role_service.role_repo.get_cache_timestamp = AsyncMock(return_value=recent_time)
+    role_service.role_repo.get_refresh_timestamp = AsyncMock(return_value=recent_time)
     role_service.role_repo.get_by_orgnr = AsyncMock(return_value=[Role(orgnr="123", type_kode="CACHED")])
     role_service.brreg_api.fetch_roles = AsyncMock()
 
@@ -138,9 +144,9 @@ async def test_get_roles_force_refresh_throttled(role_service):
 @pytest.mark.asyncio
 async def test_get_roles_force_refresh_no_previous_timestamp(role_service):
     """Should allow force refresh when no previous timestamp exists."""
-    role_service.role_repo.get_cache_timestamp = AsyncMock(return_value=None)
+    role_service.role_repo.get_refresh_timestamp = AsyncMock(return_value=None)
     role_service.role_repo.delete_by_orgnr = AsyncMock()
-    role_service.role_repo.create_batch = AsyncMock()
+    role_service.role_repo.create_batch = AsyncMock(return_value=1)
 
     api_data = [{"type_kode": "DAGL", "type_beskrivelse": "Daglig leder", "person_navn": "Test", "rekkefoelge": 1}]
     role_service.brreg_api.fetch_roles = AsyncMock(return_value=api_data)
@@ -156,7 +162,7 @@ async def test_get_roles_handles_invalid_role_data(role_service):
     """Should skip invalid role entries but continue processing."""
     role_service.role_repo.is_cache_valid = AsyncMock(return_value=False)
     role_service.role_repo.delete_by_orgnr = AsyncMock()
-    role_service.role_repo.create_batch = AsyncMock()
+    role_service.role_repo.create_batch = AsyncMock(return_value=2)
 
     # Mix of valid and invalid data
     api_data = [
@@ -187,3 +193,32 @@ async def test_get_roles_preserves_cache_when_api_roles_cannot_be_parsed(role_se
     assert result == [cached_role]
     role_service.role_repo.delete_by_orgnr.assert_not_called()
     role_service.role_repo.create_batch.assert_not_called()
+
+
+@pytest.mark.asyncio
+async def test_get_roles_does_not_proxy_unknown_company_to_brreg(role_service):
+    """Unknown organization numbers must fail closed without upstream traffic."""
+    role_service.role_repo.is_cache_valid = AsyncMock(return_value=False)
+    role_service.role_repo.company_exists = AsyncMock(return_value=False)
+    role_service.brreg_api.fetch_roles = AsyncMock()
+
+    result = await role_service.get_roles("999999999")
+
+    assert result == []
+    role_service.brreg_api.fetch_roles.assert_not_awaited()
+    role_service.role_repo.acquire_refresh_lock.assert_not_awaited()
+
+
+@pytest.mark.asyncio
+async def test_get_roles_rechecks_cache_after_waiting_for_refresh_lock(role_service):
+    """A waiting request must reuse data written by the lock holder."""
+    cached_role = Role(orgnr="123", type_kode="CACHED")
+    role_service.role_repo.is_cache_valid = AsyncMock(side_effect=[False, True])
+    role_service.role_repo.get_by_orgnr = AsyncMock(return_value=[cached_role])
+    role_service.brreg_api.fetch_roles = AsyncMock()
+
+    result = await role_service.get_roles("123")
+
+    assert result == [cached_role]
+    role_service.role_repo.acquire_refresh_lock.assert_awaited_once_with("123")
+    role_service.brreg_api.fetch_roles.assert_not_awaited()

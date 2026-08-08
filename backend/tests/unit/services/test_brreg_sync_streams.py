@@ -1,5 +1,5 @@
 from datetime import date
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 
@@ -45,8 +45,9 @@ async def test_fetch_subunit_updates_success(update_service, mock_db):
         "_links": {"next": None},
     }
 
-    with patch("httpx.AsyncClient.get", return_value=mock_response):
-        result = await update_service.fetch_subunit_updates(since_date=date(2025, 12, 1))
+    update_service.brreg_api._get = AsyncMock(return_value=mock_response)
+
+    result = await update_service.fetch_subunit_updates(since_date=date(2025, 12, 1))
 
     assert result["companies_updated"] == 1
     assert result["latest_oppdateringsid"] == 100
@@ -72,8 +73,9 @@ async def test_fetch_subunit_updates_handles_410(update_service, mock_db):
         "_links": {"next": None},
     }
 
-    with patch("httpx.AsyncClient.get", return_value=mock_response):
-        result = await update_service.fetch_subunit_updates(since_date=date(2025, 12, 1))
+    update_service.brreg_api._get = AsyncMock(return_value=mock_response)
+
+    result = await update_service.fetch_subunit_updates(since_date=date(2025, 12, 1))
 
     assert result["companies_updated"] == 0
     assert result["latest_oppdateringsid"] == 200
@@ -96,8 +98,9 @@ async def test_fetch_role_updates_success(update_service, mock_db):
     mock_response.status_code = 200
     mock_response.json.return_value = [{"id": "500", "data": {"organisasjonsnummer": "987654321"}}]
 
-    with patch("httpx.AsyncClient.get", return_value=mock_response):
-        result = await update_service.fetch_role_updates(since_date=date(2025, 12, 1))
+    update_service.brreg_api._get = AsyncMock(return_value=mock_response)
+
+    result = await update_service.fetch_role_updates(since_date=date(2025, 12, 1))
 
     assert result["companies_updated"] == 1
     assert result["latest_oppdateringsid"] == 500

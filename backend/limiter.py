@@ -27,4 +27,16 @@ limiter = Limiter(
     key_func=get_remote_address,
     default_limits=["200/minute"],
     storage_uri=storage_uri,
+    # Bucket per (client, route) instead of per (client, exact URL).
+    #
+    # slowapi defaults to key_style="url", which puts the concrete request path
+    # in the bucket key. Every endpoint with a path parameter is then trivially
+    # bypassable: varying the parameter yields a fresh bucket per request, so no
+    # limit is ever reached. A scraper used this on 2026-08-04 to pull 167k
+    # /v1/companies/{orgnr}/roles responses at up to 15 req/s without a single
+    # 429, because each orgnr had its own bucket.
+    #
+    # "endpoint" keys on the view function instead, so all orgnrs share one
+    # bucket per client. Do not change this back.
+    key_style="endpoint",
 )

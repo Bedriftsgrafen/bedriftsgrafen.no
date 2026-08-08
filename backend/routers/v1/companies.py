@@ -384,6 +384,7 @@ async def get_accounting_with_kpis(request: Request, orgnr: str, year: int, db: 
 
 @router.post("/{orgnr}/fetch", response_model=FetchCompanyResponse)
 @limiter.limit("2/second")
+@limiter.limit("10/minute")
 async def fetch_company_data(
     request: Request,
     orgnr: str,
@@ -401,6 +402,7 @@ async def fetch_company_data(
 
 @router.get("/{orgnr}/subunits", response_model=SubUnitsWithMetadata)
 @limiter.limit("5/second")
+@limiter.limit("30/minute")
 async def get_company_subunits(
     request: Request,
     orgnr: str = Path(..., min_length=9, max_length=9, pattern=r"^\d{9}$", description="9-digit organization number"),
@@ -461,7 +463,12 @@ async def get_company_subunits(
 
 
 @router.get("/{orgnr}/roles", response_model=RolesWithMetadata)
+# Two limits: the per-second one absorbs UI bursts, the per-minute one caps
+# sustained scraping. A cache miss here costs an upstream Brønnøysund call plus
+# a rewrite of the company's roles, and the UI only needs this once per company
+# page view, so 60/minute is far above real usage.
 @limiter.limit("5/second")
+@limiter.limit("60/minute")
 async def get_company_roles(
     request: Request,
     orgnr: str = Path(..., min_length=9, max_length=9, pattern=r"^\d{9}$", description="9-digit organization number"),

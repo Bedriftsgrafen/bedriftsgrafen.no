@@ -1,6 +1,6 @@
 """Prometheus metrics definition for Bedriftsgrafen."""
 
-from prometheus_client import Counter, Histogram
+from prometheus_client import Counter, Gauge, Histogram
 
 # --- Background Sync Metrics ---
 
@@ -30,6 +30,61 @@ BRREG_API_REQUESTS_TOTAL = Counter(
     ["endpoint", "status_code"],
 )
 
+BRREG_LOGICAL_OPERATIONS_TOTAL = Counter(
+    "bedriftsgrafen_brreg_logical_operations_total",
+    "Logical Brreg operations before retries",
+    ["endpoint", "traffic_class"],
+)
+
+BRREG_HTTP_ATTEMPTS_TOTAL = Counter(
+    "bedriftsgrafen_brreg_http_attempts_total",
+    "Actual Brreg HTTP attempts, including retries and paginated pages",
+    ["endpoint", "traffic_class", "status_category"],
+)
+
+BRREG_GUARD_DECISIONS_TOTAL = Counter(
+    "bedriftsgrafen_brreg_guard_decisions_total",
+    "Brreg egress guard decisions",
+    ["endpoint", "traffic_class", "result"],
+)
+
+BRREG_GUARD_WAIT_SECONDS = Histogram(
+    "bedriftsgrafen_brreg_guard_wait_seconds",
+    "Time spent waiting for Brreg egress guard capacity",
+    ["endpoint", "traffic_class"],
+    buckets=(0.005, 0.01, 0.025, 0.05, 0.1, 0.25, 0.5, 1.0, 2.5, 5.0),
+)
+
+BRREG_GUARD_REDIS_ERRORS_TOTAL = Counter(
+    "bedriftsgrafen_brreg_guard_redis_errors_total",
+    "Redis errors while enforcing the Brreg egress guard",
+    ["operation", "error_type"],
+)
+
+BRREG_RETRIES_TOTAL = Counter(
+    "bedriftsgrafen_brreg_retries_total",
+    "Brreg retries by endpoint and reason",
+    ["endpoint", "traffic_class", "reason"],
+)
+
+BRREG_PAGINATION_PAGES_TOTAL = Counter(
+    "bedriftsgrafen_brreg_pagination_pages_total",
+    "Brreg paginated pages processed",
+    ["endpoint", "traffic_class"],
+)
+
+BRREG_CACHE_EVENTS_TOTAL = Counter(
+    "bedriftsgrafen_brreg_cache_events_total",
+    "Cache outcomes before Brreg refresh decisions",
+    ["endpoint", "traffic_class", "result"],
+)
+
+BRREG_EGRESS_CONFIG = Gauge(
+    "bedriftsgrafen_brreg_egress_config",
+    "Brreg egress guard runtime configuration values",
+    ["setting"],
+)
+
 # --- Database Metrics ---
 
 DB_POOL_SIZE = Histogram(
@@ -45,3 +100,44 @@ def init_metrics() -> None:
         SYNC_LATENCY.labels(entity_type=entity).observe(0)
         for op in ["created", "updated", "deleted", "error"]:
             SYNC_OPERATIONS_TOTAL.labels(entity_type=entity, operation_type=op).inc(0)
+
+    for endpoint in [
+        "company",
+        "financials",
+        "roles",
+        "subunit",
+        "subunits",
+        "updates_company",
+        "updates_subunit",
+        "updates_role",
+    ]:
+        for traffic_class in ["public", "background", "unknown"]:
+            BRREG_LOGICAL_OPERATIONS_TOTAL.labels(endpoint=endpoint, traffic_class=traffic_class).inc(0)
+            BRREG_GUARD_WAIT_SECONDS.labels(endpoint=endpoint, traffic_class=traffic_class).observe(0)
+            BRREG_PAGINATION_PAGES_TOTAL.labels(endpoint=endpoint, traffic_class=traffic_class).inc(0)
+            for status_category in ["2xx", "3xx", "4xx", "5xx", "timeout", "exception", "circuit_open"]:
+                BRREG_HTTP_ATTEMPTS_TOTAL.labels(
+                    endpoint=endpoint,
+                    traffic_class=traffic_class,
+                    status_category=status_category,
+                ).inc(0)
+            for result in ["allowed", "waited", "rejected"]:
+                BRREG_GUARD_DECISIONS_TOTAL.labels(
+                    endpoint=endpoint,
+                    traffic_class=traffic_class,
+                    result=result,
+                ).inc(0)
+            for reason in ["status", "timeout", "exception", "rate_limited"]:
+                BRREG_RETRIES_TOTAL.labels(endpoint=endpoint, traffic_class=traffic_class, reason=reason).inc(0)
+            for cache_result in ["hit", "miss", "negative_hit", "stale_fallback", "uncacheable"]:
+                BRREG_CACHE_EVENTS_TOTAL.labels(
+                    endpoint=endpoint,
+                    traffic_class=traffic_class,
+                    result=cache_result,
+                ).inc(0)
+
+    for setting in ["enabled", "rate_per_second", "burst", "wait_timeout_seconds"]:
+        BRREG_EGRESS_CONFIG.labels(setting=setting).set(0)
+
+    for error_type in ["timeout", "redis"]:
+        BRREG_GUARD_REDIS_ERRORS_TOTAL.labels(operation="acquire", error_type=error_type).inc(0)

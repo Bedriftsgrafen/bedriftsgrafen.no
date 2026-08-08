@@ -14,7 +14,13 @@ from typing import Any
 import httpx
 
 from constants.concurrency import CONNECT_TIMEOUT, DEFAULT_EXTERNAL_TIMEOUT
-from utils.metrics import BRREG_API_REQUESTS_TOTAL
+from services.brreg_egress_guard import BrregEgressGuardError, acquire_brreg_egress_capacity, brreg_traffic_class
+from utils.metrics import (
+    BRREG_API_REQUESTS_TOTAL,
+    BRREG_HTTP_ATTEMPTS_TOTAL,
+    BRREG_LOGICAL_OPERATIONS_TOTAL,
+    BRREG_RETRIES_TOTAL,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -212,13 +218,55 @@ class BaseExternalService:
                 _CIRCUIT_COOLDOWN_SECONDS,
             )
 
-    def _record_external_request_metric(self, context: str, status_code: int | str) -> None:
+    def _metric_endpoint(self, context: str) -> str:
+        """Extract a stable low-cardinality endpoint label from a request context."""
+        return (context.split(maxsplit=1)[0] if context else "request").lower()
+
+    @staticmethod
+    def _status_category(status_code: int | str) -> str:
+        if isinstance(status_code, int):
+            return f"{status_code // 100}xx"
+        status = str(status_code)
+        return status if status in {"timeout", "exception", "circuit_open"} else "exception"
+
+    async def _guard_brreg_egress(self, endpoint: str, traffic_class: str) -> None:
+        if self.SERVICE_NAME != "Brønnøysund":
+            return
+        try:
+            await acquire_brreg_egress_capacity(endpoint=endpoint, traffic_class=traffic_class)
+        except BrregEgressGuardError as exc:
+            raise ExternalApiException(
+                message="Brreg egress guard rejected outbound request",
+                service=self.SERVICE_NAME,
+                details=str(exc),
+                status_code=503,
+            ) from exc
+
+    def _record_external_request_metric(
+        self,
+        context: str,
+        status_code: int | str,
+        traffic_class: str | None = None,
+        *,
+        actual_attempt: bool = True,
+    ) -> None:
         """Record Brreg upstream request outcomes with low-cardinality labels."""
         if self.SERVICE_NAME != "Brønnøysund":
             return
 
-        endpoint = (context.split(maxsplit=1)[0] if context else "request").lower()
+        endpoint = self._metric_endpoint(context)
+        traffic_class = traffic_class or brreg_traffic_class()
         BRREG_API_REQUESTS_TOTAL.labels(endpoint=endpoint, status_code=str(status_code)).inc()
+        if actual_attempt:
+            BRREG_HTTP_ATTEMPTS_TOTAL.labels(
+                endpoint=endpoint,
+                traffic_class=traffic_class,
+                status_category=self._status_category(status_code),
+            ).inc()
+
+    def _record_brreg_retry(self, endpoint: str, traffic_class: str, reason: str) -> None:
+        if self.SERVICE_NAME == "Brønnøysund":
+            BRREG_RETRIES_TOTAL.labels(endpoint=endpoint, traffic_class=traffic_class, reason=reason).inc()
 
     async def _request_with_retry(
         self,
@@ -236,8 +284,19 @@ class BaseExternalService:
         Returns the response object for 2xx and 404 status codes.
         Raises exceptions for other errors after retries exhausted.
         """
+        endpoint = self._metric_endpoint(context)
+        traffic_class = brreg_traffic_class() if self.SERVICE_NAME == "Brønnøysund" else "unknown"
+
+        if self.SERVICE_NAME == "Brønnøysund":
+            BRREG_LOGICAL_OPERATIONS_TOTAL.labels(endpoint=endpoint, traffic_class=traffic_class).inc()
+
         if self._is_circuit_open():
-            self._record_external_request_metric(context, "circuit_open")
+            self._record_external_request_metric(
+                context,
+                "circuit_open",
+                traffic_class=traffic_class,
+                actual_attempt=False,
+            )
             raise ExternalApiException(
                 message=f"Circuit open — too many consecutive failures for {context}",
                 service=self.SERVICE_NAME,
@@ -248,6 +307,8 @@ class BaseExternalService:
 
         for attempt in range(self.RETRY_ATTEMPTS):
             try:
+                await self._guard_brreg_egress(endpoint, traffic_class)
+
                 # Use shared client if available, otherwise create temporary one
                 if self.client:
                     response = await self._perform_request(self.client, method, url, params, json, data, headers)
@@ -255,7 +316,7 @@ class BaseExternalService:
                     async with httpx.AsyncClient(timeout=self.timeout) as client:
                         response = await self._perform_request(client, method, url, params, json, data, headers)
 
-                self._record_external_request_metric(context, response.status_code)
+                self._record_external_request_metric(context, response.status_code, traffic_class=traffic_class)
 
                 # Success, Not Found, or Gone - return to caller to handle
                 # 410 (Gone) is common for deleted Brreg companies
@@ -269,6 +330,7 @@ class BaseExternalService:
                     if rate_limit_attempts >= self.MAX_RATE_LIMIT_RETRIES:
                         raise RateLimitException(self.SERVICE_NAME)
 
+                    self._record_brreg_retry(endpoint, traffic_class, "rate_limited")
                     backoff = (
                         self.RETRY_DELAY
                         * (self.RATE_LIMIT_BACKOFF_MULTIPLIER ** (rate_limit_attempts - 1))
@@ -301,13 +363,14 @@ class BaseExternalService:
                         details=f"Status code: {response.status_code}",
                         status_code=response.status_code,
                     )
+                self._record_brreg_retry(endpoint, traffic_class, "status")
 
             except (RateLimitException, ExternalApiException):  # fmt: skip
                 raise
 
             except httpx.TimeoutException:
                 self._record_failure()
-                self._record_external_request_metric(context, "timeout")
+                self._record_external_request_metric(context, "timeout", traffic_class=traffic_class)
                 logger.debug(
                     "%s: timeout for %s (attempt %d/%d)",
                     self.SERVICE_NAME,
@@ -316,6 +379,7 @@ class BaseExternalService:
                     self.RETRY_ATTEMPTS,
                 )
                 if attempt < self.RETRY_ATTEMPTS - 1:
+                    self._record_brreg_retry(endpoint, traffic_class, "timeout")
                     delay = self.RETRY_DELAY * (attempt + 1) * random.uniform(0.8, 1.2)  # noqa: S311
                     await asyncio.sleep(delay)
                 else:
@@ -333,12 +397,13 @@ class BaseExternalService:
 
             except Exception as e:
                 self._record_failure()
-                self._record_external_request_metric(context, "exception")
+                self._record_external_request_metric(context, "exception", traffic_class=traffic_class)
                 logger.error("%s: error fetching %s: %s", self.SERVICE_NAME, context, e)
                 if attempt == self.RETRY_ATTEMPTS - 1:
                     raise ExternalApiException(
                         message=f"Failed to fetch {context}", service=self.SERVICE_NAME, details=str(e)
                     )
+                self._record_brreg_retry(endpoint, traffic_class, "exception")
 
             # Jittered backoff between retries
             if attempt < self.RETRY_ATTEMPTS - 1:

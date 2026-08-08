@@ -4,7 +4,6 @@ import os
 from datetime import UTC, date, datetime, timedelta
 from typing import Any
 
-import httpx
 from pydantic import ValidationError
 from sqlalchemy import select, text
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -555,24 +554,22 @@ class UpdateService:
             else f"{BRREG_UPDATES_URL}?dato={since_iso}&includeChanges=true&size={min(page_size, 10000)}"
         )
 
-        async with httpx.AsyncClient(timeout=self.brreg_api.timeout) as http_client:
-            while next_url:
-                try:
-                    page_result = await self._process_single_page(
-                        http_client=http_client,
-                        url=next_url,
-                        page_size=page_size,
-                        result=result,
-                    )
-                    next_url = page_result
+        while next_url:
+            try:
+                page_result = await self._process_single_page(
+                    url=next_url,
+                    page_size=page_size,
+                    result=result,
+                )
+                next_url = page_result
 
-                except Exception as e:
-                    error_msg = f"Critical error during update loop: {e!s}"
-                    logger.exception(error_msg)
-                    result.errors.append(error_msg)
-                    # Rollback any partial transaction to allow recovery
-                    await self.db.rollback()
-                    break
+            except Exception as e:
+                error_msg = f"Critical error during update loop: {e!s}"
+                logger.exception(error_msg)
+                result.errors.append(error_msg)
+                # Rollback any partial transaction to allow recovery
+                await self.db.rollback()
+                break
 
         logger.info(
             f"Update summary: {result.companies_processed} processed "
@@ -584,7 +581,6 @@ class UpdateService:
 
     async def _process_single_page(
         self,
-        http_client: httpx.AsyncClient,
         url: str,
         page_size: int,
         result: UpdateBatchResult,
@@ -594,7 +590,7 @@ class UpdateService:
         with SYNC_LATENCY.labels(entity_type="company").time():
             logger.info(f"Fetching updates page {result.pages_fetched + 1}...")
 
-            response = await http_client.get(url)
+            response = await self.brreg_api._get(url, context="updates_company")
 
             if response.status_code != 200:
                 error_msg = f"API returned status {response.status_code} for URL: {url}"
@@ -1299,36 +1295,35 @@ class UpdateService:
         )
 
         pages_processed = 0
-        async with httpx.AsyncClient(timeout=self.brreg_api.timeout) as http_client:
-            while next_url:
-                SYNC_BATCH_PAGES_TOTAL.labels(entity_type="subunit").inc()
-                with SYNC_LATENCY.labels(entity_type="subunit").time():
-                    try:
-                        response = await http_client.get(next_url)
-                        if response.status_code != 200:
-                            logger.error(f"API error {response.status_code} for subunits: {next_url}")
-                            break
-
-                        data = response.json()
-                        entities = data.get("_embedded", {}).get("oppdaterteUnderenheter", [])
-
-                        fetch_results = await self._fetch_subunit_update_details(entities)
-                        await self._persist_subunit_update_page(fetch_results, result)
-
-                        result.companies_processed += len(entities)
-                        result.pages_fetched += 1
-                        pages_processed += 1
-                        logger.info(
-                            f"Processed page {pages_processed} with {len(entities)} subunit updates",
-                            extra={"batch_size": len(entities)},
-                        )
-                        next_url = self._extract_next_link(data)
-
-                    except Exception as e:
-                        logger.exception(f"Error in subunit updates: {e}")
-                        # Rollback any partial transaction to allow recovery
-                        await self.db.rollback()
+        while next_url:
+            SYNC_BATCH_PAGES_TOTAL.labels(entity_type="subunit").inc()
+            with SYNC_LATENCY.labels(entity_type="subunit").time():
+                try:
+                    response = await self.brreg_api._get(next_url, context="updates_subunit")
+                    if response.status_code != 200:
+                        logger.error(f"API error {response.status_code} for subunits: {next_url}")
                         break
+
+                    data = response.json()
+                    entities = data.get("_embedded", {}).get("oppdaterteUnderenheter", [])
+
+                    fetch_results = await self._fetch_subunit_update_details(entities)
+                    await self._persist_subunit_update_page(fetch_results, result)
+
+                    result.companies_processed += len(entities)
+                    result.pages_fetched += 1
+                    pages_processed += 1
+                    logger.info(
+                        f"Processed page {pages_processed} with {len(entities)} subunit updates",
+                        extra={"batch_size": len(entities)},
+                    )
+                    next_url = self._extract_next_link(data)
+
+                except Exception as e:
+                    logger.exception(f"Error in subunit updates: {e}")
+                    # Rollback any partial transaction to allow recovery
+                    await self.db.rollback()
+                    break
 
         return result.model_dump()
 
@@ -1412,206 +1407,205 @@ class UpdateService:
         # To avoid re-fetching dead or subunit orgnrs in the same execution
         failed_this_run: set[str] = set()
 
-        async with httpx.AsyncClient(timeout=self.brreg_api.timeout) as http_client:
-            while True:
-                SYNC_BATCH_PAGES_TOTAL.labels(entity_type="role").inc()
-                with SYNC_LATENCY.labels(entity_type="role").time():
-                    try:
-                        response = await http_client.get(BRREG_ROLE_UPDATES_URL, params=params)
-                        if response.status_code != 200:
-                            logger.error(f"API error {response.status_code} for roles: {response.text}")
-                            break
-
-                        events = response.json()
-                        if not events or not isinstance(events, list):
-                            break
-
-                        logger.info(f"Processing batch of {len(events)} role updates...")
-
-                        # Extract unique orgnrs from the event batch
-                        orgnrs_to_sync = set()
-                        event_update_ids_by_orgnr: dict[str, list[int]] = {}
-                        committed_update_ids: list[int] = []
-                        failed_update_ids: list[int] = []
-                        latest_role_events_by_orgnr = self._latest_role_events_by_orgnr(events)
-                        last_seen_id = after_id
-                        for event in events:
-                            orgnr = event.get("data", {}).get("organisasjonsnummer")
-                            if orgnr:
-                                orgnrs_to_sync.add(orgnr)
-                            try:
-                                # IMPORTANT: Track progress even if we fail later in this batch
-                                current_id = int(event.get("id"))
-                                if last_seen_id is None or current_id > last_seen_id:
-                                    last_seen_id = current_id
-                                if orgnr:
-                                    event_update_ids_by_orgnr.setdefault(orgnr, []).append(current_id)
-                                else:
-                                    committed_update_ids.append(current_id)
-                            except ValueError, TypeError:  # Non-integer event ID — skip tracking
-                                pass
-
-                        await self.db.commit()
-
-                        # Phase 0: Smart Onboarding.
-                        # Ensure all companies for which we're syncing roles exist in the database.
-                        # We check both 'bedrifter' (main units) and 'underenheter' (subunits).
-                        # Subunits are skipped because they have no roles in Brreg.
-                        existing_orgnrs = await self.company_repo.get_existing_orgnrs(list(orgnrs_to_sync))
-                        existing_subunits = await self.subunit_repo.get_existing_orgnrs(list(orgnrs_to_sync))
-
-                        # Identify truly unknown orgnrs (not in main units, not in subunits, not failed yet)
-                        unknown_orgnrs = orgnrs_to_sync - existing_orgnrs - existing_subunits - failed_this_run
-
-                        if unknown_orgnrs:
-                            unknown_list = sorted(unknown_orgnrs)
-                            logger.info(
-                                f"Checking {len(unknown_list)} unknown orgnrs from role feed for missing main companies..."
-                            )
-
-                            semaphore = asyncio.Semaphore(API_CONCURRENCY_LIMIT)
-
-                            async def fetch_missing_main_unit(
-                                org_no: str, _semaphore: asyncio.Semaphore = semaphore
-                            ) -> dict[str, Any] | None:
-                                async with _semaphore:
-                                    try:
-                                        # Use main unit endpoint. Subunits return 404 here.
-                                        return await self.brreg_api.fetch_company(org_no)
-                                    except Exception as e:
-                                        # 404/410 are common for subunits or deleted entities
-                                        logger.debug(
-                                            f"Orgnr {org_no} is likely a subunit or deleted (404 on enheter): {e}"
-                                        )
-                                        return None
-
-                            fetch_tasks = [fetch_missing_main_unit(o) for o in unknown_list]
-                            fetched_results = await asyncio.gather(*fetch_tasks)
-
-                            new_companies_onboarded = 0
-                            for i, company_data in enumerate(fetched_results):
-                                target_orgnr = unknown_list[i]
-                                if company_data:
-                                    # Skip onboarding if the company is already deleted (has slettedato)
-                                    if company_data.get("slettedato"):
-                                        logger.debug(
-                                            f"Skipping onboarding of deleted company {target_orgnr} "
-                                            f"(slettedato: {company_data.get('slettedato')})"
-                                        )
-                                        failed_this_run.add(target_orgnr)
-                                        continue
-
-                                    try:
-                                        await self.company_repo.create_or_update(company_data)
-                                        existing_orgnrs.add(target_orgnr)
-                                        new_companies_onboarded += 1
-                                    except Exception as e:
-                                        logger.error(f"Failed to persist onboarded company {target_orgnr}: {e}")
-                                else:
-                                    # Mark as failed/subunit to avoid redundant API calls in this execution
-                                    failed_this_run.add(target_orgnr)
-
-                            if new_companies_onboarded > 0:
-                                await self.db.commit()
-                                logger.info(
-                                    f"Successfully onboarded {new_companies_onboarded} missing main companies during role sync."
-                                )
-
-                        # Phase 1: Collect all roles for companies that exist in the database
-                        all_batch_roles: list[models.Role] = []
-                        role_counts_by_orgnr: dict[str, int] = {}
-                        processed_orgnrs: set[str] = set()
-
-                        # Sort orgnrs to ensure consistent lock acquisition order and prevent deadlocks
-                        sorted_orgnrs_to_sync = sorted(orgnrs_to_sync)
-
-                        for orgnr in sorted_orgnrs_to_sync:
-                            # Skip companies that still don't exist (couldn't be fetched)
-                            if orgnr not in existing_orgnrs:
-                                logger.warning(f"Skipping role sync for {orgnr}: company not found in bedrifter table")
-                                committed_update_ids.extend(event_update_ids_by_orgnr.get(orgnr, []))
-                                continue
-
-                            try:
-                                # Use Brreg API directly to fetch current roles
-                                roles_data = await self.brreg_api.fetch_roles(orgnr)
-
-                                # Ensure any companies mentioned in the roles exist as parents
-                                potential_parents = [
-                                    {"overordnetEnhet": r.get("enhet_orgnr")}
-                                    for r in roles_data
-                                    if r.get("enhet_orgnr")
-                                ]
-                                if potential_parents:
-                                    await self._ensure_parent_companies_exist(potential_parents)
-
-                                # Create Role models
-                                for r in roles_data:
-                                    all_batch_roles.append(map_role_from_api(r, orgnr))
-                                role_counts_by_orgnr[orgnr] = len(roles_data)
-                                result.companies_updated += 1
-                                SYNC_OPERATIONS_TOTAL.labels(entity_type="role", operation_type="updated").inc()
-                                processed_orgnrs.add(orgnr)
-                                committed_update_ids.extend(event_update_ids_by_orgnr.get(orgnr, []))
-
-                            except Exception as e:
-                                failed_update_ids.extend(event_update_ids_by_orgnr.get(orgnr, []))
-                                error_msg = f"Failed to sync roles: {e!s}"
-                                logger.error(f"{error_msg} for {orgnr}")
-                                status_code = getattr(e, "status_code", None) if hasattr(e, "status_code") else None
-                                await self.report_sync_error(orgnr, "role", error_msg, status_code=status_code)
-
-                        # Phase 2: Transactional database update
-                        if processed_orgnrs:
-                            # 1. Delete old roles for successfully processed companies
-                            from sqlalchemy import delete
-
-                            await self.db.execute(delete(models.Role).where(models.Role.orgnr.in_(processed_orgnrs)))
-
-                            # 2. Bulk insert new roles
-                            if all_batch_roles:
-                                await self.role_repo.create_batch(all_batch_roles, commit=False)
-
-                            for orgnr in sorted(processed_orgnrs):
-                                await self._record_roles_changed_event(
-                                    orgnr=orgnr,
-                                    source_event=latest_role_events_by_orgnr.get(orgnr),
-                                    role_count=role_counts_by_orgnr.get(orgnr, 0),
-                                )
-
-                            # 3. Final commit for this batch
-                            await self.db.commit()
-
-                        self._publish_contiguous_update_ids(result, committed_update_ids, failed_update_ids)
-                        if result.latest_oppdateringsid:
-                            await self.system_repo.set_state("role_update_latest_id", str(result.latest_oppdateringsid))
-
-                        result.companies_processed += len(events)
-                        if failed_update_ids:
-                            logger.warning(
-                                "Role updates had sync errors; advanced cursor only through contiguous successes"
-                            )
-                            break
-
-                        # If we got a full batch, continue to next batch
-                        if len(events) >= params["size"]:
-                            params["afterId"] = result.latest_oppdateringsid or last_seen_id
-                            params.pop("afterTime", None)
-                        else:
-                            break
-
-                    except Exception as e:
-                        logger.exception(f"Error in role updates batch: {e}")
-                        # Rollback any partial transaction to allow recovery
-                        await self.db.rollback()
+        while True:
+            SYNC_BATCH_PAGES_TOTAL.labels(entity_type="role").inc()
+            with SYNC_LATENCY.labels(entity_type="role").time():
+                try:
+                    response = await self.brreg_api._get(
+                        BRREG_ROLE_UPDATES_URL,
+                        params=params,
+                        context="updates_role",
+                    )
+                    if response.status_code != 200:
+                        logger.error(f"API error {response.status_code} for roles: {response.text}")
                         break
 
-            # If we processed roles, update DB statistics to keep sitemap seek planner fast
-            if result.companies_updated > 0:
-                logger.info("Updating database statistics for 'roller' table...")
-                try:
-                    await self.db.execute(text("ANALYZE roller;"))
+                    events = response.json()
+                    if not events or not isinstance(events, list):
+                        break
+
+                    logger.info(f"Processing batch of {len(events)} role updates...")
+
+                    # Extract unique orgnrs from the event batch
+                    orgnrs_to_sync = set()
+                    event_update_ids_by_orgnr: dict[str, list[int]] = {}
+                    committed_update_ids: list[int] = []
+                    failed_update_ids: list[int] = []
+                    latest_role_events_by_orgnr = self._latest_role_events_by_orgnr(events)
+                    last_seen_id = after_id
+                    for event in events:
+                        orgnr = event.get("data", {}).get("organisasjonsnummer")
+                        if orgnr:
+                            orgnrs_to_sync.add(orgnr)
+                        try:
+                            # IMPORTANT: Track progress even if we fail later in this batch
+                            current_id = int(event.get("id"))
+                            if last_seen_id is None or current_id > last_seen_id:
+                                last_seen_id = current_id
+                            if orgnr:
+                                event_update_ids_by_orgnr.setdefault(orgnr, []).append(current_id)
+                            else:
+                                committed_update_ids.append(current_id)
+                        except ValueError, TypeError:  # Non-integer event ID — skip tracking
+                            pass
+
+                    await self.db.commit()
+
+                    # Phase 0: Smart Onboarding.
+                    # Ensure all companies for which we're syncing roles exist in the database.
+                    # We check both 'bedrifter' (main units) and 'underenheter' (subunits).
+                    # Subunits are skipped because they have no roles in Brreg.
+                    existing_orgnrs = await self.company_repo.get_existing_orgnrs(list(orgnrs_to_sync))
+                    existing_subunits = await self.subunit_repo.get_existing_orgnrs(list(orgnrs_to_sync))
+
+                    # Identify truly unknown orgnrs (not in main units, not in subunits, not failed yet)
+                    unknown_orgnrs = orgnrs_to_sync - existing_orgnrs - existing_subunits - failed_this_run
+
+                    if unknown_orgnrs:
+                        unknown_list = sorted(unknown_orgnrs)
+                        logger.info(
+                            f"Checking {len(unknown_list)} unknown orgnrs from role feed for missing main companies..."
+                        )
+
+                        semaphore = asyncio.Semaphore(API_CONCURRENCY_LIMIT)
+
+                        async def fetch_missing_main_unit(
+                            org_no: str, _semaphore: asyncio.Semaphore = semaphore
+                        ) -> dict[str, Any] | None:
+                            async with _semaphore:
+                                try:
+                                    # Use main unit endpoint. Subunits return 404 here.
+                                    return await self.brreg_api.fetch_company(org_no)
+                                except Exception as e:
+                                    # 404/410 are common for subunits or deleted entities
+                                    logger.debug(f"Orgnr {org_no} is likely a subunit or deleted (404 on enheter): {e}")
+                                    return None
+
+                        fetch_tasks = [fetch_missing_main_unit(o) for o in unknown_list]
+                        fetched_results = await asyncio.gather(*fetch_tasks)
+
+                        new_companies_onboarded = 0
+                        for i, company_data in enumerate(fetched_results):
+                            target_orgnr = unknown_list[i]
+                            if company_data:
+                                # Skip onboarding if the company is already deleted (has slettedato)
+                                if company_data.get("slettedato"):
+                                    logger.debug(
+                                        f"Skipping onboarding of deleted company {target_orgnr} "
+                                        f"(slettedato: {company_data.get('slettedato')})"
+                                    )
+                                    failed_this_run.add(target_orgnr)
+                                    continue
+
+                                try:
+                                    await self.company_repo.create_or_update(company_data)
+                                    existing_orgnrs.add(target_orgnr)
+                                    new_companies_onboarded += 1
+                                except Exception as e:
+                                    logger.error(f"Failed to persist onboarded company {target_orgnr}: {e}")
+                            else:
+                                # Mark as failed/subunit to avoid redundant API calls in this execution
+                                failed_this_run.add(target_orgnr)
+
+                        if new_companies_onboarded > 0:
+                            await self.db.commit()
+                            logger.info(
+                                f"Successfully onboarded {new_companies_onboarded} missing main companies during role sync."
+                            )
+
+                    # Phase 1: Collect all roles for companies that exist in the database
+                    all_batch_roles: list[models.Role] = []
+                    role_counts_by_orgnr: dict[str, int] = {}
+                    processed_orgnrs: set[str] = set()
+
+                    # Sort orgnrs to ensure consistent lock acquisition order and prevent deadlocks
+                    sorted_orgnrs_to_sync = sorted(orgnrs_to_sync)
+
+                    for orgnr in sorted_orgnrs_to_sync:
+                        # Skip companies that still don't exist (couldn't be fetched)
+                        if orgnr not in existing_orgnrs:
+                            logger.warning(f"Skipping role sync for {orgnr}: company not found in bedrifter table")
+                            committed_update_ids.extend(event_update_ids_by_orgnr.get(orgnr, []))
+                            continue
+
+                        try:
+                            # Use Brreg API directly to fetch current roles
+                            roles_data = await self.brreg_api.fetch_roles(orgnr)
+
+                            # Ensure any companies mentioned in the roles exist as parents
+                            potential_parents = [
+                                {"overordnetEnhet": r.get("enhet_orgnr")} for r in roles_data if r.get("enhet_orgnr")
+                            ]
+                            if potential_parents:
+                                await self._ensure_parent_companies_exist(potential_parents)
+
+                            # Create Role models
+                            for r in roles_data:
+                                all_batch_roles.append(map_role_from_api(r, orgnr))
+                            role_counts_by_orgnr[orgnr] = len(roles_data)
+                            result.companies_updated += 1
+                            SYNC_OPERATIONS_TOTAL.labels(entity_type="role", operation_type="updated").inc()
+                            processed_orgnrs.add(orgnr)
+                            committed_update_ids.extend(event_update_ids_by_orgnr.get(orgnr, []))
+
+                        except Exception as e:
+                            failed_update_ids.extend(event_update_ids_by_orgnr.get(orgnr, []))
+                            error_msg = f"Failed to sync roles: {e!s}"
+                            logger.error(f"{error_msg} for {orgnr}")
+                            status_code = getattr(e, "status_code", None) if hasattr(e, "status_code") else None
+                            await self.report_sync_error(orgnr, "role", error_msg, status_code=status_code)
+
+                    # Phase 2: Transactional database update
+                    if processed_orgnrs:
+                        # 1. Delete old roles for successfully processed companies
+                        from sqlalchemy import delete
+
+                        await self.db.execute(delete(models.Role).where(models.Role.orgnr.in_(processed_orgnrs)))
+
+                        # 2. Bulk insert new roles
+                        if all_batch_roles:
+                            await self.role_repo.create_batch(all_batch_roles, commit=False)
+
+                        for orgnr in sorted(processed_orgnrs):
+                            await self._record_roles_changed_event(
+                                orgnr=orgnr,
+                                source_event=latest_role_events_by_orgnr.get(orgnr),
+                                role_count=role_counts_by_orgnr.get(orgnr, 0),
+                            )
+
+                        # 3. Final commit for this batch
+                        await self.db.commit()
+
+                    self._publish_contiguous_update_ids(result, committed_update_ids, failed_update_ids)
+                    if result.latest_oppdateringsid:
+                        await self.system_repo.set_state("role_update_latest_id", str(result.latest_oppdateringsid))
+
+                    result.companies_processed += len(events)
+                    if failed_update_ids:
+                        logger.warning(
+                            "Role updates had sync errors; advanced cursor only through contiguous successes"
+                        )
+                        break
+
+                    # If we got a full batch, continue to next batch
+                    if len(events) >= params["size"]:
+                        params["afterId"] = result.latest_oppdateringsid or last_seen_id
+                        params.pop("afterTime", None)
+                    else:
+                        break
+
                 except Exception as e:
-                    logger.warning(f"Failed to run ANALYZE roller: {e}")
+                    logger.exception(f"Error in role updates batch: {e}")
+                    # Rollback any partial transaction to allow recovery
+                    await self.db.rollback()
+                    break
+
+        # If we processed roles, update DB statistics to keep sitemap seek planner fast
+        if result.companies_updated > 0:
+            logger.info("Updating database statistics for 'roller' table...")
+            try:
+                await self.db.execute(text("ANALYZE roller;"))
+            except Exception as e:
+                logger.warning(f"Failed to run ANALYZE roller: {e}")
 
         return result.model_dump()

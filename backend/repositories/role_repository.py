@@ -1,10 +1,10 @@
 """Repository for Role database operations"""
 
 import logging
-from datetime import UTC, date, datetime, timedelta
+from datetime import UTC, date, datetime, time, timedelta
 from typing import Any
 
-from sqlalchemy import Select, and_, delete, or_, select, text, tuple_
+from sqlalchemy import Select, and_, delete, or_, select, text, tuple_, update
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import contains_eager
 from sqlalchemy.sql import func
@@ -105,6 +105,32 @@ class RoleRepository:
             logger.error(f"Error getting role cache timestamp for {orgnr}: {e}")
             return None
 
+    async def get_refresh_timestamp(self, orgnr: str) -> datetime | None:
+        """Return the freshest successful role refresh marker.
+
+        Role rows carry an exact ``updated_at`` timestamp. Companies with no
+        roles have no rows to timestamp, so ``Company.last_polled_roles`` is
+        also considered. The latter is a date column; treating it as the end
+        of that UTC day prevents repeated force-refreshes of a known-empty
+        result during the same day.
+        """
+        role_timestamp = await self.get_cache_timestamp(orgnr)
+
+        try:
+            stmt = select(models.Company.last_polled_roles).where(models.Company.orgnr == orgnr)
+            result = await self.db.execute(stmt)
+            last_polled = result.scalar_one_or_none()
+        except Exception as e:
+            logger.error("Error getting role poll marker for %s: %s", sanitize_log(orgnr), e)
+            last_polled = None
+
+        timestamps: list[datetime] = []
+        if role_timestamp:
+            timestamps.append(role_timestamp if role_timestamp.tzinfo else role_timestamp.replace(tzinfo=UTC))
+        if isinstance(last_polled, date):
+            timestamps.append(datetime.combine(last_polled, time.max, tzinfo=UTC))
+        return max(timestamps) if timestamps else None
+
     async def is_cache_valid(self, orgnr: str) -> bool:
         """
         Check if cached roles are still valid (less than ROLE_CACHE_DAYS old).
@@ -115,7 +141,7 @@ class RoleRepository:
         Returns:
             True if cache is valid, False if refresh needed
         """
-        last_updated = await self.get_cache_timestamp(orgnr)
+        last_updated = await self.get_refresh_timestamp(orgnr)
         if not last_updated:
             return False
 
@@ -124,6 +150,45 @@ class RoleRepository:
         now = datetime.now(UTC)
         cache_expiry = last_updated + timedelta(days=ROLE_CACHE_DAYS)
         return now < cache_expiry
+
+    async def company_exists(self, orgnr: str) -> bool:
+        """Return whether roles can be persisted for this company.
+
+        The public roles endpoint must not act as an unrestricted proxy for
+        arbitrary organization numbers. A database failure also fails closed
+        here, avoiding upstream traffic that cannot be cached locally.
+        """
+        try:
+            stmt = select(models.Company.orgnr).where(models.Company.orgnr == orgnr)
+            result = await self.db.execute(stmt)
+            return result.scalar_one_or_none() is not None
+        except Exception as e:
+            logger.error("Error checking company for role refresh %s: %s", sanitize_log(orgnr), e)
+            return False
+
+    async def acquire_refresh_lock(self, orgnr: str) -> None:
+        """Serialize role refreshes for one company across all API workers.
+
+        The transaction-scoped advisory lock is released by the commit or
+        rollback performed after the refresh. Callers must re-check the cache
+        after acquiring it because another worker may have populated it while
+        this request was waiting.
+        """
+        await self.db.execute(
+            text("SELECT pg_advisory_xact_lock(hashtextextended(:lock_key, 0))"),
+            {"lock_key": f"roles:{orgnr}"},
+        )
+
+    async def mark_cache_refreshed(self, orgnr: str, commit: bool = True) -> None:
+        """Persist a successful refresh marker, including empty role sets."""
+        stmt = (
+            update(models.Company)
+            .where(models.Company.orgnr == orgnr)
+            .values(last_polled_roles=datetime.now(UTC).date())
+        )
+        await self.db.execute(stmt)
+        if commit:
+            await self.db.commit()
 
     async def create_batch(self, roles: list[models.Role], commit: bool = True) -> int:
         """

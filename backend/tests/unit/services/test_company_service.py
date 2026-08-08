@@ -2,7 +2,8 @@
 Unit tests for CompanyService.
 """
 
-from datetime import date
+import asyncio
+from datetime import UTC, date, datetime, timedelta
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
@@ -12,6 +13,7 @@ import services.company_service as company_service_module
 from models import Company
 from services.base_external_service import ExternalApiException
 from services.company_service import CompanyService
+from services.subunit_refresh_lock import SubunitRefreshLockConfig
 
 
 @pytest.fixture
@@ -20,7 +22,28 @@ def mock_db():
 
 
 @pytest.fixture
-def service(mock_db):
+def service(mock_db, monkeypatch):
+    class FakeSubunitRefreshLock:
+        key = "brreg:subunits:refresh:123456789"
+        token = "test-lock-token"  # noqa: S105
+
+    async def fake_try_acquire_subunit_refresh_lock(parent_orgnr, *, config=None):
+        return FakeSubunitRefreshLock()
+
+    async def fake_release_subunit_refresh_lock(lock, *, config=None):
+        return None
+
+    monkeypatch.setattr(
+        company_service_module,
+        "try_acquire_subunit_refresh_lock",
+        fake_try_acquire_subunit_refresh_lock,
+    )
+    monkeypatch.setattr(
+        company_service_module,
+        "release_subunit_refresh_lock",
+        fake_release_subunit_refresh_lock,
+    )
+
     svc = CompanyService(mock_db)
     svc.company_repo = AsyncMock()
     svc.accounting_repo = AsyncMock()
@@ -28,6 +51,11 @@ def service(mock_db):
     svc.event_ledger_enabled = False
     svc.role_repo = AsyncMock()
     svc.subunit_repo = AsyncMock()
+    svc.subunit_repo.is_cache_valid.return_value = False
+    svc.subunit_repo.parent_company_exists.return_value = True
+    svc.subunit_repo.get_refresh_timestamp.return_value = None
+    svc.subunit_repo.create_batch.return_value = 1
+    svc.subunit_repo.mark_cache_refreshed.return_value = 1
     svc.brreg_api = AsyncMock()
     svc.geocoding_service = AsyncMock()
     return svc
@@ -272,11 +300,10 @@ async def test_search_subunits(service):
 async def test_get_subunits_syncs_if_missing(service):
     """Should sync from API if no subunits found locally."""
     # Arrange
-    # First call returns empty, second (after sync) returns data
     mock_subunit = MagicMock()
-    service.subunit_repo.get_by_parent_orgnr.side_effect = [[], [mock_subunit]]
+    service.subunit_repo.get_by_parent_orgnr.return_value = [mock_subunit]
     service.brreg_api.fetch_subunits.return_value = [{"organisasjonsnummer": "111111111"}]
-    service.subunit_repo.create_batch.return_value = None
+    service.subunit_repo.create_batch.return_value = 1
 
     # Act
     result = await service.get_subunits("123456789")
@@ -284,6 +311,169 @@ async def test_get_subunits_syncs_if_missing(service):
     # Assert
     assert len(result) == 1
     service.brreg_api.fetch_subunits.assert_called_once_with("123456789")
+    service.subunit_repo.mark_cache_refreshed.assert_called_once_with("123456789", commit=True)
+
+
+@pytest.mark.asyncio
+async def test_get_subunits_reuses_negative_cache(service):
+    service.subunit_repo.is_cache_valid.side_effect = [False, False, True]
+    service.subunit_repo.get_by_parent_orgnr.return_value = []
+    service.brreg_api.fetch_subunits.return_value = []
+
+    first = await service.get_subunits("123456789")
+    second = await service.get_subunits("123456789")
+
+    assert first == []
+    assert second == []
+    service.brreg_api.fetch_subunits.assert_called_once_with("123456789")
+    service.subunit_repo.mark_cache_refreshed.assert_called_once_with("123456789", commit=True)
+
+
+@pytest.mark.asyncio
+async def test_get_subunits_unknown_local_parent_does_not_proxy_to_brreg(service):
+    service.subunit_repo.parent_company_exists.return_value = False
+
+    result = await service.get_subunits("999999999")
+
+    assert result == []
+    service.brreg_api.fetch_subunits.assert_not_called()
+    service.subunit_repo.mark_cache_refreshed.assert_not_called()
+
+
+@pytest.mark.asyncio
+async def test_get_subunits_force_refresh_uses_server_side_cooldown(service):
+    cached_subunit = MagicMock()
+    service.subunit_repo.get_refresh_timestamp.return_value = datetime.now(UTC) - timedelta(seconds=10)
+    service.subunit_repo.get_by_parent_orgnr.return_value = [cached_subunit]
+
+    result = await service.get_subunits("123456789", force_refresh=True)
+
+    assert result == [cached_subunit]
+    service.brreg_api.fetch_subunits.assert_not_called()
+
+
+@pytest.mark.asyncio
+async def test_get_subunits_upstream_error_returns_stale_cache(service):
+    stale_subunit = MagicMock()
+    service.subunit_repo.get_by_parent_orgnr.return_value = [stale_subunit]
+    service.brreg_api.fetch_subunits.side_effect = ExternalApiException(
+        message="Timeout fetching subunits",
+        service="Brønnøysund",
+        details="timeout",
+    )
+
+    result = await service.get_subunits("123456789")
+
+    assert result == [stale_subunit]
+    service.subunit_repo.mark_cache_refreshed.assert_not_called()
+
+
+@pytest.mark.asyncio
+async def test_get_subunits_upstream_error_without_cache_raises(service):
+    service.subunit_repo.get_by_parent_orgnr.return_value = []
+    service.brreg_api.fetch_subunits.side_effect = ExternalApiException(
+        message="Timeout fetching subunits",
+        service="Brønnøysund",
+        details="timeout",
+    )
+
+    with pytest.raises(ExternalApiException):
+        await service.get_subunits("123456789")
+
+    service.subunit_repo.mark_cache_refreshed.assert_not_called()
+
+
+@pytest.mark.asyncio
+async def test_get_subunits_parse_error_does_not_mark_success(service, monkeypatch):
+    service.subunit_repo.get_by_parent_orgnr.return_value = []
+    service.brreg_api.fetch_subunits.return_value = [{"organisasjonsnummer": "111111111"}]
+
+    def raise_parse_error(data, parent_orgnr):
+        raise ValueError("bad subunit payload")
+
+    monkeypatch.setattr(company_service_module, "map_subunit_from_api", raise_parse_error)
+
+    with pytest.raises(ExternalApiException):
+        await service.get_subunits("123456789")
+
+    service.subunit_repo.create_batch.assert_not_called()
+    service.subunit_repo.mark_cache_refreshed.assert_not_called()
+
+
+@pytest.mark.asyncio
+async def test_get_subunits_concurrent_same_parent_single_flight(service, monkeypatch):
+    cache_valid = False
+    saved_rows = []
+    lock_taken = False
+
+    class FakeLock:
+        key = "brreg:subunits:refresh:123456789"
+        token = "test-lock-token"  # noqa: S105
+
+    async def fake_is_cache_valid(parent_orgnr):
+        return cache_valid
+
+    async def fake_get_by_parent(parent_orgnr):
+        return saved_rows
+
+    async def fake_create_batch(subunits, commit=True):
+        saved_rows[:] = subunits
+        return len(subunits)
+
+    async def fake_mark_cache_refreshed(parent_orgnr, commit=True):
+        nonlocal cache_valid
+        cache_valid = True
+        return 1
+
+    async def fake_fetch_subunits(parent_orgnr):
+        await asyncio.sleep(0.05)
+        return [{"organisasjonsnummer": "111111111", "navn": "Avdeling"}]
+
+    async def fake_try_acquire(parent_orgnr, *, config=None):
+        nonlocal lock_taken
+        if lock_taken:
+            return None
+        lock_taken = True
+        return FakeLock()
+
+    monkeypatch.setattr(company_service_module, "try_acquire_subunit_refresh_lock", fake_try_acquire)
+    monkeypatch.setattr(
+        company_service_module,
+        "load_subunit_refresh_lock_config",
+        lambda: SubunitRefreshLockConfig(
+            ttl_seconds=10,
+            wait_timeout_seconds=1.0,
+            poll_interval_seconds=0.01,
+            redis_timeout_seconds=0.1,
+        ),
+    )
+    service.subunit_repo.is_cache_valid.side_effect = fake_is_cache_valid
+    service.subunit_repo.get_by_parent_orgnr.side_effect = fake_get_by_parent
+    service.subunit_repo.create_batch.side_effect = fake_create_batch
+    service.subunit_repo.mark_cache_refreshed.side_effect = fake_mark_cache_refreshed
+    service.brreg_api.fetch_subunits.side_effect = fake_fetch_subunits
+
+    first, second = await asyncio.gather(
+        service.get_subunits("123456789"),
+        service.get_subunits("123456789"),
+    )
+
+    assert len(first) == 1
+    assert len(second) == 1
+    service.brreg_api.fetch_subunits.assert_awaited_once_with("123456789")
+
+
+@pytest.mark.asyncio
+async def test_get_subunits_different_parents_refresh_independently(service):
+    service.subunit_repo.get_by_parent_orgnr.return_value = []
+    service.brreg_api.fetch_subunits.return_value = []
+
+    await service.get_subunits("123456789")
+    await service.get_subunits("987654321")
+
+    assert service.brreg_api.fetch_subunits.await_count == 2
+    service.brreg_api.fetch_subunits.assert_any_await("123456789")
+    service.brreg_api.fetch_subunits.assert_any_await("987654321")
 
 
 @pytest.mark.asyncio

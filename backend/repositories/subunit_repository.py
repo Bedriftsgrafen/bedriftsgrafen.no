@@ -2,18 +2,36 @@
 
 import asyncio
 import logging
+import os
+from datetime import UTC, datetime, timedelta
 
-from sqlalchemy import delete, func, select
+from sqlalchemy import delete, func, select, update
 from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.ext.asyncio import AsyncSession
 
 import models
 from constants.concurrency import SUBUNIT_SEARCH_SEMAPHORE_SIZE
+from utils.logging_config import sanitize_log
 
 logger = logging.getLogger(__name__)
 
 # Limit concurrent trigram searches to avoid overwhelming DB (expensive operation)
 SEARCH_SEMAPHORE = asyncio.Semaphore(SUBUNIT_SEARCH_SEMAPHORE_SIZE)
+
+# BESLUTNING: No Brreg source defines a subunit cache TTL. Default matches the
+# existing role cache policy and is configurable.
+DEFAULT_SUBUNIT_CACHE_TTL_SECONDS = 7 * 24 * 60 * 60
+
+
+def _int_from_env(name: str, default: int) -> int:
+    raw = os.getenv(name)
+    if raw is None or raw.strip() == "":
+        return default
+    return int(raw)
+
+
+def subunit_cache_ttl_seconds() -> int:
+    return max(0, _int_from_env("SUBUNIT_CACHE_TTL_SECONDS", DEFAULT_SUBUNIT_CACHE_TTL_SECONDS))
 
 
 class SubUnitRepository:
@@ -21,6 +39,12 @@ class SubUnitRepository:
 
     def __init__(self, db: AsyncSession):
         self.db = db
+
+    @staticmethod
+    def _ensure_utc(value: datetime | None) -> datetime | None:
+        if value is None:
+            return None
+        return value if value.tzinfo else value.replace(tzinfo=UTC)
 
     async def get_by_parent_orgnr(self, parent_orgnr: str) -> list[models.SubUnit]:
         """Fetch all subunits for a parent company, sorted by name."""
@@ -35,6 +59,70 @@ class SubUnitRepository:
         except Exception as e:
             logger.error(f"Failed to fetch subunits for {parent_orgnr}: {e}")
             return []
+
+    async def get_cache_timestamp(self, parent_orgnr: str) -> datetime | None:
+        """Return newest local subunit row timestamp for a non-empty cache."""
+        try:
+            stmt = select(func.max(models.SubUnit.updated_at)).where(models.SubUnit.parent_orgnr == parent_orgnr)
+            result = await self.db.execute(stmt)
+            return self._ensure_utc(result.scalar_one_or_none())
+        except Exception as e:
+            logger.error("Error getting subunit cache timestamp for %s: %s", sanitize_log(parent_orgnr), e)
+            return None
+
+    async def get_refresh_timestamp(self, parent_orgnr: str) -> datetime | None:
+        """Return the newest successful subunit refresh marker for a parent.
+
+        Subunit rows can prove a non-empty cache. ``Company.last_polled_subunits``
+        proves successful polling even when Brreg returned an empty list.
+        """
+        row_timestamp = await self.get_cache_timestamp(parent_orgnr)
+
+        try:
+            stmt = select(models.Company.last_polled_subunits).where(models.Company.orgnr == parent_orgnr)
+            result = await self.db.execute(stmt)
+            last_polled = self._ensure_utc(result.scalar_one_or_none())
+        except Exception as e:
+            logger.error("Error getting subunit poll marker for %s: %s", sanitize_log(parent_orgnr), e)
+            last_polled = None
+
+        timestamps = [ts for ts in [row_timestamp, last_polled] if ts is not None]
+        return max(timestamps) if timestamps else None
+
+    async def is_cache_valid(self, parent_orgnr: str, ttl_seconds: int | None = None) -> bool:
+        """Return whether the subunit cache is still fresh for this parent."""
+        last_updated = await self.get_refresh_timestamp(parent_orgnr)
+        if not last_updated:
+            return False
+        ttl = subunit_cache_ttl_seconds() if ttl_seconds is None else max(0, ttl_seconds)
+        return datetime.now(UTC) < last_updated + timedelta(seconds=ttl)
+
+    async def parent_company_exists(self, parent_orgnr: str) -> bool:
+        """Return whether a subunit refresh can be cached for this parent.
+
+        A database failure fails closed so public traffic cannot turn this
+        endpoint into an unrestricted Brreg proxy.
+        """
+        try:
+            stmt = select(models.Company.orgnr).where(models.Company.orgnr == parent_orgnr)
+            result = await self.db.execute(stmt)
+            return result.scalar_one_or_none() is not None
+        except Exception as e:
+            logger.error("Error checking parent company for subunit refresh %s: %s", sanitize_log(parent_orgnr), e)
+            return False
+
+    async def mark_cache_refreshed(self, parent_orgnr: str, commit: bool = True) -> int:
+        """Persist a successful subunit refresh marker, including empty sets."""
+        stmt = (
+            update(models.Company)
+            .where(models.Company.orgnr == parent_orgnr)
+            .values(last_polled_subunits=datetime.now(UTC))
+        )
+        result = await self.db.execute(stmt)
+        if commit:
+            await self.db.commit()
+        rowcount = getattr(result, "rowcount", 0)
+        return rowcount if isinstance(rowcount, int) else 0
 
     async def get_by_orgnr(self, orgnr: str) -> models.SubUnit | None:
         """

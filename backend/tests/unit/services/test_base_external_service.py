@@ -106,7 +106,8 @@ async def test_timeout_handling(service, mock_httpx_client):
 
 
 @pytest.mark.asyncio
-async def test_brreg_request_metric_records_success(mock_httpx_client):
+async def test_brreg_request_metric_records_success(mock_httpx_client, monkeypatch):
+    monkeypatch.setenv("BRREG_EGRESS_GUARD_ENABLED", "false")
     mock_response = MagicMock(spec=httpx.Response)
     mock_response.status_code = 200
     mock_httpx_client.get.return_value = mock_response
@@ -122,7 +123,8 @@ async def test_brreg_request_metric_records_success(mock_httpx_client):
 
 
 @pytest.mark.asyncio
-async def test_brreg_request_metric_records_timeout(mock_httpx_client):
+async def test_brreg_request_metric_records_timeout(mock_httpx_client, monkeypatch):
+    monkeypatch.setenv("BRREG_EGRESS_GUARD_ENABLED", "false")
     mock_httpx_client.get.side_effect = httpx.TimeoutException("Timeout")
 
     service = _MockBrregService(client=mock_httpx_client)

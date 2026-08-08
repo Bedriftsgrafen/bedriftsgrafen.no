@@ -9,6 +9,8 @@ from typing import Any
 
 from constants.urls import BRREG_ENHETSREGISTERET_BASE, BRREG_REGNSKAPSREGISTERET_BASE
 from services.base_external_service import BaseExternalService, ExternalApiException
+from services.brreg_egress_guard import brreg_traffic_class
+from utils.metrics import BRREG_PAGINATION_PAGES_TOTAL
 
 logger = logging.getLogger(__name__)
 
@@ -222,6 +224,10 @@ class BrregApiService(BaseExternalService):
             try:
                 current_params = params if page_count == 1 else None
                 response = await self._get(url, params=current_params, context=f"subunits {parent_orgnr} p{page_count}")
+                BRREG_PAGINATION_PAGES_TOTAL.labels(
+                    endpoint="subunits",
+                    traffic_class=brreg_traffic_class(),
+                ).inc()
 
                 if response.status_code == 404:
                     logger.info(f"No subunits found for {parent_orgnr}")

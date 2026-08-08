@@ -247,6 +247,9 @@ class Company(Base):
     last_polled_roles: Mapped[date | None] = mapped_column(
         Date, nullable=True, index=True
     )  # Tracks when roles were last fetched
+    last_polled_subunits: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True, index=True
+    )  # Tracks when subunits were last fetched, including empty results
 
     # Relationships - Use noload to prevent N+1 queries
     # Queries that need these relationships MUST explicitly eager load with selectinload/joinedload

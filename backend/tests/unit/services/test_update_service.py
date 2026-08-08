@@ -115,17 +115,16 @@ class TestFetchUpdates:
     async def test_fetch_updates_processes_multiple_pages(self, update_service):
         update_service._process_single_page = AsyncMock(side_effect=["http://next", None])
 
-        with patch("httpx.AsyncClient"):
-            result = await update_service.fetch_updates(page_size=1)
-            assert update_service._process_single_page.call_count == 2
-            assert result["companies_processed"] == 0
+        result = await update_service.fetch_updates(page_size=1)
+
+        assert update_service._process_single_page.call_count == 2
+        assert result["companies_processed"] == 0
 
     @pytest.mark.asyncio
     async def test_fetch_updates_requests_included_changes(self, update_service):
         update_service._process_single_page = AsyncMock(return_value=None)
 
-        with patch("httpx.AsyncClient"):
-            await update_service.fetch_updates(start_id=123, page_size=10)
+        await update_service.fetch_updates(start_id=123, page_size=10)
 
         first_url = update_service._process_single_page.await_args.kwargs["url"]
         assert "oppdateringsid=123" in first_url
@@ -180,13 +179,13 @@ class TestFetchSubunitUpdates:
         mock_page_response = MagicMock(status_code=200)
         mock_page_response.json.return_value = {"_embedded": {"oppdaterteUnderenheter": []}, "_links": {}}
 
-        with patch("httpx.AsyncClient") as mock_client:
-            mock_client.return_value.__aenter__.return_value.get.return_value = mock_page_response
-            await update_service.fetch_subunit_updates(start_id=123, page_size=10)
+        update_service.brreg_api._get = AsyncMock(return_value=mock_page_response)
 
-            first_url = mock_client.return_value.__aenter__.return_value.get.await_args.args[0]
-            assert "oppdateringsid=123" in first_url
-            assert "includeChanges=true" in first_url
+        await update_service.fetch_subunit_updates(start_id=123, page_size=10)
+
+        first_url = update_service.brreg_api._get.await_args.args[0]
+        assert "oppdateringsid=123" in first_url
+        assert "includeChanges=true" in first_url
 
     @pytest.mark.asyncio
     async def test_fetch_subunit_update_details_marks_deletion_without_fetch(self, update_service):
@@ -230,13 +229,13 @@ class TestFetchSubunitUpdates:
         update_service.company_repo.create_or_update = AsyncMock()
         update_service.subunit_repo.create_batch = AsyncMock()
 
-        with patch("httpx.AsyncClient") as mock_client:
-            mock_client.return_value.__aenter__.return_value.get.return_value = mock_page_response
-            await update_service.fetch_subunit_updates(page_size=10)
+        update_service.brreg_api._get = AsyncMock(return_value=mock_page_response)
 
-            update_service.brreg_api.fetch_company.assert_called_once_with("456")
-            update_service.company_repo.create_or_update.assert_called_once()
-            update_service.subunit_repo.create_batch.assert_called_once()
+        await update_service.fetch_subunit_updates(page_size=10)
+
+        update_service.brreg_api.fetch_company.assert_called_once_with("456")
+        update_service.company_repo.create_or_update.assert_called_once()
+        update_service.subunit_repo.create_batch.assert_called_once()
 
     @pytest.mark.asyncio
     async def test_fetch_subunit_updates_purges_deleted(self, update_service, mock_db):
@@ -261,14 +260,13 @@ class TestFetchSubunitUpdates:
         update_service.subunit_repo.delete_by_orgnr = AsyncMock(return_value=1)
         update_service.subunit_repo.create_batch = AsyncMock()
 
-        with patch("httpx.AsyncClient") as mock_client:
-            mock_client.return_value.__aenter__.return_value.get.return_value = mock_page_response
+        update_service.brreg_api._get = AsyncMock(return_value=mock_page_response)
 
-            result_dict = await update_service.fetch_subunit_updates(page_size=10)
+        result_dict = await update_service.fetch_subunit_updates(page_size=10)
 
-            update_service.subunit_repo.delete_by_orgnr.assert_called_once_with("999")
-            update_service.subunit_repo.create_batch.assert_not_called()
-            assert result_dict["companies_deleted"] == 1
+        update_service.subunit_repo.delete_by_orgnr.assert_called_once_with("999")
+        update_service.subunit_repo.create_batch.assert_not_called()
+        assert result_dict["companies_deleted"] == 1
 
     @pytest.mark.asyncio
     async def test_persist_subunit_page_records_opened_event(self, update_service):
@@ -517,23 +515,21 @@ class TestFetchRoleUpdates:
         mock_resp_2 = MagicMock(status_code=200)
         mock_resp_2.json.return_value = []
 
-        with patch("httpx.AsyncClient") as mock_client:
-            mock_instance = mock_client.return_value.__aenter__.return_value
-            mock_instance.get.side_effect = [mock_resp_1, mock_resp_2]
+        update_service.brreg_api._get = AsyncMock(side_effect=[mock_resp_1, mock_resp_2])
 
-            # 2. Mock role and parent logic
-            update_service.brreg_api.fetch_roles = AsyncMock(return_value=[{"enhet_orgnr": "ROLE_PARENT"}])
-            update_service._ensure_parent_companies_exist = AsyncMock(return_value={"ROLE_PARENT"})
-            update_service.company_repo.get_existing_orgnrs = AsyncMock(return_value={"123"})
-            update_service.role_repo.create_batch = AsyncMock()
+        # 2. Mock role and parent logic
+        update_service.brreg_api.fetch_roles = AsyncMock(return_value=[{"enhet_orgnr": "ROLE_PARENT"}])
+        update_service._ensure_parent_companies_exist = AsyncMock(return_value={"ROLE_PARENT"})
+        update_service.company_repo.get_existing_orgnrs = AsyncMock(return_value={"123"})
+        update_service.role_repo.create_batch = AsyncMock()
 
-            # 3. Act
-            await update_service.fetch_role_updates(page_size=10)
+        # 3. Act
+        await update_service.fetch_role_updates(page_size=10)
 
-            # 4. Assert
-            update_service._ensure_parent_companies_exist.assert_called_once()
-            update_service.role_repo.create_batch.assert_called_once()
-            assert mock_db.commit.call_count >= 2
+        # 4. Assert
+        update_service._ensure_parent_companies_exist.assert_called_once()
+        update_service.role_repo.create_batch.assert_called_once()
+        assert mock_db.commit.call_count >= 2
 
     async def test_fetch_role_updates_skips_deleted_companies(self, update_service, mock_db):
         """Verify that deleted companies (with slettedato) are not onboarded."""
@@ -543,25 +539,23 @@ class TestFetchRoleUpdates:
         mock_resp_2 = MagicMock(status_code=200)
         mock_resp_2.json.return_value = []
 
-        with patch("httpx.AsyncClient") as mock_client:
-            mock_instance = mock_client.return_value.__aenter__.return_value
-            mock_instance.get.side_effect = [mock_resp_1, mock_resp_2]
+        update_service.brreg_api._get = AsyncMock(side_effect=[mock_resp_1, mock_resp_2])
 
-            # 2. Mock unknown company that is deleted in Brreg
-            update_service.company_repo.get_existing_orgnrs = AsyncMock(return_value=set())
-            update_service.subunit_repo.get_existing_orgnrs = AsyncMock(return_value=set())
-            update_service.brreg_api.fetch_company = AsyncMock(
-                return_value={"organisasjonsnummer": "999", "slettedato": "2023-01-01"}
-            )
+        # 2. Mock unknown company that is deleted in Brreg
+        update_service.company_repo.get_existing_orgnrs = AsyncMock(return_value=set())
+        update_service.subunit_repo.get_existing_orgnrs = AsyncMock(return_value=set())
+        update_service.brreg_api.fetch_company = AsyncMock(
+            return_value={"organisasjonsnummer": "999", "slettedato": "2023-01-01"}
+        )
 
-            # 3. Act
-            await update_service.fetch_role_updates(page_size=10)
+        # 3. Act
+        await update_service.fetch_role_updates(page_size=10)
 
-            # 4. Assert
-            # create_or_update should NOT be called for deleted company
-            update_service.company_repo.create_or_update.assert_not_called()
-            # Role sync should be skipped for this company
-            update_service.brreg_api.fetch_roles.assert_not_called()
+        # 4. Assert
+        # create_or_update should NOT be called for deleted company
+        update_service.company_repo.create_or_update.assert_not_called()
+        # Role sync should be skipped for this company
+        update_service.brreg_api.fetch_roles.assert_not_called()
 
     async def test_fetch_role_updates_records_coarse_roles_changed_event(self, update_service, mock_db):
         mock_resp = MagicMock(status_code=200)
@@ -587,10 +581,9 @@ class TestFetchRoleUpdates:
         update_service.role_repo.create_batch = AsyncMock()
         update_service._record_company_event_safe = AsyncMock()
 
-        with patch("httpx.AsyncClient") as mock_client:
-            mock_client.return_value.__aenter__.return_value.get.return_value = mock_resp
+        update_service.brreg_api._get = AsyncMock(return_value=mock_resp)
 
-            result = await update_service.fetch_role_updates(since_date=date(2026, 5, 27), page_size=10)
+        result = await update_service.fetch_role_updates(since_date=date(2026, 5, 27), page_size=10)
 
         update_service._record_company_event_safe.assert_awaited_once()
         event_kwargs = update_service._record_company_event_safe.await_args.kwargs
@@ -629,10 +622,9 @@ class TestFetchRoleUpdates:
         update_service.brreg_api.fetch_roles = AsyncMock(return_value=[])
         update_service._record_company_event_safe = AsyncMock()
 
-        with patch("httpx.AsyncClient") as mock_client:
-            mock_client.return_value.__aenter__.return_value.get.return_value = mock_resp
+        update_service.brreg_api._get = AsyncMock(return_value=mock_resp)
 
-            result = await update_service.fetch_role_updates(since_date=date(2026, 5, 27), page_size=10)
+        result = await update_service.fetch_role_updates(since_date=date(2026, 5, 27), page_size=10)
 
         update_service._record_company_event_safe.assert_awaited_once()
         assert update_service._record_company_event_safe.await_args.kwargs["source_update_id"] == "505"
@@ -653,10 +645,9 @@ class TestFetchRoleUpdates:
         update_service.brreg_api.fetch_roles = AsyncMock(side_effect=Exception("role API down"))
         update_service.report_sync_error = AsyncMock()
 
-        with patch("httpx.AsyncClient") as mock_client:
-            mock_client.return_value.__aenter__.return_value.get.return_value = mock_resp
+        update_service.brreg_api._get = AsyncMock(return_value=mock_resp)
 
-            result = await update_service.fetch_role_updates(since_date=date(2026, 5, 27), page_size=10)
+        result = await update_service.fetch_role_updates(since_date=date(2026, 5, 27), page_size=10)
 
         assert result["latest_oppdateringsid"] is None
         update_service.system_repo.set_state.assert_not_called()
@@ -683,10 +674,9 @@ class TestFetchRoleUpdates:
         update_service.report_sync_error = AsyncMock()
         update_service._record_company_event_safe = AsyncMock()
 
-        with patch("httpx.AsyncClient") as mock_client:
-            mock_client.return_value.__aenter__.return_value.get.return_value = mock_resp
+        update_service.brreg_api._get = AsyncMock(return_value=mock_resp)
 
-            result = await update_service.fetch_role_updates(since_date=date(2026, 5, 27), page_size=10)
+        result = await update_service.fetch_role_updates(since_date=date(2026, 5, 27), page_size=10)
 
         assert result["latest_oppdateringsid"] == 500
         update_service.system_repo.set_state.assert_awaited_once_with("role_update_latest_id", "500")
@@ -1125,24 +1115,22 @@ class TestFetchSubunitUpdatesEdgeCases:
         mock_resp = MagicMock(status_code=200)
         mock_resp.json.return_value = {"_embedded": {"oppdaterteUnderenheter": []}, "_links": {}}
 
-        with patch("httpx.AsyncClient") as mock_client:
-            mock_client.return_value.__aenter__.return_value.get.return_value = mock_resp
+        update_service.brreg_api._get = AsyncMock(return_value=mock_resp)
 
-            result = await update_service.fetch_subunit_updates(page_size=10)
+        result = await update_service.fetch_subunit_updates(page_size=10)
 
-            # Result should have proper structure
-            assert isinstance(result, dict)
-            assert "errors" in result or "since_date" in result
+        # Result should have proper structure
+        assert isinstance(result, dict)
+        assert "errors" in result or "since_date" in result
 
     @pytest.mark.asyncio
     async def test_handles_api_error_response(self, update_service, mock_db):
         """Should handle non-200 API response."""
         mock_resp = MagicMock(status_code=500)
 
-        with patch("httpx.AsyncClient") as mock_client:
-            mock_client.return_value.__aenter__.return_value.get.return_value = mock_resp
+        update_service.brreg_api._get = AsyncMock(return_value=mock_resp)
 
-            result = await update_service.fetch_subunit_updates(page_size=10)
+        result = await update_service.fetch_subunit_updates(page_size=10)
 
-            # Should return result dict with errors
-            assert isinstance(result, dict)
+        # Should return result dict with errors
+        assert isinstance(result, dict)

@@ -207,6 +207,7 @@ def event_identity_pairs(candidates: list[ReplayCandidate]) -> set[tuple[str, st
 
 async def fetch_company_update_rows(args: argparse.Namespace) -> tuple[list[dict[str, Any]], int]:
     from constants.urls import BRREG_UPDATES_URL
+    from services.brreg_api_service import BrregApiService
 
     initial_params: dict[str, Any] = {
         "includeChanges": "true",
@@ -224,33 +225,34 @@ async def fetch_company_update_rows(args: argparse.Namespace) -> tuple[list[dict
     params: dict[str, Any] | None = initial_params
     stop = False
 
-    async with httpx.AsyncClient(timeout=args.api_timeout) as http_client:
-        while next_url and len(rows) < args.limit and not stop:
-            response = await http_client.get(next_url, params=params)
-            params = None
-            if response.status_code != 200:
-                raise RuntimeError(f"Brreg update API returned {response.status_code}: {response.text[:500]}")
+    brreg_api = BrregApiService()
+    brreg_api.timeout = httpx.Timeout(args.api_timeout)
+    while next_url and len(rows) < args.limit and not stop:
+        response = await brreg_api._get(next_url, params=params, context="updates_company")
+        params = None
+        if response.status_code != 200:
+            raise RuntimeError(f"Brreg update API returned {response.status_code}: {response.text[:500]}")
 
-            data = response.json()
-            pages_fetched += 1
-            entities = data.get("_embedded", {}).get("oppdaterteEnheter", [])
-            if not entities:
+        data = response.json()
+        pages_fetched += 1
+        entities = data.get("_embedded", {}).get("oppdaterteEnheter", [])
+        if not entities:
+            break
+
+        for entity in entities:
+            include, past_upper_bound = entity_in_window(entity, args)
+            if past_upper_bound:
+                stop = True
+                break
+            if not include:
+                continue
+
+            rows.append(entity)
+            if len(rows) >= args.limit:
+                stop = True
                 break
 
-            for entity in entities:
-                include, past_upper_bound = entity_in_window(entity, args)
-                if past_upper_bound:
-                    stop = True
-                    break
-                if not include:
-                    continue
-
-                rows.append(entity)
-                if len(rows) >= args.limit:
-                    stop = True
-                    break
-
-            next_url = extract_next_link(data)
+        next_url = extract_next_link(data)
 
     return rows, pages_fetched
 

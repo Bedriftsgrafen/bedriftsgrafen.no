@@ -1,4 +1,4 @@
-from datetime import date
+from datetime import UTC, date, datetime, timedelta
 from unittest.mock import AsyncMock, MagicMock
 
 import pytest
@@ -34,6 +34,69 @@ async def test_get_by_parent_orgnr(repo, mock_db_session):
 
     assert len(units) == 1
     assert units[0] == mock_unit
+
+
+@pytest.mark.asyncio
+async def test_get_refresh_timestamp_uses_last_polled_marker(repo, mock_db_session):
+    row_result = MagicMock()
+    row_result.scalar_one_or_none.return_value = None
+    marker = datetime.now(UTC)
+    marker_result = MagicMock()
+    marker_result.scalar_one_or_none.return_value = marker
+    mock_db_session.execute.side_effect = [row_result, marker_result]
+
+    result = await repo.get_refresh_timestamp("999999999")
+
+    assert result == marker
+
+
+@pytest.mark.asyncio
+async def test_is_cache_valid_uses_configured_ttl(repo, mock_db_session):
+    row_result = MagicMock()
+    row_result.scalar_one_or_none.return_value = datetime.now(UTC) - timedelta(seconds=10)
+    marker_result = MagicMock()
+    marker_result.scalar_one_or_none.return_value = None
+    mock_db_session.execute.side_effect = [row_result, marker_result]
+
+    assert await repo.is_cache_valid("999999999", ttl_seconds=60) is True
+
+
+@pytest.mark.asyncio
+async def test_is_cache_invalid_without_row_or_marker(repo, mock_db_session):
+    row_result = MagicMock()
+    row_result.scalar_one_or_none.return_value = None
+    marker_result = MagicMock()
+    marker_result.scalar_one_or_none.return_value = None
+    mock_db_session.execute.side_effect = [row_result, marker_result]
+
+    assert await repo.is_cache_valid("999999999", ttl_seconds=60) is False
+
+
+@pytest.mark.asyncio
+async def test_parent_company_exists(repo, mock_db_session):
+    mock_db_session.execute.return_value.scalar_one_or_none.return_value = "999999999"
+
+    assert await repo.parent_company_exists("999999999") is True
+
+
+@pytest.mark.asyncio
+async def test_parent_company_exists_fails_closed_on_db_error(repo, mock_db_session):
+    mock_db_session.execute.side_effect = Exception("DB error")
+
+    assert await repo.parent_company_exists("999999999") is False
+
+
+@pytest.mark.asyncio
+async def test_mark_cache_refreshed_updates_parent_marker(repo, mock_db_session):
+    mock_db_session.execute.return_value.rowcount = 1
+
+    updated = await repo.mark_cache_refreshed("999999999")
+
+    assert updated == 1
+    stmt = mock_db_session.execute.await_args.args[0]
+    compiled = str(stmt.compile(dialect=postgresql.dialect()))
+    assert "last_polled_subunits" in compiled
+    mock_db_session.commit.assert_called_once()
 
 
 @pytest.mark.asyncio
