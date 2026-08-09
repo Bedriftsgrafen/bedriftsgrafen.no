@@ -231,8 +231,9 @@ Deployment record:
   `850024c` with the shared guard enabled at `5 attempts/s`, burst `10`, and wait timeout `0s`.
 - A controlled backend-429 alert test was run immediately afterward. It made no Brreg request and is not
   representative traffic for backend-rate-limit baselines.
-- Start the clean baseline window after the final follow-up deployment recorded below; do not mix the
-  controlled alert-test interval into backend-429 threshold calculations.
+- The final follow-up deployment started backend and worker at `2026-08-09 06:57:30 UTC` from commit
+  `c2a40c6`. Use this as the clean baseline-window start, and do not mix the earlier controlled alert-test
+  interval into backend-429 threshold calculations.
 
 Baseline activation checklist:
 
