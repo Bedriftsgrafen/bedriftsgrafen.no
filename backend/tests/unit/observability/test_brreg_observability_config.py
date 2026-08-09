@@ -52,7 +52,7 @@ def test_brreg_alerts_are_provisioned_and_baseline_dependent_rules_are_paused():
     by_uid = {rule["uid"]: rule for rule in rules}
 
     required_active = {
-        "bedriftsgrafen_brreg_egress_at_configured_cap",
+        "bg_brreg_egress_at_cap",
         "bedriftsgrafen_brreg_egress_waited",
         "bedriftsgrafen_brreg_guard_rejections",
         "bedriftsgrafen_brreg_429_detected",
@@ -67,8 +67,9 @@ def test_brreg_alerts_are_provisioned_and_baseline_dependent_rules_are_paused():
     assert required_active.issubset(by_uid)
     assert all(by_uid[uid]["isPaused"] is False for uid in required_active)
 
-    assert by_uid["bedriftsgrafen_request_amplification_shift_provisional"]["isPaused"] is True
-    assert by_uid["bedriftsgrafen_cache_outcome_shift_provisional"]["isPaused"] is True
+    assert by_uid["bg_brreg_amplification_provisional"]["isPaused"] is True
+    assert by_uid["bg_brreg_cache_shift_provisional"]["isPaused"] is True
+    assert all(len(uid) <= 40 for uid in by_uid)
 
     serialized = alert_path.read_text(encoding="utf-8")
     assert "bedriftsgrafen_brreg_circuit_open_total" in serialized

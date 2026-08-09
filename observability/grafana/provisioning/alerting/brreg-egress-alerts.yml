@@ -6,7 +6,7 @@ groups:
     folder: Bedriftsgrafen
     interval: 30s
     rules:
-      - uid: bedriftsgrafen_brreg_egress_at_configured_cap
+      - uid: bg_brreg_egress_at_cap
         title: Brreg egress at configured cap
         condition: C
         data:
@@ -821,7 +821,7 @@ groups:
           service: frontend
         isPaused: false
 
-      - uid: bedriftsgrafen_request_amplification_shift_provisional
+      - uid: bg_brreg_amplification_provisional
         title: Request amplification shift (baseline pending)
         condition: C
         data:
@@ -895,7 +895,7 @@ groups:
           service: api
         isPaused: true
 
-      - uid: bedriftsgrafen_cache_outcome_shift_provisional
+      - uid: bg_brreg_cache_shift_provisional
         title: Cache outcome shift (baseline pending)
         condition: C
         data:

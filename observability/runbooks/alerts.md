@@ -225,6 +225,15 @@ instrumentation deploy. The provisioned rules `Request amplification shift (base
 
 ### Baseline-dependent Alerts
 
+Deployment record:
+
+- Corrected Brreg instrumentation was first deployed at `2026-08-09 06:46:03 UTC` from commit
+  `850024c` with the shared guard enabled at `5 attempts/s`, burst `10`, and wait timeout `0s`.
+- A controlled backend-429 alert test was run immediately afterward. It made no Brreg request and is not
+  representative traffic for backend-rate-limit baselines.
+- Start the clean baseline window after the final follow-up deployment recorded below; do not mix the
+  controlled alert-test interval into backend-429 threshold calculations.
+
 Baseline activation checklist:
 
 1. Record the exact deploy timestamp for Brreg instrumentation.

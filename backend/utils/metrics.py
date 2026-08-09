@@ -128,7 +128,7 @@ def init_metrics() -> None:
             BRREG_CIRCUIT_OPEN_TOTAL.labels(endpoint=endpoint, traffic_class=traffic_class).inc(0)
             BRREG_GUARD_WAIT_SECONDS.labels(endpoint=endpoint, traffic_class=traffic_class).observe(0)
             BRREG_PAGINATION_PAGES_TOTAL.labels(endpoint=endpoint, traffic_class=traffic_class).inc(0)
-            for status_category in ["2xx", "3xx", "4xx", "5xx", "timeout", "exception", "circuit_open"]:
+            for status_category in ["2xx", "3xx", "4xx", "5xx", "timeout", "exception"]:
                 BRREG_HTTP_ATTEMPTS_TOTAL.labels(
                     endpoint=endpoint,
                     traffic_class=traffic_class,

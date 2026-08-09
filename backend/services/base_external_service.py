@@ -228,7 +228,7 @@ class BaseExternalService:
         if isinstance(status_code, int):
             return f"{status_code // 100}xx"
         status = str(status_code)
-        return status if status in {"timeout", "exception", "circuit_open"} else "exception"
+        return status if status in {"timeout", "exception"} else "exception"
 
     async def _guard_brreg_egress(self, endpoint: str, traffic_class: str) -> None:
         if self.SERVICE_NAME != "Brønnøysund":
