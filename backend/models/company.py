@@ -248,7 +248,7 @@ class Company(Base):
         Date, nullable=True, index=True
     )  # Tracks when roles were last fetched
     last_polled_subunits: Mapped[datetime | None] = mapped_column(
-        DateTime(timezone=True), nullable=True, index=True
+        DateTime(timezone=True), nullable=True
     )  # Tracks when subunits were last fetched, including empty results
 
     # Relationships - Use noload to prevent N+1 queries

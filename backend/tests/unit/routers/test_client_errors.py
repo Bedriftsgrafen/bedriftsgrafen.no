@@ -7,6 +7,7 @@ from fastapi.testclient import TestClient
 
 from limiter import limiter
 from main import app
+from utils.metrics import RATE_LIMIT_RESPONSES_TOTAL
 
 client = TestClient(app)
 limiter.enabled = False
@@ -140,10 +141,12 @@ class TestClientErrorsEndpoint:
 
         limiter.enabled = True
         try:
+            before = RATE_LIMIT_RESPONSES_TOTAL.labels(layer="backend")._value.get()
             with patch("routers.v1.client_errors.client_error_logger"):
                 payload = {"message": "flood test", "url": "https://example.com"}
                 responses = [client.post("/v1/client-errors", json=payload) for _ in range(11)]
             assert all(r.status_code == 204 for r in responses[:10])
             assert responses[-1].status_code == 429
+            assert RATE_LIMIT_RESPONSES_TOTAL.labels(layer="backend")._value.get() == before + 1
         finally:
             limiter.enabled = False

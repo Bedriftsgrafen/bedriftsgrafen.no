@@ -50,6 +50,7 @@ class BrregApiService(BaseExternalService):
         Returns:
             Company data as dict or None if not found
         """
+        self._record_brreg_logical_operation("company")
         url = f"{self.ENHETSREGISTERET_BASE_URL}/enheter/{orgnr}"
         data = await self._fetch_and_handle_404(url, context=f"company {orgnr}")
         if data is not None and not isinstance(data, dict):
@@ -64,6 +65,7 @@ class BrregApiService(BaseExternalService):
         """
         Fetch subunit (underenhet) details from Enhetsregisteret.
         """
+        self._record_brreg_logical_operation("subunit")
         url = f"{self.ENHETSREGISTERET_BASE_URL}/underenheter/{orgnr}"
         data = await self._fetch_and_handle_404(url, context=f"subunit {orgnr}")
         if data is not None and not isinstance(data, dict):
@@ -85,6 +87,7 @@ class BrregApiService(BaseExternalService):
         Returns:
             List of financial statements
         """
+        self._record_brreg_logical_operation("financials")
         url = f"{self.REGNSKAPSREGISTERET_BASE_URL}/{orgnr}"
         params = {}
 
@@ -212,6 +215,7 @@ class BrregApiService(BaseExternalService):
         Fetch all subunits (underenheter) for a parent company.
         Handles pagination automatically.
         """
+        self._record_brreg_logical_operation("subunits")
         url = f"{self.ENHETSREGISTERET_BASE_URL}/underenheter"
         params = {"overordnetEnhet": parent_orgnr, "size": 100}
 
@@ -256,6 +260,7 @@ class BrregApiService(BaseExternalService):
         """
         Fetch all roles (roller) for a company.
         """
+        self._record_brreg_logical_operation("roles")
         url = f"{self.ENHETSREGISTERET_BASE_URL}/enheter/{orgnr}/roller"
 
         try:

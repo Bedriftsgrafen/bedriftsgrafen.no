@@ -1,0 +1,36 @@
+name: bedriftsgrafen-brreg-security-test
+
+services:
+  redis:
+    image: redis:8.4-alpine
+    command: ["redis-server", "--save", "", "--appendonly", "no"]
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 1s
+      timeout: 1s
+      retries: 20
+    networks: [isolated]
+
+  harness:
+    build:
+      context: .
+      dockerfile: backend/Dockerfile.prod
+    command: ["python", "tests/load/brreg_security_harness.py"]
+    environment:
+      PYTHONPATH: /app
+      REDIS_HOST: redis
+      REDIS_PORT: "6379"
+      BRREG_EGRESS_GUARD_ENABLED: "true"
+      BRREG_EGRESS_RATE_PER_SECOND: "0.1"
+      BRREG_EGRESS_BURST: "7"
+      BRREG_EGRESS_WAIT_TIMEOUT_SECONDS: "0"
+      BRREG_EGRESS_REDIS_TIMEOUT_SECONDS: "1"
+      BRREG_EGRESS_TRAFFIC_CLASS: public
+    depends_on:
+      redis:
+        condition: service_healthy
+    networks: [isolated]
+
+networks:
+  isolated:
+    internal: true

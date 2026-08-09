@@ -1,4 +1,5 @@
 import asyncio
+import time
 from unittest.mock import AsyncMock, patch
 
 import httpx
@@ -75,6 +76,26 @@ def test_load_config_exports_low_cardinality_config_gauge(monkeypatch):
     labels.assert_any_call(setting="rate_per_second")
     labels.assert_any_call(setting="burst")
     labels.assert_any_call(setting="wait_timeout_seconds")
+
+
+@pytest.mark.parametrize(
+    ("name", "value", "message"),
+    [
+        ("BRREG_EGRESS_RATE_PER_SECOND", "0", "RATE_PER_SECOND"),
+        ("BRREG_EGRESS_RATE_PER_SECOND", "nan", "RATE_PER_SECOND"),
+        ("BRREG_EGRESS_BURST", "0", "BURST"),
+        ("BRREG_EGRESS_WAIT_TIMEOUT_SECONDS", "nan", "WAIT_TIMEOUT"),
+        ("BRREG_EGRESS_REDIS_TIMEOUT_SECONDS", "0", "REDIS_TIMEOUT"),
+    ],
+)
+def test_invalid_enabled_guard_config_fails_validation(monkeypatch, name, value, message):
+    monkeypatch.setenv("BRREG_EGRESS_GUARD_ENABLED", "true")
+    monkeypatch.setenv("BRREG_EGRESS_RATE_PER_SECOND", "5")
+    monkeypatch.setenv("BRREG_EGRESS_BURST", "10")
+    monkeypatch.setenv(name, value)
+
+    with pytest.raises(ValueError, match=message):
+        load_brreg_egress_guard_config()
 
 
 class _GuardedBrregService(BaseExternalService):
@@ -235,3 +256,22 @@ async def test_base_external_service_guard_rejection_blocks_transport(monkeypatc
 
     assert exc.value.status_code == 503
     client.get.assert_not_awaited()
+
+
+@pytest.mark.asyncio
+async def test_circuit_open_is_counted_without_fake_http_attempt(monkeypatch):
+    monkeypatch.setenv("BRREG_EGRESS_GUARD_ENABLED", "false")
+    service = _GuardedBrregService(client=AsyncMock(spec=httpx.AsyncClient))
+    _GuardedBrregService._circuit_open_until = time.monotonic() + 10
+    try:
+        with (
+            patch("services.base_external_service.BRREG_CIRCUIT_OPEN_TOTAL") as circuit_metric,
+            patch("services.base_external_service.BRREG_HTTP_ATTEMPTS_TOTAL") as attempt_metric,
+        ):
+            with pytest.raises(ExternalApiException, match="Circuit open"):
+                await service.get_company()
+        circuit_metric.labels.assert_called_once_with(endpoint="company", traffic_class="public")
+        attempt_metric.labels.assert_not_called()
+    finally:
+        _GuardedBrregService._circuit_open_until = 0
+        _GuardedBrregService._circuit_failure_count = 0

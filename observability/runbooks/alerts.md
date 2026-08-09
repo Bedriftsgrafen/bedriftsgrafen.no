@@ -182,7 +182,8 @@ with the exact PromQL below.
 5. For Brreg 429, query:
    `sum(increase(bedriftsgrafen_brreg_api_requests_total{status_code="429"}[15m]))`.
 6. For timeout/circuit problems, query:
-   `sum(increase(bedriftsgrafen_brreg_http_attempts_total{status_category=~"timeout|circuit_open"}[15m])) by (status_category)`.
+   Query `bedriftsgrafen_brreg_http_attempts_total{status_category="timeout"}` for real timeouts and
+   `bedriftsgrafen_brreg_circuit_open_total` for operations blocked before an HTTP attempt.
 7. For Redis guard failures, query:
    `sum(increase(bedriftsgrafen_brreg_guard_redis_errors_total[5m])) by (error_type)`.
 8. Compare public request pressure with logical operations and attempts:
@@ -211,9 +212,10 @@ Immediate actions:
 | Brreg guard rejections | `sum(increase(bedriftsgrafen_brreg_guard_decisions_total{result="rejected"}[5m]))` | 5m, `for: 1m` | any rejection | semantic guard event | Low; rejection is user-visible or job-visible protection |
 | Brreg 429 | `sum(increase(bedriftsgrafen_brreg_api_requests_total{status_code="429"}[15m]))` | 15m, `for: 1m` | any upstream 429 | upstream response code | Low; Brreg 429 should be investigated |
 | Brreg timeouts | `sum(increase(bedriftsgrafen_brreg_http_attempts_total{status_category="timeout"}[15m]))` | 15m, `for: 5m` | any sustained timeout | local timeout event | Medium; transient upstream network blips can fire |
-| Brreg circuit breaker | `sum(increase(bedriftsgrafen_brreg_http_attempts_total{status_category="circuit_open"}[5m]))` | 5m, `for: 1m` | any circuit-open observation | local protection state | Low |
+| Brreg circuit breaker | `sum(increase(bedriftsgrafen_brreg_circuit_open_total[5m]))` | 5m, `for: 1m` | any circuit-open observation | local protection state | Low |
 | Redis guard errors | `sum(increase(bedriftsgrafen_brreg_guard_redis_errors_total[5m]))` | 5m, `for: 1m` | any Redis guard error | guard fail-closed event | Low |
-| Backend 429 | `sum(increase(http_requests_total{job="bedriftsgrafen-api",status="429"}[5m]))` | 5m, `for: 2m` | any backend 429 | application limiter event | Medium; can be expected during abuse |
+| Backend 429 | `sum(increase(bedriftsgrafen_rate_limit_responses_total{layer="backend"}[5m]))` | 5m, `for: 2m` | any backend 429 | application limiter event | Medium; can be expected during abuse |
+| Edge nginx 429 | `sum(count_over_time({container="bedriftsgrafen-frontend"} |~ "(?i)(limiting requests| 429 |status=429)" [5m]))` | 5m, `for: 2m` | any edge limiter event | nginx access/error logs in Loki | Medium; expected during abuse |
 | Prometheus API scrape failure | `sum(max_over_time(up{job="bedriftsgrafen-api"}[3m]) == 0)` | 3m, `for: 2m` | any backend/worker target down | scrape health | Low |
 | Backend or worker restarted | `sum(changes(container_start_time_seconds{name=~"bedriftsgrafen-(backend|worker)"}[10m]))` | 10m, `for: 1m` | any container start-time change | cAdvisor container metric | Medium around planned deploys |
 
@@ -235,7 +237,7 @@ Baseline activation checklist:
 ## Edge and Backend 429s
 
 1. Backend 429 PromQL:
-   `sum(increase(http_requests_total{job="bedriftsgrafen-api",status="429"}[5m]))`.
+   `sum(increase(bedriftsgrafen_rate_limit_responses_total{layer="backend"}[5m]))`.
 2. Nginx/Loki query:
    `{container="bedriftsgrafen-frontend"} |~ "(limiting requests| 429 |status=429)"`.
 3. Compare with Brreg guard decisions. If nginx/backend 429 rises while Brreg attempts stay flat, local

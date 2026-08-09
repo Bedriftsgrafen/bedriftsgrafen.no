@@ -1,16 +1,23 @@
+import asyncio
 import logging
 import os
 import sys
-import time
 from datetime import datetime
+from pathlib import Path
 
 import psycopg2
-import requests
 from psycopg2.extras import execute_values
+
+sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "backend"))
+
+from services.brreg_api_service import BrregApiService  # noqa: E402
+from services.brreg_egress_guard import brreg_traffic_class  # noqa: E402
 
 # Setup logging
 logging.basicConfig(
-    level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s", handlers=[logging.StreamHandler(sys.stdout)]
+    level=logging.INFO,
+    format="%(asctime)s - %(levelname)s - %(message)s",
+    handlers=[logging.StreamHandler(sys.stdout)],
 )
 logger = logging.getLogger(__name__)
 
@@ -25,12 +32,11 @@ if not DB_USER or not DB_PASSWORD:
         "DATABASE_USER and DATABASE_PASSWORD must be set in environment. See .env.example for configuration."
     )
 
-# Brønnøysundregistrene API
-API_URL = "https://data.brreg.no/regnskapsregisteret/regnskap"
-
 
 def get_db_connection():
-    return psycopg2.connect(host=DB_HOST, database=DB_NAME, user=DB_USER, password=DB_PASSWORD)
+    return psycopg2.connect(
+        host=DB_HOST, database=DB_NAME, user=DB_USER, password=DB_PASSWORD
+    )
 
 
 def create_regnskap_table(conn):
@@ -54,24 +60,13 @@ def create_regnskap_table(conn):
         conn.commit()
 
 
-def fetch_accounting_data(orgnr, year):
-    """Fetch accounting data for a specific company and year."""
-    params = {"orgnr": orgnr, "år": year}
+async def fetch_accounting_data(brreg_api: BrregApiService, orgnr: str, year: int):
+    """Fetch through the shared fail-closed Redis egress guard."""
     try:
-        response = requests.get(API_URL, params=params, timeout=10)
-        if response.status_code == 200:
-            data = response.json()
-            if data:
-                return data
-        elif response.status_code == 404:
-            return None  # No data found
-        else:
-            logger.warning(f"API Error {response.status_code} for {orgnr}: {response.text}")
-            return None
+        return await brreg_api.fetch_financial_statements(orgnr, year)
     except Exception as e:
         logger.error(f"Request failed for {orgnr}: {e}")
         return None
-    return None
 
 
 def parse_accounting_data(api_data):
@@ -96,13 +91,25 @@ def parse_accounting_data(api_data):
             # Try to find common fields. This requires inspection of actual API responses.
             # For now, we will look for 'egenkapitalGjeld' and 'resultatregnskap'
 
-            egenkapital = entry.get("egenkapitalGjeld", {}).get("egenkapital", {}).get("sumEgenkapital")
+            egenkapital = (
+                entry.get("egenkapitalGjeld", {})
+                .get("egenkapital", {})
+                .get("sumEgenkapital")
+            )
 
             # Income (Driftsinntekter)
-            inntekt = entry.get("resultatregnskap", {}).get("driftsinntekter", {}).get("sumDriftsinntekter")
+            inntekt = (
+                entry.get("resultatregnskap", {})
+                .get("driftsinntekter", {})
+                .get("sumDriftsinntekter")
+            )
 
             # Result (Årsresultat)
-            resultat = entry.get("resultatregnskap", {}).get("aarsresultat", {}).get("aarsresultat")
+            resultat = (
+                entry.get("resultatregnskap", {})
+                .get("aarsresultat", {})
+                .get("aarsresultat")
+            )
 
             til_dato = entry.get("regnskapsperiode", {}).get("tilDato")
             results.append(
@@ -125,9 +132,13 @@ def parse_accounting_data(api_data):
     return results
 
 
-def process_companies():
+async def process_companies():
     conn = get_db_connection()
     create_regnskap_table(conn)
+    brreg_api = BrregApiService()
+    logger.info(
+        "Brreg imports use the shared egress guard (%s traffic)", brreg_traffic_class()
+    )
 
     try:
         with conn.cursor() as cur:
@@ -135,7 +146,9 @@ def process_companies():
             logger.info("Fetching list of AS companies from DB...")
             # Note: Adjust the WHERE clause based on your actual 'bedrifter' table structure
             # Assuming 'organisasjonsform' is stored in the JSON 'data' column or a separate column
-            cur.execute("SELECT orgnr FROM bedrifter WHERE navn LIKE '% AS' LIMIT 100")  # Start small for testing
+            cur.execute(
+                "SELECT orgnr FROM bedrifter WHERE navn LIKE '% AS' LIMIT 100"
+            )  # Start small for testing
             companies = cur.fetchall()
 
             logger.info(f"Found {len(companies)} companies to process.")
@@ -146,7 +159,7 @@ def process_companies():
                 # Fetch last 3 years
                 current_year = datetime.now().year
                 for year in range(current_year - 3, current_year):
-                    raw_data = fetch_accounting_data(orgnr, year)
+                    raw_data = await fetch_accounting_data(brreg_api, orgnr, year)
                     if raw_data:
                         parsed_rows = parse_accounting_data(raw_data)
 
@@ -164,8 +177,6 @@ def process_companies():
                             conn.commit()
                             logger.info(f"Saved data for {orgnr} - {year}")
 
-                    time.sleep(0.1)  # Be nice to the API
-
     except Exception as e:
         logger.error(f"Script failed: {e}")
     finally:
@@ -173,6 +184,4 @@ def process_companies():
 
 
 if __name__ == "__main__":
-    # Wait for DB to be ready
-    time.sleep(5)
-    process_companies()
+    asyncio.run(process_companies())

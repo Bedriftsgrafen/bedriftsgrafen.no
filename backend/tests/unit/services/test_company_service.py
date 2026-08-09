@@ -3,6 +3,7 @@ Unit tests for CompanyService.
 """
 
 import asyncio
+from contextlib import asynccontextmanager
 from datetime import UTC, date, datetime, timedelta
 from unittest.mock import AsyncMock, MagicMock, patch
 
@@ -30,8 +31,9 @@ def service(mock_db, monkeypatch):
     async def fake_try_acquire_subunit_refresh_lock(parent_orgnr, *, config=None):
         return FakeSubunitRefreshLock()
 
-    async def fake_release_subunit_refresh_lock(lock, *, config=None):
-        return None
+    @asynccontextmanager
+    async def fake_maintain_subunit_refresh_lock(lock, *, config=None):
+        yield
 
     monkeypatch.setattr(
         company_service_module,
@@ -40,9 +42,13 @@ def service(mock_db, monkeypatch):
     )
     monkeypatch.setattr(
         company_service_module,
-        "release_subunit_refresh_lock",
-        fake_release_subunit_refresh_lock,
+        "maintain_subunit_refresh_lock",
+        fake_maintain_subunit_refresh_lock,
     )
+    monkeypatch.setattr(company_service_module.count_cache, "get", AsyncMock(return_value=None))
+    monkeypatch.setattr(company_service_module.count_cache, "set", AsyncMock())
+    monkeypatch.setattr(company_service_module.stats_cache, "get", AsyncMock(return_value=None))
+    monkeypatch.setattr(company_service_module.stats_cache, "set", AsyncMock())
 
     svc = CompanyService(mock_db)
     svc.company_repo = AsyncMock()

@@ -37,7 +37,7 @@ from services.subunit_refresh_lock import (
     SubunitRefreshLockConfig,
     SubunitRefreshLockError,
     load_subunit_refresh_lock_config,
-    release_subunit_refresh_lock,
+    maintain_subunit_refresh_lock,
     try_acquire_subunit_refresh_lock,
 )
 from utils.cache import AsyncLRUCache
@@ -570,18 +570,17 @@ class CompanyService:
             )
 
         try:
-            if not force_refresh and await self.subunit_repo.is_cache_valid(parent_orgnr):
-                return await self._get_cached_subunits(parent_orgnr, traffic_class)
-            if force_refresh and await self._subunit_force_refresh_in_cooldown(parent_orgnr):
-                return await self._get_cached_subunits(parent_orgnr, traffic_class)
+            async with maintain_subunit_refresh_lock(lock, config=lock_config):
+                if not force_refresh and await self.subunit_repo.is_cache_valid(parent_orgnr):
+                    return await self._get_cached_subunits(parent_orgnr, traffic_class)
+                if force_refresh and await self._subunit_force_refresh_in_cooldown(parent_orgnr):
+                    return await self._get_cached_subunits(parent_orgnr, traffic_class)
 
-            await self._release_subunit_read_transaction()
-            await self._sync_subunits_from_api(parent_orgnr, raise_errors=True)
-            return await self._get_cached_subunits(parent_orgnr, traffic_class)
+                await self._release_subunit_read_transaction()
+                await self._sync_subunits_from_api(parent_orgnr, raise_errors=True)
+                return await self._get_cached_subunits(parent_orgnr, traffic_class)
         except Exception as exc:
             return await self._subunit_stale_or_raise(parent_orgnr, traffic_class, exc)
-        finally:
-            await release_subunit_refresh_lock(lock, config=lock_config)
 
     async def fetch_and_store_company(
         self, orgnr: str, fetch_financials: bool = True, geocode: bool = True

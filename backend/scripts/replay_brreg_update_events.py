@@ -227,6 +227,7 @@ async def fetch_company_update_rows(args: argparse.Namespace) -> tuple[list[dict
 
     brreg_api = BrregApiService()
     brreg_api.timeout = httpx.Timeout(args.api_timeout)
+    brreg_api._record_brreg_logical_operation("updates_company")
     while next_url and len(rows) < args.limit and not stop:
         response = await brreg_api._get(next_url, params=params, context="updates_company")
         params = None

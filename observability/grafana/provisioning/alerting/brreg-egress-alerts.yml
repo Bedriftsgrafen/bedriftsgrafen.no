@@ -390,7 +390,7 @@ groups:
                 type: prometheus
                 uid: prometheus
               editorMode: code
-              expr: sum(increase(bedriftsgrafen_brreg_http_attempts_total{status_category="circuit_open"}[5m])) or vector(0)
+              expr: sum(increase(bedriftsgrafen_brreg_circuit_open_total[5m])) or vector(0)
               instant: true
               intervalMs: 1000
               maxDataPoints: 43200
@@ -538,7 +538,7 @@ groups:
                 type: prometheus
                 uid: prometheus
               editorMode: code
-              expr: sum(increase(http_requests_total{job="bedriftsgrafen-api",status="429"}[5m])) or vector(0)
+              expr: sum(increase(bedriftsgrafen_rate_limit_responses_total{layer="backend"}[5m])) or vector(0)
               instant: true
               intervalMs: 1000
               maxDataPoints: 43200
@@ -744,6 +744,81 @@ groups:
         labels:
           severity: critical
           service: api
+        isPaused: false
+
+      - uid: bedriftsgrafen_edge_429_seen
+        title: Edge nginx 429 responses detected
+        condition: C
+        data:
+          - refId: A
+            datasourceUid: loki
+            relativeTimeRange:
+              from: 600
+              to: 0
+            model:
+              datasource:
+                type: loki
+                uid: loki
+              editorMode: code
+              expr: sum(count_over_time({container="bedriftsgrafen-frontend"} |~ "(?i)(limiting requests| 429 |status=429)" [5m]))
+              instant: true
+              intervalMs: 1000
+              maxDataPoints: 43200
+              queryType: instant
+              refId: A
+          - refId: B
+            datasourceUid: __expr__
+            relativeTimeRange:
+              from: 0
+              to: 0
+            model:
+              datasource:
+                type: __expr__
+                uid: __expr__
+              expression: A
+              intervalMs: 1000
+              maxDataPoints: 43200
+              reducer: last
+              refId: B
+              type: reduce
+          - refId: C
+            datasourceUid: __expr__
+            relativeTimeRange:
+              from: 0
+              to: 0
+            model:
+              conditions:
+                - evaluator:
+                    params:
+                      - 0
+                    type: gt
+                  operator:
+                    type: and
+                  query:
+                    params:
+                      - C
+                  reducer:
+                    params: []
+                    type: last
+                  type: query
+              datasource:
+                type: __expr__
+                uid: __expr__
+              expression: B
+              intervalMs: 1000
+              maxDataPoints: 43200
+              refId: C
+              type: threshold
+        noDataState: OK
+        execErrState: Error
+        for: 2m
+        annotations:
+          summary: Edge nginx rate limiting is returning 429.
+          description: Nginx rejected requests before they reached the backend; compare client patterns with Brreg attempts.
+          runbook_url: https://github.com/Bedriftsgrafen/bedriftsgrafen.no/blob/main/observability/runbooks/alerts.md#edge-and-backend-429s
+        labels:
+          severity: warning
+          service: frontend
         isPaused: false
 
       - uid: bedriftsgrafen_request_amplification_shift_provisional

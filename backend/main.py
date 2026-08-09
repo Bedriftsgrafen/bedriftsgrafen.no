@@ -18,7 +18,7 @@ from exceptions import BedriftsgrafenException
 from limiter import limiter
 from middleware import RequestIdMiddleware, SecurityHeadersMiddleware
 from utils.logging_config import setup_logging
-from utils.metrics import init_metrics
+from utils.metrics import RATE_LIMIT_RESPONSES_TOTAL, init_metrics
 
 # Setup structured logging before creating app
 setup_logging(level=logging.INFO)
@@ -43,6 +43,7 @@ from routers.v1 import og_image as v1_og_image  # noqa: E402
 from routers.v1 import people as v1_people  # noqa: E402
 from routers.v1 import stats as v1_stats  # noqa: E402
 from routers.v1 import trends as v1_trends  # noqa: E402
+from services.brreg_egress_guard import load_brreg_egress_guard_config  # noqa: E402
 from services.company_service import CompanyService  # noqa: E402
 from services.scheduler import SchedulerService  # noqa: E402
 from services.seo_service import SEOService  # noqa: E402
@@ -88,6 +89,9 @@ async def lifespan(app):
     warm_cache = os.getenv("WARM_SITEMAP_CACHE", "false").lower() == "true"
     scheduler_service = None
     cache_task = None
+
+    # Fail startup before accepting traffic when outbound safety configuration is invalid.
+    load_brreg_egress_guard_config()
 
     if start_scheduler:
         logger.info("Starting scheduler service...")
@@ -138,6 +142,7 @@ app.add_middleware(SlowAPIMiddleware)
 @app.exception_handler(RateLimitExceeded)
 async def rate_limit_handler(request: Request, exc: RateLimitExceeded):
     """Handle rate limit exceeded errors"""
+    RATE_LIMIT_RESPONSES_TOTAL.labels(layer="backend").inc()
     return JSONResponse(
         status_code=429,
         content={

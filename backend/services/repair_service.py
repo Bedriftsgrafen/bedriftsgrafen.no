@@ -11,7 +11,6 @@ from repositories.role_repository import RoleRepository
 from repositories.subunit_repository import SubUnitRepository
 from services.brreg_api_service import BrregApiService
 from services.brreg_mappers import map_role_from_api, map_subunit_from_api
-from services.rate_limits import BRREG_RATE_LIMITER
 from services.update_service import UpdateService
 
 logger = logging.getLogger(__name__)
@@ -119,7 +118,7 @@ class RepairService:
         local_counts = {row[0]: row[1] for row in count_res.all()}
 
         for company in companies:
-            async with repair_semaphore, BRREG_RATE_LIMITER:
+            async with repair_semaphore:
                 try:
                     api_subunits = await self.brreg_api.fetch_subunits(company.orgnr)
                     local_count = local_counts.get(company.orgnr, 0)
@@ -150,7 +149,7 @@ class RepairService:
         companies = result.scalars().all()
 
         for company in companies:
-            async with repair_semaphore, BRREG_RATE_LIMITER:
+            async with repair_semaphore:
                 try:
                     roles_data = await self.brreg_api.fetch_roles(company.orgnr)
 
@@ -213,7 +212,7 @@ class RepairService:
         }
 
     async def _repair_company(self, orgnr: str) -> bool:
-        async with repair_semaphore, BRREG_RATE_LIMITER:
+        async with repair_semaphore:
             try:
                 data = await self.brreg_api.fetch_company(orgnr)
                 if data:

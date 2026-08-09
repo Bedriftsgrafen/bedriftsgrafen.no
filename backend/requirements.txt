@@ -4,8 +4,6 @@
 #
 #    pip-compile --extra=dev --no-strip-extras --output-file=requirements.txt pyproject.toml
 #
-aiolimiter==1.2.1
-    # via bedriftsgrafen-backend (pyproject.toml)
 aiosqlite==0.22.1
     # via bedriftsgrafen-backend (pyproject.toml)
 alembic==1.18.4

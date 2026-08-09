@@ -60,6 +60,7 @@ def test_brreg_alerts_are_provisioned_and_baseline_dependent_rules_are_paused():
         "bedriftsgrafen_brreg_circuit_open",
         "bedriftsgrafen_brreg_guard_redis_errors",
         "bedriftsgrafen_backend_429_seen",
+        "bedriftsgrafen_edge_429_seen",
         "bedriftsgrafen_api_scrape_failure",
         "bedriftsgrafen_backend_worker_restart",
     }
@@ -68,6 +69,10 @@ def test_brreg_alerts_are_provisioned_and_baseline_dependent_rules_are_paused():
 
     assert by_uid["bedriftsgrafen_request_amplification_shift_provisional"]["isPaused"] is True
     assert by_uid["bedriftsgrafen_cache_outcome_shift_provisional"]["isPaused"] is True
+
+    serialized = alert_path.read_text(encoding="utf-8")
+    assert "bedriftsgrafen_brreg_circuit_open_total" in serialized
+    assert 'bedriftsgrafen_rate_limit_responses_total{layer="backend"}' in serialized
 
 
 def test_brreg_alerts_use_existing_discord_notification_path():

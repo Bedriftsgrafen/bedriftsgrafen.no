@@ -112,13 +112,24 @@ def _int_from_env(name: str, default: int | None = None) -> int | None:
 
 def load_brreg_egress_guard_config() -> BrregEgressGuardConfig:
     """Load guard config from environment without inventing a production cap."""
+    wait_timeout_seconds = cast(float, _float_from_env("BRREG_EGRESS_WAIT_TIMEOUT_SECONDS", 0.0))
+    redis_timeout_seconds = cast(float, _float_from_env("BRREG_EGRESS_REDIS_TIMEOUT_SECONDS", 1.0))
     config = BrregEgressGuardConfig(
         enabled=_flag_from_env("BRREG_EGRESS_GUARD_ENABLED", True),
         rate_per_second=_float_from_env("BRREG_EGRESS_RATE_PER_SECOND"),
         burst=_int_from_env("BRREG_EGRESS_BURST"),
-        wait_timeout_seconds=_float_from_env("BRREG_EGRESS_WAIT_TIMEOUT_SECONDS", 0.0) or 0.0,
-        redis_timeout_seconds=_float_from_env("BRREG_EGRESS_REDIS_TIMEOUT_SECONDS", 1.0) or 1.0,
+        wait_timeout_seconds=wait_timeout_seconds,
+        redis_timeout_seconds=redis_timeout_seconds,
     )
+    if config.enabled:
+        if config.rate_per_second is None or not math.isfinite(config.rate_per_second) or config.rate_per_second <= 0:
+            raise ValueError("BRREG_EGRESS_RATE_PER_SECOND must be a finite number greater than zero")
+        if config.burst is None or config.burst <= 0:
+            raise ValueError("BRREG_EGRESS_BURST must be a positive integer")
+    if not math.isfinite(config.wait_timeout_seconds) or config.wait_timeout_seconds < 0:
+        raise ValueError("BRREG_EGRESS_WAIT_TIMEOUT_SECONDS must be a finite non-negative number")
+    if not math.isfinite(config.redis_timeout_seconds) or config.redis_timeout_seconds <= 0:
+        raise ValueError("BRREG_EGRESS_REDIS_TIMEOUT_SECONDS must be a finite number greater than zero")
     BRREG_EGRESS_CONFIG.labels(setting="enabled").set(1 if config.enabled else 0)
     BRREG_EGRESS_CONFIG.labels(setting="rate_per_second").set(config.rate_per_second or 0)
     BRREG_EGRESS_CONFIG.labels(setting="burst").set(config.burst or 0)

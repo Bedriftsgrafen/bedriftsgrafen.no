@@ -17,6 +17,7 @@ from constants.concurrency import CONNECT_TIMEOUT, DEFAULT_EXTERNAL_TIMEOUT
 from services.brreg_egress_guard import BrregEgressGuardError, acquire_brreg_egress_capacity, brreg_traffic_class
 from utils.metrics import (
     BRREG_API_REQUESTS_TOTAL,
+    BRREG_CIRCUIT_OPEN_TOTAL,
     BRREG_HTTP_ATTEMPTS_TOTAL,
     BRREG_LOGICAL_OPERATIONS_TOTAL,
     BRREG_RETRIES_TOTAL,
@@ -268,6 +269,14 @@ class BaseExternalService:
         if self.SERVICE_NAME == "Brønnøysund":
             BRREG_RETRIES_TOTAL.labels(endpoint=endpoint, traffic_class=traffic_class, reason=reason).inc()
 
+    def _record_brreg_logical_operation(self, endpoint: str) -> None:
+        """Count one caller-visible Brreg operation, independently of pages and retries."""
+        if self.SERVICE_NAME == "Brønnøysund":
+            BRREG_LOGICAL_OPERATIONS_TOTAL.labels(
+                endpoint=endpoint,
+                traffic_class=brreg_traffic_class(),
+            ).inc()
+
     async def _request_with_retry(
         self,
         method: str,
@@ -287,9 +296,6 @@ class BaseExternalService:
         endpoint = self._metric_endpoint(context)
         traffic_class = brreg_traffic_class() if self.SERVICE_NAME == "Brønnøysund" else "unknown"
 
-        if self.SERVICE_NAME == "Brønnøysund":
-            BRREG_LOGICAL_OPERATIONS_TOTAL.labels(endpoint=endpoint, traffic_class=traffic_class).inc()
-
         if self._is_circuit_open():
             self._record_external_request_metric(
                 context,
@@ -297,6 +303,8 @@ class BaseExternalService:
                 traffic_class=traffic_class,
                 actual_attempt=False,
             )
+            if self.SERVICE_NAME == "Brønnøysund":
+                BRREG_CIRCUIT_OPEN_TOTAL.labels(endpoint=endpoint, traffic_class=traffic_class).inc()
             raise ExternalApiException(
                 message=f"Circuit open — too many consecutive failures for {context}",
                 service=self.SERVICE_NAME,

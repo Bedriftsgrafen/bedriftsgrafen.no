@@ -20,7 +20,6 @@ from repositories.system_repository import SystemRepository
 from schemas.brreg import BrregUpdateChange, FetchResult, SubunitFetchResult, UpdateBatchResult
 from services.brreg_api_service import BrregApiService
 from services.brreg_mappers import map_role_from_api, map_subunit_from_api
-from services.rate_limits import BRREG_RATE_LIMITER
 from utils.logging_config import sanitize_log
 from utils.metrics import SYNC_BATCH_PAGES_TOTAL, SYNC_LATENCY, SYNC_OPERATIONS_TOTAL
 
@@ -525,6 +524,7 @@ class UpdateService:
         Returns:
             Dictionary with total processing results
         """
+        self.brreg_api._record_brreg_logical_operation("updates_company")
         if since_date is None:
             since_date = date.today() - timedelta(days=1)
 
@@ -656,20 +656,19 @@ class UpdateService:
 
             async with semaphore:
                 try:
-                    async with BRREG_RATE_LIMITER:
-                        company_data = await self.brreg_api.fetch_company(orgnr)
+                    company_data = await self.brreg_api.fetch_company(orgnr)
 
-                        # We don't fetch financials here anymore - it's too slow.
-                        # Financials are now synced in a separate background job.
-                        return FetchResult(
-                            orgnr=orgnr,
-                            success=True,
-                            company_data=company_data,
-                            source_update_id=source_update_id,
-                            source_event_time=source_event_time,
-                            source_change_type=endringstype,
-                            source_changes=source_changes,
-                        )
+                    # We don't fetch financials here anymore - it's too slow.
+                    # Financials are now synced in a separate background job.
+                    return FetchResult(
+                        orgnr=orgnr,
+                        success=True,
+                        company_data=company_data,
+                        source_update_id=source_update_id,
+                        source_event_time=source_event_time,
+                        source_change_type=endringstype,
+                        source_changes=source_changes,
+                    )
                 except Exception as exc:
                     return FetchResult(
                         orgnr=orgnr,
@@ -949,8 +948,7 @@ class UpdateService:
 
             async with _semaphore:
                 try:
-                    async with BRREG_RATE_LIMITER:
-                        subunit_data = await self.brreg_api.fetch_subunit(orgnr)
+                    subunit_data = await self.brreg_api.fetch_subunit(orgnr)
                     if subunit_data is None:
                         return SubunitFetchResult(
                             orgnr=orgnr,
@@ -1276,6 +1274,7 @@ class UpdateService:
         start_id: int | None = None,
     ) -> dict[str, Any]:
         """Process incremental updates for subunits (underenheter)."""
+        self.brreg_api._record_brreg_logical_operation("updates_subunit")
         if since_date is None and start_id is None:
             since_date = date.today() - timedelta(days=1)
 
@@ -1390,6 +1389,7 @@ class UpdateService:
         page_size: int = 100,
     ) -> dict[str, Any]:
         """Fetch and process ALL role updates using CloudEvents batches."""
+        self.brreg_api._record_brreg_logical_operation("updates_role")
         if since_date is None:
             since_date = date.today() - timedelta(days=1)
 

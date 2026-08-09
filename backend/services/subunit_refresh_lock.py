@@ -6,6 +6,7 @@ import asyncio
 import os
 import uuid
 from collections.abc import Awaitable
+from contextlib import asynccontextmanager, suppress
 from dataclasses import dataclass
 from typing import Any, cast
 
@@ -18,6 +19,13 @@ _LOCK_KEY_PREFIX = "brreg:subunits:refresh"
 _RELEASE_LOCK_SCRIPT = """
 if redis.call("GET", KEYS[1]) == ARGV[1] then
     return redis.call("DEL", KEYS[1])
+end
+return 0
+"""
+
+_RENEW_LOCK_SCRIPT = """
+if redis.call("GET", KEYS[1]) == ARGV[1] then
+    return redis.call("EXPIRE", KEYS[1], ARGV[2])
 end
 return 0
 """
@@ -119,11 +127,85 @@ async def release_subunit_refresh_lock(
         return
 
 
+async def renew_subunit_refresh_lock(
+    lock: SubunitRefreshLock,
+    *,
+    config: SubunitRefreshLockConfig | None = None,
+) -> None:
+    """Extend a lease only while its ownership token still matches."""
+    config = config or load_subunit_refresh_lock_config()
+    redis = get_redis()
+    try:
+        eval_result = cast(
+            Awaitable[Any],
+            redis.eval(_RENEW_LOCK_SCRIPT, 1, lock.key, lock.token, config.ttl_seconds),
+        )
+        renewed = await asyncio.wait_for(eval_result, timeout=config.redis_timeout_seconds)
+    except TimeoutError as exc:
+        raise SubunitRefreshLockError("Timed out renewing subunit refresh lock") from exc
+    except RedisError as exc:
+        raise SubunitRefreshLockError("Redis unavailable while renewing subunit refresh lock") from exc
+    except Exception as exc:
+        raise SubunitRefreshLockError("Failed to renew subunit refresh lock") from exc
+
+    if int(renewed) != 1:
+        raise SubunitRefreshLockError("Lost ownership of subunit refresh lock")
+
+
+@asynccontextmanager
+async def maintain_subunit_refresh_lock(
+    lock: SubunitRefreshLock,
+    *,
+    config: SubunitRefreshLockConfig | None = None,
+):
+    """Keep a lock alive and abort the protected task if ownership is lost."""
+    config = config or load_subunit_refresh_lock_config()
+    owner = asyncio.current_task()
+    stopped = asyncio.Event()
+    lease_error: SubunitRefreshLockError | None = None
+    interval = max(0.05, config.ttl_seconds / 3)
+
+    async def heartbeat() -> None:
+        nonlocal lease_error
+        while True:
+            try:
+                await asyncio.wait_for(stopped.wait(), timeout=interval)
+                return
+            except TimeoutError:
+                pass
+            try:
+                await renew_subunit_refresh_lock(lock, config=config)
+            except SubunitRefreshLockError as exc:
+                lease_error = exc
+                if owner is not None:
+                    owner.cancel()
+                return
+
+    heartbeat_task = asyncio.create_task(heartbeat(), name=f"renew-{lock.key}")
+    try:
+        yield
+    except asyncio.CancelledError:
+        if lease_error is not None:
+            raise lease_error from None
+        raise
+    finally:
+        stopped.set()
+        heartbeat_task.cancel()
+        with suppress(asyncio.CancelledError):
+            await heartbeat_task
+        await release_subunit_refresh_lock(lock, config=config)
+
+    if lease_error is not None:
+        raise lease_error
+
+
 __all__ = [
     "SubunitRefreshLock",
     "SubunitRefreshLockConfig",
     "SubunitRefreshLockError",
     "load_subunit_refresh_lock_config",
+    "maintain_subunit_refresh_lock",
     "release_subunit_refresh_lock",
+    "renew_subunit_refresh_lock",
     "try_acquire_subunit_refresh_lock",
 ]

@@ -116,6 +116,15 @@ check_brreg_egress_config() {
         echo "   Set BRREG_EGRESS_RATE_PER_SECOND and BRREG_EGRESS_BURST, or explicitly set BRREG_EGRESS_GUARD_ENABLED=false." >&2
         return 1
     fi
+
+    if [[ ! "$rate" =~ ^[0-9]+([.][0-9]+)?$ ]] || ! awk -v value="$rate" 'BEGIN { exit !(value > 0) }'; then
+        echo -e "${RED}❌ BRREG_EGRESS_RATE_PER_SECOND must be a number greater than zero.${NC}" >&2
+        return 1
+    fi
+    if [[ ! "$burst" =~ ^[1-9][0-9]*$ ]]; then
+        echo -e "${RED}❌ BRREG_EGRESS_BURST must be a positive integer.${NC}" >&2
+        return 1
+    fi
 }
 
 run_database_migrations() {
@@ -148,6 +157,7 @@ fi
 echo ""
 
 # Preflight
+python3 scripts/validate_proxy_network.py
 check_brreg_egress_config
 
 # 1. Bygg nye images

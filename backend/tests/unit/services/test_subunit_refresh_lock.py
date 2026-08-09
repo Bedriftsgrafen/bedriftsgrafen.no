@@ -8,6 +8,7 @@ from services.subunit_refresh_lock import (
     SubunitRefreshLockConfig,
     SubunitRefreshLockError,
     release_subunit_refresh_lock,
+    renew_subunit_refresh_lock,
     try_acquire_subunit_refresh_lock,
 )
 
@@ -83,3 +84,33 @@ async def test_release_subunit_refresh_lock_uses_compare_and_delete(monkeypatch)
 
     assert redis.eval_calls
     assert redis.eval_calls[0][1:] == (1, "brreg:subunits:refresh:123456789", "test-lock-token")
+
+
+@pytest.mark.asyncio
+async def test_renew_subunit_refresh_lock_uses_compare_and_expire(monkeypatch):
+    redis = FakeRedis()
+    monkeypatch.setattr(subunit_refresh_lock, "get_redis", lambda: redis)
+
+    await renew_subunit_refresh_lock(
+        SubunitRefreshLock(key="brreg:subunits:refresh:123456789", token="test-lock-token"),  # noqa: S106
+        config=CONFIG,
+    )
+
+    assert redis.eval_calls[0][1:] == (1, "brreg:subunits:refresh:123456789", "test-lock-token", 30)
+
+
+@pytest.mark.asyncio
+async def test_renew_rejects_lost_ownership(monkeypatch):
+    redis = FakeRedis()
+
+    async def lost(*args):
+        return 0
+
+    redis.eval = lost
+    monkeypatch.setattr(subunit_refresh_lock, "get_redis", lambda: redis)
+
+    with pytest.raises(SubunitRefreshLockError, match="Lost ownership"):
+        await renew_subunit_refresh_lock(
+            SubunitRefreshLock(key="brreg:subunits:refresh:123456789", token="old-token"),  # noqa: S106
+            config=CONFIG,
+        )
