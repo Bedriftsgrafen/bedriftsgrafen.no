@@ -19,7 +19,7 @@ services:
     environment:
       - START_SCHEDULER=false
       - REDIS_HOST=bedriftsgrafen-redis
-      - WARM_SITEMAP_CACHE=true
+      - WARM_SITEMAP_CACHE=false
       - DB_POOL_SIZE=8
       - DB_MAX_OVERFLOW=5
       - ENABLE_COMPANY_EVENT_LEDGER=true
@@ -76,6 +76,7 @@ services:
       - .env
     environment:
       - START_SCHEDULER=true
+      - WARM_SITEMAP_CACHE=true
       - DB_POOL_SIZE=2
       - DB_STATEMENT_TIMEOUT=60000
       - SUBUNIT_UPDATE_PAGE_SIZE=${WORKER_SUBUNIT_UPDATE_PAGE_SIZE:-10}
