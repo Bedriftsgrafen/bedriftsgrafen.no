@@ -9,108 +9,46 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
-import { Route as VilkarRouteImport } from './routes/vilkar'
-import { Route as UtforskRouteImport } from './routes/utforsk'
-import { Route as SammenlignRouteImport } from './routes/sammenlign'
-import { Route as RegionerRouteImport } from './routes/regioner'
-import { Route as PersonvernRouteImport } from './routes/personvern'
-import { Route as PersonerRouteImport } from './routes/personer'
-import { Route as PersonRouteImport } from './routes/person'
-import { Route as OppdateringerRouteImport } from './routes/oppdateringer'
-import { Route as OmRouteImport } from './routes/om'
-import { Route as NyetableringerRouteImport } from './routes/nyetableringer'
-import { Route as KonkurserRouteImport } from './routes/konkurser'
-import { Route as KommunerRouteImport } from './routes/kommuner'
-import { Route as KartRouteImport } from './routes/kart'
-import { Route as FylkerRouteImport } from './routes/fylker'
-import { Route as DatakilderRouteImport } from './routes/datakilder'
-import { Route as BransjerRouteImport } from './routes/bransjer'
-import { Route as AffiliatesRouteImport } from './routes/affiliates'
-import { Route as SplatRouteImport } from './routes/$'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as SplatRouteImport } from './routes/$'
+import { Route as AffiliatesRouteImport } from './routes/affiliates'
+import { Route as BransjerRouteImport } from './routes/bransjer'
+import { Route as DatakilderRouteImport } from './routes/datakilder'
+import { Route as FylkerRouteImport } from './routes/fylker'
+import { Route as KartRouteImport } from './routes/kart'
+import { Route as KommunerRouteImport } from './routes/kommuner'
+import { Route as KonkurserRouteImport } from './routes/konkurser'
+import { Route as NyetableringerRouteImport } from './routes/nyetableringer'
+import { Route as OmRouteImport } from './routes/om'
+import { Route as OppdateringerRouteImport } from './routes/oppdateringer'
+import { Route as PersonRouteImport } from './routes/person'
+import { Route as PersonerRouteImport } from './routes/personer'
+import { Route as PersonvernRouteImport } from './routes/personvern'
+import { Route as RegionerRouteImport } from './routes/regioner'
+import { Route as SammenlignRouteImport } from './routes/sammenlign'
+import { Route as UtforskRouteImport } from './routes/utforsk'
+import { Route as VilkarRouteImport } from './routes/vilkar'
+import { Route as BedriftOrgnrRouteImport } from './routes/bedrift.$orgnr'
+import { Route as BransjeCodeRouteImport } from './routes/bransje.$code'
+import { Route as FylkeCodeRouteImport } from './routes/fylke.$code'
+import { Route as KommuneCodeRouteImport } from './routes/kommune.$code'
 import { Route as PersonIndexRouteImport } from './routes/person.index'
 import { Route as VirksomhetOrgnrRouteImport } from './routes/virksomhet.$orgnr'
-import { Route as KommuneCodeRouteImport } from './routes/kommune.$code'
-import { Route as FylkeCodeRouteImport } from './routes/fylke.$code'
-import { Route as BransjeCodeRouteImport } from './routes/bransje.$code'
-import { Route as BedriftOrgnrRouteImport } from './routes/bedrift.$orgnr'
 import { Route as PersonNameBirthdateRouteImport } from './routes/person.$name.$birthdate'
 
-const VilkarRoute = VilkarRouteImport.update({
-  id: '/vilkar',
-  path: '/vilkar',
+const IndexRoute = IndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => rootRouteImport,
+} as any).lazy(() => import('./routes/index.lazy').then((d) => d.Route))
+const SplatRoute = SplatRouteImport.update({
+  id: '/$',
+  path: '/$',
   getParentRoute: () => rootRouteImport,
 } as any)
-const UtforskRoute = UtforskRouteImport.update({
-  id: '/utforsk',
-  path: '/utforsk',
-  getParentRoute: () => rootRouteImport,
-} as any).lazy(() => import('./routes/utforsk.lazy').then((d) => d.Route))
-const SammenlignRoute = SammenlignRouteImport.update({
-  id: '/sammenlign',
-  path: '/sammenlign',
-  getParentRoute: () => rootRouteImport,
-} as any).lazy(() => import('./routes/sammenlign.lazy').then((d) => d.Route))
-const RegionerRoute = RegionerRouteImport.update({
-  id: '/regioner',
-  path: '/regioner',
-  getParentRoute: () => rootRouteImport,
-} as any).lazy(() => import('./routes/regioner.lazy').then((d) => d.Route))
-const PersonvernRoute = PersonvernRouteImport.update({
-  id: '/personvern',
-  path: '/personvern',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const PersonerRoute = PersonerRouteImport.update({
-  id: '/personer',
-  path: '/personer',
-  getParentRoute: () => rootRouteImport,
-} as any).lazy(() => import('./routes/personer.lazy').then((d) => d.Route))
-const PersonRoute = PersonRouteImport.update({
-  id: '/person',
-  path: '/person',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const OppdateringerRoute = OppdateringerRouteImport.update({
-  id: '/oppdateringer',
-  path: '/oppdateringer',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const OmRoute = OmRouteImport.update({
-  id: '/om',
-  path: '/om',
-  getParentRoute: () => rootRouteImport,
-} as any).lazy(() => import('./routes/om.lazy').then((d) => d.Route))
-const NyetableringerRoute = NyetableringerRouteImport.update({
-  id: '/nyetableringer',
-  path: '/nyetableringer',
-  getParentRoute: () => rootRouteImport,
-} as any).lazy(() =>
-  import('./routes/nyetableringer.lazy').then((d) => d.Route),
-)
-const KonkurserRoute = KonkurserRouteImport.update({
-  id: '/konkurser',
-  path: '/konkurser',
-  getParentRoute: () => rootRouteImport,
-} as any).lazy(() => import('./routes/konkurser.lazy').then((d) => d.Route))
-const KommunerRoute = KommunerRouteImport.update({
-  id: '/kommuner',
-  path: '/kommuner',
-  getParentRoute: () => rootRouteImport,
-} as any).lazy(() => import('./routes/kommuner.lazy').then((d) => d.Route))
-const KartRoute = KartRouteImport.update({
-  id: '/kart',
-  path: '/kart',
-  getParentRoute: () => rootRouteImport,
-} as any).lazy(() => import('./routes/kart.lazy').then((d) => d.Route))
-const FylkerRoute = FylkerRouteImport.update({
-  id: '/fylker',
-  path: '/fylker',
-  getParentRoute: () => rootRouteImport,
-} as any).lazy(() => import('./routes/fylker.lazy').then((d) => d.Route))
-const DatakilderRoute = DatakilderRouteImport.update({
-  id: '/datakilder',
-  path: '/datakilder',
+const AffiliatesRoute = AffiliatesRouteImport.update({
+  id: '/affiliates',
+  path: '/affiliates',
   getParentRoute: () => rootRouteImport,
 } as any)
 const BransjerRoute = BransjerRouteImport.update({
@@ -118,21 +56,103 @@ const BransjerRoute = BransjerRouteImport.update({
   path: '/bransjer',
   getParentRoute: () => rootRouteImport,
 } as any).lazy(() => import('./routes/bransjer.lazy').then((d) => d.Route))
-const AffiliatesRoute = AffiliatesRouteImport.update({
-  id: '/affiliates',
-  path: '/affiliates',
+const DatakilderRoute = DatakilderRouteImport.update({
+  id: '/datakilder',
+  path: '/datakilder',
   getParentRoute: () => rootRouteImport,
 } as any)
-const SplatRoute = SplatRouteImport.update({
-  id: '/$',
-  path: '/$',
+const FylkerRoute = FylkerRouteImport.update({
+  id: '/fylker',
+  path: '/fylker',
+  getParentRoute: () => rootRouteImport,
+} as any).lazy(() => import('./routes/fylker.lazy').then((d) => d.Route))
+const KartRoute = KartRouteImport.update({
+  id: '/kart',
+  path: '/kart',
+  getParentRoute: () => rootRouteImport,
+} as any).lazy(() => import('./routes/kart.lazy').then((d) => d.Route))
+const KommunerRoute = KommunerRouteImport.update({
+  id: '/kommuner',
+  path: '/kommuner',
+  getParentRoute: () => rootRouteImport,
+} as any).lazy(() => import('./routes/kommuner.lazy').then((d) => d.Route))
+const KonkurserRoute = KonkurserRouteImport.update({
+  id: '/konkurser',
+  path: '/konkurser',
+  getParentRoute: () => rootRouteImport,
+} as any).lazy(() => import('./routes/konkurser.lazy').then((d) => d.Route))
+const NyetableringerRoute = NyetableringerRouteImport.update({
+  id: '/nyetableringer',
+  path: '/nyetableringer',
+  getParentRoute: () => rootRouteImport,
+} as any).lazy(() =>
+  import('./routes/nyetableringer.lazy').then((d) => d.Route),
+)
+const OmRoute = OmRouteImport.update({
+  id: '/om',
+  path: '/om',
+  getParentRoute: () => rootRouteImport,
+} as any).lazy(() => import('./routes/om.lazy').then((d) => d.Route))
+const OppdateringerRoute = OppdateringerRouteImport.update({
+  id: '/oppdateringer',
+  path: '/oppdateringer',
   getParentRoute: () => rootRouteImport,
 } as any)
-const IndexRoute = IndexRouteImport.update({
-  id: '/',
-  path: '/',
+const PersonRoute = PersonRouteImport.update({
+  id: '/person',
+  path: '/person',
   getParentRoute: () => rootRouteImport,
-} as any).lazy(() => import('./routes/index.lazy').then((d) => d.Route))
+} as any)
+const PersonerRoute = PersonerRouteImport.update({
+  id: '/personer',
+  path: '/personer',
+  getParentRoute: () => rootRouteImport,
+} as any).lazy(() => import('./routes/personer.lazy').then((d) => d.Route))
+const PersonvernRoute = PersonvernRouteImport.update({
+  id: '/personvern',
+  path: '/personvern',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const RegionerRoute = RegionerRouteImport.update({
+  id: '/regioner',
+  path: '/regioner',
+  getParentRoute: () => rootRouteImport,
+} as any).lazy(() => import('./routes/regioner.lazy').then((d) => d.Route))
+const SammenlignRoute = SammenlignRouteImport.update({
+  id: '/sammenlign',
+  path: '/sammenlign',
+  getParentRoute: () => rootRouteImport,
+} as any).lazy(() => import('./routes/sammenlign.lazy').then((d) => d.Route))
+const UtforskRoute = UtforskRouteImport.update({
+  id: '/utforsk',
+  path: '/utforsk',
+  getParentRoute: () => rootRouteImport,
+} as any).lazy(() => import('./routes/utforsk.lazy').then((d) => d.Route))
+const VilkarRoute = VilkarRouteImport.update({
+  id: '/vilkar',
+  path: '/vilkar',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const BedriftOrgnrRoute = BedriftOrgnrRouteImport.update({
+  id: '/bedrift/$orgnr',
+  path: '/bedrift/$orgnr',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const BransjeCodeRoute = BransjeCodeRouteImport.update({
+  id: '/bransje/$code',
+  path: '/bransje/$code',
+  getParentRoute: () => rootRouteImport,
+} as any).lazy(() => import('./routes/bransje.$code.lazy').then((d) => d.Route))
+const FylkeCodeRoute = FylkeCodeRouteImport.update({
+  id: '/fylke/$code',
+  path: '/fylke/$code',
+  getParentRoute: () => rootRouteImport,
+} as any).lazy(() => import('./routes/fylke.$code.lazy').then((d) => d.Route))
+const KommuneCodeRoute = KommuneCodeRouteImport.update({
+  id: '/kommune/$code',
+  path: '/kommune/$code',
+  getParentRoute: () => rootRouteImport,
+} as any).lazy(() => import('./routes/kommune.$code.lazy').then((d) => d.Route))
 const PersonIndexRoute = PersonIndexRouteImport.update({
   id: '/',
   path: '/',
@@ -145,26 +165,6 @@ const VirksomhetOrgnrRoute = VirksomhetOrgnrRouteImport.update({
 } as any).lazy(() =>
   import('./routes/virksomhet.$orgnr.lazy').then((d) => d.Route),
 )
-const KommuneCodeRoute = KommuneCodeRouteImport.update({
-  id: '/kommune/$code',
-  path: '/kommune/$code',
-  getParentRoute: () => rootRouteImport,
-} as any).lazy(() => import('./routes/kommune.$code.lazy').then((d) => d.Route))
-const FylkeCodeRoute = FylkeCodeRouteImport.update({
-  id: '/fylke/$code',
-  path: '/fylke/$code',
-  getParentRoute: () => rootRouteImport,
-} as any).lazy(() => import('./routes/fylke.$code.lazy').then((d) => d.Route))
-const BransjeCodeRoute = BransjeCodeRouteImport.update({
-  id: '/bransje/$code',
-  path: '/bransje/$code',
-  getParentRoute: () => rootRouteImport,
-} as any).lazy(() => import('./routes/bransje.$code.lazy').then((d) => d.Route))
-const BedriftOrgnrRoute = BedriftOrgnrRouteImport.update({
-  id: '/bedrift/$orgnr',
-  path: '/bedrift/$orgnr',
-  getParentRoute: () => rootRouteImport,
-} as any)
 const PersonNameBirthdateRoute = PersonNameBirthdateRouteImport.update({
   id: '/$name/$birthdate',
   path: '/$name/$birthdate',
@@ -372,123 +372,11 @@ export interface RootRouteChildren {
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
-    '/vilkar': {
-      id: '/vilkar'
-      path: '/vilkar'
-      fullPath: '/vilkar'
-      preLoaderRoute: typeof VilkarRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/utforsk': {
-      id: '/utforsk'
-      path: '/utforsk'
-      fullPath: '/utforsk'
-      preLoaderRoute: typeof UtforskRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/sammenlign': {
-      id: '/sammenlign'
-      path: '/sammenlign'
-      fullPath: '/sammenlign'
-      preLoaderRoute: typeof SammenlignRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/regioner': {
-      id: '/regioner'
-      path: '/regioner'
-      fullPath: '/regioner'
-      preLoaderRoute: typeof RegionerRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/personvern': {
-      id: '/personvern'
-      path: '/personvern'
-      fullPath: '/personvern'
-      preLoaderRoute: typeof PersonvernRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/personer': {
-      id: '/personer'
-      path: '/personer'
-      fullPath: '/personer'
-      preLoaderRoute: typeof PersonerRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/person': {
-      id: '/person'
-      path: '/person'
-      fullPath: '/person'
-      preLoaderRoute: typeof PersonRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/oppdateringer': {
-      id: '/oppdateringer'
-      path: '/oppdateringer'
-      fullPath: '/oppdateringer'
-      preLoaderRoute: typeof OppdateringerRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/om': {
-      id: '/om'
-      path: '/om'
-      fullPath: '/om'
-      preLoaderRoute: typeof OmRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/nyetableringer': {
-      id: '/nyetableringer'
-      path: '/nyetableringer'
-      fullPath: '/nyetableringer'
-      preLoaderRoute: typeof NyetableringerRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/konkurser': {
-      id: '/konkurser'
-      path: '/konkurser'
-      fullPath: '/konkurser'
-      preLoaderRoute: typeof KonkurserRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/kommuner': {
-      id: '/kommuner'
-      path: '/kommuner'
-      fullPath: '/kommuner'
-      preLoaderRoute: typeof KommunerRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/kart': {
-      id: '/kart'
-      path: '/kart'
-      fullPath: '/kart'
-      preLoaderRoute: typeof KartRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/fylker': {
-      id: '/fylker'
-      path: '/fylker'
-      fullPath: '/fylker'
-      preLoaderRoute: typeof FylkerRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/datakilder': {
-      id: '/datakilder'
-      path: '/datakilder'
-      fullPath: '/datakilder'
-      preLoaderRoute: typeof DatakilderRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/bransjer': {
-      id: '/bransjer'
-      path: '/bransjer'
-      fullPath: '/bransjer'
-      preLoaderRoute: typeof BransjerRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/affiliates': {
-      id: '/affiliates'
-      path: '/affiliates'
-      fullPath: '/affiliates'
-      preLoaderRoute: typeof AffiliatesRouteImport
+    '/': {
+      id: '/'
+      path: '/'
+      fullPath: '/'
+      preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/$': {
@@ -498,11 +386,151 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof SplatRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/': {
-      id: '/'
-      path: '/'
-      fullPath: '/'
-      preLoaderRoute: typeof IndexRouteImport
+    '/affiliates': {
+      id: '/affiliates'
+      path: '/affiliates'
+      fullPath: '/affiliates'
+      preLoaderRoute: typeof AffiliatesRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/bransjer': {
+      id: '/bransjer'
+      path: '/bransjer'
+      fullPath: '/bransjer'
+      preLoaderRoute: typeof BransjerRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/datakilder': {
+      id: '/datakilder'
+      path: '/datakilder'
+      fullPath: '/datakilder'
+      preLoaderRoute: typeof DatakilderRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/fylker': {
+      id: '/fylker'
+      path: '/fylker'
+      fullPath: '/fylker'
+      preLoaderRoute: typeof FylkerRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/kart': {
+      id: '/kart'
+      path: '/kart'
+      fullPath: '/kart'
+      preLoaderRoute: typeof KartRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/kommuner': {
+      id: '/kommuner'
+      path: '/kommuner'
+      fullPath: '/kommuner'
+      preLoaderRoute: typeof KommunerRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/konkurser': {
+      id: '/konkurser'
+      path: '/konkurser'
+      fullPath: '/konkurser'
+      preLoaderRoute: typeof KonkurserRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/nyetableringer': {
+      id: '/nyetableringer'
+      path: '/nyetableringer'
+      fullPath: '/nyetableringer'
+      preLoaderRoute: typeof NyetableringerRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/om': {
+      id: '/om'
+      path: '/om'
+      fullPath: '/om'
+      preLoaderRoute: typeof OmRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/oppdateringer': {
+      id: '/oppdateringer'
+      path: '/oppdateringer'
+      fullPath: '/oppdateringer'
+      preLoaderRoute: typeof OppdateringerRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/person': {
+      id: '/person'
+      path: '/person'
+      fullPath: '/person'
+      preLoaderRoute: typeof PersonRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/personer': {
+      id: '/personer'
+      path: '/personer'
+      fullPath: '/personer'
+      preLoaderRoute: typeof PersonerRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/personvern': {
+      id: '/personvern'
+      path: '/personvern'
+      fullPath: '/personvern'
+      preLoaderRoute: typeof PersonvernRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/regioner': {
+      id: '/regioner'
+      path: '/regioner'
+      fullPath: '/regioner'
+      preLoaderRoute: typeof RegionerRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/sammenlign': {
+      id: '/sammenlign'
+      path: '/sammenlign'
+      fullPath: '/sammenlign'
+      preLoaderRoute: typeof SammenlignRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/utforsk': {
+      id: '/utforsk'
+      path: '/utforsk'
+      fullPath: '/utforsk'
+      preLoaderRoute: typeof UtforskRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/vilkar': {
+      id: '/vilkar'
+      path: '/vilkar'
+      fullPath: '/vilkar'
+      preLoaderRoute: typeof VilkarRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/bedrift/$orgnr': {
+      id: '/bedrift/$orgnr'
+      path: '/bedrift/$orgnr'
+      fullPath: '/bedrift/$orgnr'
+      preLoaderRoute: typeof BedriftOrgnrRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/bransje/$code': {
+      id: '/bransje/$code'
+      path: '/bransje/$code'
+      fullPath: '/bransje/$code'
+      preLoaderRoute: typeof BransjeCodeRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/fylke/$code': {
+      id: '/fylke/$code'
+      path: '/fylke/$code'
+      fullPath: '/fylke/$code'
+      preLoaderRoute: typeof FylkeCodeRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/kommune/$code': {
+      id: '/kommune/$code'
+      path: '/kommune/$code'
+      fullPath: '/kommune/$code'
+      preLoaderRoute: typeof KommuneCodeRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/person/': {
@@ -517,34 +545,6 @@ declare module '@tanstack/react-router' {
       path: '/virksomhet/$orgnr'
       fullPath: '/virksomhet/$orgnr'
       preLoaderRoute: typeof VirksomhetOrgnrRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/kommune/$code': {
-      id: '/kommune/$code'
-      path: '/kommune/$code'
-      fullPath: '/kommune/$code'
-      preLoaderRoute: typeof KommuneCodeRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/fylke/$code': {
-      id: '/fylke/$code'
-      path: '/fylke/$code'
-      fullPath: '/fylke/$code'
-      preLoaderRoute: typeof FylkeCodeRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/bransje/$code': {
-      id: '/bransje/$code'
-      path: '/bransje/$code'
-      fullPath: '/bransje/$code'
-      preLoaderRoute: typeof BransjeCodeRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/bedrift/$orgnr': {
-      id: '/bedrift/$orgnr'
-      path: '/bedrift/$orgnr'
-      fullPath: '/bedrift/$orgnr'
-      preLoaderRoute: typeof BedriftOrgnrRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/person/$name/$birthdate': {
