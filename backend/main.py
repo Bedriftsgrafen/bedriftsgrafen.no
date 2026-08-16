@@ -232,8 +232,10 @@ async def generic_exception_handler(request: Request, exc: Exception):
         )
 
     # Always log the full exception
-    logger.exception(
-        f"Unhandled exception: {exc}",
+    logger.error(
+        "Unhandled exception: %s",
+        exc,
+        exc_info=exc,
         extra={"path": request.url.path, "method": request.method},
     )
 

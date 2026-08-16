@@ -13,7 +13,7 @@ import pytest
 from httpx import ASGITransport, AsyncClient
 
 from database import get_db
-from main import app
+from main import app, generic_exception_handler
 
 
 # Override DB dependency (not needed for mocked service, but avoids startup errors)
@@ -22,6 +22,25 @@ async def override_get_db():
 
 
 app.dependency_overrides[get_db] = override_get_db
+
+
+@pytest.mark.asyncio
+async def test_generic_exception_handler_logs_supplied_exception():
+    request = MagicMock()
+    request.url.path = "/v1/test"
+    request.method = "GET"
+    exc = RuntimeError("database unavailable")
+
+    with patch("main.ENVIRONMENT", "production"), patch("main.logger") as mock_logger:
+        response = await generic_exception_handler(request, exc)
+
+    assert response.status_code == 500
+    mock_logger.error.assert_called_once_with(
+        "Unhandled exception: %s",
+        exc,
+        exc_info=exc,
+        extra={"path": "/v1/test", "method": "GET"},
+    )
 
 
 @pytest.mark.asyncio

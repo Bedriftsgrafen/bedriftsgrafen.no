@@ -1,4 +1,4 @@
-from unittest.mock import AsyncMock, MagicMock
+from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
@@ -19,6 +19,22 @@ def mock_db_session():
 @pytest.fixture
 def repo(mock_db_session):
     return StatsRepository(mock_db_session)
+
+
+@pytest.fixture(autouse=True)
+def mock_latest_year_cache():
+    with patch("repositories.stats_repository._latest_year_cache") as cache:
+        cache.get = AsyncMock(return_value=None)
+        cache.set = AsyncMock()
+        yield cache
+
+
+@pytest.fixture(autouse=True)
+def mock_national_density_cache():
+    with patch("repositories.stats_repository._national_density_cache") as cache:
+        cache.get = AsyncMock(return_value=None)
+        cache.set = AsyncMock()
+        yield cache
 
 
 @pytest.mark.asyncio
@@ -71,12 +87,13 @@ async def test_get_municipality_stats(repo, mock_db_session):
 
 
 @pytest.mark.asyncio
-async def test_get_latest_population_year(repo, mock_db_session):
+async def test_get_latest_population_year(repo, mock_db_session, mock_latest_year_cache):
     mock_db_session.execute.return_value.scalar.return_value = 2023
 
     year = await repo.get_latest_population_year()
     assert year == 2023
     assert mock_db_session.execute.called
+    mock_latest_year_cache.set.assert_awaited_once_with("year", 2023)
 
 
 @pytest.mark.asyncio
