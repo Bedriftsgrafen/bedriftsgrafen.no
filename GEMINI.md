@@ -1,31 +1,26 @@
 # Bedriftsgrafen.no — Gemini Context
 
-**Bedriftsgrafen.no** is a financial analytics platform for 1.14M Norwegian companies.
+**Bedriftsgrafen.no** is a financial analytics platform for ~1.1M Norwegian companies.
+**Stack:** React 19 + TypeScript + Vite | FastAPI + Python 3.14 | PostgreSQL 18 | Redis | Docker Compose
 
-**Stack:** React 19 + TypeScript + Vite | FastAPI + Python 3.14 | PostgreSQL 18 | Docker Compose
+## Read this first
 
-## Mandatory Skills
+**`CLAUDE.md` in the repository root is the single source of truth** for architecture, commands, conventions and invariants. Read it before making changes. This file only restates the non-negotiables; it deliberately does not duplicate anything else, so it cannot drift.
 
-All development must follow the skills defined in `.agent/skills/`:
+## Non-negotiables
 
-| Skill | Path |
-|-------|------|
-| Code Review | `.agent/skills/code_review_process/SKILL.md` |
-| Safe Push | `.agent/skills/safe_push/SKILL.md` |
-| Git Conventions | `.agent/skills/git_commit_convention/SKILL.md` |
-| Feature Implementation | `.agent/skills/feature_implementation/SKILL.md` |
-| Database Migration | `.agent/skills/database_migration/SKILL.md` |
-| Dependency Management | `.agent/skills/dependency_management/SKILL.md` |
+- **Language:** UI text Norwegian. Code, comments and commit messages English. Financial/domain variables Norwegian (`driftsresultat`, `egenkapital`, `omloepsmidler`).
+- **Async everywhere** in the backend (`async def`, `asyncpg`). No blocking I/O in async functions, no N+1 queries.
+- **Layering:** routers → services → repositories. Routers never touch the DB; repositories hold no business rules.
+- **Docker networking:** internal hostnames (`bedriftsgrafen-db`, `bedriftsgrafen-redis`), never `localhost`.
+- **Verify before pushing:** `npm run check` (or `npm run validate && npm run test`). New behaviour without tests is incomplete.
+- **Commits do not deploy.** Production requires `docker compose -f docker-compose.prod.yml up -d --build`. Never commit without explicit user approval.
+- **Do not create new summary/status markdown files.** Keep progress in the conversation.
 
-## Key References
+## Workflows
 
-- **Architecture & patterns:** `.github/copilot-instructions.md`
-- **API endpoints:** `backend/API_ENDPOINTS.md`
-- **Frontend style:** `frontend/STYLE_GUIDE.md`
-- **Operations:** `OPERATIONS.md`
+Versioned skills in `.agent/skills/`: `code_review_process`, `safe_push`, `git_commit_convention`, `feature_implementation`, `database_migration`, `dependency_management`, `testing_patterns`, `lighthouse_ci`.
 
-## Conventions
+## Further reference
 
-- **UI text:** Norwegian. **Code/comments:** English. **Domain variables:** Norwegian (`driftsresultat`, `egenkapital`).
-- **All backend code must be async** (`async def`, `asyncpg` driver).
-- **Docker networking:** Services use internal hostnames (`bedriftsgrafen-db`), never `localhost`.
+`CLAUDE.md` · `backend/API_ENDPOINTS.md` · `frontend/STYLE_GUIDE.md` · `OPERATIONS.md` · `.github/copilot-instructions.md` (code examples)

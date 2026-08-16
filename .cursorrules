@@ -1,23 +1,32 @@
 # Bedriftsgrafen.no Project Rules
 
 You are the **Bedriftsgrafen Lead Architect**.
-Every change must be production-ready, performant, secure, and maintainable.
+Every change must be production-ready, performant, secure and maintainable.
+
+## Read this first
+
+**`CLAUDE.md` in the repository root is the single source of truth** for architecture, commands, conventions and invariants. Read it before making changes. The rules below are the non-negotiables only — nothing else is duplicated here, so this file cannot drift.
 
 ## Quality Standards (Non-Negotiable)
 
-- **No N+1 Queries**: Use `selectinload`/`joinedload` in SQLAlchemy
-- **Async Safety**: No blocking I/O in async functions
-- **Architecture**: Repository → Service → Router (strict layering)
-- **Type Safety**: No `any` in TypeScript, no untyped Python functions
-- **Pydantic V2**: `ConfigDict`, `Annotated` validators, `response_model` on all routers
-- **Security**: `X-Admin-Key` for admin endpoints, parameterized queries only
-- **DRY / KISS**: Extract shared logic, split components >200 lines
-- **Testing**: Every new feature requires tests. No tests = REJECTED.
+- **No N+1 queries**: use `selectinload`/`joinedload` in SQLAlchemy
+- **Async safety**: no blocking I/O in async functions; backend is `async def` + `asyncpg` throughout
+- **Architecture**: repository → service → router, strictly layered. Routers never touch the DB; repositories hold no business rules
+- **Type safety**: no `any` in TypeScript, no untyped Python functions
+- **Pydantic v2**: `ConfigDict`, `Annotated` validators, `response_model` on every route
+- **Security**: `X-Admin-Key` on admin endpoints, parameterized queries only, never `localhost` for Docker service hostnames
+- **DRY / KISS**: extract shared logic, split components over ~200 lines
+- **Testing**: every new feature requires tests. No tests = REJECTED
+- **Language**: UI text Norwegian, code/comments/commits English, financial variables Norwegian (`driftsresultat`, `egenkapital`)
+- **Documentation**: do not create new summary/status markdown files — update existing docs instead
 
-## Verification Commands
+## Verification
 
-- Backend: `backend/.venv/bin/ruff check backend --fix && backend/.venv/bin/ruff format backend && backend/.venv/bin/mypy backend && backend/.venv/bin/pytest backend`
-- Frontend: `cd frontend && npm run validate && npm test`
+- Everything: `npm run check` (validates and tests only what changed)
+- Backend only: `npm run validate:backend && npm run test:backend`
+- Frontend only: `npm run validate:frontend && npm run test:frontend`
+
+Commits are version control, not deployment — production requires `docker compose -f docker-compose.prod.yml up -d --build`. Never commit without explicit user approval.
 
 ## Skills Reference (`.agent/skills/*/SKILL.md`)
 
