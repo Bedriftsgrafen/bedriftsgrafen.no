@@ -12,7 +12,7 @@ description: Run Lighthouse CI audits for performance, accessibility, SEO, and b
 npm run lighthouse
 ```
 
-Prerequisites: `npm install` at root level. No backend needed (static pages only).
+Prerequisites: `npm install` at root level and a locally available Chrome/Chromium. No backend needed (static pages only).
 
 ## Audited Pages
 
@@ -50,17 +50,17 @@ Performance is relaxed due to third-party scripts. Prioritize accessibility and 
 ## Reports
 
 After running:
-1. JSON reports saved to `.lighthouseci/` (gitignored)
-2. Shareable link printed to terminal (auto-expires after 7 days)
+1. HTML and JSON reports are saved to `.lighthouseci/` (gitignored)
+2. `summary.json` contains median scores, assertions, and report paths
 
 ## Manual Steps
 
 ```bash
 cd frontend && npm run build         # Step 1: Build
-npx lhci autorun                     # Step 2: Audit (from project root)
+node scripts/run-lighthouse.mjs       # Step 2: Audit (from project root)
 ```
 
-For stable scores: `npx lhci autorun --collect.numberOfRuns=5`
+For a focused smoke run: `node scripts/run-lighthouse.mjs --runs 1 --url http://localhost:5174/`
 
 ## Troubleshooting
 
@@ -68,7 +68,7 @@ For stable scores: `npx lhci autorun --collect.numberOfRuns=5`
 |---------|-----|
 | No Chrome found | `sudo apt install chromium-browser` or set `CHROME_PATH` |
 | Port 5174 in use | `fuser -k 5174/tcp` |
-| Flaky performance scores | Increase runs with `--collect.numberOfRuns=5` |
+| Flaky performance scores | Increase `numberOfRuns` in `lighthouserc.cjs` |
 
 ## Disabled Audits
 

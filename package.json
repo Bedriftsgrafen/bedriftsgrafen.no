@@ -19,15 +19,16 @@
     "test:backend": "if [ -f backend/.venv/bin/pytest ]; then (cd backend && .venv/bin/pytest tests/unit -v); else docker exec bedriftsgrafen-backend-dev python3 -m pytest tests/unit -v; fi",
     "test": "npm run test:frontend && npm run test:backend",
     "check": "bash scripts/smart-check.sh",
-    "lighthouse": "cd frontend && npm run build && cd .. && lhci autorun",
+    "lighthouse": "npm run build --workspace=frontend && node scripts/run-lighthouse.mjs",
     "security:audit": "bash scripts/security-audit.sh",
     "security:frontend": "cd frontend && npm audit",
     "security:backend": "cd backend && pip install safety pip-audit && safety check && pip-audit",
     "security:fix": "npm audit fix && cd frontend && npm audit fix"
   },
   "devDependencies": {
-    "@lhci/cli": "0.15.1",
+    "chrome-launcher": "1.2.1",
     "husky": "^9.1.7",
+    "lighthouse": "13.4.1",
     "lint-staged": "^17.3.0"
   },
   "overrides": {

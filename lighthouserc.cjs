@@ -1,10 +1,8 @@
 /**
  * Lighthouse CI Configuration
  *
- * Run locally:   npm run lighthouse
- * Run in CI:     lhci autorun
- *
- * Reports are uploaded to temporary-public-storage (auto-deletes after 7 days)
+ * Run locally or in CI: npm run lighthouse
+ * Reports are written to .lighthouseci/.
  */
 module.exports = {
     ci: {
@@ -25,7 +23,9 @@ module.exports = {
                 'http://localhost:5174/kommune/0301', // Example municipality (Oslo)
             ],
             // Start Vite preview server (handles SPA routing with fallback to index.html)
-            startServerCommand: 'npm run preview --prefix frontend -- --port 5174 --strictPort',
+            startServerCommand: 'node',
+            startServerArgs: ['../node_modules/vite/bin/vite.js', 'preview', '--port', '5174', '--strictPort'],
+            startServerCwd: 'frontend',
             startServerReadyPattern: 'Local:',
             startServerReadyTimeout: 30000,
             numberOfRuns: 3, // Run 3 times and take median for accuracy
@@ -78,9 +78,8 @@ module.exports = {
                 'errors-in-console': 'off', // Only an issue if backend not running
             },
         },
-        upload: {
-            // For local runs, use temporary public storage (free, auto-deletes after 7 days)
-            target: 'temporary-public-storage',
+        runner: {
+            reportDir: '.lighthouseci',
         },
     },
 };
