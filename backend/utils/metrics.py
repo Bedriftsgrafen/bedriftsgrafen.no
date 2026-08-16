@@ -149,7 +149,14 @@ def init_metrics() -> None:
                     result=cache_result,
                 ).inc(0)
 
-    for setting in ["enabled", "rate_per_second", "burst", "wait_timeout_seconds"]:
+    for setting in [
+        "enabled",
+        "rate_per_second",
+        "burst",
+        "wait_timeout_seconds",
+        "background_rate_per_second",
+        "background_burst",
+    ]:
         BRREG_EGRESS_CONFIG.labels(setting=setting).set(0)
 
     for error_type in ["timeout", "redis"]:

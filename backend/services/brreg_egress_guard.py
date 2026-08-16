@@ -21,6 +21,7 @@ from utils.metrics import (
 from utils.redis_client import get_redis
 
 _BUCKET_KEY = "brreg:egress:global"
+_BACKGROUND_BUCKET_KEY = "brreg:egress:background"
 _TOKEN_COST = 1.0
 
 _REDIS_BUCKET_SCRIPT = """
@@ -76,17 +77,31 @@ class BrregEgressGuardConfig:
     burst: int | None
     wait_timeout_seconds: float
     redis_timeout_seconds: float
+    background_rate_per_second: float | None = None
+    background_burst: int | None = None
 
     @property
     def configured(self) -> bool:
         return self.rate_per_second is not None and self.burst is not None
 
     @property
+    def background_configured(self) -> bool:
+        return self.background_rate_per_second is not None and self.background_burst is not None
+
+    @property
     def ttl_ms(self) -> int:
-        if not self.rate_per_second or not self.burst:
-            return 1000
-        refill_seconds = self.burst / self.rate_per_second
-        return max(1000, math.ceil((refill_seconds * 2 + 1) * 1000))
+        return _bucket_ttl_ms(self.rate_per_second, self.burst)
+
+    @property
+    def background_ttl_ms(self) -> int:
+        return _bucket_ttl_ms(self.background_rate_per_second, self.background_burst)
+
+
+def _bucket_ttl_ms(rate_per_second: float | None, burst: int | None) -> int:
+    if not rate_per_second or not burst:
+        return 1000
+    refill_seconds = burst / rate_per_second
+    return max(1000, math.ceil((refill_seconds * 2 + 1) * 1000))
 
 
 def _flag_from_env(name: str, default: bool) -> bool:
@@ -114,18 +129,38 @@ def load_brreg_egress_guard_config() -> BrregEgressGuardConfig:
     """Load guard config from environment without inventing a production cap."""
     wait_timeout_seconds = cast(float, _float_from_env("BRREG_EGRESS_WAIT_TIMEOUT_SECONDS", 0.0))
     redis_timeout_seconds = cast(float, _float_from_env("BRREG_EGRESS_REDIS_TIMEOUT_SECONDS", 1.0))
+    background_rate_per_second = _float_from_env("BRREG_BACKGROUND_EGRESS_RATE_PER_SECOND")
+    background_burst = _int_from_env("BRREG_BACKGROUND_EGRESS_BURST")
     config = BrregEgressGuardConfig(
         enabled=_flag_from_env("BRREG_EGRESS_GUARD_ENABLED", True),
         rate_per_second=_float_from_env("BRREG_EGRESS_RATE_PER_SECOND"),
         burst=_int_from_env("BRREG_EGRESS_BURST"),
         wait_timeout_seconds=wait_timeout_seconds,
         redis_timeout_seconds=redis_timeout_seconds,
+        background_rate_per_second=background_rate_per_second,
+        background_burst=background_burst,
     )
     if config.enabled:
         if config.rate_per_second is None or not math.isfinite(config.rate_per_second) or config.rate_per_second <= 0:
             raise ValueError("BRREG_EGRESS_RATE_PER_SECOND must be a finite number greater than zero")
         if config.burst is None or config.burst <= 0:
             raise ValueError("BRREG_EGRESS_BURST must be a positive integer")
+        if (config.background_rate_per_second is None) != (config.background_burst is None):
+            raise ValueError(
+                "BRREG_BACKGROUND_EGRESS_RATE_PER_SECOND and BRREG_BACKGROUND_EGRESS_BURST must be set together"
+            )
+        if config.background_rate_per_second is not None:
+            if not math.isfinite(config.background_rate_per_second) or config.background_rate_per_second <= 0:
+                raise ValueError("BRREG_BACKGROUND_EGRESS_RATE_PER_SECOND must be greater than zero")
+            if config.background_rate_per_second >= config.rate_per_second:
+                raise ValueError(
+                    "BRREG_BACKGROUND_EGRESS_RATE_PER_SECOND must be lower than BRREG_EGRESS_RATE_PER_SECOND"
+                )
+        if config.background_burst is not None:
+            if config.background_burst <= 0:
+                raise ValueError("BRREG_BACKGROUND_EGRESS_BURST must be a positive integer")
+            if config.burst is not None and config.background_burst > config.burst:
+                raise ValueError("BRREG_BACKGROUND_EGRESS_BURST must not exceed BRREG_EGRESS_BURST")
     if not math.isfinite(config.wait_timeout_seconds) or config.wait_timeout_seconds < 0:
         raise ValueError("BRREG_EGRESS_WAIT_TIMEOUT_SECONDS must be a finite non-negative number")
     if not math.isfinite(config.redis_timeout_seconds) or config.redis_timeout_seconds <= 0:
@@ -134,6 +169,8 @@ def load_brreg_egress_guard_config() -> BrregEgressGuardConfig:
     BRREG_EGRESS_CONFIG.labels(setting="rate_per_second").set(config.rate_per_second or 0)
     BRREG_EGRESS_CONFIG.labels(setting="burst").set(config.burst or 0)
     BRREG_EGRESS_CONFIG.labels(setting="wait_timeout_seconds").set(config.wait_timeout_seconds)
+    BRREG_EGRESS_CONFIG.labels(setting="background_rate_per_second").set(config.background_rate_per_second or 0)
+    BRREG_EGRESS_CONFIG.labels(setting="background_burst").set(config.background_burst or 0)
     return config
 
 
@@ -149,8 +186,15 @@ def _record_decision(endpoint: str, traffic_class: str, result: str) -> None:
     BRREG_GUARD_DECISIONS_TOTAL.labels(endpoint=endpoint, traffic_class=traffic_class, result=result).inc()
 
 
-async def _eval_bucket(config: BrregEgressGuardConfig) -> tuple[bool, int]:
-    if not config.rate_per_second or not config.burst:
+async def _eval_bucket(
+    config: BrregEgressGuardConfig,
+    *,
+    key: str,
+    rate_per_second: float | None,
+    burst: int | None,
+    ttl_ms: int,
+) -> tuple[bool, int]:
+    if not rate_per_second or not burst:
         raise BrregEgressGuardError("Brreg egress guard is not configured")
 
     redis = get_redis()
@@ -160,12 +204,12 @@ async def _eval_bucket(config: BrregEgressGuardConfig) -> tuple[bool, int]:
         redis.eval(
             _REDIS_BUCKET_SCRIPT,
             1,
-            _BUCKET_KEY,
-            str(config.rate_per_second),
-            str(config.burst),
+            key,
+            str(rate_per_second),
+            str(burst),
             str(_TOKEN_COST),
             str(now_ms),
-            str(config.ttl_ms),
+            str(ttl_ms),
         ),
     )
     result = await asyncio.wait_for(eval_result, timeout=config.redis_timeout_seconds)
@@ -173,6 +217,73 @@ async def _eval_bucket(config: BrregEgressGuardConfig) -> tuple[bool, int]:
     allowed = int(values[0]) == 1
     wait_ms = int(values[1]) if len(values) > 1 else 0
     return allowed, wait_ms
+
+
+async def _acquire_bucket_capacity(
+    *,
+    endpoint: str,
+    traffic_class: str,
+    config: BrregEgressGuardConfig,
+    key: str,
+    rate_per_second: float | None,
+    burst: int | None,
+    ttl_ms: int,
+    record_decisions: bool,
+    exhausted_message: str,
+) -> None:
+    deadline = time.monotonic() + max(0.0, config.wait_timeout_seconds)
+    total_wait = 0.0
+
+    while True:
+        try:
+            allowed, wait_ms = await _eval_bucket(
+                config,
+                key=key,
+                rate_per_second=rate_per_second,
+                burst=burst,
+                ttl_ms=ttl_ms,
+            )
+        except TimeoutError as exc:
+            if record_decisions:
+                _record_decision(endpoint, traffic_class, "rejected")
+            BRREG_GUARD_REDIS_ERRORS_TOTAL.labels(operation="acquire", error_type="timeout").inc()
+            raise BrregEgressGuardError("Brreg egress guard Redis timeout") from exc
+        except RedisError as exc:
+            if record_decisions:
+                _record_decision(endpoint, traffic_class, "rejected")
+            BRREG_GUARD_REDIS_ERRORS_TOTAL.labels(operation="acquire", error_type="redis").inc()
+            raise BrregEgressGuardError("Brreg egress guard Redis unavailable") from exc
+        except BrregEgressGuardError:
+            if record_decisions:
+                _record_decision(endpoint, traffic_class, "rejected")
+            raise
+        except Exception as exc:
+            if record_decisions:
+                _record_decision(endpoint, traffic_class, "rejected")
+            BRREG_GUARD_REDIS_ERRORS_TOTAL.labels(operation="acquire", error_type="redis").inc()
+            raise BrregEgressGuardError("Brreg egress guard failed closed") from exc
+
+        if allowed:
+            if record_decisions:
+                _record_decision(endpoint, traffic_class, "allowed")
+            if record_decisions and total_wait > 0:
+                BRREG_GUARD_WAIT_SECONDS.labels(endpoint=endpoint, traffic_class=traffic_class).observe(total_wait)
+            return
+
+        wait_seconds = max(0.0, wait_ms / 1000)
+        remaining = deadline - time.monotonic()
+        if wait_seconds <= 0 or wait_seconds > remaining:
+            if record_decisions:
+                _record_decision(endpoint, traffic_class, "rejected")
+            raise BrregEgressGuardError(
+                exhausted_message,
+                retry_after_seconds=wait_seconds if wait_seconds > 0 else None,
+            )
+
+        if record_decisions:
+            _record_decision(endpoint, traffic_class, "waited")
+        await asyncio.sleep(wait_seconds)
+        total_wait += wait_seconds
 
 
 async def acquire_brreg_egress_capacity(
@@ -196,46 +307,34 @@ async def acquire_brreg_egress_capacity(
         _record_decision(endpoint, traffic_class, "rejected")
         raise BrregEgressGuardError("Brreg egress guard is enabled but rate/burst are not configured")
 
-    deadline = time.monotonic() + max(0.0, config.wait_timeout_seconds)
-    total_wait = 0.0
-
-    while True:
+    if traffic_class == "background" and config.background_configured:
         try:
-            allowed, wait_ms = await _eval_bucket(config)
-        except TimeoutError as exc:
-            _record_decision(endpoint, traffic_class, "rejected")
-            BRREG_GUARD_REDIS_ERRORS_TOTAL.labels(operation="acquire", error_type="timeout").inc()
-            raise BrregEgressGuardError("Brreg egress guard Redis timeout") from exc
-        except RedisError as exc:
-            _record_decision(endpoint, traffic_class, "rejected")
-            BRREG_GUARD_REDIS_ERRORS_TOTAL.labels(operation="acquire", error_type="redis").inc()
-            raise BrregEgressGuardError("Brreg egress guard Redis unavailable") from exc
+            await _acquire_bucket_capacity(
+                endpoint=endpoint,
+                traffic_class=traffic_class,
+                config=config,
+                key=_BACKGROUND_BUCKET_KEY,
+                rate_per_second=config.background_rate_per_second,
+                burst=config.background_burst,
+                ttl_ms=config.background_ttl_ms,
+                record_decisions=False,
+                exhausted_message="Brreg background egress capacity exhausted",
+            )
         except BrregEgressGuardError:
             _record_decision(endpoint, traffic_class, "rejected")
             raise
-        except Exception as exc:
-            _record_decision(endpoint, traffic_class, "rejected")
-            BRREG_GUARD_REDIS_ERRORS_TOTAL.labels(operation="acquire", error_type="redis").inc()
-            raise BrregEgressGuardError("Brreg egress guard failed closed") from exc
 
-        if allowed:
-            _record_decision(endpoint, traffic_class, "allowed")
-            if total_wait > 0:
-                BRREG_GUARD_WAIT_SECONDS.labels(endpoint=endpoint, traffic_class=traffic_class).observe(total_wait)
-            return
-
-        wait_seconds = max(0.0, wait_ms / 1000)
-        remaining = deadline - time.monotonic()
-        if wait_seconds <= 0 or wait_seconds > remaining:
-            _record_decision(endpoint, traffic_class, "rejected")
-            raise BrregEgressGuardError(
-                "Brreg egress capacity exhausted",
-                retry_after_seconds=wait_seconds if wait_seconds > 0 else None,
-            )
-
-        _record_decision(endpoint, traffic_class, "waited")
-        await asyncio.sleep(wait_seconds)
-        total_wait += wait_seconds
+    await _acquire_bucket_capacity(
+        endpoint=endpoint,
+        traffic_class=traffic_class,
+        config=config,
+        key=_BUCKET_KEY,
+        rate_per_second=config.rate_per_second,
+        burst=config.burst,
+        ttl_ms=config.ttl_ms,
+        record_decisions=True,
+        exhausted_message="Brreg egress capacity exhausted",
+    )
 
 
 __all__ = [

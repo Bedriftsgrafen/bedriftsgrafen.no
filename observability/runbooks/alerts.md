@@ -178,7 +178,7 @@ with the exact PromQL below.
 2. Check current cap pressure:
    `((sum(rate(bedriftsgrafen_brreg_http_attempts_total[5m])) / clamp_min(max(bedriftsgrafen_brreg_egress_config{setting="rate_per_second"}), 0.001)) * (max(bedriftsgrafen_brreg_egress_config{setting="enabled"}) == bool 1) * (max(bedriftsgrafen_brreg_egress_config{setting="rate_per_second"}) > bool 0))`.
 3. If `bedriftsgrafen_brreg_guard_decisions_total{result="waited"}` increased, traffic reached the shared guard and had to queue.
-4. If `bedriftsgrafen_brreg_guard_decisions_total{result="rejected"}` increased, public requests may see Brreg-backed 503s and background jobs may skip upstream calls.
+4. If `bedriftsgrafen_brreg_guard_decisions_total{result="rejected"}` increased, separate public/unknown traffic from background traffic before assessing user impact.
 5. For Brreg 429, query:
    `sum(increase(bedriftsgrafen_brreg_api_requests_total{status_code="429"}[15m]))`.
 6. For timeout/circuit problems, query:
@@ -208,8 +208,9 @@ Immediate actions:
 | Alert | PromQL | Window | Active threshold | Data basis | False-positive risk |
 | --- | --- | --- | --- | --- | --- |
 | Brreg egress at configured cap | `((sum(rate(bedriftsgrafen_brreg_http_attempts_total[5m])) / clamp_min(max(bedriftsgrafen_brreg_egress_config{setting="rate_per_second"}), 0.001)) * (max(bedriftsgrafen_brreg_egress_config{setting="enabled"}) == bool 1) * (max(bedriftsgrafen_brreg_egress_config{setting="rate_per_second"}) > bool 0)) >= bool 1` | 5m, `for: 2m` | mathematical: current attempt rate is at configured enabled cap | configured cap, not historical baseline | Low if cap is correct; silent if guard is disabled or rate is unset |
-| Brreg egress guard waited | `sum(increase(bedriftsgrafen_brreg_guard_decisions_total{result="waited"}[5m]))` | 5m, `for: 2m` | any wait decision | semantic guard event | Medium; legitimate bursts can wait briefly |
-| Brreg guard rejections | `sum(increase(bedriftsgrafen_brreg_guard_decisions_total{result="rejected"}[5m]))` | 5m, `for: 1m` | any rejection | semantic guard event | Low; rejection is user-visible or job-visible protection |
+| Brreg egress guard waited | `sum(increase(bedriftsgrafen_brreg_guard_decisions_total{result="waited",traffic_class=~"public\|unknown"}[5m]))` | 5m, `for: 2m` | any public/unknown wait decision | semantic guard event | Medium; background worker waits are expected during paced sync |
+| Brreg public guard rejections | `sum(increase(bedriftsgrafen_brreg_guard_decisions_total{result="rejected",traffic_class=~"public\|unknown"}[5m]))` | 5m, `for: 1m` | any public/unknown rejection | semantic guard event | Low; rejection is user-visible protection |
+| Brreg background guard saturation | `(sum(increase(bedriftsgrafen_brreg_guard_decisions_total{result="rejected",traffic_class="background"}[15m])) or vector(0)) >= bool 10` | 15m, `for: 5m` | at least 10 background rejections | semantic guard event | Medium; alerts on sustained worker saturation, not isolated retries |
 | Brreg 429 | `sum(increase(bedriftsgrafen_brreg_api_requests_total{status_code="429"}[15m]))` | 15m, `for: 1m` | any upstream 429 | upstream response code | Low; Brreg 429 should be investigated |
 | Brreg timeouts | `sum(increase(bedriftsgrafen_brreg_http_attempts_total{status_category="timeout"}[15m]))` | 15m, `for: 5m` | any sustained timeout | local timeout event | Medium; transient upstream network blips can fire |
 | Brreg circuit breaker | `sum(increase(bedriftsgrafen_brreg_circuit_open_total[5m]))` | 5m, `for: 1m` | any circuit-open observation | local protection state | Low |

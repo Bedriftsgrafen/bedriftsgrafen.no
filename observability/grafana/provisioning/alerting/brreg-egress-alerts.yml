@@ -94,7 +94,7 @@ groups:
                 type: prometheus
                 uid: prometheus
               editorMode: code
-              expr: sum(increase(bedriftsgrafen_brreg_guard_decisions_total{result="waited"}[5m])) or vector(0)
+              expr: sum(increase(bedriftsgrafen_brreg_guard_decisions_total{result="waited",traffic_class=~"public|unknown"}[5m])) or vector(0)
               instant: true
               intervalMs: 1000
               maxDataPoints: 43200
@@ -147,7 +147,7 @@ groups:
         for: 2m
         annotations:
           summary: Brreg egress guard had to wait for capacity.
-          description: Wait decisions indicate traffic pressure against the configured shared guard.
+          description: Public or unknown traffic waited for Brreg egress capacity. Background worker waits are expected during paced sync.
           runbook_url: https://github.com/Bedriftsgrafen/bedriftsgrafen.no/blob/main/observability/runbooks/alerts.md#brreg-egress-protection
         labels:
           severity: warning
@@ -155,7 +155,7 @@ groups:
         isPaused: false
 
       - uid: bedriftsgrafen_brreg_guard_rejections
-        title: Brreg guard rejections detected
+        title: Brreg public guard rejections detected
         condition: C
         data:
           - refId: A
@@ -168,7 +168,7 @@ groups:
                 type: prometheus
                 uid: prometheus
               editorMode: code
-              expr: sum(increase(bedriftsgrafen_brreg_guard_decisions_total{result="rejected"}[5m])) or vector(0)
+              expr: sum(increase(bedriftsgrafen_brreg_guard_decisions_total{result="rejected",traffic_class=~"public|unknown"}[5m])) or vector(0)
               instant: true
               intervalMs: 1000
               maxDataPoints: 43200
@@ -220,11 +220,85 @@ groups:
         execErrState: Error
         for: 1m
         annotations:
-          summary: Brreg guard is rejecting outbound attempts.
-          description: The guard rejected at least one Brreg attempt in the last five minutes.
+          summary: Brreg guard is rejecting public outbound attempts.
+          description: The guard rejected at least one public or unknown Brreg attempt in the last five minutes.
           runbook_url: https://github.com/Bedriftsgrafen/bedriftsgrafen.no/blob/main/observability/runbooks/alerts.md#brreg-egress-protection
         labels:
           severity: critical
+          service: brreg
+        isPaused: false
+
+      - uid: bg_brreg_background_guard_rejections
+        title: Brreg background guard saturation
+        condition: C
+        data:
+          - refId: A
+            datasourceUid: prometheus
+            relativeTimeRange:
+              from: 1200
+              to: 0
+            model:
+              datasource:
+                type: prometheus
+                uid: prometheus
+              editorMode: code
+              expr: (sum(increase(bedriftsgrafen_brreg_guard_decisions_total{result="rejected",traffic_class="background"}[15m])) or vector(0)) >= bool 10
+              instant: true
+              intervalMs: 1000
+              maxDataPoints: 43200
+              refId: A
+          - refId: B
+            datasourceUid: __expr__
+            relativeTimeRange:
+              from: 0
+              to: 0
+            model:
+              datasource:
+                type: __expr__
+                uid: __expr__
+              expression: A
+              intervalMs: 1000
+              maxDataPoints: 43200
+              reducer: last
+              refId: B
+              type: reduce
+          - refId: C
+            datasourceUid: __expr__
+            relativeTimeRange:
+              from: 0
+              to: 0
+            model:
+              conditions:
+                - evaluator:
+                    params:
+                      - 0
+                    type: gt
+                  operator:
+                    type: and
+                  query:
+                    params:
+                      - C
+                  reducer:
+                    params: []
+                    type: last
+                  type: query
+              datasource:
+                type: __expr__
+                uid: __expr__
+              expression: B
+              intervalMs: 1000
+              maxDataPoints: 43200
+              refId: C
+              type: threshold
+        noDataState: OK
+        execErrState: Error
+        for: 5m
+        annotations:
+          summary: Brreg background workload is saturating its reserved quota.
+          description: At least 10 background attempts were rejected within 15 minutes despite the worker wait budget.
+          runbook_url: https://github.com/Bedriftsgrafen/bedriftsgrafen.no/blob/main/observability/runbooks/alerts.md#brreg-egress-protection
+        labels:
+          severity: warning
           service: brreg
         isPaused: false
 

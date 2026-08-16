@@ -17,21 +17,25 @@ from services.brreg_egress_guard import (
 
 class FakeTokenBucketRedis:
     def __init__(self) -> None:
-        self.tokens: float | None = None
-        self.ts: int | None = None
+        self.tokens: dict[str, float | None] = {}
+        self.ts: dict[str, int | None] = {}
         self.calls = 0
+        self.calls_by_key: dict[str, int] = {}
         self.lock = asyncio.Lock()
 
     async def eval(self, script, numkeys, key, rate, burst, cost, now_ms, ttl_ms):
         async with self.lock:
             self.calls += 1
+            self.calls_by_key[key] = self.calls_by_key.get(key, 0) + 1
             rate_value = float(rate)
             burst_value = int(burst)
             cost_value = float(cost)
             now_value = int(now_ms)
 
-            tokens = float(burst_value if self.tokens is None else self.tokens)
-            ts = now_value if self.ts is None else self.ts
+            current_tokens = self.tokens.get(key)
+            current_ts = self.ts.get(key)
+            tokens = float(burst_value if current_tokens is None else current_tokens)
+            ts = now_value if current_ts is None else current_ts
             elapsed = max(0, now_value - ts)
             tokens = min(float(burst_value), tokens + (elapsed * rate_value / 1000))
 
@@ -43,8 +47,8 @@ class FakeTokenBucketRedis:
                 allowed = 0
                 wait_ms = int(((cost_value - tokens) * 1000 + rate_value - 1) // rate_value)
 
-            self.tokens = tokens
-            self.ts = now_value
+            self.tokens[key] = tokens
+            self.ts[key] = now_value
             return [allowed, wait_ms]
 
 
@@ -65,17 +69,23 @@ def test_load_config_exports_low_cardinality_config_gauge(monkeypatch):
     monkeypatch.setenv("BRREG_EGRESS_RATE_PER_SECOND", "12.5")
     monkeypatch.setenv("BRREG_EGRESS_BURST", "25")
     monkeypatch.setenv("BRREG_EGRESS_WAIT_TIMEOUT_SECONDS", "0.75")
+    monkeypatch.setenv("BRREG_BACKGROUND_EGRESS_RATE_PER_SECOND", "5")
+    monkeypatch.setenv("BRREG_BACKGROUND_EGRESS_BURST", "10")
 
     with patch("services.brreg_egress_guard.BRREG_EGRESS_CONFIG") as metric:
         config = load_brreg_egress_guard_config()
 
     assert config.rate_per_second == 12.5
     assert config.burst == 25
+    assert config.background_rate_per_second == 5
+    assert config.background_burst == 10
     labels = metric.labels
     labels.assert_any_call(setting="enabled")
     labels.assert_any_call(setting="rate_per_second")
     labels.assert_any_call(setting="burst")
     labels.assert_any_call(setting="wait_timeout_seconds")
+    labels.assert_any_call(setting="background_rate_per_second")
+    labels.assert_any_call(setting="background_burst")
 
 
 @pytest.mark.parametrize(
@@ -93,6 +103,36 @@ def test_invalid_enabled_guard_config_fails_validation(monkeypatch, name, value,
     monkeypatch.setenv("BRREG_EGRESS_RATE_PER_SECOND", "5")
     monkeypatch.setenv("BRREG_EGRESS_BURST", "10")
     monkeypatch.setenv(name, value)
+
+    with pytest.raises(ValueError, match=message):
+        load_brreg_egress_guard_config()
+
+
+def test_background_guard_config_requires_rate_and_burst(monkeypatch):
+    monkeypatch.setenv("BRREG_EGRESS_GUARD_ENABLED", "true")
+    monkeypatch.setenv("BRREG_EGRESS_RATE_PER_SECOND", "5")
+    monkeypatch.setenv("BRREG_EGRESS_BURST", "10")
+    monkeypatch.setenv("BRREG_BACKGROUND_EGRESS_RATE_PER_SECOND", "2")
+
+    with pytest.raises(ValueError, match="must be set together"):
+        load_brreg_egress_guard_config()
+
+
+@pytest.mark.parametrize(
+    ("background_rate", "background_burst", "message"),
+    [
+        ("0", "5", "BACKGROUND_EGRESS_RATE"),
+        ("5", "5", "lower than"),
+        ("2", "0", "BACKGROUND_EGRESS_BURST"),
+        ("2", "11", "must not exceed"),
+    ],
+)
+def test_invalid_background_guard_config_fails_validation(monkeypatch, background_rate, background_burst, message):
+    monkeypatch.setenv("BRREG_EGRESS_GUARD_ENABLED", "true")
+    monkeypatch.setenv("BRREG_EGRESS_RATE_PER_SECOND", "5")
+    monkeypatch.setenv("BRREG_EGRESS_BURST", "10")
+    monkeypatch.setenv("BRREG_BACKGROUND_EGRESS_RATE_PER_SECOND", background_rate)
+    monkeypatch.setenv("BRREG_BACKGROUND_EGRESS_BURST", background_burst)
 
     with pytest.raises(ValueError, match=message):
         load_brreg_egress_guard_config()
@@ -145,6 +185,46 @@ async def test_burst_is_enforced_atomically_for_concurrent_callers():
     assert len(allowed) == 3
     assert len(rejected) == 7
     assert fake_redis.calls == 10
+
+
+@pytest.mark.asyncio
+async def test_public_traffic_does_not_use_background_bucket():
+    fake_redis = FakeTokenBucketRedis()
+    config = _config(
+        rate_per_second=100.0,
+        burst=2,
+        wait_timeout_seconds=0.0,
+        background_rate_per_second=1.0,
+        background_burst=1,
+    )
+
+    with patch("services.brreg_egress_guard.get_redis", return_value=fake_redis):
+        await acquire_brreg_egress_capacity(endpoint="company", traffic_class="public", config=config)
+        await acquire_brreg_egress_capacity(endpoint="company", traffic_class="public", config=config)
+
+    assert fake_redis.calls_by_key == {"brreg:egress:global": 2}
+
+
+@pytest.mark.asyncio
+async def test_background_quota_rejects_before_global_bucket_is_exhausted():
+    fake_redis = FakeTokenBucketRedis()
+    config = _config(
+        rate_per_second=100.0,
+        burst=10,
+        wait_timeout_seconds=0.0,
+        background_rate_per_second=1.0,
+        background_burst=1,
+    )
+
+    with patch("services.brreg_egress_guard.get_redis", return_value=fake_redis):
+        await acquire_brreg_egress_capacity(endpoint="subunit", traffic_class="background", config=config)
+        with pytest.raises(BrregEgressGuardError, match="background egress capacity exhausted"):
+            await acquire_brreg_egress_capacity(endpoint="subunit", traffic_class="background", config=config)
+
+    assert fake_redis.calls_by_key == {
+        "brreg:egress:background": 2,
+        "brreg:egress:global": 1,
+    }
 
 
 @pytest.mark.asyncio
