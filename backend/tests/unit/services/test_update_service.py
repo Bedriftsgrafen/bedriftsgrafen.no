@@ -505,6 +505,15 @@ async def test_ensure_parent_companies_exist_skips_deleted(update_service, mock_
 
 
 @pytest.mark.asyncio
+async def test_ensure_parent_companies_exist_propagates_fetch_failure(update_service):
+    update_service.company_repo.get_existing_orgnrs = AsyncMock(return_value=set())
+    update_service.brreg_api.fetch_company = AsyncMock(side_effect=Exception("egress capacity exhausted"))
+
+    with pytest.raises(Exception, match="egress capacity exhausted"):
+        await update_service._ensure_parent_companies_exist([{"overordnetEnhet": "999"}])
+
+
+@pytest.mark.asyncio
 class TestFetchRoleUpdates:
     """Tests for role updates fetching and processing."""
 
@@ -650,6 +659,29 @@ class TestFetchRoleUpdates:
         result = await update_service.fetch_role_updates(since_date=date(2026, 5, 27), page_size=10)
 
         assert result["latest_oppdateringsid"] is None
+        update_service.system_repo.set_state.assert_not_called()
+        update_service.report_sync_error.assert_awaited_once()
+
+    async def test_fetch_role_updates_does_not_advance_cursor_on_onboarding_failure(self, update_service):
+        mock_resp = MagicMock(status_code=200)
+        mock_resp.json.return_value = [
+            {
+                "id": "500",
+                "time": "2026-05-27T12:00:00Z",
+                "data": {"organisasjonsnummer": "987654321"},
+            }
+        ]
+
+        update_service.company_repo.get_existing_orgnrs = AsyncMock(return_value=set())
+        update_service.subunit_repo.get_existing_orgnrs = AsyncMock(return_value=set())
+        update_service.brreg_api.fetch_company = AsyncMock(side_effect=Exception("egress capacity exhausted"))
+        update_service.report_sync_error = AsyncMock()
+        update_service.brreg_api._get = AsyncMock(return_value=mock_resp)
+
+        result = await update_service.fetch_role_updates(since_date=date(2026, 5, 27), page_size=10)
+
+        assert result["latest_oppdateringsid"] is None
+        update_service.brreg_api.fetch_roles.assert_not_called()
         update_service.system_repo.set_state.assert_not_called()
         update_service.report_sync_error.assert_awaited_once()
 

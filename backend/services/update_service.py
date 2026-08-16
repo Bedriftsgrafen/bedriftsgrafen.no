@@ -1351,13 +1351,7 @@ class UpdateService:
 
         async def fetch_parent(orgnr: str) -> dict[str, Any] | None:
             async with semaphore:
-                try:
-                    return await self.brreg_api.fetch_company(orgnr)
-                except Exception as e:
-                    error_msg = f"Failed to fetch missing parent: {e!s}"
-                    logger.warning(f"{error_msg} for {orgnr}")
-                    await self.report_sync_error(orgnr, "company", error_msg)
-                    return None
+                return await self.brreg_api.fetch_company(orgnr)
 
         # Gather and filter
         tasks = [fetch_parent(orgnr) for orgnr in sorted(missing_orgnrs)]
@@ -1460,6 +1454,7 @@ class UpdateService:
 
                     # Identify truly unknown orgnrs (not in main units, not in subunits, not failed yet)
                     unknown_orgnrs = orgnrs_to_sync - existing_orgnrs - existing_subunits - failed_this_run
+                    onboarding_failed_orgnrs: set[str] = set()
 
                     if unknown_orgnrs:
                         unknown_list = sorted(unknown_orgnrs)
@@ -1473,20 +1468,30 @@ class UpdateService:
                             org_no: str, _semaphore: asyncio.Semaphore = semaphore
                         ) -> dict[str, Any] | None:
                             async with _semaphore:
-                                try:
-                                    # Use main unit endpoint. Subunits return 404 here.
-                                    return await self.brreg_api.fetch_company(org_no)
-                                except Exception as e:
-                                    # 404/410 are common for subunits or deleted entities
-                                    logger.debug(f"Orgnr {org_no} is likely a subunit or deleted (404 on enheter): {e}")
-                                    return None
+                                # fetch_company returns None only for a confirmed 404/410.
+                                return await self.brreg_api.fetch_company(org_no)
 
                         fetch_tasks = [fetch_missing_main_unit(o) for o in unknown_list]
-                        fetched_results = await asyncio.gather(*fetch_tasks)
+                        fetched_results = await asyncio.gather(*fetch_tasks, return_exceptions=True)
 
                         new_companies_onboarded = 0
-                        for i, company_data in enumerate(fetched_results):
-                            target_orgnr = unknown_list[i]
+                        for target_orgnr, company_data in zip(unknown_list, fetched_results, strict=True):
+                            if isinstance(company_data, BaseException):
+                                if isinstance(company_data, asyncio.CancelledError):
+                                    raise company_data
+                                onboarding_failed_orgnrs.add(target_orgnr)
+                                failed_update_ids.extend(event_update_ids_by_orgnr.get(target_orgnr, []))
+                                error_msg = f"Failed to onboard company during role sync: {company_data!s}"
+                                logger.error("%s for %s", error_msg, target_orgnr)
+                                status_code = getattr(company_data, "status_code", None)
+                                await self.report_sync_error(
+                                    target_orgnr,
+                                    "company",
+                                    error_msg,
+                                    status_code=status_code,
+                                )
+                                continue
+
                             if company_data:
                                 # Skip onboarding if the company is already deleted (has slettedato)
                                 if company_data.get("slettedato"):
@@ -1522,6 +1527,9 @@ class UpdateService:
                     sorted_orgnrs_to_sync = sorted(orgnrs_to_sync)
 
                     for orgnr in sorted_orgnrs_to_sync:
+                        if orgnr in onboarding_failed_orgnrs:
+                            continue
+
                         # Skip companies that still don't exist (couldn't be fetched)
                         if orgnr not in existing_orgnrs:
                             logger.warning(f"Skipping role sync for {orgnr}: company not found in bedrifter table")
