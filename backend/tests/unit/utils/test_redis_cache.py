@@ -65,6 +65,17 @@ class TestRedisCache:
         assert result is None
 
     @pytest.mark.asyncio
+    async def test_get_treats_socket_timeout_as_cache_miss(self, cache: RedisCache):
+        mock_redis = AsyncMock()
+        mock_redis.get = AsyncMock(side_effect=TimeoutError)
+
+        with patch("utils.redis_cache.get_redis", return_value=mock_redis):
+            result = await cache.get("mykey")
+
+        assert result is None
+        assert redis_cache_module._redis_failure_count == 1
+
+    @pytest.mark.asyncio
     async def test_set_uses_correct_ttl(self, cache: RedisCache):
         """Test that set uses correct TTL."""
         mock_redis = AsyncMock()

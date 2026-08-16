@@ -6,13 +6,17 @@ Redis uses database 1 (separate from cache in database 0).
 """
 
 import os
+from typing import Any
 
 from slowapi import Limiter
 from slowapi.util import get_remote_address
 
+from utils.redis_client import load_redis_socket_timeouts
+
 redis_host = os.getenv("REDIS_HOST")
 redis_port = os.getenv("REDIS_PORT", "6379")
 redis_password = os.getenv("REDIS_PASSWORD")
+storage_options: dict[str, Any] = {}
 
 # Use Redis if configured, fallback to in-memory
 if redis_host:
@@ -20,6 +24,11 @@ if redis_host:
         storage_uri = f"redis://:{redis_password}@{redis_host}:{redis_port}/1"
     else:
         storage_uri = f"redis://{redis_host}:{redis_port}/1"
+    socket_connect_timeout, socket_timeout = load_redis_socket_timeouts()
+    storage_options = {
+        "socket_connect_timeout": socket_connect_timeout,
+        "socket_timeout": socket_timeout,
+    }
 else:
     storage_uri = "memory://"
 
@@ -27,6 +36,7 @@ limiter = Limiter(
     key_func=get_remote_address,
     default_limits=["200/minute"],
     storage_uri=storage_uri,
+    storage_options=storage_options,
     # Bucket per (client, route) instead of per (client, exact URL).
     #
     # slowapi defaults to key_style="url", which puts the concrete request path

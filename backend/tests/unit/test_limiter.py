@@ -41,6 +41,8 @@ class TestLimiterConfiguration:
             "REDIS_HOST": "redis-host",
             "REDIS_PORT": "6380",
             "REDIS_PASSWORD": "",
+            "REDIS_SOCKET_CONNECT_TIMEOUT_SECONDS": "0.25",
+            "REDIS_SOCKET_TIMEOUT_SECONDS": "0.75",
         }
 
         with patch.dict(os.environ, env_vars, clear=False):
@@ -51,6 +53,9 @@ class TestLimiterConfiguration:
             importlib.reload(limiter_module)
 
             assert limiter_module.storage_uri == "redis://redis-host:6380/1"
+            connection_kwargs = limiter_module.limiter._storage.storage.connection_pool.connection_kwargs
+            assert connection_kwargs["socket_connect_timeout"] == 0.25
+            assert connection_kwargs["socket_timeout"] == 0.75
 
     def test_limiter_includes_password_in_uri(self):
         """Test that limiter includes password in Redis URI when set."""
