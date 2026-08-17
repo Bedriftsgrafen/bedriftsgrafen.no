@@ -124,6 +124,16 @@ async def test_update_coordinates_error(repo, mock_db_session):
 
 
 @pytest.mark.asyncio
+async def test_delete_by_orgnr_propagates_database_error(repo, mock_db_session):
+    from exceptions import DatabaseException
+
+    mock_db_session.execute.side_effect = Exception("DB error")
+
+    with pytest.raises(DatabaseException):
+        await repo.delete_by_orgnr("123456789")
+
+
+@pytest.mark.asyncio
 async def test_parse_company_fields_complete(repo):
     """Test _parse_company_fields with complete data."""
     company_data = {

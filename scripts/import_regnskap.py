@@ -133,6 +133,7 @@ def parse_accounting_data(api_data):
 
 
 async def process_companies():
+    os.environ.setdefault("BRREG_EGRESS_TRAFFIC_CLASS", "background")
     conn = get_db_connection()
     create_regnskap_table(conn)
     brreg_api = BrregApiService()

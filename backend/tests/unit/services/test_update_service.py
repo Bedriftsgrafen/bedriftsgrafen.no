@@ -121,6 +121,33 @@ class TestFetchUpdates:
         assert result["companies_processed"] == 0
 
     @pytest.mark.asyncio
+    async def test_fetch_updates_stops_before_next_page_after_cursor_gap(self, update_service):
+        first_page = MagicMock(status_code=200)
+        first_page.json.return_value = {
+            "_embedded": {"oppdaterteEnheter": [{"organisasjonsnummer": "123456789"}]},
+            "_links": {"next": {"href": "https://stub.invalid/page/2"}},
+        }
+        second_page = MagicMock(status_code=200)
+        second_page.json.return_value = {"_embedded": {"oppdaterteEnheter": []}, "_links": {}}
+        update_service.brreg_api._get = AsyncMock(side_effect=[first_page, second_page])
+        update_service._fetch_chunk_details = AsyncMock(
+            return_value=[
+                FetchResult(
+                    orgnr="123456789",
+                    success=False,
+                    error="API timeout",
+                    source_update_id="42",
+                )
+            ]
+        )
+        update_service.report_sync_error = AsyncMock()
+
+        result = await update_service.fetch_updates(start_id=41, page_size=1)
+
+        assert update_service.brreg_api._get.await_count == 1
+        assert result["latest_oppdateringsid"] is None
+
+    @pytest.mark.asyncio
     async def test_fetch_updates_requests_included_changes(self, update_service):
         update_service._process_single_page = AsyncMock(return_value=None)
 
@@ -186,6 +213,32 @@ class TestFetchSubunitUpdates:
         first_url = update_service.brreg_api._get.await_args.args[0]
         assert "oppdateringsid=123" in first_url
         assert "includeChanges=true" in first_url
+
+    @pytest.mark.asyncio
+    async def test_fetch_subunit_updates_stops_before_next_page_after_cursor_gap(self, update_service):
+        first_page = MagicMock(status_code=200)
+        first_page.json.return_value = {
+            "_embedded": {"oppdaterteUnderenheter": [{"organisasjonsnummer": "123456789"}]},
+            "_links": {"next": {"href": "https://stub.invalid/page/2"}},
+        }
+        second_page = MagicMock(status_code=200)
+        second_page.json.return_value = {"_embedded": {"oppdaterteUnderenheter": []}, "_links": {}}
+        update_service.brreg_api._get = AsyncMock(side_effect=[first_page, second_page])
+        update_service._fetch_subunit_update_details = AsyncMock(
+            return_value=[
+                SubunitFetchResult(
+                    orgnr="123456789",
+                    success=False,
+                    error="API timeout",
+                    source_update_id="42",
+                )
+            ]
+        )
+
+        result = await update_service.fetch_subunit_updates(start_id=41, page_size=1)
+
+        assert update_service.brreg_api._get.await_count == 1
+        assert result["latest_oppdateringsid"] is None
 
     @pytest.mark.asyncio
     async def test_fetch_subunit_update_details_marks_deletion_without_fetch(self, update_service):
@@ -409,6 +462,27 @@ class TestFetchSubunitUpdates:
         assert event_kwargs["event_type"] == "subunit_closed"
         assert event_kwargs["payload"]["parent_orgnr"] == "987654321"
         assert result.companies_deleted == 1
+
+    @pytest.mark.asyncio
+    async def test_persist_subunit_page_blocks_cursor_when_delete_fails(self, update_service):
+        update_service.event_ledger_enabled = False
+        update_service.subunit_repo.delete_by_orgnr = AsyncMock(side_effect=Exception("DB down"))
+        fetch_results = [
+            SubunitFetchResult(
+                orgnr="123456789",
+                success=True,
+                subunit_data=None,
+                source_update_id="42",
+                source_change_type="Fjernet",
+            )
+        ]
+        result = UpdateBatchResult(since_date=date.today(), since_iso="2026-05-27T00:00:00.000Z")
+
+        cursor_gap_detected = await update_service._persist_subunit_update_page(fetch_results, result)
+
+        assert cursor_gap_detected is True
+        assert result.latest_oppdateringsid is None
+        assert result.db_errors == 1
 
     @pytest.mark.asyncio
     async def test_persist_subunit_page_advances_cursor_after_successful_upsert(self, update_service):
@@ -685,6 +759,32 @@ class TestFetchRoleUpdates:
         update_service.system_repo.set_state.assert_not_called()
         update_service.report_sync_error.assert_awaited_once()
 
+    async def test_fetch_role_updates_does_not_advance_cursor_on_onboarding_persist_failure(self, update_service):
+        mock_resp = MagicMock(status_code=200)
+        mock_resp.json.return_value = [
+            {
+                "id": "500",
+                "time": "2026-05-27T12:00:00Z",
+                "data": {"organisasjonsnummer": "987654321"},
+            }
+        ]
+
+        update_service.company_repo.get_existing_orgnrs = AsyncMock(return_value=set())
+        update_service.subunit_repo.get_existing_orgnrs = AsyncMock(return_value=set())
+        update_service.brreg_api.fetch_company = AsyncMock(
+            return_value={"organisasjonsnummer": "987654321", "navn": "Test AS"}
+        )
+        update_service.company_repo.create_or_update = AsyncMock(side_effect=Exception("DB down"))
+        update_service.report_sync_error = AsyncMock()
+        update_service.brreg_api._get = AsyncMock(return_value=mock_resp)
+
+        result = await update_service.fetch_role_updates(since_date=date(2026, 5, 27), page_size=10)
+
+        assert result["latest_oppdateringsid"] is None
+        update_service.brreg_api.fetch_roles.assert_not_called()
+        update_service.system_repo.set_state.assert_not_called()
+        update_service.report_sync_error.assert_awaited_once()
+
     async def test_fetch_role_updates_advances_cursor_to_success_before_failure(self, update_service, mock_db):
         mock_resp = MagicMock(status_code=200)
         mock_resp.json.return_value = [
@@ -948,6 +1048,40 @@ class TestPersistChunk:
         update_service.db.rollback.assert_awaited()
 
     @pytest.mark.asyncio
+    async def test_persist_chunk_treats_rolled_back_pending_ids_as_cursor_gap(self, update_service):
+        company = MagicMock()
+        company.last_polled_regnskap = date.today()
+        update_service.company_repo.create_or_update = AsyncMock(side_effect=[company, Exception("DB down"), company])
+        update_service._fetch_and_persist_financials = AsyncMock()
+
+        fetch_results = [
+            FetchResult(
+                orgnr="111111111",
+                success=True,
+                company_data={"organisasjonsnummer": "111111111"},
+                source_update_id="10",
+            ),
+            FetchResult(
+                orgnr="222222222",
+                success=True,
+                company_data={"organisasjonsnummer": "222222222"},
+                source_update_id="100",
+            ),
+            FetchResult(
+                orgnr="333333333",
+                success=True,
+                company_data={"organisasjonsnummer": "333333333"},
+                source_update_id="50",
+            ),
+        ]
+        result = UpdateBatchResult(since_date=date.today(), since_iso="2026-01-26T00:00:00.000Z")
+
+        cursor_gap_detected = await update_service._persist_chunk(fetch_results, result)
+
+        assert cursor_gap_detected is True
+        assert result.latest_oppdateringsid is None
+
+    @pytest.mark.asyncio
     async def test_persist_chunk_deletes_company_on_none_data(self, update_service):
         """_persist_chunk should delete company when success=True but company_data=None (Sletting)."""
         update_service.company_repo.delete_by_orgnr = AsyncMock(return_value=1)
@@ -960,6 +1094,26 @@ class TestPersistChunk:
         update_service.company_repo.delete_by_orgnr.assert_called_once_with("123456789")
         assert result.companies_deleted == 1
         assert result.companies_processed == 1
+
+    @pytest.mark.asyncio
+    async def test_persist_chunk_blocks_cursor_when_company_delete_fails(self, update_service):
+        update_service.company_repo.delete_by_orgnr = AsyncMock(side_effect=Exception("DB down"))
+        fetch_results = [
+            FetchResult(
+                orgnr="123456789",
+                success=True,
+                company_data=None,
+                source_update_id="42",
+                source_change_type="Fjernet",
+            )
+        ]
+        result = UpdateBatchResult(since_date=date.today(), since_iso="2026-01-26T00:00:00.000Z")
+
+        cursor_gap_detected = await update_service._persist_chunk(fetch_results, result)
+
+        assert cursor_gap_detected is True
+        assert result.latest_oppdateringsid is None
+        assert result.db_errors == 1
 
     @pytest.mark.asyncio
     async def test_persist_chunk_records_fjernet_as_removed_from_open_data(self, update_service):

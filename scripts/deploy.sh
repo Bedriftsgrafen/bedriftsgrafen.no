@@ -97,6 +97,8 @@ check_brreg_egress_config() {
     local enabled=""
     local rate=""
     local burst=""
+    local background_rate=""
+    local background_burst=""
 
     enabled="$(env_file_value "BRREG_EGRESS_GUARD_ENABLED" || true)"
     enabled="${enabled:-true}"
@@ -123,6 +125,29 @@ check_brreg_egress_config() {
     fi
     if [[ ! "$burst" =~ ^[1-9][0-9]*$ ]]; then
         echo -e "${RED}❌ BRREG_EGRESS_BURST must be a positive integer.${NC}" >&2
+        return 1
+    fi
+
+    background_rate="$(env_file_value "WORKER_BRREG_BACKGROUND_EGRESS_RATE_PER_SECOND" || true)"
+    background_rate="${background_rate:-4}"
+    background_burst="$(env_file_value "WORKER_BRREG_BACKGROUND_EGRESS_BURST" || true)"
+    background_burst="${background_burst:-10}"
+
+    if [[ ! "$background_rate" =~ ^[0-9]+([.][0-9]+)?$ ]] \
+        || ! awk -v value="$background_rate" 'BEGIN { exit !(value > 0) }'; then
+        echo -e "${RED}❌ WORKER_BRREG_BACKGROUND_EGRESS_RATE_PER_SECOND must be greater than zero.${NC}" >&2
+        return 1
+    fi
+    if ! awk -v background="$background_rate" -v global="$rate" 'BEGIN { exit !(background < global) }'; then
+        echo -e "${RED}❌ Worker Brreg background rate must be lower than the global rate.${NC}" >&2
+        return 1
+    fi
+    if [[ ! "$background_burst" =~ ^[1-9][0-9]*$ ]]; then
+        echo -e "${RED}❌ WORKER_BRREG_BACKGROUND_EGRESS_BURST must be a positive integer.${NC}" >&2
+        return 1
+    fi
+    if (( background_burst > burst )); then
+        echo -e "${RED}❌ Worker Brreg background burst must not exceed the global burst.${NC}" >&2
         return 1
     fi
 }

@@ -280,4 +280,4 @@ class CrudMixin:
             if autocommit:
                 await self.db.rollback()
             logger.error(f"Failed to purge company {orgnr}: {e}")
-            return 0
+            raise DatabaseException(f"Failed to purge company {orgnr}", original_error=e) from e

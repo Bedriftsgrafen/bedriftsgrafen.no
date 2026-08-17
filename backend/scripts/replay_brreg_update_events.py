@@ -57,6 +57,8 @@ def load_environment() -> None:
     if os.getenv("DATABASE_HOST") == "bedriftsgrafen-db":
         os.environ["DATABASE_HOST"] = "localhost"
 
+    os.environ.setdefault("BRREG_EGRESS_TRAFFIC_CLASS", "background")
+
 
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(
@@ -333,12 +335,12 @@ async def apply_company_replay(rows: list[dict[str, Any]], args: argparse.Namesp
         for offset in range(0, len(rows), args.batch_size):
             chunk = rows[offset : offset + args.batch_size]
             fetch_results = await service._fetch_chunk_details(chunk)
-            await service._persist_chunk(fetch_results, result)
+            cursor_gap_detected = await service._persist_chunk(fetch_results, result)
 
-            chunk_ids = [entity_update_id(entity) for entity in chunk]
-            latest_chunk_id = max((value for value in chunk_ids if value is not None), default=None)
-            if latest_chunk_id is not None:
-                await service.system_repo.set_state(REPLAY_STATE_KEY, str(latest_chunk_id))
+            if result.latest_oppdateringsid is not None:
+                await service.system_repo.set_state(REPLAY_STATE_KEY, str(result.latest_oppdateringsid))
+            if cursor_gap_detected:
+                break
 
         return result.model_dump()
 

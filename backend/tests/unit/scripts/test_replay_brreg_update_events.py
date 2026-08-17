@@ -1,4 +1,5 @@
 import argparse
+import os
 
 import pytest
 
@@ -34,6 +35,18 @@ def test_validate_args_rejects_apply_and_dry_run_together():
 
     with pytest.raises(SystemExit, match="--apply and --dry-run"):
         replay.validate_args(args)
+
+
+def test_load_environment_defaults_replay_to_background_traffic(monkeypatch):
+    # Register the key with monkeypatch before deleting it so teardown also
+    # removes the value that load_environment() adds through os.environ.
+    monkeypatch.setenv("BRREG_EGRESS_TRAFFIC_CLASS", "sentinel")
+    monkeypatch.delenv("BRREG_EGRESS_TRAFFIC_CLASS", raising=False)
+    monkeypatch.setattr(replay.os.path, "exists", lambda _path: False)
+
+    replay.load_environment()
+
+    assert os.environ["BRREG_EGRESS_TRAFFIC_CLASS"] == "background"
 
 
 def test_entity_in_window_stops_after_upper_id_bound():

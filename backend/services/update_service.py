@@ -609,10 +609,14 @@ class UpdateService:
             fetch_results = await self._fetch_chunk_details(entities)
 
             # Phase 2: Sequential Persistence
-            await self._persist_chunk(fetch_results, result)
+            cursor_gap_detected = await self._persist_chunk(fetch_results, result)
 
             # Metadata tracking
             result.pages_fetched += 1
+
+            if cursor_gap_detected:
+                logger.warning("Stopping company update pagination at the first uncommitted update ID")
+                return None
 
             return self._extract_next_link(data)
 
@@ -687,7 +691,7 @@ class UpdateService:
         self,
         fetch_results: list[FetchResult],
         result: UpdateBatchResult,
-    ) -> None:
+    ) -> bool:
         """Persist a chunk of fetched data to the database.
 
         This is Phase 2 - sequential database operations with proper transactions.
@@ -701,10 +705,21 @@ class UpdateService:
         pending_update_ids: list[int] = []
         committed_update_ids: list[int] = []
         failed_update_ids: list[int] = []
+        cursor_gap_detected = False
+        cursor_gap_without_id = False
 
         def remember_committed_update_ids() -> None:
             committed_update_ids.extend(pending_update_ids)
             pending_update_ids.clear()
+
+        def remember_failed_update_id(source_update_id: str | int | None) -> None:
+            nonlocal cursor_gap_detected, cursor_gap_without_id
+            cursor_gap_detected = True
+            update_id = self._parse_oppdateringsid(source_update_id)
+            if update_id is None:
+                cursor_gap_without_id = True
+            else:
+                failed_update_ids.append(update_id)
 
         sorted_results = sorted(fetch_results, key=lambda item: item.orgnr)
         existing_company_snapshots = await self._get_existing_company_event_snapshots(
@@ -715,9 +730,7 @@ class UpdateService:
             result.companies_processed += 1
 
             if not fetch_result.success:
-                update_id = self._parse_oppdateringsid(fetch_result.source_update_id)
-                if update_id is not None:
-                    failed_update_ids.append(update_id)
+                remember_failed_update_id(fetch_result.source_update_id)
                 if "Skipped" in (fetch_result.error or ""):
                     result.companies_skipped += 1
                 else:
@@ -845,9 +858,11 @@ class UpdateService:
                     logger.debug(f"Committed chunk of {DB_COMMIT_CHUNK_SIZE} records")
 
             except Exception as e:
-                update_id = self._parse_oppdateringsid(fetch_result.source_update_id)
-                if update_id is not None:
-                    failed_update_ids.append(update_id)
+                # The rollback discards every uncommitted item in this chunk, not
+                # only the item that raised. They must all become cursor barriers.
+                cursor_gap_detected = True
+                failed_update_ids.extend(pending_update_ids)
+                remember_failed_update_id(fetch_result.source_update_id)
                 result.db_errors += 1
                 result.errors.append(f"DB error {fetch_result.orgnr}: {e!s}")
                 logger.error(f"Database error persisting {fetch_result.orgnr}: {e}")
@@ -862,7 +877,9 @@ class UpdateService:
             remember_committed_update_ids()
             logger.debug(f"Committed final chunk of {records_since_commit} records")
 
-        self._publish_contiguous_update_ids(result, committed_update_ids, failed_update_ids)
+        if not cursor_gap_without_id:
+            self._publish_contiguous_update_ids(result, committed_update_ids, failed_update_ids)
+        return cursor_gap_detected
 
     async def _get_existing_company_event_snapshots(self, orgnrs: list[str]) -> dict[str, dict[str, Any]]:
         if not orgnrs:
@@ -1105,10 +1122,26 @@ class UpdateService:
         self,
         fetch_results: list[SubunitFetchResult],
         result: UpdateBatchResult,
-    ) -> None:
+    ) -> bool:
         sorted_results = sorted(fetch_results, key=lambda item: item.orgnr)
         committed_update_ids: list[int] = []
         failed_update_ids: list[int] = []
+        cursor_gap_detected = False
+        cursor_gap_without_id = False
+
+        def remember_failed_update_id(source_update_id: str | int | None) -> None:
+            nonlocal cursor_gap_detected, cursor_gap_without_id
+            cursor_gap_detected = True
+            update_id = self._parse_oppdateringsid(source_update_id)
+            if update_id is None:
+                cursor_gap_without_id = True
+            else:
+                failed_update_ids.append(update_id)
+
+        def publish_safe_update_ids() -> None:
+            if not cursor_gap_without_id:
+                self._publish_contiguous_update_ids(result, committed_update_ids, failed_update_ids)
+
         existing_subunit_snapshots = (
             await self._get_existing_subunit_event_snapshots([item.orgnr for item in sorted_results if item.success])
             if self.event_ledger_enabled
@@ -1118,9 +1151,7 @@ class UpdateService:
 
         for fetch_result in sorted_results:
             if not fetch_result.success:
-                update_id = self._parse_oppdateringsid(fetch_result.source_update_id)
-                if update_id is not None:
-                    failed_update_ids.append(update_id)
+                remember_failed_update_id(fetch_result.source_update_id)
                 result.api_errors += 1
                 if fetch_result.error:
                     result.errors.append(f"{fetch_result.orgnr}: {fetch_result.error}")
@@ -1129,7 +1160,14 @@ class UpdateService:
             previous_snapshot = existing_subunit_snapshots.get(fetch_result.orgnr)
             subunit_data = fetch_result.subunit_data
             if subunit_data is None:
-                await self._delete_subunit_from_update(fetch_result, previous_snapshot, result)
+                try:
+                    await self._delete_subunit_from_update(fetch_result, previous_snapshot, result)
+                except Exception as e:
+                    remember_failed_update_id(fetch_result.source_update_id)
+                    result.db_errors += 1
+                    result.errors.append(f"DB error {fetch_result.orgnr}: {e!s}")
+                    logger.error("Database error deleting subunit %s: %s", fetch_result.orgnr, e)
+                    continue
                 update_id = self._parse_oppdateringsid(fetch_result.source_update_id)
                 if update_id is not None:
                     committed_update_ids.append(update_id)
@@ -1144,24 +1182,29 @@ class UpdateService:
                     or subunit_data.get("slettedato") is not None
                 )
                 if is_deleted:
-                    await self._delete_subunit_from_update(fetch_result, previous_snapshot, result)
+                    try:
+                        await self._delete_subunit_from_update(fetch_result, previous_snapshot, result)
+                    except Exception as e:
+                        remember_failed_update_id(fetch_result.source_update_id)
+                        result.db_errors += 1
+                        result.errors.append(f"DB error {fetch_result.orgnr}: {e!s}")
+                        logger.error("Database error deleting subunit %s: %s", fetch_result.orgnr, e)
+                        continue
                     update_id = self._parse_oppdateringsid(fetch_result.source_update_id)
                     if update_id is not None:
                         committed_update_ids.append(update_id)
                     continue
 
                 logger.warning(f"Skipping subunit {orgnr} because it has no parent_orgnr (overordnetEnhet is missing).")
-                update_id = self._parse_oppdateringsid(fetch_result.source_update_id)
-                if update_id is not None:
-                    failed_update_ids.append(update_id)
+                remember_failed_update_id(fetch_result.source_update_id)
                 continue
 
             parent_orgnr = str(parent_orgnr)
             persist_candidates.append((fetch_result, subunit_data, parent_orgnr, previous_snapshot))
 
         if not persist_candidates:
-            self._publish_contiguous_update_ids(result, committed_update_ids, failed_update_ids)
-            return
+            publish_safe_update_ids()
+            return cursor_gap_detected
 
         verified_parents = await self._ensure_parent_companies_exist([candidate[1] for candidate in persist_candidates])
         subunits_to_save: list[models.SubUnit] = []
@@ -1173,26 +1216,22 @@ class UpdateService:
                     f"Skipping subunit {subunit_data.get('organisasjonsnummer')} "
                     f"because parent {parent_orgnr} is missing and could not be fetched."
                 )
-                update_id = self._parse_oppdateringsid(fetch_result.source_update_id)
-                if update_id is not None:
-                    failed_update_ids.append(update_id)
+                remember_failed_update_id(fetch_result.source_update_id)
                 continue
 
             subunits_to_save.append(map_subunit_from_api(subunit_data, parent_orgnr))
             event_candidates.append((fetch_result, parent_orgnr, previous_snapshot))
 
         if not subunits_to_save:
-            self._publish_contiguous_update_ids(result, committed_update_ids, failed_update_ids)
-            return
+            publish_safe_update_ids()
+            return cursor_gap_detected
 
         saved_count = await self.subunit_repo.create_batch(subunits_to_save, commit=True)
         if not saved_count:
             for fetch_result, _, _ in event_candidates:
-                update_id = self._parse_oppdateringsid(fetch_result.source_update_id)
-                if update_id is not None:
-                    failed_update_ids.append(update_id)
-            self._publish_contiguous_update_ids(result, committed_update_ids, failed_update_ids)
-            return
+                remember_failed_update_id(fetch_result.source_update_id)
+            publish_safe_update_ids()
+            return cursor_gap_detected
 
         for fetch_result, parent_orgnr, previous_snapshot in event_candidates:
             update_id = self._parse_oppdateringsid(fetch_result.source_update_id)
@@ -1206,7 +1245,8 @@ class UpdateService:
             else:
                 await self._record_subunit_update_events_from_changes(fetch_result, previous_snapshot, parent_orgnr)
 
-        self._publish_contiguous_update_ids(result, committed_update_ids, failed_update_ids)
+        publish_safe_update_ids()
+        return cursor_gap_detected
 
     async def _fetch_and_persist_financials(
         self,
@@ -1307,7 +1347,7 @@ class UpdateService:
                     entities = data.get("_embedded", {}).get("oppdaterteUnderenheter", [])
 
                     fetch_results = await self._fetch_subunit_update_details(entities)
-                    await self._persist_subunit_update_page(fetch_results, result)
+                    cursor_gap_detected = await self._persist_subunit_update_page(fetch_results, result)
 
                     result.companies_processed += len(entities)
                     result.pages_fetched += 1
@@ -1316,6 +1356,9 @@ class UpdateService:
                         f"Processed page {pages_processed} with {len(entities)} subunit updates",
                         extra={"batch_size": len(entities)},
                     )
+                    if cursor_gap_detected:
+                        logger.warning("Stopping subunit update pagination at the first uncommitted update ID")
+                        break
                     next_url = self._extract_next_link(data)
 
                 except Exception as e:
@@ -1504,16 +1547,26 @@ class UpdateService:
 
                                 try:
                                     await self.company_repo.create_or_update(company_data)
+                                    await self.db.commit()
                                     existing_orgnrs.add(target_orgnr)
                                     new_companies_onboarded += 1
                                 except Exception as e:
-                                    logger.error(f"Failed to persist onboarded company {target_orgnr}: {e}")
+                                    await self.db.rollback()
+                                    onboarding_failed_orgnrs.add(target_orgnr)
+                                    failed_update_ids.extend(event_update_ids_by_orgnr.get(target_orgnr, []))
+                                    error_msg = f"Failed to persist onboarded company: {e!s}"
+                                    logger.error("%s for %s", error_msg, target_orgnr)
+                                    await self.report_sync_error(target_orgnr, "company", error_msg)
                             else:
                                 # Mark as failed/subunit to avoid redundant API calls in this execution
                                 failed_this_run.add(target_orgnr)
 
-                        if new_companies_onboarded > 0:
+                        if onboarding_failed_orgnrs:
+                            # Persist retry records even when every item in the
+                            # batch failed before the role transaction starts.
                             await self.db.commit()
+
+                        if new_companies_onboarded > 0:
                             logger.info(
                                 f"Successfully onboarded {new_companies_onboarded} missing main companies during role sync."
                             )

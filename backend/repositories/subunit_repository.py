@@ -313,7 +313,7 @@ class SubUnitRepository:
             logger.error(f"Failed to delete subunit {orgnr}: {e}")
             if commit:
                 await self.db.rollback()
-            return 0
+            raise
 
     async def count_by_parent(self, parent_orgnr: str) -> int:
         """Efficiently count subunits for a parent company."""

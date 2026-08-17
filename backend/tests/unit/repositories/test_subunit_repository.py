@@ -280,6 +280,16 @@ async def test_delete_by_parent_orgnr_no_commit(repo, mock_db_session):
 
 
 @pytest.mark.asyncio
+async def test_delete_by_orgnr_propagates_database_error(repo, mock_db_session):
+    mock_db_session.execute.side_effect = Exception("DB error")
+
+    with pytest.raises(Exception, match="DB error"):
+        await repo.delete_by_orgnr("111111111")
+
+    mock_db_session.rollback.assert_awaited_once()
+
+
+@pytest.mark.asyncio
 async def test_get_existing_orgnrs(repo, mock_db_session):
     """Should return set of existing orgnrs."""
     mock_db_session.execute.return_value.fetchall.return_value = [("111",), ("222",)]
