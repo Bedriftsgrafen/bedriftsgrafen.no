@@ -621,7 +621,9 @@ class SchedulerService:
                 if result.get("latest_oppdateringsid"):
                     await system_repo.set_state("company_update_latest_id", str(result["latest_oppdateringsid"]))
 
-                if result.get("companies_processed", 0) > 0 or not result.get("errors"):
+                if result.get("cursor_gap_detected"):
+                    logger.warning("Preserving company update date cursor because the batch has an uncommitted gap")
+                elif result.get("companies_processed", 0) > 0 or not result.get("errors"):
                     await system_repo.set_state("company_update_last_sync_date", date.today().isoformat())
 
                 logger.info(

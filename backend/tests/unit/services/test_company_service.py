@@ -317,6 +317,7 @@ async def test_get_subunits_syncs_if_missing(service):
     # Assert
     assert len(result) == 1
     service.brreg_api.fetch_subunits.assert_called_once_with("123456789")
+    service.subunit_repo.delete_by_parent_orgnr.assert_awaited_once_with("123456789", commit=False)
     service.subunit_repo.mark_cache_refreshed.assert_called_once_with("123456789", commit=True)
 
 
@@ -332,7 +333,39 @@ async def test_get_subunits_reuses_negative_cache(service):
     assert first == []
     assert second == []
     service.brreg_api.fetch_subunits.assert_called_once_with("123456789")
+    service.subunit_repo.delete_by_parent_orgnr.assert_awaited_once_with("123456789", commit=False)
+    service.subunit_repo.create_batch.assert_not_awaited()
     service.subunit_repo.mark_cache_refreshed.assert_called_once_with("123456789", commit=True)
+
+
+@pytest.mark.asyncio
+async def test_get_subunits_reconciles_stale_rows_before_marking_cache_fresh(service):
+    call_order = []
+
+    async def delete_existing(parent_orgnr, commit=True):
+        call_order.append("delete")
+        return 2
+
+    async def create_current(subunits, commit=True):
+        call_order.append("create")
+        return len(subunits)
+
+    async def mark_fresh(parent_orgnr, commit=True):
+        call_order.append("mark")
+        return 1
+
+    service.subunit_repo.get_by_parent_orgnr.return_value = [MagicMock()]
+    service.subunit_repo.delete_by_parent_orgnr.side_effect = delete_existing
+    service.subunit_repo.create_batch.side_effect = create_current
+    service.subunit_repo.mark_cache_refreshed.side_effect = mark_fresh
+    service.brreg_api.fetch_subunits.return_value = [{"organisasjonsnummer": "111111111", "navn": "Aktiv avdeling"}]
+
+    await service.get_subunits("123456789")
+
+    assert call_order == ["delete", "create", "mark"]
+    service.subunit_repo.delete_by_parent_orgnr.assert_awaited_once_with("123456789", commit=False)
+    service.subunit_repo.create_batch.assert_awaited_once()
+    service.subunit_repo.mark_cache_refreshed.assert_awaited_once_with("123456789", commit=True)
 
 
 @pytest.mark.asyncio

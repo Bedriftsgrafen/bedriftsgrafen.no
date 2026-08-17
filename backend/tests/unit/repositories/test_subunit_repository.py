@@ -280,6 +280,16 @@ async def test_delete_by_parent_orgnr_no_commit(repo, mock_db_session):
 
 
 @pytest.mark.asyncio
+async def test_delete_by_parent_orgnr_propagates_error_without_commit(repo, mock_db_session):
+    mock_db_session.execute.side_effect = RuntimeError("DB error")
+
+    with pytest.raises(RuntimeError, match="DB error"):
+        await repo.delete_by_parent_orgnr("999999999", commit=False)
+
+    mock_db_session.rollback.assert_not_called()
+
+
+@pytest.mark.asyncio
 async def test_delete_by_orgnr_propagates_database_error(repo, mock_db_session):
     mock_db_session.execute.side_effect = Exception("DB error")
 

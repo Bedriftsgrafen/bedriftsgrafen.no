@@ -719,7 +719,10 @@ class CompanyService:
                 for item in data:
                     subunits.append(map_subunit_from_api(item, parent_orgnr))
 
-                expected_count = len({subunit.orgnr for subunit in subunits if subunit.parent_orgnr})
+            expected_count = len({subunit.orgnr for subunit in subunits if subunit.parent_orgnr})
+            await self.subunit_repo.delete_by_parent_orgnr(parent_orgnr, commit=False)
+
+            if subunits:
                 saved_count = await self.subunit_repo.create_batch(subunits, commit=False)
                 if saved_count != expected_count:
                     raise RuntimeError(

@@ -502,6 +502,27 @@ class UpdateService:
         except Exception as e:
             logger.error(f"Failed to report sync error for {orgnr}: {e}")
 
+    async def _persist_sync_error_reports(
+        self,
+        reports: list[tuple[str, str, str, int | None]],
+    ) -> None:
+        """Persist retry records after the caller's data transaction is settled."""
+        if not reports:
+            return
+
+        try:
+            for orgnr, entity_type, error_message, status_code in reports:
+                await self.report_sync_error(
+                    orgnr=orgnr,
+                    entity_type=entity_type,
+                    error_message=error_message,
+                    status_code=status_code,
+                )
+            await self.db.commit()
+        except Exception:
+            await self.db.rollback()
+            logger.exception("Failed to persist sync error reports")
+
     async def fetch_updates(
         self,
         since_date: date | None = None,
@@ -705,6 +726,7 @@ class UpdateService:
         pending_update_ids: list[int] = []
         committed_update_ids: list[int] = []
         failed_update_ids: list[int] = []
+        sync_error_reports: list[tuple[str, str, str, int | None]] = []
         cursor_gap_detected = False
         cursor_gap_without_id = False
 
@@ -715,6 +737,7 @@ class UpdateService:
         def remember_failed_update_id(source_update_id: str | int | None) -> None:
             nonlocal cursor_gap_detected, cursor_gap_without_id
             cursor_gap_detected = True
+            result.cursor_gap_detected = True
             update_id = self._parse_oppdateringsid(source_update_id)
             if update_id is None:
                 cursor_gap_without_id = True
@@ -737,12 +760,7 @@ class UpdateService:
                     result.api_errors += 1
                     if fetch_result.error and "Invalid" not in fetch_result.error:
                         result.errors.append(f"{fetch_result.orgnr}: {fetch_result.error}")
-                        # Report to SyncError for later retry by repair worker
-                        await self.report_sync_error(
-                            orgnr=fetch_result.orgnr,
-                            entity_type="company",
-                            error_message=fetch_result.error,
-                        )
+                        sync_error_reports.append((fetch_result.orgnr, "company", fetch_result.error, None))
                 continue
 
             try:
@@ -879,6 +897,7 @@ class UpdateService:
 
         if not cursor_gap_without_id:
             self._publish_contiguous_update_ids(result, committed_update_ids, failed_update_ids)
+        await self._persist_sync_error_reports(sync_error_reports)
         return cursor_gap_detected
 
     async def _get_existing_company_event_snapshots(self, orgnrs: list[str]) -> dict[str, dict[str, Any]]:
@@ -1132,6 +1151,7 @@ class UpdateService:
         def remember_failed_update_id(source_update_id: str | int | None) -> None:
             nonlocal cursor_gap_detected, cursor_gap_without_id
             cursor_gap_detected = True
+            result.cursor_gap_detected = True
             update_id = self._parse_oppdateringsid(source_update_id)
             if update_id is None:
                 cursor_gap_without_id = True
@@ -1575,6 +1595,7 @@ class UpdateService:
                     all_batch_roles: list[models.Role] = []
                     role_counts_by_orgnr: dict[str, int] = {}
                     processed_orgnrs: set[str] = set()
+                    role_sync_error_reports: list[tuple[str, str, str, int | None]] = []
 
                     # Sort orgnrs to ensure consistent lock acquisition order and prevent deadlocks
                     sorted_orgnrs_to_sync = sorted(orgnrs_to_sync)
@@ -1614,7 +1635,7 @@ class UpdateService:
                             error_msg = f"Failed to sync roles: {e!s}"
                             logger.error(f"{error_msg} for {orgnr}")
                             status_code = getattr(e, "status_code", None) if hasattr(e, "status_code") else None
-                            await self.report_sync_error(orgnr, "role", error_msg, status_code=status_code)
+                            role_sync_error_reports.append((orgnr, "role", error_msg, status_code))
 
                     # Phase 2: Transactional database update
                     if processed_orgnrs:
@@ -1637,12 +1658,14 @@ class UpdateService:
                         # 3. Final commit for this batch
                         await self.db.commit()
 
+                    await self._persist_sync_error_reports(role_sync_error_reports)
                     self._publish_contiguous_update_ids(result, committed_update_ids, failed_update_ids)
                     if result.latest_oppdateringsid:
                         await self.system_repo.set_state("role_update_latest_id", str(result.latest_oppdateringsid))
 
                     result.companies_processed += len(events)
                     if failed_update_ids:
+                        result.cursor_gap_detected = True
                         logger.warning(
                             "Role updates had sync errors; advanced cursor only through contiguous successes"
                         )

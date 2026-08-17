@@ -146,6 +146,7 @@ class TestFetchUpdates:
 
         assert update_service.brreg_api._get.await_count == 1
         assert result["latest_oppdateringsid"] is None
+        assert result["cursor_gap_detected"] is True
 
     @pytest.mark.asyncio
     async def test_fetch_updates_requests_included_changes(self, update_service):
@@ -733,8 +734,10 @@ class TestFetchRoleUpdates:
         result = await update_service.fetch_role_updates(since_date=date(2026, 5, 27), page_size=10)
 
         assert result["latest_oppdateringsid"] is None
+        assert result["cursor_gap_detected"] is True
         update_service.system_repo.set_state.assert_not_called()
         update_service.report_sync_error.assert_awaited_once()
+        assert mock_db.commit.await_count == 2
 
     async def test_fetch_role_updates_does_not_advance_cursor_on_onboarding_failure(self, update_service):
         mock_resp = MagicMock(status_code=200)
@@ -978,6 +981,9 @@ class TestPersistChunk:
 
         update_service.company_repo.create_or_update.assert_not_called()
         assert result.api_errors == 1
+        assert result.cursor_gap_detected is True
+        update_service.report_sync_error.assert_awaited_once()
+        update_service.db.commit.assert_awaited_once()
 
     @pytest.mark.asyncio
     async def test_persist_chunk_advances_cursor_only_for_committed_successes(self, update_service):

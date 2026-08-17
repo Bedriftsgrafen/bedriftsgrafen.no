@@ -177,4 +177,5 @@ class UpdateBatchResult(BaseModel):
     db_errors: int = 0
     errors: list[str] = Field(default_factory=list)
     latest_oppdateringsid: int | None = None
+    cursor_gap_detected: bool = False
     pages_fetched: int = 0

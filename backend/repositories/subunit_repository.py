@@ -287,7 +287,8 @@ class SubUnitRepository:
             logger.error(f"Failed to delete subunits for {parent_orgnr}: {e}")
             if commit:
                 await self.db.rollback()
-            return 0
+                return 0
+            raise
 
     async def delete_by_orgnr(self, orgnr: str, commit: bool = True) -> int:
         """

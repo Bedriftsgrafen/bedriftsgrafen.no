@@ -271,6 +271,36 @@ async def test_run_company_updates(mock_session_local):
 
 
 @pytest.mark.asyncio
+async def test_run_company_updates_preserves_date_cursor_when_batch_has_gap(mock_session_local):
+    scheduler_service = SchedulerService()
+
+    with (
+        patch.object(scheduler_service, "_log_memory_snapshot"),
+        patch("services.update_service.UpdateService") as MockUpdateService,
+        patch("repositories.system_repository.SystemRepository") as MockSystemRepo,
+    ):
+        mock_update = MockUpdateService.return_value
+        mock_update.fetch_updates = AsyncMock(
+            return_value={
+                "latest_oppdateringsid": None,
+                "companies_processed": 2,
+                "companies_created": 0,
+                "companies_updated": 1,
+                "errors": ["123456789: API timeout"],
+                "cursor_gap_detected": True,
+            }
+        )
+
+        mock_system = MockSystemRepo.return_value
+        mock_system.get_state = AsyncMock(side_effect=[None, "2026-08-16"])
+        mock_system.set_state = AsyncMock()
+
+        await scheduler_service.run_company_updates()
+
+        mock_system.set_state.assert_not_awaited()
+
+
+@pytest.mark.asyncio
 async def test_sync_accounting_batch(mock_session_local):
     scheduler_service = SchedulerService()
 
