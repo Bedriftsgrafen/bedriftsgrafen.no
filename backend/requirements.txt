@@ -15,7 +15,6 @@ annotated-types==0.7.0
 anyio==4.14.2
     # via
     #   httpx
-    #   httpx2
     #   starlette
     #   watchfiles
 apscheduler==3.11.3
@@ -52,25 +51,19 @@ greenlet==3.5.5
 h11==0.16.0
     # via
     #   httpcore
-    #   httpcore2
     #   uvicorn
 hiredis==3.4.1
     # via redis
 httpcore==1.0.9
     # via httpx
-httpcore2==2.10.0
-    # via httpx2
 httptools==0.7.1
     # via uvicorn
 httpx==0.28.1
-    # via bedriftsgrafen-backend (pyproject.toml)
-httpx2==2.10.0
     # via bedriftsgrafen-backend (pyproject.toml)
 idna==3.18
     # via
     #   anyio
     #   httpx
-    #   httpx2
     #   requests
 ijson==3.5.1
     # via bedriftsgrafen-backend (pyproject.toml)
@@ -161,10 +154,6 @@ starlette==1.6.0
     #   bedriftsgrafen-backend (pyproject.toml)
     #   fastapi
     #   prometheus-fastapi-instrumentator
-truststore==0.10.4
-    # via
-    #   httpcore2
-    #   httpx2
 typing-extensions==4.16.0
     # via
     #   alembic
