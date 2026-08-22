@@ -1,30 +1,42 @@
-#!/bin/bash
+#!/usr/bin/env bash
 
-# scripts/sync-venv.sh
-# Automatically synchronizes the local backend virtual environment with requirements.txt
+# Keep the local backend environment identical to the compiled requirements.
 
-VENV_DIR="backend/.venv"
-REQ_FILE="backend/requirements.txt"
-MARKER_FILE="$VENV_DIR/.last_install"
+set -euo pipefail
 
-# 1. If venv doesn't exist, it will be handled by the validate:backend fallback
-if [ ! -d "$VENV_DIR" ]; then
+SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
+REPO_ROOT="$(cd -- "$SCRIPT_DIR/.." && pwd)"
+
+VENV_DIR="${VENV_DIR:-$REPO_ROOT/backend/.venv}"
+REQ_FILE="${REQ_FILE:-$REPO_ROOT/backend/requirements.txt}"
+PYTHON="$VENV_DIR/bin/python"
+PIP_SYNC="$VENV_DIR/bin/pip-sync"
+
+# validate:backend falls back to the development container when no local venv exists.
+if [[ ! -d "$VENV_DIR" ]]; then
     exit 0
 fi
 
-# 2. Check if requirements.txt is newer than our marker file
-if [ ! -f "$MARKER_FILE" ] || [ "$REQ_FILE" -nt "$MARKER_FILE" ]; then
-    echo "🔄 requirements.txt has changed. Synchronizing local .venv..."
-    
-    # Run pip install using the absolute path to the venv's pip
-    ./"$VENV_DIR/bin/pip" install --upgrade pip
-    ./"$VENV_DIR/bin/pip" install -r "$REQ_FILE"
-    
-    if [ $? -eq 0 ]; then
-        touch "$MARKER_FILE"
-        echo "✅ Local .venv synchronized."
-    else
-        echo "❌ Failed to synchronize .venv. Please check backend/requirements.txt"
-        exit 1
-    fi
+if [[ ! -x "$PYTHON" ]]; then
+    echo "Invalid backend virtual environment: $PYTHON is missing" >&2
+    exit 1
 fi
+
+if [[ ! -f "$REQ_FILE" ]]; then
+    echo "Backend requirements file is missing: $REQ_FILE" >&2
+    exit 1
+fi
+
+# A newly created or partially installed venv may not have pip-tools yet.
+if [[ ! -x "$PIP_SYNC" ]]; then
+    echo "Bootstrapping backend dependencies from requirements.txt..."
+    "$PYTHON" -m pip install --requirement "$REQ_FILE"
+fi
+
+if [[ ! -x "$PIP_SYNC" ]]; then
+    echo "pip-sync is unavailable after dependency bootstrap" >&2
+    exit 1
+fi
+
+# Run on every validation so packages installed outside the lock file are removed.
+"$PIP_SYNC" "$REQ_FILE"

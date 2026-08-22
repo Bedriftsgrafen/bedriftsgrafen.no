@@ -17,12 +17,12 @@ Dependencies declared in `backend/pyproject.toml`, pinned in `backend/requiremen
 
 2. Regenerate lock file:
    ```bash
-   cd backend && .venv/bin/pip-compile --output-file=requirements.txt pyproject.toml
+   cd backend && .venv/bin/pip-compile --allow-unsafe --extra=dev --no-strip-extras --output-file=requirements.txt pyproject.toml
    ```
 
 3. Install locally:
    ```bash
-   cd backend && .venv/bin/pip install -r requirements.txt
+   npm run sync:backend
    ```
 
 4. Commit both files:
@@ -34,7 +34,7 @@ Dependencies declared in `backend/pyproject.toml`, pinned in `backend/requiremen
 ### Security audit
 
 ```bash
-cd backend && .venv/bin/pip-audit
+npm run security:backend
 ```
 
 ## Frontend (npm)

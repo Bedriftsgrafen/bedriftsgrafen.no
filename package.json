@@ -22,7 +22,7 @@
     "lighthouse": "npm run build --workspace=frontend && node scripts/run-lighthouse.mjs",
     "security:audit": "bash scripts/security-audit.sh",
     "security:frontend": "cd frontend && npm audit",
-    "security:backend": "cd backend && pip install safety pip-audit && safety check && pip-audit",
+    "security:backend": "npm run sync:backend && cd backend && .venv/bin/pip-audit -r requirements.txt",
     "security:fix": "npm audit fix && cd frontend && npm audit fix"
   },
   "devDependencies": {
