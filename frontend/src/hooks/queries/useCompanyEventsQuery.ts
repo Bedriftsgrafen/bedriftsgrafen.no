@@ -1,6 +1,7 @@
 import { useQuery } from '@tanstack/react-query'
 import { companyQueryKeys } from '../../lib/queryKeys'
 import { apiClient } from '../../utils/apiClient'
+import { isAutomatedClient } from '../../utils/automatedClient'
 
 export type CompanyEventItem = {
   id: number
@@ -36,7 +37,7 @@ export function useCompanyEventsQuery(orgnr: string | null, limit = 6, offset = 
       })
       return response.data
     },
-    enabled: !!orgnr,
+    enabled: !!orgnr && !isAutomatedClient(),
     staleTime: 5 * 60 * 1000,
     retry: false,
     refetchOnWindowFocus: false,

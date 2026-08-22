@@ -4,6 +4,7 @@ import { logger } from '../../utils/logger'
 import { CompanyWithAccounting } from '../../types'
 import { useEffect } from 'react'
 import { companyQueryKeys } from '../../lib/queryKeys'
+import { isAutomatedClient } from '../../utils/automatedClient'
 
 interface FetchCompanyResponse {
   company_fetched: boolean
@@ -40,9 +41,9 @@ export function useCompanyDetailQuery(orgnr: string | null, autoFetch: boolean =
     enabled: !!orgnr, // Only run query if orgnr is provided
   })
 
-  // Auto-fetch from Brønnøysund if company has no accounting data
+  // Auto-fetch from Brønnøysund for interactive clients if accounting data is missing.
   useEffect(() => {
-    if (autoFetch && query.data && query.data.regnskap.length === 0 && orgnr) {
+    if (autoFetch && !isAutomatedClient() && query.data && query.data.regnskap.length === 0 && orgnr) {
       // Only auto-fetch once per session (check if we already tried)
       const autoFetchKey = `auto-fetched-${orgnr}`
       const alreadyFetched = sessionStorage.getItem(autoFetchKey)
