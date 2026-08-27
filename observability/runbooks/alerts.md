@@ -183,7 +183,12 @@ with the exact PromQL below.
    `sum(increase(bedriftsgrafen_brreg_api_requests_total{status_code="429"}[15m]))`.
 6. For timeout/circuit problems, query:
    Query `bedriftsgrafen_brreg_http_attempts_total{status_category="timeout"}` for real timeouts and
-   `bedriftsgrafen_brreg_circuit_open_total` for operations blocked before an HTTP attempt.
+   `bedriftsgrafen_brreg_circuit_open_total` for transitions from closed to open. Locally blocked operations
+   remain visible as `bedriftsgrafen_brreg_api_requests_total{status_code="circuit_open"}`.
+   Circuit state is endpoint-scoped, so use the `endpoint` label to identify the isolated Brreg surface.
+   Circuit failures are counted per exhausted logical operation, not once per internal HTTP retry.
+   Transient financial failures persist `financial_poll_failure_count` and `financial_poll_retry_after` on
+   `bedrifter`; inspect due retries before manually resetting either field.
 7. For Redis guard failures, query:
    `sum(increase(bedriftsgrafen_brreg_guard_redis_errors_total[5m])) by (error_type)`.
 8. Compare public request pressure with logical operations and attempts:
@@ -213,7 +218,7 @@ Immediate actions:
 | Brreg background guard saturation | `(sum(increase(bedriftsgrafen_brreg_guard_decisions_total{result="rejected",traffic_class="background"}[15m])) or vector(0)) >= bool 10` | 15m, `for: 5m` | at least 10 background rejections | semantic guard event | Medium; alerts on sustained worker saturation, not isolated retries |
 | Brreg 429 | `sum(increase(bedriftsgrafen_brreg_api_requests_total{status_code="429"}[15m]))` | 15m, `for: 1m` | any upstream 429 | upstream response code | Low; Brreg 429 should be investigated |
 | Brreg timeouts | `sum(increase(bedriftsgrafen_brreg_http_attempts_total{status_category="timeout"}[15m]))` | 15m, `for: 5m` | any sustained timeout | local timeout event | Medium; transient upstream network blips can fire |
-| Brreg circuit breaker | `sum(increase(bedriftsgrafen_brreg_circuit_open_total[5m]))` | 5m, `for: 1m` | any circuit-open observation | local protection state | Low |
+| Brreg circuit breaker | `sum(increase(bedriftsgrafen_brreg_circuit_open_total[5m]))` | 5m, `for: 1m` | any circuit-open transition | local protection transition | Low |
 | Redis guard errors | `sum(increase(bedriftsgrafen_brreg_guard_redis_errors_total[5m]))` | 5m, `for: 1m` | any Redis guard error | guard fail-closed event | Low |
 | Backend 429 | `sum(increase(bedriftsgrafen_rate_limit_responses_total{layer="backend"}[5m]))` | 5m, `for: 2m` | any backend 429 | application limiter event | Medium; can be expected during abuse |
 | Edge nginx 429 | `sum(count_over_time({container="bedriftsgrafen-frontend"} |~ "(?i)(limiting requests| 429 |status=429)" [5m]))` | 5m, `for: 2m` | any edge limiter event | nginx access/error logs in Loki | Medium; expected during abuse |

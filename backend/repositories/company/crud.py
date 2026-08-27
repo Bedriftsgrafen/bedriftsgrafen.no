@@ -8,7 +8,7 @@ import logging
 from datetime import UTC, datetime
 from typing import Any
 
-from sqlalchemy import delete, text, update
+from sqlalchemy import delete, select, text, update
 from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.exc import DBAPIError
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -226,12 +226,36 @@ class CrudMixin:
             raise DatabaseException(f"Failed to update coordinates for {orgnr}", original_error=e)
 
     async def update_last_polled_regnskap(self, orgnr: str) -> None:
-        """Update the last_polled_regnskap timestamp for a company."""
+        """Mark a financial poll complete and clear any retry state."""
         # Note: No internal commit here, relies on caller to commit
         stmt = (
             update(models.Company)
             .where(models.Company.orgnr == orgnr)
-            .values(last_polled_regnskap=datetime.now(UTC).date())
+            .values(
+                last_polled_regnskap=datetime.now(UTC).date(),
+                financial_poll_failure_count=0,
+                financial_poll_retry_after=None,
+            )
+        )
+        await self.db.execute(stmt)
+
+    async def get_financial_poll_failure_count_for_update(self, orgnr: str) -> int:
+        """Lock and return a company's current financial poll failure count."""
+        stmt = (
+            select(models.Company.financial_poll_failure_count).where(models.Company.orgnr == orgnr).with_for_update()
+        )
+        result = await self.db.execute(stmt)
+        return result.scalar_one_or_none() or 0
+
+    async def defer_financial_poll(self, orgnr: str, failure_count: int, retry_after: datetime) -> None:
+        """Persist retry metadata for a transient financial poll failure."""
+        stmt = (
+            update(models.Company)
+            .where(models.Company.orgnr == orgnr)
+            .values(
+                financial_poll_failure_count=failure_count,
+                financial_poll_retry_after=retry_after,
+            )
         )
         await self.db.execute(stmt)
 

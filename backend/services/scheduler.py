@@ -649,7 +649,8 @@ class SchedulerService:
         """Sync accounting data for companies needing updates."""
         from datetime import datetime, timedelta
 
-        from services.update_service import UpdateService
+        from schemas.brreg import UpdateBatchResult
+        from services.update_service import FinancialPollOutcome, UpdateService
 
         logger.info("Starting accounting sync batch...")
         self._log_memory_snapshot("accounting_sync", "start")
@@ -658,7 +659,8 @@ class SchedulerService:
                 # 1. Selection logic: New companies first, then oldest polled ones
                 # Priority: never polled -> oldest polled
                 limit = 50
-                cutoff_date = datetime.now(UTC).date() - timedelta(days=30)
+                now = datetime.now(UTC)
+                cutoff_date = now.date() - timedelta(days=30)
 
                 # UNION ALL so each branch uses its own index:
                 #   - never-polled branch: idx_bedrifter_needs_financial_polling (partial index on IS NULL)
@@ -667,15 +669,20 @@ class SchedulerService:
                 union_stmt = text("""
                     (SELECT orgnr FROM bedrifter
                      WHERE last_polled_regnskap IS NULL
+                       AND (financial_poll_retry_after IS NULL OR financial_poll_retry_after <= :retry_cutoff)
                      ORDER BY orgnr LIMIT :lim)
                     UNION ALL
                     (SELECT orgnr FROM bedrifter
                      WHERE last_polled_regnskap <= :cutoff
+                       AND (financial_poll_retry_after IS NULL OR financial_poll_retry_after <= :retry_cutoff)
                      ORDER BY last_polled_regnskap ASC LIMIT :lim)
                     LIMIT :lim
                 """)
 
-                result = await db.execute(union_stmt, {"cutoff": cutoff_date, "lim": limit})
+                result = await db.execute(
+                    union_stmt,
+                    {"cutoff": cutoff_date, "retry_cutoff": now, "lim": limit},
+                )
                 orgnrs = [row[0] for row in result.all()]
                 total = len(orgnrs)
 
@@ -688,36 +695,71 @@ class SchedulerService:
 
                 # 2. Process batch
                 update_service = UpdateService(db)
+                attempted = 0
                 processed = 0
+                failed = 0
+                deferred = 0
+                circuit_opened = False
                 for attempt_index, orgnr in enumerate(orgnrs, start=1):
+                    attempted = attempt_index
                     try:
-                        from schemas.brreg import UpdateBatchResult
-
                         dummy_result = UpdateBatchResult(since_date=datetime.now().date(), since_iso="")
-                        await update_service._fetch_and_persist_financials(orgnr, dummy_result)
-                        await db.commit()
-                        processed += 1
+                        outcome = await update_service._fetch_and_persist_financials(orgnr, dummy_result)
+                        if outcome is FinancialPollOutcome.CIRCUIT_OPEN:
+                            await db.rollback()
+                            deferred += 1
+                            circuit_opened = True
+                            logger.warning(
+                                "Accounting sync paused because the Brreg circuit opened",
+                                extra={"orgnr": orgnr, "attempted": attempted, "total": total},
+                            )
+                        elif outcome is FinancialPollOutcome.RETRY_LATER:
+                            await db.commit()
+                            deferred += 1
+                        else:
+                            await db.commit()
+                            if outcome is FinancialPollOutcome.COMPLETED:
+                                processed += 1
+                            else:
+                                failed += 1
                     except Exception as ex:
                         await db.rollback()
+                        failed += 1
                         logger.warning("Failed to sync accounting", extra={"orgnr": orgnr, "error": str(ex)})
 
-                    if attempt_index % 10 == 0 or attempt_index == total:
+                    if attempt_index % 10 == 0 or attempt_index == total or circuit_opened:
                         self._log_memory_snapshot(
                             "accounting_sync",
                             "progress",
                             attempted=attempt_index,
                             processed=processed,
+                            failed=failed,
+                            deferred=deferred,
                             total=total,
                         )
+                    if circuit_opened:
+                        break
 
+                skipped = total - attempted if circuit_opened else 0
                 logger.info(
                     "Accounting sync batch completed",
-                    extra={"processed": processed, "total": total},
+                    extra={
+                        "attempted": attempted,
+                        "processed": processed,
+                        "failed": failed,
+                        "deferred": deferred,
+                        "skipped": skipped,
+                        "total": total,
+                    },
                 )
                 self._log_memory_snapshot(
                     "accounting_sync",
                     "done",
+                    attempted=attempted,
                     processed=processed,
+                    failed=failed,
+                    deferred=deferred,
+                    skipped=skipped,
                     total=total,
                 )
 

@@ -2,6 +2,7 @@ import asyncio
 import logging
 import os
 from datetime import UTC, date, datetime, timedelta
+from enum import StrEnum
 from typing import Any
 
 from pydantic import ValidationError
@@ -18,6 +19,7 @@ from repositories.role_repository import RoleRepository
 from repositories.subunit_repository import SubUnitRepository
 from repositories.system_repository import SystemRepository
 from schemas.brreg import BrregUpdateChange, FetchResult, SubunitFetchResult, UpdateBatchResult
+from services.base_external_service import CircuitOpenException, ExternalApiException
 from services.brreg_api_service import BrregApiService
 from services.brreg_mappers import map_role_from_api, map_subunit_from_api
 from utils.logging_config import sanitize_log
@@ -62,6 +64,18 @@ BRREG_SUBUNIT_CHANGE_EVENT_PATHS: dict[str, tuple[str, ...]] = {
     "subunit_employee_count_changed": ("/antallAnsatte", "/harRegistrertAntallAnsatte"),
 }
 BRREG_EMPLOYEE_CHANGE_PATHS = ("/antallAnsatte", "/harRegistrertAntallAnsatte")
+FINANCIAL_POLL_RETRY_BASE_SECONDS = 60 * 60
+FINANCIAL_POLL_RETRY_MAX_SECONDS = 7 * 24 * 60 * 60
+FINANCIAL_POLL_RETRY_JITTER_SECONDS = 30 * 60
+
+
+class FinancialPollOutcome(StrEnum):
+    """Result of one financial poll, including whether it is safe to advance freshness state."""
+
+    COMPLETED = "completed"
+    TERMINAL_FAILURE = "terminal_failure"
+    RETRY_LATER = "retry_later"
+    CIRCUIT_OPEN = "circuit_open"
 
 
 class UpdateService:
@@ -77,6 +91,28 @@ class UpdateService:
         self.accounting_repo = AccountingRepository(db)
         self.event_repo = CompanyEventRepository(db)
         self.event_ledger_enabled = os.getenv("ENABLE_COMPANY_EVENT_LEDGER", "").lower() in {"1", "true", "yes"}
+
+    @staticmethod
+    def _financial_poll_retry_delay(orgnr: str, failure_count: int) -> timedelta:
+        """Return a deterministic exponential delay that spreads retries across each window."""
+        exponent = min(max(failure_count - 1, 0), 16)
+        exponential_seconds = min(
+            FINANCIAL_POLL_RETRY_BASE_SECONDS * (2**exponent),
+            FINANCIAL_POLL_RETRY_MAX_SECONDS,
+        )
+        jitter_seconds = sum((index + 1) * ord(char) for index, char in enumerate(orgnr))
+        jitter_seconds %= FINANCIAL_POLL_RETRY_JITTER_SECONDS
+        return timedelta(seconds=min(exponential_seconds + jitter_seconds, FINANCIAL_POLL_RETRY_MAX_SECONDS))
+
+    async def _defer_financial_poll(self, orgnr: str) -> None:
+        current_failure_count = await self.company_repo.get_financial_poll_failure_count_for_update(orgnr)
+        failure_count = current_failure_count + 1
+        retry_after = datetime.now(UTC) + self._financial_poll_retry_delay(orgnr, failure_count)
+        await self.company_repo.defer_financial_poll(orgnr, failure_count, retry_after)
+        logger.warning(
+            "Deferred financial poll after transient Brreg failure",
+            extra={"orgnr": orgnr, "failure_count": failure_count, "retry_after": retry_after.isoformat()},
+        )
 
     @staticmethod
     def _parse_brreg_datetime(value: Any) -> datetime | None:
@@ -1272,14 +1308,13 @@ class UpdateService:
         self,
         orgnr: str,
         result: UpdateBatchResult,
-    ) -> None:
+    ) -> FinancialPollOutcome:
         """Fetch and persist financial statements for a company.
 
-        Called only for newly discovered companies.
-        Always marks last_polled_regnskap afterwards (even on failure)
-        to prevent infinite retry loops for companies whose financials
-        consistently return server errors from Brønnøysund.
+        Advance last_polled_regnskap only after a valid upstream response or a
+        non-retryable client error. Transient failures must remain eligible for retry.
         """
+        outcome = FinancialPollOutcome.COMPLETED
         try:
             statements = await self.brreg_api.fetch_financial_statements(orgnr)
 
@@ -1317,15 +1352,18 @@ class UpdateService:
             error_msg = f"Failed to fetch financials for {orgnr}: {e}"
             logger.warning(error_msg)
             result.errors.append(error_msg)
-        finally:
-            # Always mark as polled to prevent infinite retry loops.
-            # Companies with persistent API errors will be retried after
-            # the 30-day cutoff in sync_accounting_batch.
-            try:
-                await self.company_repo.update_last_polled_regnskap(orgnr)
-            except Exception as e:
-                logger.error(f"Failed to update last_polled_regnskap for {orgnr}: {e}")
-                await self.db.rollback()
+            if isinstance(e, CircuitOpenException):
+                return FinancialPollOutcome.CIRCUIT_OPEN
+            if not isinstance(e, ExternalApiException) or e.status_code is None or e.status_code == 429:
+                await self._defer_financial_poll(orgnr)
+                return FinancialPollOutcome.RETRY_LATER
+            if e.status_code >= 500:
+                await self._defer_financial_poll(orgnr)
+                return FinancialPollOutcome.RETRY_LATER
+            outcome = FinancialPollOutcome.TERMINAL_FAILURE
+
+        await self.company_repo.update_last_polled_regnskap(orgnr)
+        return outcome
 
     async def fetch_subunit_updates(
         self,

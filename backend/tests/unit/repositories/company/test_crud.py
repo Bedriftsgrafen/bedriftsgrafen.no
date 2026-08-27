@@ -100,7 +100,33 @@ async def test_update_coordinates(repo, mock_db_session):
 async def test_update_last_polled_regnskap(repo, mock_db_session):
     await repo.update_last_polled_regnskap("123")
 
-    assert mock_db_session.execute.called
+    stmt = mock_db_session.execute.await_args.args[0]
+    params = stmt.compile().params
+    assert params["financial_poll_failure_count"] == 0
+    assert params["financial_poll_retry_after"] is None
+
+
+@pytest.mark.asyncio
+async def test_get_financial_poll_failure_count_for_update(repo, mock_db_session):
+    mock_db_session.execute.return_value.scalar_one_or_none.return_value = 3
+
+    result = await repo.get_financial_poll_failure_count_for_update("123")
+
+    assert result == 3
+    stmt = mock_db_session.execute.await_args.args[0]
+    assert stmt._for_update_arg is not None
+
+
+@pytest.mark.asyncio
+async def test_defer_financial_poll(repo, mock_db_session):
+    retry_after = MagicMock()
+
+    await repo.defer_financial_poll("123", 2, retry_after)
+
+    stmt = mock_db_session.execute.await_args.args[0]
+    params = stmt.compile().params
+    assert params["financial_poll_failure_count"] == 2
+    assert params["financial_poll_retry_after"] is retry_after
 
 
 @pytest.mark.asyncio

@@ -11,6 +11,7 @@ from services.scheduler import (
     REGULAR_MAINTENANCE_TABLES,
     SchedulerService,
 )
+from services.update_service import FinancialPollOutcome
 
 
 @pytest.fixture
@@ -316,18 +317,80 @@ async def test_sync_accounting_batch(mock_session_local):
         patch("services.update_service.UpdateService") as MockUpdateService,
     ):
         mock_update = MockUpdateService.return_value
-        mock_update._fetch_and_persist_financials = AsyncMock()
+        mock_update._fetch_and_persist_financials = AsyncMock(return_value=FinancialPollOutcome.COMPLETED)
 
         await scheduler_service.sync_accounting_batch()
 
         assert mock_update._fetch_and_persist_financials.call_count == 2
         assert mock_db.commit.await_count == 2
         mock_db.rollback.assert_not_awaited()
+        selection_stmt = mock_db.execute.await_args_list[0].args[0]
+        assert "financial_poll_retry_after" in selection_stmt.text
+        assert "retry_cutoff" in mock_db.execute.await_args_list[0].args[1]
         phases = [call.args[:2] for call in mock_memory.call_args_list]
         assert ("accounting_sync", "start") in phases
         assert ("accounting_sync", "selected") in phases
         assert ("accounting_sync", "progress") in phases
         assert ("accounting_sync", "done") in phases
+
+
+@pytest.mark.asyncio
+async def test_sync_accounting_batch_stops_when_circuit_opens(mock_session_local):
+    scheduler_service = SchedulerService()
+    mock_db = mock_session_local.return_value.__aenter__.return_value
+    mock_db.execute = AsyncMock(return_value=patch("sqlalchemy.engine.Result").start())
+    mock_db.execute.return_value.all.return_value = [("123456789",), ("234567891",), ("345678912",)]
+    mock_db.commit = AsyncMock()
+    mock_db.rollback = AsyncMock()
+
+    with (
+        patch.object(scheduler_service, "_log_memory_snapshot") as mock_memory,
+        patch("services.update_service.UpdateService") as MockUpdateService,
+    ):
+        mock_update = MockUpdateService.return_value
+        mock_update._fetch_and_persist_financials = AsyncMock(
+            side_effect=[FinancialPollOutcome.RETRY_LATER, FinancialPollOutcome.CIRCUIT_OPEN]
+        )
+
+        await scheduler_service.sync_accounting_batch()
+
+    assert mock_update._fetch_and_persist_financials.await_count == 2
+    mock_db.commit.assert_awaited_once()
+    mock_db.rollback.assert_awaited_once()
+    done_call = next(call for call in mock_memory.call_args_list if call.args[:2] == ("accounting_sync", "done"))
+    assert done_call.kwargs == {
+        "attempted": 2,
+        "processed": 0,
+        "failed": 0,
+        "deferred": 2,
+        "skipped": 1,
+        "total": 3,
+    }
+
+
+@pytest.mark.asyncio
+async def test_sync_accounting_batch_reports_terminal_failure_without_success(mock_session_local):
+    scheduler_service = SchedulerService()
+    mock_db = mock_session_local.return_value.__aenter__.return_value
+    mock_db.execute = AsyncMock(return_value=patch("sqlalchemy.engine.Result").start())
+    mock_db.execute.return_value.all.return_value = [("123456789",)]
+    mock_db.commit = AsyncMock()
+    mock_db.rollback = AsyncMock()
+
+    with (
+        patch.object(scheduler_service, "_log_memory_snapshot") as mock_memory,
+        patch("services.update_service.UpdateService") as MockUpdateService,
+    ):
+        mock_update = MockUpdateService.return_value
+        mock_update._fetch_and_persist_financials = AsyncMock(return_value=FinancialPollOutcome.TERMINAL_FAILURE)
+
+        await scheduler_service.sync_accounting_batch()
+
+    mock_db.commit.assert_awaited_once()
+    mock_db.rollback.assert_not_awaited()
+    done_call = next(call for call in mock_memory.call_args_list if call.args[:2] == ("accounting_sync", "done"))
+    assert done_call.kwargs["processed"] == 0
+    assert done_call.kwargs["failed"] == 1
 
 
 @pytest.mark.asyncio

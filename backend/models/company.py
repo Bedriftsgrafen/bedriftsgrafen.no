@@ -100,6 +100,11 @@ class Company(Base):
             "idx_bedrifter_needs_financial_polling", "orgnr", postgresql_where=sa_text("last_polled_regnskap IS NULL")
         ),
         Index(
+            "idx_bedrifter_financial_poll_retry_after",
+            "financial_poll_retry_after",
+            postgresql_where=sa_text("financial_poll_retry_after IS NOT NULL"),
+        ),
+        Index(
             "idx_bedrifter_slettedato_orgnr",
             "orgnr",
             postgresql_where=sa_text("((data ->> 'slettedato') IS NOT NULL)"),
@@ -244,6 +249,8 @@ class Company(Base):
     last_polled_regnskap: Mapped[date | None] = mapped_column(
         Date, nullable=True, index=True
     )  # Tracks when financials were last fetched
+    financial_poll_failure_count: Mapped[int] = mapped_column(Integer, nullable=False, default=0, server_default="0")
+    financial_poll_retry_after: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     last_polled_roles: Mapped[date | None] = mapped_column(
         Date, nullable=True, index=True
     )  # Tracks when roles were last fetched

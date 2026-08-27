@@ -5,13 +5,14 @@ Tests incremental update fetching and processing phases.
 Follows AAA pattern (Arrange - Act - Assert).
 """
 
-from datetime import date, timedelta
+from datetime import UTC, date, datetime, timedelta
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
 from schemas.brreg import BrregUpdateEntity, FetchResult, SubunitFetchResult, UpdateBatchResult
-from services.update_service import UpdateService
+from services.base_external_service import CircuitOpenException, ExternalApiException
+from services.update_service import FinancialPollOutcome, UpdateService
 
 
 class NoopAsyncContext:
@@ -37,6 +38,8 @@ def update_service(mock_db):
     service.role_repo = AsyncMock()
     service.system_repo = AsyncMock()
     service.company_repo = AsyncMock()
+    service.company_repo.get_financial_poll_failure_count_for_update = AsyncMock(return_value=0)
+    service.company_repo.defer_financial_poll = AsyncMock()
     service._get_existing_company_event_snapshots = AsyncMock(return_value={})
     return service
 
@@ -1262,8 +1265,9 @@ class TestFetchAndPersistFinancials:
 
         result = UpdateBatchResult(since_date=date.today(), since_iso="2026-01-26T00:00:00.000Z")
 
-        await update_service._fetch_and_persist_financials("123456789", result)
+        outcome = await update_service._fetch_and_persist_financials("123456789", result)
 
+        assert outcome is FinancialPollOutcome.COMPLETED
         update_service.brreg_api.fetch_financial_statements.assert_called_once_with("123456789")
         update_service.company_repo.update_last_polled_regnskap.assert_called_once_with("123456789")
 
@@ -1279,8 +1283,9 @@ class TestFetchAndPersistFinancials:
 
         result = UpdateBatchResult(since_date=date.today(), since_iso="2026-01-26T00:00:00.000Z")
 
-        await update_service._fetch_and_persist_financials("123456789", result)
+        outcome = await update_service._fetch_and_persist_financials("123456789", result)
 
+        assert outcome is FinancialPollOutcome.COMPLETED
         update_service.accounting_repo.create_or_update.assert_called_once()
         assert result.financials_updated == 1
 
@@ -1288,14 +1293,80 @@ class TestFetchAndPersistFinancials:
     async def test_fetch_financials_handles_api_error(self, update_service, mock_db):
         """Should handle API errors gracefully."""
         update_service.brreg_api.fetch_financial_statements = AsyncMock(side_effect=Exception("API error"))
+        update_service.company_repo.update_last_polled_regnskap = AsyncMock()
 
         result = UpdateBatchResult(since_date=date.today(), since_iso="2026-01-26T00:00:00.000Z")
 
-        await update_service._fetch_and_persist_financials("123456789", result)
+        outcome = await update_service._fetch_and_persist_financials("123456789", result)
 
-        # Should record error but not raise
+        assert outcome is FinancialPollOutcome.RETRY_LATER
         assert len(result.errors) == 1
         assert "API error" in result.errors[0]
+        update_service.company_repo.update_last_polled_regnskap.assert_not_awaited()
+        update_service.company_repo.defer_financial_poll.assert_awaited_once()
+        orgnr, failure_count, retry_after = update_service.company_repo.defer_financial_poll.await_args.args
+        assert orgnr == "123456789"
+        assert failure_count == 1
+        assert datetime.now(UTC) + timedelta(minutes=59) < retry_after
+        assert retry_after < datetime.now(UTC) + timedelta(minutes=91)
+
+    @pytest.mark.asyncio
+    async def test_upstream_503_remains_eligible_for_retry(self, update_service, mock_db):
+        update_service.brreg_api.fetch_financial_statements = AsyncMock(
+            side_effect=ExternalApiException(
+                "Failed to fetch financials 123456789",
+                service="Brønnøysund",
+                status_code=503,
+            )
+        )
+        update_service.company_repo.update_last_polled_regnskap = AsyncMock()
+        result = UpdateBatchResult(since_date=date.today(), since_iso="2026-01-26T00:00:00.000Z")
+
+        outcome = await update_service._fetch_and_persist_financials("123456789", result)
+
+        assert outcome is FinancialPollOutcome.RETRY_LATER
+        update_service.company_repo.update_last_polled_regnskap.assert_not_awaited()
+        update_service.company_repo.defer_financial_poll.assert_awaited_once()
+
+    @pytest.mark.asyncio
+    async def test_circuit_open_remains_eligible_for_retry(self, update_service, mock_db):
+        update_service.brreg_api.fetch_financial_statements = AsyncMock(
+            side_effect=CircuitOpenException("Brønnøysund", "financials 123456789")
+        )
+        update_service.company_repo.update_last_polled_regnskap = AsyncMock()
+        result = UpdateBatchResult(since_date=date.today(), since_iso="2026-01-26T00:00:00.000Z")
+
+        outcome = await update_service._fetch_and_persist_financials("123456789", result)
+
+        assert outcome is FinancialPollOutcome.CIRCUIT_OPEN
+        update_service.company_repo.update_last_polled_regnskap.assert_not_awaited()
+        update_service.company_repo.defer_financial_poll.assert_not_awaited()
+
+    def test_financial_poll_retry_delay_is_exponential_and_capped(self, update_service):
+        first_delay = update_service._financial_poll_retry_delay("123456789", 1)
+        second_delay = update_service._financial_poll_retry_delay("123456789", 2)
+        capped_delay = update_service._financial_poll_retry_delay("123456789", 20)
+
+        assert timedelta(hours=1) <= first_delay < timedelta(hours=1, minutes=30)
+        assert timedelta(hours=2) <= second_delay < timedelta(hours=2, minutes=30)
+        assert capped_delay == timedelta(days=7)
+
+    @pytest.mark.asyncio
+    async def test_non_retryable_client_error_advances_poll_timestamp(self, update_service, mock_db):
+        update_service.brreg_api.fetch_financial_statements = AsyncMock(
+            side_effect=ExternalApiException(
+                "Invalid request for financials 123456789",
+                service="Brønnøysund",
+                status_code=400,
+            )
+        )
+        update_service.company_repo.update_last_polled_regnskap = AsyncMock()
+        result = UpdateBatchResult(since_date=date.today(), since_iso="2026-01-26T00:00:00.000Z")
+
+        outcome = await update_service._fetch_and_persist_financials("123456789", result)
+
+        assert outcome is FinancialPollOutcome.TERMINAL_FAILURE
+        update_service.company_repo.update_last_polled_regnskap.assert_awaited_once_with("123456789")
 
 
 class TestFetchSubunitUpdatesEdgeCases:
