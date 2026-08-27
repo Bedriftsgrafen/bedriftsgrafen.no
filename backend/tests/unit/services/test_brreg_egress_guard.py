@@ -6,7 +6,13 @@ import httpx
 import pytest
 from redis.exceptions import RedisError
 
-from services.base_external_service import BaseExternalService, ExternalApiException
+from services.base_external_service import (
+    _CIRCUIT_FAILURE_THRESHOLD,
+    BaseExternalService,
+    CircuitOpenException,
+    ExternalApiException,
+    _CircuitState,
+)
 from services.brreg_egress_guard import (
     BrregEgressGuardConfig,
     BrregEgressGuardError,
@@ -339,19 +345,46 @@ async def test_base_external_service_guard_rejection_blocks_transport(monkeypatc
 
 
 @pytest.mark.asyncio
-async def test_circuit_open_is_counted_without_fake_http_attempt(monkeypatch):
+async def test_open_circuit_rejection_does_not_count_transition_or_http_attempt(monkeypatch):
     monkeypatch.setenv("BRREG_EGRESS_GUARD_ENABLED", "false")
     service = _GuardedBrregService(client=AsyncMock(spec=httpx.AsyncClient))
-    _GuardedBrregService._circuit_open_until = time.monotonic() + 10
+    _GuardedBrregService._circuit_states["company"] = _CircuitState(
+        failure_count=_CIRCUIT_FAILURE_THRESHOLD,
+        open_until=time.monotonic() + 10,
+    )
     try:
         with (
             patch("services.base_external_service.BRREG_CIRCUIT_OPEN_TOTAL") as circuit_metric,
             patch("services.base_external_service.BRREG_HTTP_ATTEMPTS_TOTAL") as attempt_metric,
         ):
-            with pytest.raises(ExternalApiException, match="Circuit open"):
+            with pytest.raises(CircuitOpenException, match="Circuit open"):
                 await service.get_company()
-        circuit_metric.labels.assert_called_once_with(endpoint="company", traffic_class="public")
+        circuit_metric.labels.assert_not_called()
         attempt_metric.labels.assert_not_called()
     finally:
-        _GuardedBrregService._circuit_open_until = 0
-        _GuardedBrregService._circuit_failure_count = 0
+        _GuardedBrregService._reset_circuit_state()
+
+
+@pytest.mark.asyncio
+async def test_circuit_transition_is_counted_once(monkeypatch):
+    monkeypatch.setenv("BRREG_EGRESS_GUARD_ENABLED", "false")
+    client = AsyncMock(spec=httpx.AsyncClient)
+    response = AsyncMock(spec=httpx.Response)
+    response.status_code = 503
+    client.get.return_value = response
+    service = _GuardedBrregService(client=client)
+    service.RETRY_ATTEMPTS = 1
+    _GuardedBrregService._circuit_states["company"] = _CircuitState(
+        failure_count=_CIRCUIT_FAILURE_THRESHOLD - 1,
+        last_failure_time=time.monotonic(),
+    )
+    try:
+        with patch("services.base_external_service.BRREG_CIRCUIT_OPEN_TOTAL") as circuit_metric:
+            with pytest.raises(CircuitOpenException, match="Circuit open"):
+                await service.get_company()
+
+        circuit_metric.labels.assert_called_once_with(endpoint="company", traffic_class="public")
+        circuit_metric.labels.return_value.inc.assert_called_once_with()
+        client.get.assert_awaited_once()
+    finally:
+        _GuardedBrregService._reset_circuit_state()

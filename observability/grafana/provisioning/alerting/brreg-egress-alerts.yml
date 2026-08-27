@@ -517,7 +517,7 @@ groups:
         for: 1m
         annotations:
           summary: Brreg circuit breaker is open.
-          description: Calls are blocked locally because repeated Brreg failures opened the circuit breaker.
+          description: Repeated Brreg failures opened the circuit for the affected endpoint; other Brreg endpoints remain isolated.
           runbook_url: https://github.com/Bedriftsgrafen/bedriftsgrafen.no/blob/main/observability/runbooks/alerts.md#brreg-egress-protection
         labels:
           severity: critical

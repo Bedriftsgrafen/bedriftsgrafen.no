@@ -129,8 +129,7 @@ async def verify_pagination_and_retry_semantics() -> None:
         failures += 1
         return httpx.Response(500)
 
-    BrregApiService._circuit_failure_count = 0
-    BrregApiService._circuit_open_until = 0
+    BrregApiService._reset_circuit_state()
     before_logical = _counter_value(BRREG_LOGICAL_OPERATIONS_TOTAL, endpoint="company", traffic_class="public")
     before_attempts = _counter_value(
         BRREG_HTTP_ATTEMPTS_TOTAL,

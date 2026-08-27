@@ -8,7 +8,9 @@ from services.base_external_service import (
     _CIRCUIT_FAILURE_THRESHOLD,
     _CIRCUIT_WINDOW_SECONDS,
     BaseExternalService,
+    CircuitOpenException,
     ExternalApiException,
+    _CircuitState,
 )
 
 
@@ -166,10 +168,7 @@ async def test_rate_limit_backoff(service, mock_httpx_client):
 def fresh_service(mock_httpx_client):
     """Service with a clean circuit breaker state."""
     svc = _MockExternalService(client=mock_httpx_client)
-    # Reset class-level circuit state
-    _MockExternalService._circuit_failure_count = 0
-    _MockExternalService._circuit_last_failure_time = 0.0
-    _MockExternalService._circuit_open_until = 0.0
+    _MockExternalService._reset_circuit_state()
     return svc
 
 
@@ -187,7 +186,23 @@ async def test_circuit_opens_after_threshold_failures(fresh_service, mock_httpx_
         with pytest.raises(ExternalApiException):
             await fresh_service.get_resource()
 
-    assert _MockExternalService._circuit_open_until > 0
+    assert _MockExternalService._circuit_states["request"].open_until > 0
+
+
+@pytest.mark.asyncio
+async def test_retries_count_as_one_circuit_failure(fresh_service, mock_httpx_client):
+    """Internal HTTP retries belong to one logical circuit outcome."""
+    fail_response = MagicMock(spec=httpx.Response)
+    fail_response.status_code = 500
+    mock_httpx_client.get.return_value = fail_response
+    fresh_service.RETRY_DELAY = 0.0
+    fresh_service.RETRY_ATTEMPTS = 3
+
+    with pytest.raises(ExternalApiException):
+        await fresh_service.get_resource()
+
+    assert mock_httpx_client.get.await_count == 3
+    assert _MockExternalService._circuit_states["request"].failure_count == 1
 
 
 @pytest.mark.asyncio
@@ -195,10 +210,12 @@ async def test_circuit_blocks_requests_when_open(fresh_service):
     """Once the circuit is open, requests should fail immediately without hitting transport."""
     import time
 
-    _MockExternalService._circuit_open_until = time.monotonic() + _CIRCUIT_COOLDOWN_SECONDS
-    _MockExternalService._circuit_failure_count = _CIRCUIT_FAILURE_THRESHOLD
+    _MockExternalService._circuit_states["request"] = _CircuitState(
+        failure_count=_CIRCUIT_FAILURE_THRESHOLD,
+        open_until=time.monotonic() + _CIRCUIT_COOLDOWN_SECONDS,
+    )
 
-    with pytest.raises(ExternalApiException, match="Circuit open"):
+    with pytest.raises(CircuitOpenException, match="Circuit open"):
         await fresh_service.get_resource()
 
 
@@ -208,8 +225,10 @@ async def test_circuit_resets_on_success(fresh_service, mock_httpx_client):
     import time
 
     # Cooldown expired
-    _MockExternalService._circuit_open_until = time.monotonic() - 1.0
-    _MockExternalService._circuit_failure_count = _CIRCUIT_FAILURE_THRESHOLD
+    _MockExternalService._circuit_states["request"] = _CircuitState(
+        failure_count=_CIRCUIT_FAILURE_THRESHOLD,
+        open_until=time.monotonic() - 1.0,
+    )
 
     success_resp = MagicMock(spec=httpx.Response)
     success_resp.status_code = 200
@@ -217,8 +236,7 @@ async def test_circuit_resets_on_success(fresh_service, mock_httpx_client):
 
     response = await fresh_service.get_resource()
     assert response.status_code == 200
-    assert _MockExternalService._circuit_failure_count == 0
-    assert _MockExternalService._circuit_open_until == 0.0
+    assert "request" not in _MockExternalService._circuit_states
 
 
 @pytest.mark.asyncio
@@ -227,8 +245,10 @@ async def test_failure_counter_resets_outside_window(fresh_service, mock_httpx_c
     import time
 
     # Simulate old failures (outside rolling window)
-    _MockExternalService._circuit_failure_count = _CIRCUIT_FAILURE_THRESHOLD - 1
-    _MockExternalService._circuit_last_failure_time = time.monotonic() - _CIRCUIT_WINDOW_SECONDS - 1
+    _MockExternalService._circuit_states["request"] = _CircuitState(
+        failure_count=_CIRCUIT_FAILURE_THRESHOLD - 1,
+        last_failure_time=time.monotonic() - _CIRCUIT_WINDOW_SECONDS - 1,
+    )
 
     fail_response = MagicMock(spec=httpx.Response)
     fail_response.status_code = 500
@@ -240,8 +260,50 @@ async def test_failure_counter_resets_outside_window(fresh_service, mock_httpx_c
         await fresh_service.get_resource()
 
     # Counter should have been reset to 1 (only the new failure)
-    assert _MockExternalService._circuit_failure_count == 1
-    assert _MockExternalService._circuit_open_until == 0.0
+    assert _MockExternalService._circuit_states["request"].failure_count == 1
+    assert _MockExternalService._circuit_states["request"].open_until == 0.0
+
+
+@pytest.mark.asyncio
+async def test_open_circuit_is_isolated_to_endpoint(mock_httpx_client, monkeypatch):
+    """A financial-style endpoint failure must not block or reset another endpoint."""
+    import time
+
+    monkeypatch.setenv("BRREG_EGRESS_GUARD_ENABLED", "false")
+    service = _MockBrregService(client=mock_httpx_client)
+    _MockBrregService._reset_circuit_state()
+    _MockBrregService._circuit_states["company"] = _CircuitState(
+        failure_count=_CIRCUIT_FAILURE_THRESHOLD,
+        open_until=time.monotonic() + _CIRCUIT_COOLDOWN_SECONDS,
+    )
+    success_resp = MagicMock(spec=httpx.Response)
+    success_resp.status_code = 200
+    mock_httpx_client.get.return_value = success_resp
+    try:
+        with pytest.raises(CircuitOpenException, match="Circuit open"):
+            await service.get_company()
+
+        response = await service.get_roles()
+
+        assert response.status_code == 200
+        mock_httpx_client.get.assert_awaited_once()
+        assert "company" in _MockBrregService._circuit_states
+        assert "roles" not in _MockBrregService._circuit_states
+    finally:
+        _MockBrregService._reset_circuit_state()
+
+
+def test_circuit_state_is_isolated_between_service_subclasses():
+    """Mutable circuit maps must not leak between service subclasses."""
+    _MockExternalService._reset_circuit_state()
+    _MockBrregService._reset_circuit_state()
+    try:
+        _MockExternalService._circuit_states["request"] = _CircuitState(failure_count=1)
+
+        assert _MockBrregService._circuit_states == {}
+    finally:
+        _MockExternalService._reset_circuit_state()
+        _MockBrregService._reset_circuit_state()
 
 
 @pytest.mark.asyncio

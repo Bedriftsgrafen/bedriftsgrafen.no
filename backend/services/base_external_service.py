@@ -9,7 +9,8 @@ import asyncio
 import logging
 import random
 import time
-from typing import Any
+from dataclasses import dataclass
+from typing import Any, ClassVar
 
 import httpx
 
@@ -29,6 +30,13 @@ logger = logging.getLogger(__name__)
 _CIRCUIT_FAILURE_THRESHOLD = 20  # consecutive failures before opening
 _CIRCUIT_WINDOW_SECONDS = 60  # rolling window for failure counting
 _CIRCUIT_COOLDOWN_SECONDS = 300  # time the circuit stays open (5 min)
+
+
+@dataclass(slots=True)
+class _CircuitState:
+    failure_count: int = 0
+    last_failure_time: float = 0.0
+    open_until: float = 0.0
 
 
 class ExternalApiException(Exception):
@@ -57,6 +65,18 @@ class RateLimitException(ExternalApiException):
             service=service,
             details="Exhausted retries after rate limit errors",
             status_code=429,
+        )
+
+
+class CircuitOpenException(ExternalApiException):
+    """Exception raised when a circuit breaker blocks an external request."""
+
+    def __init__(self, service: str, context: str):
+        super().__init__(
+            message=f"Circuit open — too many consecutive failures for {context}",
+            service=service,
+            details="Service temporarily unavailable; will retry automatically",
+            status_code=503,
         )
 
 
@@ -95,10 +115,12 @@ class BaseExternalService:
     RATE_LIMIT_BACKOFF_MULTIPLIER: float = 2.0
     MAX_RATE_LIMIT_RETRIES: int = 2
 
-    # Circuit breaker state (per class, shared across instances of the same service)
-    _circuit_failure_count: int = 0
-    _circuit_last_failure_time: float = 0.0
-    _circuit_open_until: float = 0.0
+    # Circuit state is shared across service instances, but isolated by endpoint.
+    _circuit_states: ClassVar[dict[str, _CircuitState]] = {}
+
+    def __init_subclass__(cls, **kwargs: Any) -> None:
+        super().__init_subclass__(**kwargs)
+        cls._circuit_states = {}
 
     def __init__(self, client: httpx.AsyncClient | None = None):
         """
@@ -181,43 +203,74 @@ class BaseExternalService:
         else:
             raise ValueError(f"Unsupported HTTP method: {method}")
 
-    def _is_circuit_open(self) -> bool:
-        """Return True if the circuit breaker is currently open (requests blocked)."""
+    @classmethod
+    def _reset_circuit_state(cls, endpoint: str | None = None) -> None:
+        """Reset one endpoint circuit, or every endpoint when omitted."""
+        if endpoint is None:
+            cls._circuit_states.clear()
+        else:
+            cls._circuit_states.pop(endpoint, None)
+
+    def _is_circuit_open(self, endpoint: str) -> bool:
+        """Return True if this endpoint's circuit is currently open."""
         now = time.monotonic()
         cls = type(self)
-        if cls._circuit_open_until > 0 and now < cls._circuit_open_until:
+        state = cls._circuit_states.get(endpoint)
+        if state is None:
+            return False
+        if state.open_until > 0 and now < state.open_until:
             return True
-        if cls._circuit_open_until > 0 and now >= cls._circuit_open_until:
+        if state.open_until > 0 and now >= state.open_until:
             # Cooldown expired — reset so the next request can probe
-            cls._circuit_open_until = 0.0
-            cls._circuit_failure_count = 0
+            cls._circuit_states.pop(endpoint, None)
         return False
 
-    def _record_success(self) -> None:
-        """Reset circuit breaker on a successful request."""
+    def _record_success(self, endpoint: str) -> None:
+        """Reset this endpoint's circuit breaker on a successful request."""
         cls = type(self)
-        if cls._circuit_failure_count > 0 or cls._circuit_open_until > 0:
-            logger.info("%s: brreg.circuit_closed", self.SERVICE_NAME)
-        cls._circuit_failure_count = 0
-        cls._circuit_open_until = 0.0
+        state = cls._circuit_states.pop(endpoint, None)
+        if state is not None and (state.failure_count > 0 or state.open_until > 0):
+            event_name = "brreg.circuit_closed" if self.SERVICE_NAME == "Brønnøysund" else "external.circuit_closed"
+            logger.info("%s: %s endpoint=%s", self.SERVICE_NAME, event_name, endpoint)
 
-    def _record_failure(self) -> None:
-        """Track consecutive failures; open the circuit when threshold is reached."""
+    def _record_failure(self, endpoint: str) -> bool:
+        """Track endpoint failures and return whether this failure opened its circuit."""
         cls = type(self)
         now = time.monotonic()
+        state = cls._circuit_states.setdefault(endpoint, _CircuitState())
         # Reset counter if the last failure is outside the rolling window
-        if now - cls._circuit_last_failure_time > _CIRCUIT_WINDOW_SECONDS:
-            cls._circuit_failure_count = 0
-        cls._circuit_failure_count += 1
-        cls._circuit_last_failure_time = now
-        if cls._circuit_failure_count >= _CIRCUIT_FAILURE_THRESHOLD and cls._circuit_open_until == 0.0:
-            cls._circuit_open_until = now + _CIRCUIT_COOLDOWN_SECONDS
+        if now - state.last_failure_time > _CIRCUIT_WINDOW_SECONDS:
+            state.failure_count = 0
+        state.failure_count += 1
+        state.last_failure_time = now
+        if state.failure_count >= _CIRCUIT_FAILURE_THRESHOLD and state.open_until == 0.0:
+            state.open_until = now + _CIRCUIT_COOLDOWN_SECONDS
+            event_name = "brreg.circuit_opened" if self.SERVICE_NAME == "Brønnøysund" else "external.circuit_opened"
             logger.error(
-                "%s: brreg.circuit_opened — %d consecutive failures; blocking calls for %ds",
+                "%s: %s endpoint=%s — %d consecutive failures; blocking calls for %ds",
                 self.SERVICE_NAME,
-                cls._circuit_failure_count,
+                event_name,
+                endpoint,
+                state.failure_count,
                 _CIRCUIT_COOLDOWN_SECONDS,
             )
+            return True
+        return False
+
+    def _raise_if_circuit_opened(
+        self,
+        circuit_opened: bool,
+        *,
+        endpoint: str,
+        traffic_class: str,
+        context: str,
+    ) -> None:
+        """Record a circuit transition and stop the operation that opened it."""
+        if not circuit_opened:
+            return
+        if self.SERVICE_NAME == "Brønnøysund":
+            BRREG_CIRCUIT_OPEN_TOTAL.labels(endpoint=endpoint, traffic_class=traffic_class).inc()
+        raise CircuitOpenException(self.SERVICE_NAME, context)
 
     def _metric_endpoint(self, context: str) -> str:
         """Extract a stable low-cardinality endpoint label from a request context."""
@@ -296,20 +349,14 @@ class BaseExternalService:
         endpoint = self._metric_endpoint(context)
         traffic_class = brreg_traffic_class() if self.SERVICE_NAME == "Brønnøysund" else "unknown"
 
-        if self._is_circuit_open():
+        if self._is_circuit_open(endpoint):
             self._record_external_request_metric(
                 context,
                 "circuit_open",
                 traffic_class=traffic_class,
                 actual_attempt=False,
             )
-            if self.SERVICE_NAME == "Brønnøysund":
-                BRREG_CIRCUIT_OPEN_TOTAL.labels(endpoint=endpoint, traffic_class=traffic_class).inc()
-            raise ExternalApiException(
-                message=f"Circuit open — too many consecutive failures for {context}",
-                service=self.SERVICE_NAME,
-                details="Service temporarily unavailable; will retry automatically",
-            )
+            raise CircuitOpenException(self.SERVICE_NAME, context)
 
         rate_limit_attempts = 0
 
@@ -329,7 +376,7 @@ class BaseExternalService:
                 # Success, Not Found, or Gone - return to caller to handle
                 # 410 (Gone) is common for deleted Brreg companies
                 if response.status_code in (200, 201, 204, 404, 410):
-                    self._record_success()
+                    self._record_success(endpoint)
                     return response
 
                 # Rate limit - exponential backoff with jitter
@@ -349,7 +396,6 @@ class BaseExternalService:
                     continue
 
                 # Other errors
-                self._record_failure()
                 logger.debug(
                     "%s: API error for %s: %d (attempt %d/%d)",
                     self.SERVICE_NAME,
@@ -359,6 +405,13 @@ class BaseExternalService:
                     self.RETRY_ATTEMPTS,
                 )
                 if attempt == self.RETRY_ATTEMPTS - 1:
+                    circuit_opened = self._record_failure(endpoint)
+                    self._raise_if_circuit_opened(
+                        circuit_opened,
+                        endpoint=endpoint,
+                        traffic_class=traffic_class,
+                        context=context,
+                    )
                     logger.error(
                         "%s: exhausted retries for %s (last status %d)",
                         self.SERVICE_NAME,
@@ -377,7 +430,6 @@ class BaseExternalService:
                 raise
 
             except httpx.TimeoutException:
-                self._record_failure()
                 self._record_external_request_metric(context, "timeout", traffic_class=traffic_class)
                 logger.debug(
                     "%s: timeout for %s (attempt %d/%d)",
@@ -391,6 +443,13 @@ class BaseExternalService:
                     delay = self.RETRY_DELAY * (attempt + 1) * random.uniform(0.8, 1.2)  # noqa: S311
                     await asyncio.sleep(delay)
                 else:
+                    circuit_opened = self._record_failure(endpoint)
+                    self._raise_if_circuit_opened(
+                        circuit_opened,
+                        endpoint=endpoint,
+                        traffic_class=traffic_class,
+                        context=context,
+                    )
                     logger.warning(
                         "%s: timeout fetching %s after %d attempts",
                         self.SERVICE_NAME,
@@ -404,10 +463,16 @@ class BaseExternalService:
                     )
 
             except Exception as e:
-                self._record_failure()
                 self._record_external_request_metric(context, "exception", traffic_class=traffic_class)
                 logger.error("%s: error fetching %s: %s", self.SERVICE_NAME, context, e)
                 if attempt == self.RETRY_ATTEMPTS - 1:
+                    circuit_opened = self._record_failure(endpoint)
+                    self._raise_if_circuit_opened(
+                        circuit_opened,
+                        endpoint=endpoint,
+                        traffic_class=traffic_class,
+                        context=context,
+                    )
                     raise ExternalApiException(
                         message=f"Failed to fetch {context}", service=self.SERVICE_NAME, details=str(e)
                     )

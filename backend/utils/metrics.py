@@ -44,7 +44,7 @@ BRREG_HTTP_ATTEMPTS_TOTAL = Counter(
 
 BRREG_CIRCUIT_OPEN_TOTAL = Counter(
     "bedriftsgrafen_brreg_circuit_open_total",
-    "Brreg operations rejected locally because the circuit breaker was open",
+    "Brreg circuit breaker transitions from closed to open",
     ["endpoint", "traffic_class"],
 )
 
