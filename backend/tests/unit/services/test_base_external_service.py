@@ -1,3 +1,4 @@
+import logging
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import httpx
@@ -220,7 +221,7 @@ async def test_circuit_blocks_requests_when_open(fresh_service):
 
 
 @pytest.mark.asyncio
-async def test_circuit_resets_on_success(fresh_service, mock_httpx_client):
+async def test_circuit_resets_on_success(fresh_service, mock_httpx_client, caplog):
     """A success after cooldown should close the circuit and reset the counter."""
     import time
 
@@ -228,14 +229,29 @@ async def test_circuit_resets_on_success(fresh_service, mock_httpx_client):
     _MockExternalService._circuit_states["request"] = _CircuitState(
         failure_count=_CIRCUIT_FAILURE_THRESHOLD,
         open_until=time.monotonic() - 1.0,
+        has_opened=True,
     )
 
     success_resp = MagicMock(spec=httpx.Response)
     success_resp.status_code = 200
     mock_httpx_client.get.return_value = success_resp
 
-    response = await fresh_service.get_resource()
+    with caplog.at_level(logging.INFO, logger="services.base_external_service"):
+        response = await fresh_service.get_resource()
+
     assert response.status_code == 200
+    assert "request" not in _MockExternalService._circuit_states
+    assert "external.circuit_closed endpoint=request" in caplog.text
+
+
+def test_success_after_ordinary_failure_does_not_log_circuit_closed(fresh_service, caplog):
+    """A normal failure streak is not a circuit-open transition."""
+    fresh_service._record_failure("request")
+
+    with caplog.at_level(logging.INFO, logger="services.base_external_service"):
+        fresh_service._record_success("request")
+
+    assert "circuit_closed" not in caplog.text
     assert "request" not in _MockExternalService._circuit_states
 
 

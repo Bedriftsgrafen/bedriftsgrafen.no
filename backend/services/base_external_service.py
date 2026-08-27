@@ -37,6 +37,7 @@ class _CircuitState:
     failure_count: int = 0
     last_failure_time: float = 0.0
     open_until: float = 0.0
+    has_opened: bool = False
 
 
 class ExternalApiException(Exception):
@@ -221,15 +222,18 @@ class BaseExternalService:
         if state.open_until > 0 and now < state.open_until:
             return True
         if state.open_until > 0 and now >= state.open_until:
-            # Cooldown expired — reset so the next request can probe
-            cls._circuit_states.pop(endpoint, None)
+            # Cooldown expired — reset failures but retain the transition so a
+            # successful probe can emit an accurate circuit-closed event.
+            state.failure_count = 0
+            state.last_failure_time = 0.0
+            state.open_until = 0.0
         return False
 
     def _record_success(self, endpoint: str) -> None:
         """Reset this endpoint's circuit breaker on a successful request."""
         cls = type(self)
         state = cls._circuit_states.pop(endpoint, None)
-        if state is not None and (state.failure_count > 0 or state.open_until > 0):
+        if state is not None and state.has_opened:
             event_name = "brreg.circuit_closed" if self.SERVICE_NAME == "Brønnøysund" else "external.circuit_closed"
             logger.info("%s: %s endpoint=%s", self.SERVICE_NAME, event_name, endpoint)
 
@@ -245,6 +249,7 @@ class BaseExternalService:
         state.last_failure_time = now
         if state.failure_count >= _CIRCUIT_FAILURE_THRESHOLD and state.open_until == 0.0:
             state.open_until = now + _CIRCUIT_COOLDOWN_SECONDS
+            state.has_opened = True
             event_name = "brreg.circuit_opened" if self.SERVICE_NAME == "Brønnøysund" else "external.circuit_opened"
             logger.error(
                 "%s: %s endpoint=%s — %d consecutive failures; blocking calls for %ds",
