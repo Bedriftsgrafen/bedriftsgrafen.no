@@ -28,6 +28,7 @@ def test_brreg_dashboard_contains_required_low_cardinality_panels():
         "Brreg/Guard Incidents",
         "Backend/Worker Health and 429",
         "Nginx 429 / Limit Logs",
+        "Financial Poll Retry Backlog",
     }.issubset(titles)
 
     expressions = json.dumps(dashboard)
@@ -43,6 +44,7 @@ def test_brreg_dashboard_contains_required_low_cardinality_panels():
         'changes(container_start_time_seconds{name=~"bedriftsgrafen-(backend|worker)"}[10m])' in expr
         for expr in target_expressions
     )
+    assert any("bedriftsgrafen_financial_poll_retry_backlog" in expr for expr in target_expressions)
 
 
 def test_brreg_alerts_are_provisioned_and_baseline_dependent_rules_are_paused():
@@ -58,6 +60,7 @@ def test_brreg_alerts_are_provisioned_and_baseline_dependent_rules_are_paused():
         "bedriftsgrafen_brreg_429_detected",
         "bedriftsgrafen_brreg_timeouts_detected",
         "bedriftsgrafen_brreg_circuit_open",
+        "bedriftsgrafen_financial_retry_backlog",
         "bedriftsgrafen_brreg_guard_redis_errors",
         "bedriftsgrafen_backend_429_seen",
         "bedriftsgrafen_edge_429_seen",
@@ -73,6 +76,7 @@ def test_brreg_alerts_are_provisioned_and_baseline_dependent_rules_are_paused():
 
     serialized = alert_path.read_text(encoding="utf-8")
     assert "bedriftsgrafen_brreg_circuit_open_total" in serialized
+    assert "bedriftsgrafen_financial_poll_retry_backlog" in serialized
     assert 'bedriftsgrafen_rate_limit_responses_total{layer="backend"}' in serialized
 
 

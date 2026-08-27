@@ -1,4 +1,5 @@
-from unittest.mock import AsyncMock, MagicMock, patch
+from datetime import UTC, datetime
+from unittest.mock import AsyncMock, MagicMock, call, patch
 
 import pytest
 
@@ -314,6 +315,7 @@ async def test_sync_accounting_batch(mock_session_local):
 
     with (
         patch.object(scheduler_service, "_log_memory_snapshot") as mock_memory,
+        patch.object(scheduler_service, "_update_financial_poll_retry_metrics", new=AsyncMock()) as mock_retry_metrics,
         patch("services.update_service.UpdateService") as MockUpdateService,
     ):
         mock_update = MockUpdateService.return_value
@@ -327,6 +329,7 @@ async def test_sync_accounting_batch(mock_session_local):
         selection_stmt = mock_db.execute.await_args_list[0].args[0]
         assert "financial_poll_retry_after" in selection_stmt.text
         assert "retry_cutoff" in mock_db.execute.await_args_list[0].args[1]
+        assert mock_retry_metrics.await_count == 2
         phases = [call.args[:2] for call in mock_memory.call_args_list]
         assert ("accounting_sync", "start") in phases
         assert ("accounting_sync", "selected") in phases
@@ -345,6 +348,7 @@ async def test_sync_accounting_batch_stops_when_circuit_opens(mock_session_local
 
     with (
         patch.object(scheduler_service, "_log_memory_snapshot") as mock_memory,
+        patch.object(scheduler_service, "_update_financial_poll_retry_metrics", new=AsyncMock()) as mock_retry_metrics,
         patch("services.update_service.UpdateService") as MockUpdateService,
     ):
         mock_update = MockUpdateService.return_value
@@ -357,6 +361,7 @@ async def test_sync_accounting_batch_stops_when_circuit_opens(mock_session_local
     assert mock_update._fetch_and_persist_financials.await_count == 2
     mock_db.commit.assert_awaited_once()
     mock_db.rollback.assert_awaited_once()
+    assert mock_retry_metrics.await_count == 2
     done_call = next(call for call in mock_memory.call_args_list if call.args[:2] == ("accounting_sync", "done"))
     assert done_call.kwargs == {
         "attempted": 2,
@@ -379,6 +384,7 @@ async def test_sync_accounting_batch_reports_terminal_failure_without_success(mo
 
     with (
         patch.object(scheduler_service, "_log_memory_snapshot") as mock_memory,
+        patch.object(scheduler_service, "_update_financial_poll_retry_metrics", new=AsyncMock()) as mock_retry_metrics,
         patch("services.update_service.UpdateService") as MockUpdateService,
     ):
         mock_update = MockUpdateService.return_value
@@ -388,9 +394,34 @@ async def test_sync_accounting_batch_reports_terminal_failure_without_success(mo
 
     mock_db.commit.assert_awaited_once()
     mock_db.rollback.assert_not_awaited()
+    assert mock_retry_metrics.await_count == 2
     done_call = next(call for call in mock_memory.call_args_list if call.args[:2] == ("accounting_sync", "done"))
     assert done_call.kwargs["processed"] == 0
     assert done_call.kwargs["failed"] == 1
+
+
+@pytest.mark.asyncio
+async def test_update_financial_poll_retry_metrics_publishes_waiting_and_due_counts():
+    scheduler_service = SchedulerService()
+    mock_db = AsyncMock()
+    result = MagicMock()
+    result.mappings.return_value.one.return_value = {"waiting": 7, "due": 2}
+    mock_db.execute = AsyncMock(return_value=result)
+    waiting_metric = MagicMock()
+    due_metric = MagicMock()
+
+    with patch("services.scheduler.FINANCIAL_POLL_RETRY_BACKLOG") as backlog_metric:
+        backlog_metric.labels.side_effect = [waiting_metric, due_metric]
+        now = datetime.now(UTC)
+
+        await scheduler_service._update_financial_poll_retry_metrics(mock_db, now)
+
+    statement, params = mock_db.execute.await_args.args
+    assert "financial_poll_retry_after IS NOT NULL" in statement.text
+    assert params == {"now": now}
+    assert backlog_metric.labels.call_args_list == [call(state="waiting"), call(state="due")]
+    waiting_metric.set.assert_called_once_with(7)
+    due_metric.set.assert_called_once_with(2)
 
 
 @pytest.mark.asyncio

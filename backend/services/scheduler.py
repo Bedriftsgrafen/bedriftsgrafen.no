@@ -9,11 +9,12 @@ from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from apscheduler.triggers.cron import CronTrigger
 from apscheduler.triggers.interval import IntervalTrigger
 from sqlalchemy import text
-from sqlalchemy.ext.asyncio import AsyncConnection
+from sqlalchemy.ext.asyncio import AsyncConnection, AsyncSession
 
 from constants.concurrency import SUBUNIT_UPDATE_PAGE_SIZE
 from database import AsyncSessionLocal, engine
 from services.seo_service import SEOService
+from utils.metrics import FINANCIAL_POLL_RETRY_BACKLOG
 
 logger = logging.getLogger(__name__)
 
@@ -661,6 +662,7 @@ class SchedulerService:
                 limit = 50
                 now = datetime.now(UTC)
                 cutoff_date = now.date() - timedelta(days=30)
+                await self._update_financial_poll_retry_metrics(db, now)
 
                 # UNION ALL so each branch uses its own index:
                 #   - never-polled branch: idx_bedrifter_needs_financial_polling (partial index on IS NULL)
@@ -741,6 +743,7 @@ class SchedulerService:
                         break
 
                 skipped = total - attempted if circuit_opened else 0
+                await self._update_financial_poll_retry_metrics(db, datetime.now(UTC))
                 logger.info(
                     "Accounting sync batch completed",
                     extra={
@@ -766,6 +769,25 @@ class SchedulerService:
         except Exception as e:
             self._log_memory_snapshot("accounting_sync", "failed", error=str(e))
             logger.exception("Failed to run accounting sync batch", extra={"error": str(e)})
+
+    async def _update_financial_poll_retry_metrics(self, db: AsyncSession, now: datetime) -> None:
+        """Publish current retry queue depth from the durable database state."""
+        result = await db.execute(
+            text("""
+                SELECT
+                    count(*) FILTER (WHERE financial_poll_retry_after > :now) AS waiting,
+                    count(*) FILTER (WHERE financial_poll_retry_after <= :now) AS due
+                FROM bedrifter
+                WHERE financial_poll_retry_after IS NOT NULL
+            """),
+            {"now": now},
+        )
+        counts = result.mappings().one()
+        waiting = int(counts["waiting"] or 0)
+        due = int(counts["due"] or 0)
+        FINANCIAL_POLL_RETRY_BACKLOG.labels(state="waiting").set(waiting)
+        FINANCIAL_POLL_RETRY_BACKLOG.labels(state="due").set(due)
+        logger.info("financial_poll_retry_backlog waiting=%d due=%d", waiting, due)
 
     async def run_subunit_updates(self) -> None:
         """Fetch incremental subunit updates."""
