@@ -1342,14 +1342,18 @@ class TestFetchAndPersistFinancials:
         update_service.company_repo.update_last_polled_regnskap.assert_not_awaited()
         update_service.company_repo.defer_financial_poll.assert_not_awaited()
 
-    def test_financial_poll_retry_delay_is_exponential_and_capped(self, update_service):
+    def test_financial_poll_retry_delay_enters_quarantine_after_six_failures(self, update_service):
         first_delay = update_service._financial_poll_retry_delay("123456789", 1)
         second_delay = update_service._financial_poll_retry_delay("123456789", 2)
-        capped_delay = update_service._financial_poll_retry_delay("123456789", 20)
+        fifth_delay = update_service._financial_poll_retry_delay("123456789", 5)
+        quarantine_delay = update_service._financial_poll_retry_delay("123456789", 6)
+        later_quarantine_delay = update_service._financial_poll_retry_delay("123456789", 20)
 
         assert timedelta(hours=1) <= first_delay < timedelta(hours=1, minutes=30)
         assert timedelta(hours=2) <= second_delay < timedelta(hours=2, minutes=30)
-        assert capped_delay == timedelta(days=7)
+        assert timedelta(hours=16) <= fifth_delay < timedelta(hours=16, minutes=30)
+        assert timedelta(days=30) <= quarantine_delay < timedelta(days=30, minutes=30)
+        assert later_quarantine_delay == quarantine_delay
 
     @pytest.mark.asyncio
     async def test_non_retryable_client_error_advances_poll_timestamp(self, update_service, mock_db):

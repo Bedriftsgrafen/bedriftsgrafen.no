@@ -65,8 +65,9 @@ BRREG_SUBUNIT_CHANGE_EVENT_PATHS: dict[str, tuple[str, ...]] = {
 }
 BRREG_EMPLOYEE_CHANGE_PATHS = ("/antallAnsatte", "/harRegistrertAntallAnsatte")
 FINANCIAL_POLL_RETRY_BASE_SECONDS = 60 * 60
-FINANCIAL_POLL_RETRY_MAX_SECONDS = 7 * 24 * 60 * 60
 FINANCIAL_POLL_RETRY_JITTER_SECONDS = 30 * 60
+FINANCIAL_POLL_QUARANTINE_AFTER_FAILURES = 6
+FINANCIAL_POLL_QUARANTINE_SECONDS = 30 * 24 * 60 * 60
 
 
 class FinancialPollOutcome(StrEnum):
@@ -94,15 +95,15 @@ class UpdateService:
 
     @staticmethod
     def _financial_poll_retry_delay(orgnr: str, failure_count: int) -> timedelta:
-        """Return a deterministic exponential delay that spreads retries across each window."""
-        exponent = min(max(failure_count - 1, 0), 16)
-        exponential_seconds = min(
-            FINANCIAL_POLL_RETRY_BASE_SECONDS * (2**exponent),
-            FINANCIAL_POLL_RETRY_MAX_SECONDS,
-        )
+        """Return exponential backoff followed by durable long-term quarantine."""
         jitter_seconds = sum((index + 1) * ord(char) for index, char in enumerate(orgnr))
         jitter_seconds %= FINANCIAL_POLL_RETRY_JITTER_SECONDS
-        return timedelta(seconds=min(exponential_seconds + jitter_seconds, FINANCIAL_POLL_RETRY_MAX_SECONDS))
+        if failure_count >= FINANCIAL_POLL_QUARANTINE_AFTER_FAILURES:
+            return timedelta(seconds=FINANCIAL_POLL_QUARANTINE_SECONDS + jitter_seconds)
+
+        exponent = max(failure_count - 1, 0)
+        exponential_seconds = FINANCIAL_POLL_RETRY_BASE_SECONDS * (2**exponent)
+        return timedelta(seconds=exponential_seconds + jitter_seconds)
 
     async def _defer_financial_poll(self, orgnr: str) -> None:
         current_failure_count = await self.company_repo.get_financial_poll_failure_count_for_update(orgnr)

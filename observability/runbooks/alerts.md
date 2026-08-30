@@ -188,7 +188,8 @@ with the exact PromQL below.
    Circuit state is endpoint-scoped, so use the `endpoint` label to identify the isolated Brreg surface.
    Circuit failures are counted per exhausted logical operation, not once per internal HTTP retry.
    Transient financial failures persist `financial_poll_failure_count` and `financial_poll_retry_after` on
-   `bedrifter`; inspect due retries before manually resetting either field.
+   `bedrifter`; retries use 1/2/4/8/16-hour backoff followed by a 30-day quarantine from the sixth
+   exhausted operation. Inspect due retries before manually resetting either field.
 7. For financial retry pressure, query:
    `max by (state) (bedriftsgrafen_financial_poll_retry_backlog{service="worker"})`.
    `waiting` is still inside its backoff window; `due` is eligible for the next accounting batch.
