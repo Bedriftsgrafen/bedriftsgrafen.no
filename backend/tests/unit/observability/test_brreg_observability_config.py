@@ -74,6 +74,11 @@ def test_brreg_alerts_are_provisioned_and_baseline_dependent_rules_are_paused():
     assert by_uid["bg_brreg_cache_shift_provisional"]["isPaused"] is True
     assert all(len(uid) <= 40 for uid in by_uid)
 
+    retry_rule = by_uid["bedriftsgrafen_financial_retry_backlog"]
+    assert retry_rule["for"] == "15m"
+    assert 'state="due"' in retry_rule["data"][0]["model"]["expr"]
+    assert retry_rule["data"][2]["model"]["conditions"][0]["evaluator"] == {"params": [49], "type": "gt"}
+
     serialized = alert_path.read_text(encoding="utf-8")
     assert "bedriftsgrafen_brreg_circuit_open_total" in serialized
     assert "bedriftsgrafen_financial_poll_retry_backlog" in serialized

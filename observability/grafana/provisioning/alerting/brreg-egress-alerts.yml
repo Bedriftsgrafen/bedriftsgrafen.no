@@ -599,7 +599,7 @@ groups:
         isPaused: false
 
       - uid: bedriftsgrafen_financial_retry_backlog
-        title: Financial poll retry backlog growing
+        title: Financial poll due retry queue stalled
         condition: C
         data:
           - refId: A
@@ -612,7 +612,7 @@ groups:
                 type: prometheus
                 uid: prometheus
               editorMode: code
-              expr: sum(max by (state) (bedriftsgrafen_financial_poll_retry_backlog{service="worker"})) or vector(0)
+              expr: max(bedriftsgrafen_financial_poll_retry_backlog{service="worker",state="due"}) or vector(0)
               instant: true
               intervalMs: 1000
               maxDataPoints: 43200
@@ -641,7 +641,7 @@ groups:
               conditions:
                 - evaluator:
                     params:
-                      - 99
+                      - 49
                     type: gt
                   operator:
                     type: and
@@ -662,10 +662,10 @@ groups:
               type: threshold
         noDataState: OK
         execErrState: Error
-        for: 30m
+        for: 15m
         annotations:
-          summary: Financial poll retry backlog is elevated.
-          description: At least 100 companies have remained in the durable financial retry queue for 30 minutes.
+          summary: Financial poll due retry queue is not draining.
+          description: At least 50 due financial polls have remained eligible for processing for 15 minutes.
           runbook_url: https://github.com/Bedriftsgrafen/bedriftsgrafen.no/blob/main/observability/runbooks/alerts.md#brreg-egress-protection
         labels:
           severity: warning

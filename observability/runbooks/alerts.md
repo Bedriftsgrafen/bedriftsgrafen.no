@@ -210,8 +210,8 @@ Immediate actions:
 2. If cached data exists, prefer stale-cache behavior over bypassing the guard.
 3. If Redis guard errors are firing, treat Brreg egress as fail-closed until Redis is healthy.
 4. If Brreg 429 fires, stop/pause background sync before changing public request limits.
-5. If the financial retry backlog alert fires, identify the upstream status pattern before changing retry fields;
-   do not clear durable backoff while Brreg is still returning transient failures.
+5. If the financial due retry queue alert fires, verify that accounting batches are running and draining due rows.
+   A growing `waiting` queue alone reflects isolated upstream failures in backoff and is not a scheduler incident.
 
 ### Brreg Alert Threshold Register
 
@@ -224,7 +224,7 @@ Immediate actions:
 | Brreg 429 | `sum(increase(bedriftsgrafen_brreg_api_requests_total{status_code="429"}[15m]))` | 15m, `for: 1m` | any upstream 429 | upstream response code | Low; Brreg 429 should be investigated |
 | Brreg timeouts | `sum(increase(bedriftsgrafen_brreg_http_attempts_total{status_category="timeout"}[15m]))` | 15m, `for: 5m` | any sustained timeout | local timeout event | Medium; transient upstream network blips can fire |
 | Brreg circuit breaker | `sum(increase(bedriftsgrafen_brreg_circuit_open_total[5m]))` | 5m, `for: 1m` | any circuit-open transition | local protection transition | Low |
-| Financial poll retry backlog | `sum(max by (state) (bedriftsgrafen_financial_poll_retry_backlog{service="worker"}))` | current value, `for: 30m` | at least 100 queued companies | durable database retry state | Low; seven persistent per-company failures were normal at introduction |
+| Financial poll due retry queue | `max(bedriftsgrafen_financial_poll_retry_backlog{service="worker",state="due"})` | current value, `for: 15m` | at least 50 due companies | durable database retry state and 50-company batch size | Low; observed due maximum was 7 over the first 48 hours |
 | Redis guard errors | `sum(increase(bedriftsgrafen_brreg_guard_redis_errors_total[5m]))` | 5m, `for: 1m` | any Redis guard error | guard fail-closed event | Low |
 | Backend 429 | `sum(increase(bedriftsgrafen_rate_limit_responses_total{layer="backend"}[5m]))` | 5m, `for: 2m` | any backend 429 | application limiter event | Medium; can be expected during abuse |
 | Edge nginx 429 | `sum(count_over_time({container="bedriftsgrafen-frontend"} |~ "(?i)(limiting requests| 429 |status=429)" [5m]))` | 5m, `for: 2m` | any edge limiter event | nginx access/error logs in Loki | Medium; expected during abuse |
