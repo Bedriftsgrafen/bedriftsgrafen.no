@@ -30,6 +30,8 @@ logger = logging.getLogger(__name__)
 
 DB_COMMIT_CHUNK_SIZE = 100  # Commit every X records for efficiency
 UPDATE_PAGE_SIZE = 1000  # Max size allowed by API
+BRREG_UPDATE_MAX_PAGE_SIZE = 10_000
+BRREG_UPDATE_RESULT_WINDOW_SIZE = 10_000
 BRREG_COMPANY_EVENT_SOURCE = "Enhetsregisteret via Brreg"
 BRREG_SUBUNIT_EVENT_SOURCE = "Underenhetsregisteret via Brreg"
 BRREG_ROLE_EVENT_SOURCE = "Enhetsregisteret roller via Brreg"
@@ -101,6 +103,14 @@ class UpdateService:
         self.accounting_repo = AccountingRepository(db)
         self.event_repo = CompanyEventRepository(db)
         self.event_ledger_enabled = os.getenv("ENABLE_COMPANY_EVENT_LEDGER", "").lower() in {"1", "true", "yes"}
+
+    @staticmethod
+    def _brreg_update_result_window_page_limit(page_size: int) -> int:
+        """Return the number of pages that stay within Brreg's 10k result window."""
+        effective_page_size = min(page_size, BRREG_UPDATE_MAX_PAGE_SIZE)
+        if effective_page_size < 1:
+            raise ValueError("page_size must be at least 1")
+        return max(1, BRREG_UPDATE_RESULT_WINDOW_SIZE // effective_page_size)
 
     @staticmethod
     def _financial_poll_retry_delay(orgnr: str, failure_count: int) -> timedelta:
@@ -616,10 +626,13 @@ class UpdateService:
         # Initial URL determination
         # Priority: start_id > since_date
         next_url: str | None = (
-            f"{BRREG_UPDATES_URL}?oppdateringsid={start_id}&includeChanges=true&size={min(page_size, 10000)}"
+            f"{BRREG_UPDATES_URL}?oppdateringsid={start_id}"
+            f"&includeChanges=true&size={min(page_size, BRREG_UPDATE_MAX_PAGE_SIZE)}"
             if start_id is not None
-            else f"{BRREG_UPDATES_URL}?dato={since_iso}&includeChanges=true&size={min(page_size, 10000)}"
+            else f"{BRREG_UPDATES_URL}?dato={since_iso}"
+            f"&includeChanges=true&size={min(page_size, BRREG_UPDATE_MAX_PAGE_SIZE)}"
         )
+        result_window_page_limit = self._brreg_update_result_window_page_limit(page_size)
 
         while next_url:
             try:
@@ -629,6 +642,17 @@ class UpdateService:
                     result=result,
                 )
                 next_url = page_result
+                if next_url and result.pages_fetched >= result_window_page_limit:
+                    result.result_window_reached = True
+                    logger.info(
+                        "Stopping company update pagination at Brreg's result window; "
+                        "the next scheduled batch will resume from the safe cursor",
+                        extra={
+                            "pages_fetched": result.pages_fetched,
+                            "latest_oppdateringsid": result.latest_oppdateringsid,
+                        },
+                    )
+                    break
 
             except Exception as e:
                 error_msg = f"Critical error during update loop: {e!s}"
@@ -1411,12 +1435,15 @@ class UpdateService:
         )
 
         next_url: str | None = (
-            f"{BRREG_SUBUNIT_UPDATES_URL}?oppdateringsid={start_id}&includeChanges=true&size={min(page_size, 10000)}"
+            f"{BRREG_SUBUNIT_UPDATES_URL}?oppdateringsid={start_id}"
+            f"&includeChanges=true&size={min(page_size, BRREG_UPDATE_MAX_PAGE_SIZE)}"
             if start_id is not None
-            else f"{BRREG_SUBUNIT_UPDATES_URL}?dato={since_iso}&includeChanges=true&size={min(page_size, 10000)}"
+            else f"{BRREG_SUBUNIT_UPDATES_URL}?dato={since_iso}"
+            f"&includeChanges=true&size={min(page_size, BRREG_UPDATE_MAX_PAGE_SIZE)}"
         )
 
         pages_processed = 0
+        result_window_page_limit = self._brreg_update_result_window_page_limit(page_size)
         while next_url:
             SYNC_BATCH_PAGES_TOTAL.labels(entity_type="subunit").inc()
             with SYNC_LATENCY.labels(entity_type="subunit").time():
@@ -1443,6 +1470,17 @@ class UpdateService:
                         logger.warning("Stopping subunit update pagination at the first uncommitted update ID")
                         break
                     next_url = self._extract_next_link(data)
+                    if next_url and pages_processed >= result_window_page_limit:
+                        result.result_window_reached = True
+                        logger.info(
+                            "Stopping subunit update pagination at Brreg's result window; "
+                            "the next scheduled batch will resume from the safe cursor",
+                            extra={
+                                "pages_fetched": result.pages_fetched,
+                                "latest_oppdateringsid": result.latest_oppdateringsid,
+                            },
+                        )
+                        break
 
                 except Exception as e:
                     logger.exception(f"Error in subunit updates: {e}")

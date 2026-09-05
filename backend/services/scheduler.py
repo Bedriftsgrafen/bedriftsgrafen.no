@@ -619,11 +619,35 @@ class SchedulerService:
                 result = await service.fetch_updates(since_date=since_date, start_id=start_id)
 
                 # Update state
+                checkpoint_published = False
                 if result.get("latest_oppdateringsid"):
-                    await system_repo.set_state("company_update_latest_id", str(result["latest_oppdateringsid"]))
+                    checkpoint_published = await system_repo.set_state(
+                        "company_update_latest_id", str(result["latest_oppdateringsid"])
+                    )
+
+                if result.get("result_window_reached"):
+                    checkpoint_log = {
+                        "previous_id": start_id,
+                        "checkpoint_id": result.get("latest_oppdateringsid"),
+                        "pages_fetched": result.get("pages_fetched"),
+                    }
+                    if checkpoint_published:
+                        logger.info(
+                            "Company update checkpoint published at Brreg's result window",
+                            extra=checkpoint_log,
+                        )
+                    else:
+                        logger.error(
+                            "Company update reached Brreg's result window without publishing a checkpoint",
+                            extra=checkpoint_log,
+                        )
 
                 if result.get("cursor_gap_detected"):
                     logger.warning("Preserving company update date cursor because the batch has an uncommitted gap")
+                elif result.get("result_window_reached") and not checkpoint_published:
+                    logger.warning(
+                        "Preserving company update date cursor because the result-window checkpoint was not published"
+                    )
                 elif result.get("companies_processed", 0) > 0 or not result.get("errors"):
                     await system_repo.set_state("company_update_last_sync_date", date.today().isoformat())
 
@@ -816,14 +840,19 @@ class SchedulerService:
                 latest_result_id = result.get("latest_oppdateringsid")
                 cursor_gap_detected = bool(result.get("cursor_gap_detected"))
                 cursor_advanced = False
+                checkpoint_published = False
                 if latest_result_id is not None:
                     latest_result_id = int(latest_result_id)
                     if start_id is None or latest_result_id > start_id:
-                        await system_repo.set_state("subunit_update_latest_id", str(latest_result_id))
-                        cursor_advanced = True
+                        checkpoint_published = await system_repo.set_state(
+                            "subunit_update_latest_id", str(latest_result_id)
+                        )
+                        cursor_advanced = checkpoint_published
                     elif latest_result_id == start_id and not cursor_gap_detected:
                         # A successful no-change poll still represents fresh source verification.
-                        await system_repo.set_state("subunit_update_latest_id", str(latest_result_id))
+                        checkpoint_published = await system_repo.set_state(
+                            "subunit_update_latest_id", str(latest_result_id)
+                        )
                     elif latest_result_id < start_id:
                         logger.error(
                             "Refusing to move subunit update cursor backwards",
@@ -836,6 +865,22 @@ class SchedulerService:
                         "Subunit update cursor made no progress because the batch has an uncommitted gap",
                         extra={"current_id": start_id, "result_id": latest_result_id},
                     )
+                elif result.get("result_window_reached"):
+                    checkpoint_log = {
+                        "previous_id": start_id,
+                        "checkpoint_id": latest_result_id,
+                        "pages_fetched": result.get("pages_fetched"),
+                    }
+                    if checkpoint_published:
+                        logger.info(
+                            "Subunit update checkpoint published at Brreg's result window",
+                            extra=checkpoint_log,
+                        )
+                    else:
+                        logger.error(
+                            "Subunit update reached Brreg's result window without publishing a checkpoint",
+                            extra=checkpoint_log,
+                        )
 
                 logger.info(
                     "Subunit updates completed",

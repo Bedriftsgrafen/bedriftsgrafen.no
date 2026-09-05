@@ -303,6 +303,38 @@ async def test_run_company_updates_preserves_date_cursor_when_batch_has_gap(mock
 
 
 @pytest.mark.asyncio
+async def test_run_company_updates_preserves_date_cursor_when_result_window_checkpoint_fails(mock_session_local):
+    scheduler_service = SchedulerService()
+
+    with (
+        patch.object(scheduler_service, "_log_memory_snapshot"),
+        patch("services.update_service.UpdateService") as MockUpdateService,
+        patch("repositories.system_repository.SystemRepository") as MockSystemRepo,
+    ):
+        mock_update = MockUpdateService.return_value
+        mock_update.fetch_updates = AsyncMock(
+            return_value={
+                "latest_oppdateringsid": 123,
+                "companies_processed": 10_000,
+                "companies_created": 0,
+                "companies_updated": 10_000,
+                "errors": [],
+                "cursor_gap_detected": False,
+                "result_window_reached": True,
+                "pages_fetched": 10,
+            }
+        )
+
+        mock_system = MockSystemRepo.return_value
+        mock_system.get_state = AsyncMock(side_effect=[None, "2026-08-16"])
+        mock_system.set_state = AsyncMock(return_value=False)
+
+        await scheduler_service.run_company_updates()
+
+        mock_system.set_state.assert_awaited_once_with("company_update_latest_id", "123")
+
+
+@pytest.mark.asyncio
 async def test_sync_accounting_batch(mock_session_local):
     scheduler_service = SchedulerService()
 
@@ -474,6 +506,36 @@ async def test_run_subunit_updates_preserves_timestamp_when_gap_makes_no_progres
         mock_system.set_state.assert_not_awaited()
         stalled_metric.labels.assert_called_once_with(entity_type="subunit")
         stalled_metric.labels.return_value.set.assert_called_once_with(1)
+
+
+@pytest.mark.asyncio
+async def test_run_subunit_updates_publishes_result_window_checkpoint(mock_session_local):
+    scheduler_service = SchedulerService()
+
+    with (
+        patch("services.update_service.UpdateService") as MockUpdateService,
+        patch("repositories.system_repository.SystemRepository") as MockSystemRepo,
+        patch("services.scheduler.SYNC_CURSOR_STALLED") as stalled_metric,
+    ):
+        mock_update = MockUpdateService.return_value
+        mock_update.fetch_subunit_updates = AsyncMock(
+            return_value={
+                "latest_oppdateringsid": 202,
+                "companies_processed": 10_000,
+                "cursor_gap_detected": False,
+                "result_window_reached": True,
+                "pages_fetched": 1_000,
+            }
+        )
+
+        mock_system = MockSystemRepo.return_value
+        mock_system.get_state = AsyncMock(return_value="100")
+        mock_system.set_state = AsyncMock(return_value=True)
+
+        await scheduler_service.run_subunit_updates()
+
+        mock_system.set_state.assert_awaited_once_with("subunit_update_latest_id", "202")
+        stalled_metric.labels.return_value.set.assert_called_once_with(0)
 
 
 @pytest.mark.asyncio

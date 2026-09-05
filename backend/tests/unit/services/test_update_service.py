@@ -103,6 +103,17 @@ async def test_record_company_event_safe_writes_inside_savepoint_when_enabled(up
 class TestFetchUpdates:
     """Tests for the main update fetching workflow."""
 
+    @pytest.mark.parametrize(
+        ("page_size", "expected_pages"),
+        [(10, 1_000), (100, 100), (1_000, 10), (10_000, 1), (20_000, 1)],
+    )
+    def test_result_window_page_limit(self, update_service, page_size, expected_pages):
+        assert update_service._brreg_update_result_window_page_limit(page_size) == expected_pages
+
+    def test_result_window_page_limit_rejects_invalid_page_size(self, update_service):
+        with pytest.raises(ValueError, match="page_size must be at least 1"):
+            update_service._brreg_update_result_window_page_limit(0)
+
     @pytest.mark.asyncio
     async def test_fetch_updates_defaults_to_yesterday(self, update_service):
         update_service._process_single_page = AsyncMock(return_value=None)
@@ -160,6 +171,24 @@ class TestFetchUpdates:
         first_url = update_service._process_single_page.await_args.kwargs["url"]
         assert "oppdateringsid=123" in first_url
         assert "includeChanges=true" in first_url
+
+    @pytest.mark.asyncio
+    async def test_fetch_updates_stops_at_result_window(self, update_service):
+        async def process_page(*, result, **_kwargs):
+            result.pages_fetched += 1
+            result.latest_oppdateringsid = 100 + result.pages_fetched
+            return f"https://stub.invalid/page/{result.pages_fetched + 1}"
+
+        update_service._process_single_page = AsyncMock(side_effect=process_page)
+
+        with patch("services.update_service.BRREG_UPDATE_RESULT_WINDOW_SIZE", 20):
+            result = await update_service.fetch_updates(start_id=100, page_size=10)
+
+        assert update_service._process_single_page.await_count == 2
+        assert result["pages_fetched"] == 2
+        assert result["latest_oppdateringsid"] == 102
+        assert result["result_window_reached"] is True
+        assert result["errors"] == []
 
 
 class TestBrregUpdateSchemas:
@@ -243,6 +272,37 @@ class TestFetchSubunitUpdates:
 
         assert update_service.brreg_api._get.await_count == 1
         assert result["latest_oppdateringsid"] is None
+
+    @pytest.mark.asyncio
+    async def test_fetch_subunit_updates_stops_at_result_window_with_safe_cursor(self, update_service):
+        first_page = MagicMock(status_code=200)
+        first_page.json.return_value = {
+            "_embedded": {"oppdaterteUnderenheter": [{"organisasjonsnummer": "123456789"}]},
+            "_links": {"next": {"href": "https://stub.invalid/page/2"}},
+        }
+        second_page = MagicMock(status_code=200)
+        second_page.json.return_value = {
+            "_embedded": {"oppdaterteUnderenheter": [{"organisasjonsnummer": "987654321"}]},
+            "_links": {"next": {"href": "https://stub.invalid/page/3"}},
+        }
+        unexpected_page = MagicMock(status_code=400)
+        update_service.brreg_api._get = AsyncMock(side_effect=[first_page, second_page, unexpected_page])
+        update_service._fetch_subunit_update_details = AsyncMock(side_effect=[[MagicMock()], [MagicMock()]])
+
+        async def persist_page(_fetch_results, result):
+            result.latest_oppdateringsid = 200 + result.pages_fetched + 1
+            return False
+
+        update_service._persist_subunit_update_page = AsyncMock(side_effect=persist_page)
+
+        with patch("services.update_service.BRREG_UPDATE_RESULT_WINDOW_SIZE", 20):
+            result = await update_service.fetch_subunit_updates(start_id=200, page_size=10)
+
+        assert update_service.brreg_api._get.await_count == 2
+        assert result["pages_fetched"] == 2
+        assert result["latest_oppdateringsid"] == 202
+        assert result["result_window_reached"] is True
+        assert result["errors"] == []
 
     @pytest.mark.asyncio
     async def test_fetch_subunit_update_details_marks_deletion_without_fetch(self, update_service):

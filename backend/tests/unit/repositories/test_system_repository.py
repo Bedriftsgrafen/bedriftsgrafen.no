@@ -57,8 +57,9 @@ async def test_get_state_not_found(repo, mock_db_session):
 
 @pytest.mark.asyncio
 async def test_set_state(repo, mock_db_session):
-    await repo.set_state("key1", "val1")
+    result = await repo.set_state("key1", "val1")
 
+    assert result is True
     assert mock_db_session.execute.called
     # Check SQL contains upsert logic
     sql = str(mock_db_session.execute.call_args[0][0])
@@ -92,6 +93,7 @@ async def test_set_state_error(repo, mock_db_session):
     """Should rollback on error."""
     mock_db_session.execute.side_effect = Exception("DB error")
 
-    await repo.set_state("key", "value")
+    result = await repo.set_state("key", "value")
 
+    assert result is False
     mock_db_session.rollback.assert_called_once()

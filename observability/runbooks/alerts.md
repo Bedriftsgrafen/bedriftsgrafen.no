@@ -229,6 +229,11 @@ for at least 20 minutes. A single transient gap that heals on the next 15-minute
 5. Do not advance the cursor manually. Fix the classification or persistence failure, then verify that the worker
    advances naturally and the gauge returns to zero.
 
+Large catch-up batches stop normally at Brreg's 10,000-result pagination window. The worker logs
+`Subunit update checkpoint published at Brreg's result window`, stores the last committed `oppdateringsid`, and
+resumes from that checkpoint on the next scheduled run. This controlled stop must not produce an upstream HTTP 400.
+If the log repeats without the checkpoint increasing, treat it as a cursor incident and follow the steps above.
+
 ### Brreg Alert Threshold Register
 
 | Alert | PromQL | Window | Active threshold | Data basis | False-positive risk |

@@ -42,8 +42,8 @@ class SystemRepository:
             logger.warning(f"Failed to read state for {key}: {e}")
             return None
 
-    async def set_state(self, key: str, value: str):
-        """Set value in system_state"""
+    async def set_state(self, key: str, value: str) -> bool:
+        """Set a value in system_state and report whether it was committed."""
         try:
             await self.db.execute(
                 text("""
@@ -55,6 +55,8 @@ class SystemRepository:
                 {"key": key, "value": value},
             )
             await self.db.commit()
+            return True
         except Exception as e:
             logger.warning(f"Failed to save state for {key}: {e}")
             await self.db.rollback()
+            return False
