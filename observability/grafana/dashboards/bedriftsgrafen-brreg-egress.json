@@ -551,7 +551,7 @@
             "uid": "loki"
           },
           "editorMode": "code",
-          "expr": "{container=\"bedriftsgrafen-frontend\"} |~ \"(?i)(limiting requests| 429 |status=429)\"",
+          "expr": "{container=\"bedriftsgrafen-frontend\"} |~ \"\\\" 429 [0-9]+ \\\"\"",
           "queryType": "range",
           "refId": "A"
         }

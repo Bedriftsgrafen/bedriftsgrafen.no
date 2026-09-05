@@ -1,4 +1,5 @@
 import json
+import re
 from pathlib import Path
 
 import yaml
@@ -46,6 +47,15 @@ def test_brreg_dashboard_contains_required_low_cardinality_panels():
     )
     assert any("bedriftsgrafen_financial_poll_retry_backlog" in expr for expr in target_expressions)
 
+    edge_log_expr = next(
+        target["expr"]
+        for panel in dashboard["panels"]
+        if panel["title"] == "Nginx 429 / Limit Logs"
+        for target in panel["targets"]
+    )
+    assert '\\" 429 [0-9]+ \\"' in edge_log_expr
+    assert "limiting requests| 429 |status=429" not in edge_log_expr
+
 
 def test_brreg_alerts_are_provisioned_and_baseline_dependent_rules_are_paused():
     alert_path = OBSERVABILITY_ROOT / "grafana" / "provisioning" / "alerting" / "brreg-egress-alerts.yml"
@@ -85,11 +95,29 @@ def test_brreg_alerts_are_provisioned_and_baseline_dependent_rules_are_paused():
     assert 'entity_type="subunit"' in cursor_rule["data"][0]["model"]["expr"]
     assert cursor_rule["data"][2]["model"]["conditions"][0]["evaluator"] == {"params": [0], "type": "gt"}
 
+    edge_rule = by_uid["bedriftsgrafen_edge_429_seen"]
+    edge_expr = edge_rule["data"][0]["model"]["expr"]
+    assert '\\" 429 [0-9]+ \\"' in edge_expr
+    assert "limiting requests| 429 |status=429" not in edge_expr
+
     serialized = alert_path.read_text(encoding="utf-8")
     assert "bedriftsgrafen_brreg_circuit_open_total" in serialized
     assert "bedriftsgrafen_financial_poll_retry_backlog" in serialized
     assert "bedriftsgrafen_sync_cursor_stalled" in serialized
     assert 'bedriftsgrafen_rate_limit_responses_total{layer="backend"}' in serialized
+    assert "limiting requests| 429 |status=429" not in serialized
+
+
+def test_edge_429_log_pattern_matches_status_field_without_matching_response_size():
+    status_pattern = re.compile(r'" 429 [0-9]+ "')
+
+    assert status_pattern.search(
+        '203.0.113.10 - - [05/Sep/2026:08:00:00 +0000] "GET /api/test HTTP/1.1" 429 169 "-" "agent"'
+    )
+    assert not status_pattern.search(
+        '17.166.23.239 - - [05/Sep/2026:08:04:36 +0000] "GET /api/v1/people/roles HTTP/1.1" '
+        '200 429 "https://bedriftsgrafen.no/person/example" "Applebot"'
+    )
 
 
 def test_brreg_alerts_use_existing_discord_notification_path():

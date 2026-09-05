@@ -982,7 +982,7 @@ groups:
                 type: loki
                 uid: loki
               editorMode: code
-              expr: sum(count_over_time({container="bedriftsgrafen-frontend"} |~ "(?i)(limiting requests| 429 |status=429)" [5m]))
+              expr: sum(count_over_time({container="bedriftsgrafen-frontend"} |~ "\" 429 [0-9]+ \"" [5m]))
               instant: true
               intervalMs: 1000
               maxDataPoints: 43200

@@ -244,7 +244,7 @@ for at least 20 minutes. A single transient gap that heals on the next 15-minute
 | Brreg subunit cursor stalled | `max(bedriftsgrafen_sync_cursor_stalled{service="worker",entity_type="subunit"})` | current value, `for: 20m` | cursor gap remains active | durable cursor outcome from the 15-minute worker job | Low; a self-healed single-run gap resets before alerting |
 | Redis guard errors | `sum(increase(bedriftsgrafen_brreg_guard_redis_errors_total[5m]))` | 5m, `for: 1m` | any Redis guard error | guard fail-closed event | Low |
 | Backend 429 | `sum(increase(bedriftsgrafen_rate_limit_responses_total{layer="backend"}[5m]))` | 5m, `for: 2m` | any backend 429 | application limiter event | Medium; can be expected during abuse |
-| Edge nginx 429 | `sum(count_over_time({container="bedriftsgrafen-frontend"} |~ "(?i)(limiting requests| 429 |status=429)" [5m]))` | 5m, `for: 2m` | any edge limiter event | nginx access/error logs in Loki | Medium; expected during abuse |
+| Edge nginx 429 | `sum(count_over_time({container="bedriftsgrafen-frontend"} |~ "\" 429 [0-9]+ \"" [5m]))` | 5m, `for: 2m` | any edge 429 response | nginx access logs in Loki | Medium; expected during abuse |
 | Prometheus API scrape failure | `sum(max_over_time(up{job="bedriftsgrafen-api"}[3m]) == 0)` | 3m, `for: 2m` | any backend/worker target down | scrape health | Low |
 | Backend or worker restarted | `sum(changes(container_start_time_seconds{name=~"bedriftsgrafen-(backend|worker)"}[10m]))` | 10m, `for: 1m` | any container start-time change | cAdvisor container metric | Medium around planned deploys |
 
@@ -278,7 +278,9 @@ Baseline activation checklist:
 1. Backend 429 PromQL:
    `sum(increase(bedriftsgrafen_rate_limit_responses_total{layer="backend"}[5m]))`.
 2. Nginx/Loki query:
-   `{container="bedriftsgrafen-frontend"} |~ "(limiting requests| 429 |status=429)"`.
+   `{container="bedriftsgrafen-frontend"} |~ "\" 429 [0-9]+ \""`.
+   This matches the HTTP status field in the access-log format. Do not use a bare ` 429 ` match because
+   `body_bytes_sent=429` is a common successful response size and creates false alerts.
 3. Compare with Brreg guard decisions. If nginx/backend 429 rises while Brreg attempts stay flat, local
    rate limiting is absorbing abuse before egress.
 4. If 429 and Brreg attempts rise together, check whether a route bypasses cache, negative cache, or single-flight.
