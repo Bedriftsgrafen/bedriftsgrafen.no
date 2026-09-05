@@ -672,6 +672,80 @@ groups:
           service: brreg
         isPaused: false
 
+      - uid: bedriftsgrafen_subunit_cursor_stalled
+        title: Brreg subunit update cursor stalled
+        condition: C
+        data:
+          - refId: A
+            datasourceUid: prometheus
+            relativeTimeRange:
+              from: 600
+              to: 0
+            model:
+              datasource:
+                type: prometheus
+                uid: prometheus
+              editorMode: code
+              expr: max(bedriftsgrafen_sync_cursor_stalled{service="worker",entity_type="subunit"}) or vector(0)
+              instant: true
+              intervalMs: 1000
+              maxDataPoints: 43200
+              refId: A
+          - refId: B
+            datasourceUid: __expr__
+            relativeTimeRange:
+              from: 0
+              to: 0
+            model:
+              datasource:
+                type: __expr__
+                uid: __expr__
+              expression: A
+              intervalMs: 1000
+              maxDataPoints: 43200
+              reducer: last
+              refId: B
+              type: reduce
+          - refId: C
+            datasourceUid: __expr__
+            relativeTimeRange:
+              from: 0
+              to: 0
+            model:
+              conditions:
+                - evaluator:
+                    params:
+                      - 0
+                    type: gt
+                  operator:
+                    type: and
+                  query:
+                    params:
+                      - C
+                  reducer:
+                    params: []
+                    type: last
+                  type: query
+              datasource:
+                type: __expr__
+                uid: __expr__
+              expression: B
+              intervalMs: 1000
+              maxDataPoints: 43200
+              refId: C
+              type: threshold
+        noDataState: OK
+        execErrState: Error
+        for: 20m
+        annotations:
+          summary: Brreg subunit update cursor is not advancing.
+          description: An uncommitted subunit update gap has blocked the cursor for at least 20 minutes.
+          runbook_url: https://github.com/Bedriftsgrafen/bedriftsgrafen.no/blob/main/observability/runbooks/alerts.md#brreg-update-cursor-stalls
+        labels:
+          severity: critical
+          service: brreg
+        isPaused: false
+
       - uid: bedriftsgrafen_backend_429_seen
         title: Backend 429 responses detected
         condition: C

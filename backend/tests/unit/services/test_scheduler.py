@@ -448,6 +448,35 @@ async def test_run_subunit_updates(mock_session_local):
 
 
 @pytest.mark.asyncio
+async def test_run_subunit_updates_preserves_timestamp_when_gap_makes_no_progress(mock_session_local):
+    scheduler_service = SchedulerService()
+
+    with (
+        patch("services.update_service.UpdateService") as MockUpdateService,
+        patch("repositories.system_repository.SystemRepository") as MockSystemRepo,
+        patch("services.scheduler.SYNC_CURSOR_STALLED") as stalled_metric,
+    ):
+        mock_update = MockUpdateService.return_value
+        mock_update.fetch_subunit_updates = AsyncMock(
+            return_value={
+                "latest_oppdateringsid": 456,
+                "companies_processed": 10,
+                "cursor_gap_detected": True,
+            }
+        )
+
+        mock_system = MockSystemRepo.return_value
+        mock_system.get_state = AsyncMock(return_value="456")
+        mock_system.set_state = AsyncMock()
+
+        await scheduler_service.run_subunit_updates()
+
+        mock_system.set_state.assert_not_awaited()
+        stalled_metric.labels.assert_called_once_with(entity_type="subunit")
+        stalled_metric.labels.return_value.set.assert_called_once_with(1)
+
+
+@pytest.mark.asyncio
 async def test_run_role_updates(mock_session_local):
     scheduler_service = SchedulerService()
 

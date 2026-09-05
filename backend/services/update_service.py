@@ -1,6 +1,7 @@
 import asyncio
 import logging
 import os
+from dataclasses import dataclass
 from datetime import UTC, date, datetime, timedelta
 from enum import StrEnum
 from typing import Any
@@ -77,6 +78,14 @@ class FinancialPollOutcome(StrEnum):
     TERMINAL_FAILURE = "terminal_failure"
     RETRY_LATER = "retry_later"
     CIRCUIT_OPEN = "circuit_open"
+
+
+@dataclass(frozen=True)
+class ParentCompanyResolution:
+    """Classify parents that can be persisted separately from terminal Brreg absences."""
+
+    verified: frozenset[str]
+    terminally_unavailable: frozenset[str]
 
 
 class UpdateService:
@@ -1263,12 +1272,27 @@ class UpdateService:
             publish_safe_update_ids()
             return cursor_gap_detected
 
-        verified_parents = await self._ensure_parent_companies_exist([candidate[1] for candidate in persist_candidates])
+        parent_resolution = await self._ensure_parent_companies_exist(
+            [candidate[1] for candidate in persist_candidates]
+        )
         subunits_to_save: list[models.SubUnit] = []
         event_candidates: list[tuple[SubunitFetchResult, str, dict[str, Any] | None]] = []
 
         for fetch_result, subunit_data, parent_orgnr, previous_snapshot in persist_candidates:
-            if parent_orgnr not in verified_parents:
+            if parent_orgnr not in parent_resolution.verified:
+                if parent_orgnr in parent_resolution.terminally_unavailable:
+                    logger.warning(
+                        "Skipping subunit %s because parent %s is deleted or unavailable in Brreg",
+                        subunit_data.get("organisasjonsnummer"),
+                        parent_orgnr,
+                    )
+                    update_id = self._parse_oppdateringsid(fetch_result.source_update_id)
+                    if update_id is not None:
+                        committed_update_ids.append(update_id)
+                    result.companies_skipped += 1
+                    SYNC_OPERATIONS_TOTAL.labels(entity_type="subunit", operation_type="skipped").inc()
+                    continue
+
                 logger.warning(
                     f"Skipping subunit {subunit_data.get('organisasjonsnummer')} "
                     f"because parent {parent_orgnr} is missing and could not be fetched."
@@ -1428,23 +1452,23 @@ class UpdateService:
 
         return result.model_dump()
 
-    async def _ensure_parent_companies_exist(self, subunits_data: list[dict[str, Any]]) -> set[str]:
+    async def _ensure_parent_companies_exist(self, subunits_data: list[dict[str, Any]]) -> ParentCompanyResolution:
         """Ensure all parent companies for a batch of subunits exist in the database.
 
         Fetches missing parents from Brreg API if necessary.
-        Returns the set of all verified (existing or created) parent orgnrs.
+        Returns verified parents and definitive Brreg 404/410/deleted parents separately.
         """
         # Collect unique parent orgnrs
         parent_orgnrs: set[str] = {str(s["overordnetEnhet"]) for s in subunits_data if s.get("overordnetEnhet")}
         if not parent_orgnrs:
-            return set()
+            return ParentCompanyResolution(frozenset(), frozenset())
 
         # Check which parents already exist
         existing_orgnrs = await self.company_repo.get_existing_orgnrs(list(parent_orgnrs))
         missing_orgnrs = parent_orgnrs - existing_orgnrs
 
         if not missing_orgnrs:
-            return existing_orgnrs
+            return ParentCompanyResolution(frozenset(existing_orgnrs), frozenset())
 
         logger.info(f"Found {len(missing_orgnrs)} missing parent companies. Fetching from Brreg...")
 
@@ -1456,9 +1480,20 @@ class UpdateService:
                 return await self.brreg_api.fetch_company(orgnr)
 
         # Gather and filter
-        tasks = [fetch_parent(orgnr) for orgnr in sorted(missing_orgnrs)]
+        sorted_missing_orgnrs = sorted(missing_orgnrs)
+        tasks = [fetch_parent(orgnr) for orgnr in sorted_missing_orgnrs]
         results = await asyncio.gather(*tasks)
-        valid_parent_data = [r for r in results if r and not r.get("slettedato")]
+        fetched_parents = dict(zip(sorted_missing_orgnrs, results, strict=True))
+        terminally_unavailable = {
+            orgnr
+            for orgnr, parent_data in fetched_parents.items()
+            if parent_data is None or parent_data.get("slettedato")
+        }
+        valid_parent_data = [
+            parent_data
+            for parent_data in fetched_parents.values()
+            if parent_data is not None and not parent_data.get("slettedato")
+        ]
 
         # Persist new parents
         count = 0
@@ -1476,7 +1511,8 @@ class UpdateService:
 
         # Re-check existence to get final set of verified parents
         # (Alternatively, we could track which ones succeeded above)
-        return await self.company_repo.get_existing_orgnrs(list(parent_orgnrs))
+        verified = await self.company_repo.get_existing_orgnrs(list(parent_orgnrs))
+        return ParentCompanyResolution(frozenset(verified), frozenset(terminally_unavailable))
 
     async def fetch_role_updates(
         self,

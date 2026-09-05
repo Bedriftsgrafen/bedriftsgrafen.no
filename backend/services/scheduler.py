@@ -14,7 +14,7 @@ from sqlalchemy.ext.asyncio import AsyncConnection, AsyncSession
 from constants.concurrency import SUBUNIT_UPDATE_PAGE_SIZE
 from database import AsyncSessionLocal, engine
 from services.seo_service import SEOService
-from utils.metrics import FINANCIAL_POLL_RETRY_BACKLOG
+from utils.metrics import FINANCIAL_POLL_RETRY_BACKLOG, SYNC_CURSOR_STALLED
 
 logger = logging.getLogger(__name__)
 
@@ -813,9 +813,29 @@ class SchedulerService:
                     since_date=since_date, start_id=start_id, page_size=SUBUNIT_UPDATE_PAGE_SIZE
                 )
 
-                # Update state
-                if result.get("latest_oppdateringsid"):
-                    await system_repo.set_state("subunit_update_latest_id", str(result["latest_oppdateringsid"]))
+                latest_result_id = result.get("latest_oppdateringsid")
+                cursor_gap_detected = bool(result.get("cursor_gap_detected"))
+                cursor_advanced = False
+                if latest_result_id is not None:
+                    latest_result_id = int(latest_result_id)
+                    if start_id is None or latest_result_id > start_id:
+                        await system_repo.set_state("subunit_update_latest_id", str(latest_result_id))
+                        cursor_advanced = True
+                    elif latest_result_id == start_id and not cursor_gap_detected:
+                        # A successful no-change poll still represents fresh source verification.
+                        await system_repo.set_state("subunit_update_latest_id", str(latest_result_id))
+                    elif latest_result_id < start_id:
+                        logger.error(
+                            "Refusing to move subunit update cursor backwards",
+                            extra={"current_id": start_id, "result_id": latest_result_id},
+                        )
+
+                SYNC_CURSOR_STALLED.labels(entity_type="subunit").set(1 if cursor_gap_detected else 0)
+                if cursor_gap_detected and not cursor_advanced:
+                    logger.warning(
+                        "Subunit update cursor made no progress because the batch has an uncommitted gap",
+                        extra={"current_id": start_id, "result_id": latest_result_id},
+                    )
 
                 logger.info(
                     "Subunit updates completed",

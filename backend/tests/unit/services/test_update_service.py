@@ -12,7 +12,7 @@ import pytest
 
 from schemas.brreg import BrregUpdateEntity, FetchResult, SubunitFetchResult, UpdateBatchResult
 from services.base_external_service import CircuitOpenException, ExternalApiException
-from services.update_service import FinancialPollOutcome, UpdateService
+from services.update_service import FinancialPollOutcome, ParentCompanyResolution, UpdateService
 
 
 class NoopAsyncContext:
@@ -295,6 +295,36 @@ class TestFetchSubunitUpdates:
         update_service.subunit_repo.create_batch.assert_called_once()
 
     @pytest.mark.asyncio
+    async def test_fetch_subunit_updates_consumes_deleted_parent_gap(self, update_service, mock_db):
+        mock_page_response = MagicMock(status_code=200)
+        mock_page_response.json.return_value = {
+            "_embedded": {"oppdaterteUnderenheter": [{"organisasjonsnummer": "938292655", "oppdateringsid": 21274549}]},
+            "_links": {},
+        }
+        update_service.brreg_api._get = AsyncMock(return_value=mock_page_response)
+        update_service.brreg_api.fetch_subunit = AsyncMock(
+            return_value={
+                "organisasjonsnummer": "938292655",
+                "overordnetEnhet": "938235392",
+                "navn": "A Johansen Service",
+            }
+        )
+        update_service.brreg_api.fetch_company = AsyncMock(
+            return_value={"organisasjonsnummer": "938235392", "slettedato": "2026-08-19"}
+        )
+        update_service.company_repo.get_existing_orgnrs = AsyncMock(side_effect=[set(), set()])
+        update_service.company_repo.create_or_update = AsyncMock()
+        update_service.subunit_repo.create_batch = AsyncMock()
+
+        result = await update_service.fetch_subunit_updates(start_id=21274548, page_size=10)
+
+        assert result["latest_oppdateringsid"] == 21274549
+        assert result["cursor_gap_detected"] is False
+        assert result["companies_skipped"] == 1
+        update_service.company_repo.create_or_update.assert_not_awaited()
+        update_service.subunit_repo.create_batch.assert_not_awaited()
+
+    @pytest.mark.asyncio
     async def test_fetch_subunit_updates_purges_deleted(self, update_service, mock_db):
         """Verify that subunits marked as deleted in Brreg are purged from DB."""
         # 1. Mock page response
@@ -329,7 +359,9 @@ class TestFetchSubunitUpdates:
     async def test_persist_subunit_page_records_opened_event(self, update_service):
         update_service.event_ledger_enabled = True
         update_service._get_existing_subunit_event_snapshots = AsyncMock(return_value={})
-        update_service._ensure_parent_companies_exist = AsyncMock(return_value={"987654321"})
+        update_service._ensure_parent_companies_exist = AsyncMock(
+            return_value=ParentCompanyResolution(frozenset({"987654321"}), frozenset())
+        )
         update_service.subunit_repo.create_batch = AsyncMock(return_value=1)
         update_service._record_company_event_safe = AsyncMock()
 
@@ -384,7 +416,9 @@ class TestFetchSubunitUpdates:
                 }
             }
         )
-        update_service._ensure_parent_companies_exist = AsyncMock(return_value={"987654321"})
+        update_service._ensure_parent_companies_exist = AsyncMock(
+            return_value=ParentCompanyResolution(frozenset({"987654321"}), frozenset())
+        )
         update_service.subunit_repo.create_batch = AsyncMock(return_value=1)
         update_service._record_company_event_safe = AsyncMock()
 
@@ -491,7 +525,9 @@ class TestFetchSubunitUpdates:
     @pytest.mark.asyncio
     async def test_persist_subunit_page_advances_cursor_after_successful_upsert(self, update_service):
         update_service.event_ledger_enabled = False
-        update_service._ensure_parent_companies_exist = AsyncMock(return_value={"987654321"})
+        update_service._ensure_parent_companies_exist = AsyncMock(
+            return_value=ParentCompanyResolution(frozenset({"987654321"}), frozenset())
+        )
         update_service.subunit_repo.create_batch = AsyncMock(return_value=1)
 
         fetch_results = [
@@ -513,9 +549,64 @@ class TestFetchSubunitUpdates:
         assert result.latest_oppdateringsid == 42
 
     @pytest.mark.asyncio
+    async def test_persist_subunit_page_consumes_terminally_unavailable_parent(self, update_service):
+        update_service.event_ledger_enabled = False
+        update_service._ensure_parent_companies_exist = AsyncMock(
+            return_value=ParentCompanyResolution(frozenset(), frozenset({"987654321"}))
+        )
+        update_service.subunit_repo.create_batch = AsyncMock()
+        fetch_results = [
+            SubunitFetchResult(
+                orgnr="123456789",
+                success=True,
+                subunit_data={
+                    "organisasjonsnummer": "123456789",
+                    "overordnetEnhet": "987654321",
+                    "navn": "Orphaned upstream subunit",
+                },
+                source_update_id="42",
+            )
+        ]
+        result = UpdateBatchResult(since_date=date.today(), since_iso="2026-08-30T00:00:00.000Z")
+
+        cursor_gap_detected = await update_service._persist_subunit_update_page(fetch_results, result)
+
+        assert cursor_gap_detected is False
+        assert result.latest_oppdateringsid == 42
+        assert result.companies_skipped == 1
+        update_service.subunit_repo.create_batch.assert_not_awaited()
+
+    @pytest.mark.asyncio
+    async def test_persist_subunit_page_blocks_cursor_for_unverified_parent(self, update_service):
+        update_service.event_ledger_enabled = False
+        update_service._ensure_parent_companies_exist = AsyncMock(
+            return_value=ParentCompanyResolution(frozenset(), frozenset())
+        )
+        fetch_results = [
+            SubunitFetchResult(
+                orgnr="123456789",
+                success=True,
+                subunit_data={
+                    "organisasjonsnummer": "123456789",
+                    "overordnetEnhet": "987654321",
+                    "navn": "Unpersisted subunit",
+                },
+                source_update_id="42",
+            )
+        ]
+        result = UpdateBatchResult(since_date=date.today(), since_iso="2026-08-30T00:00:00.000Z")
+
+        cursor_gap_detected = await update_service._persist_subunit_update_page(fetch_results, result)
+
+        assert cursor_gap_detected is True
+        assert result.latest_oppdateringsid is None
+
+    @pytest.mark.asyncio
     async def test_persist_subunit_page_does_not_advance_past_earlier_failed_update(self, update_service):
         update_service.event_ledger_enabled = False
-        update_service._ensure_parent_companies_exist = AsyncMock(return_value={"987654321"})
+        update_service._ensure_parent_companies_exist = AsyncMock(
+            return_value=ParentCompanyResolution(frozenset({"987654321"}), frozenset())
+        )
         update_service.subunit_repo.create_batch = AsyncMock(return_value=1)
 
         fetch_results = [
@@ -575,11 +666,23 @@ async def test_ensure_parent_companies_exist_skips_deleted(update_service, mock_
 
     # 2. Act
     subunits_data = [{"overordnetEnhet": "999"}]
-    verified = await update_service._ensure_parent_companies_exist(subunits_data)
+    resolution = await update_service._ensure_parent_companies_exist(subunits_data)
 
     # 3. Assert
     update_service.company_repo.create_or_update.assert_not_called()
-    assert "999" not in verified
+    assert resolution.verified == frozenset()
+    assert resolution.terminally_unavailable == frozenset({"999"})
+
+
+@pytest.mark.asyncio
+async def test_ensure_parent_companies_exist_classifies_not_found_as_terminal(update_service, mock_db):
+    update_service.company_repo.get_existing_orgnrs = AsyncMock(return_value=set())
+    update_service.brreg_api.fetch_company = AsyncMock(return_value=None)
+
+    resolution = await update_service._ensure_parent_companies_exist([{"overordnetEnhet": "999"}])
+
+    assert resolution.verified == frozenset()
+    assert resolution.terminally_unavailable == frozenset({"999"})
 
 
 @pytest.mark.asyncio

@@ -3,7 +3,7 @@ from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 
-from services.update_service import UpdateService
+from services.update_service import ParentCompanyResolution, UpdateService
 
 
 @pytest.fixture
@@ -35,7 +35,9 @@ async def test_fetch_subunit_updates_success(update_service, mock_db):
     }
 
     # Mock parent verification (NEW)
-    update_service._ensure_parent_companies_exist = AsyncMock(return_value={"123456789"})
+    update_service._ensure_parent_companies_exist = AsyncMock(
+        return_value=ParentCompanyResolution(frozenset({"123456789"}), frozenset())
+    )
 
     # Mock HTTP response for the update stream
     mock_response = MagicMock()

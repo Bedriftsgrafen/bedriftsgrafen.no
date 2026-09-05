@@ -22,6 +22,12 @@ SYNC_LATENCY = Histogram(
     ["entity_type"],
 )
 
+SYNC_CURSOR_STALLED = Gauge(
+    "bedriftsgrafen_sync_cursor_stalled",
+    "Whether an incremental update cursor is blocked by an uncommitted gap",
+    ["entity_type"],
+)
+
 # --- External API Metrics ---
 
 BRREG_API_REQUESTS_TOTAL = Counter(

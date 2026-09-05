@@ -61,6 +61,7 @@ def test_brreg_alerts_are_provisioned_and_baseline_dependent_rules_are_paused():
         "bedriftsgrafen_brreg_timeouts_detected",
         "bedriftsgrafen_brreg_circuit_open",
         "bedriftsgrafen_financial_retry_backlog",
+        "bedriftsgrafen_subunit_cursor_stalled",
         "bedriftsgrafen_brreg_guard_redis_errors",
         "bedriftsgrafen_backend_429_seen",
         "bedriftsgrafen_edge_429_seen",
@@ -79,9 +80,15 @@ def test_brreg_alerts_are_provisioned_and_baseline_dependent_rules_are_paused():
     assert 'state="due"' in retry_rule["data"][0]["model"]["expr"]
     assert retry_rule["data"][2]["model"]["conditions"][0]["evaluator"] == {"params": [49], "type": "gt"}
 
+    cursor_rule = by_uid["bedriftsgrafen_subunit_cursor_stalled"]
+    assert cursor_rule["for"] == "20m"
+    assert 'entity_type="subunit"' in cursor_rule["data"][0]["model"]["expr"]
+    assert cursor_rule["data"][2]["model"]["conditions"][0]["evaluator"] == {"params": [0], "type": "gt"}
+
     serialized = alert_path.read_text(encoding="utf-8")
     assert "bedriftsgrafen_brreg_circuit_open_total" in serialized
     assert "bedriftsgrafen_financial_poll_retry_backlog" in serialized
+    assert "bedriftsgrafen_sync_cursor_stalled" in serialized
     assert 'bedriftsgrafen_rate_limit_responses_total{layer="backend"}' in serialized
 
 

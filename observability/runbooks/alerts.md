@@ -214,6 +214,21 @@ Immediate actions:
 5. If the financial due retry queue alert fires, verify that accounting batches are running and draining due rows.
    A growing `waiting` queue alone reflects isolated upstream failures in backoff and is not a scheduler incident.
 
+### Brreg Update Cursor Stalls
+
+This alert means an incremental subunit batch encountered an uncommitted update gap and the cursor stayed blocked
+for at least 20 minutes. A single transient gap that heals on the next 15-minute run does not alert.
+
+1. Check `bedriftsgrafen_sync_cursor_stalled{service="worker",entity_type="subunit"}` and worker health.
+2. Find `Subunit update cursor made no progress because the batch has an uncommitted gap` in worker logs.
+3. Record the current `subunit_update_latest_id` from `system_state`; its `updated_at` must not move while the same
+   gap prevents progress.
+4. Inspect the first failed Brreg update ID. A parent returning 404/410 or a payload with `slettedato` is terminal
+   and may be consumed without storing the orphaned subunit. API, validation, and database failures remain cursor
+   barriers.
+5. Do not advance the cursor manually. Fix the classification or persistence failure, then verify that the worker
+   advances naturally and the gauge returns to zero.
+
 ### Brreg Alert Threshold Register
 
 | Alert | PromQL | Window | Active threshold | Data basis | False-positive risk |
@@ -226,6 +241,7 @@ Immediate actions:
 | Brreg timeouts | `sum(increase(bedriftsgrafen_brreg_http_attempts_total{status_category="timeout"}[15m]))` | 15m, `for: 5m` | any sustained timeout | local timeout event | Medium; transient upstream network blips can fire |
 | Brreg circuit breaker | `sum(increase(bedriftsgrafen_brreg_circuit_open_total[5m]))` | 5m, `for: 1m` | any circuit-open transition | local protection transition | Low |
 | Financial poll due retry queue | `max(bedriftsgrafen_financial_poll_retry_backlog{service="worker",state="due"})` | current value, `for: 15m` | at least 50 due companies | durable database retry state and 50-company batch size | Low; observed due maximum was 7 over the first 48 hours |
+| Brreg subunit cursor stalled | `max(bedriftsgrafen_sync_cursor_stalled{service="worker",entity_type="subunit"})` | current value, `for: 20m` | cursor gap remains active | durable cursor outcome from the 15-minute worker job | Low; a self-healed single-run gap resets before alerting |
 | Redis guard errors | `sum(increase(bedriftsgrafen_brreg_guard_redis_errors_total[5m]))` | 5m, `for: 1m` | any Redis guard error | guard fail-closed event | Low |
 | Backend 429 | `sum(increase(bedriftsgrafen_rate_limit_responses_total{layer="backend"}[5m]))` | 5m, `for: 2m` | any backend 429 | application limiter event | Medium; can be expected during abuse |
 | Edge nginx 429 | `sum(count_over_time({container="bedriftsgrafen-frontend"} |~ "(?i)(limiting requests| 429 |status=429)" [5m]))` | 5m, `for: 2m` | any edge limiter event | nginx access/error logs in Loki | Medium; expected during abuse |
