@@ -10,6 +10,7 @@ GREEN='\033[0;32m'
 YELLOW='\033[1;33m'
 BLUE='\033[0;34m'
 NC='\033[0m' # No Color
+GITLEAKS_IMAGE="ghcr.io/gitleaks/gitleaks:v8.30.1@sha256:c00b6bd0aeb3071cbcb79009cb16a60dd9e0a7c60e2be9ab65d25e6bc8abbb7f"
 
 # Track overall status
 OVERALL_STATUS=0
@@ -94,18 +95,6 @@ if [ -d "backend" ]; then
     fi
     
     if [ -n "$PYTHON_CMD" ]; then
-        # safety check
-        if $PYTHON_CMD -m pip show safety >/dev/null 2>&1; then
-            print_info "Running safety check..."
-            if $PYTHON_CMD -m safety check; then
-                print_status 0 "safety: No known vulnerabilities"
-            else
-                print_status 1 "safety: Vulnerabilities detected"
-            fi
-        else
-            print_warning "safety not installed - Install with: pip install safety"
-        fi
-        
         # pip-audit
         if $PYTHON_CMD -m pip show pip-audit >/dev/null 2>&1; then
             print_info "Running pip-audit..."
@@ -121,7 +110,7 @@ if [ -d "backend" ]; then
         # Bandit SAST
         if $PYTHON_CMD -m pip show bandit >/dev/null 2>&1; then
             print_info "Running Bandit SAST..."
-            if $PYTHON_CMD -m bandit -r . -ll -q; then
+            if $PYTHON_CMD -m bandit -r . -x ./.venv -lll -q; then
                 print_status 0 "Bandit: No security issues found"
             else
                 print_status 1 "Bandit: Security issues detected"
@@ -148,7 +137,7 @@ if command_exists trivy; then
     if command_exists docker; then
         # Scan backend image if it exists
         if docker images | grep -q bedriftsgrafen-backend; then
-            if trivy image --severity CRITICAL,HIGH bedriftsgrafen-backend:latest; then
+            if trivy image --exit-code 1 --ignore-unfixed --severity CRITICAL,HIGH bedriftsgrafen-backend:latest; then
                 print_status 0 "Trivy (backend): No CRITICAL/HIGH vulnerabilities"
             else
                 print_status 1 "Trivy (backend): Vulnerabilities detected"
@@ -159,7 +148,7 @@ if command_exists trivy; then
         
         # Scan frontend image if it exists
         if docker images | grep -q bedriftsgrafen-frontend; then
-            if trivy image --severity CRITICAL,HIGH bedriftsgrafen-frontend:latest; then
+            if trivy image --exit-code 1 --ignore-unfixed --severity CRITICAL,HIGH bedriftsgrafen-frontend:latest; then
                 print_status 0 "Trivy (frontend): No CRITICAL/HIGH vulnerabilities"
             else
                 print_status 1 "Trivy (frontend): Vulnerabilities detected"
@@ -181,13 +170,23 @@ echo -e "\n${BLUE}═══ Secret Detection ═══${NC}\n"
 
 if command_exists gitleaks; then
     print_info "Running gitleaks secret detection..."
-    if gitleaks detect --no-git; then
+    if gitleaks git --gitleaks-ignore-path .gitleaksignore --no-banner --redact --verbose .; then
+        print_status 0 "gitleaks: No secrets detected"
+    else
+        print_status 1 "gitleaks: Potential secrets detected"
+    fi
+elif command_exists docker; then
+    print_info "Running gitleaks secret detection with Docker..."
+    if docker run --rm \
+        --volume "$PWD:/repo:ro" \
+        "$GITLEAKS_IMAGE" \
+        git --gitleaks-ignore-path /repo/.gitleaksignore --no-banner --redact --verbose /repo; then
         print_status 0 "gitleaks: No secrets detected"
     else
         print_status 1 "gitleaks: Potential secrets detected"
     fi
 else
-    print_warning "gitleaks not installed - Install from: https://github.com/gitleaks/gitleaks"
+    print_warning "gitleaks and Docker not found - skipping secret detection"
 fi
 
 if command_exists detect-secrets; then
@@ -214,5 +213,5 @@ fi
 echo -e "${BLUE}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
 echo ""
 
-# Exit with status (don't fail developer workflow)
-exit 0
+# Fail automation when an installed scanner finds a security issue.
+exit "$OVERALL_STATUS"

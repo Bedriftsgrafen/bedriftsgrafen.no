@@ -1,0 +1,6 @@
+# Verified false positive: TypeScript helper name, not a LinkedIn credential.
+2197c5887ff0ae1f249322619657719677b2c06c:frontend/src/components/company/RolesTab.tsx:linkedin-client-secret:5
+dfbda986fb75e661272f7ebce745623949a13d2d:frontend/src/components/company/RolesTab.tsx:linkedin-client-secret:5
+
+# Verified false positive: documentation placeholder `your-admin-api-key`.
+d15b466164d0dfe3e5b46452a51694547f3e0e74:backend/API_ENDPOINTS.md:curl-auth-header:232

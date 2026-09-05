@@ -42,8 +42,8 @@ jobs:
 
       - name: npm audit (workspace)
         run: |
-          npm audit --audit-level=high --json > npm-audit-report.json || true
-          npm audit --audit-level=high || true
+          npm audit --audit-level=moderate --json > npm-audit-report.json || true
+          npm audit --audit-level=moderate
 
       - name: Upload npm audit report
         if: always()
@@ -76,32 +76,17 @@ jobs:
       - name: Install dependencies
         run: |
           pip install -r requirements.txt
-          pip install safety pip-audit bandit[toml]
-
-      - name: Safety check
-        run: |
-          safety check --json --output safety-report.json || true
-          safety check || true
-        continue-on-error: true
+          pip install pip-audit bandit[toml]
 
       - name: pip-audit
         run: |
           pip-audit --format json --output pip-audit-report.json || true
-          pip-audit || true
-        continue-on-error: true
+          pip-audit
 
       - name: Bandit SAST
         run: |
-          bandit -r . -f json -o bandit-report.json || true
-          bandit -r . -l || true
-
-      - name: Upload safety report
-        if: always()
-        uses: actions/upload-artifact@v7
-        with:
-          name: safety-report
-          path: backend/safety-report.json
-          retention-days: 14
+          bandit -r . -ll -f json -o bandit-report.json || true
+          bandit -r . -lll
 
       - name: Upload pip-audit report
         if: always()
@@ -118,6 +103,24 @@ jobs:
           name: bandit-report
           path: backend/bandit-report.json
           retention-days: 14
+
+  secret-scanning:
+    name: Secret Scanning
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout full history
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+
+      - name: Run Gitleaks
+        run: |
+          docker run --rm \
+            --volume "$GITHUB_WORKSPACE:/repo:ro" \
+            ghcr.io/gitleaks/gitleaks:v8.30.1@sha256:c00b6bd0aeb3071cbcb79009cb16a60dd9e0a7c60e2be9ab65d25e6bc8abbb7f \
+            git --gitleaks-ignore-path /repo/.gitleaksignore --no-banner --redact --verbose /repo
 
   # CodeQL Analysis
   codeql-analysis:
@@ -301,7 +304,7 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: read
-    needs: [frontend-security, backend-security, codeql-analysis, container-scanning, license-check]
+    needs: [frontend-security, backend-security, secret-scanning, codeql-analysis, container-scanning, license-check]
     if: always()
     steps:
       - name: Generate Security Summary
@@ -316,6 +319,7 @@ jobs:
           echo "|-----|--------|" >> $GITHUB_STEP_SUMMARY
           echo "| Frontend Security | ${{ needs.frontend-security.result }} |" >> $GITHUB_STEP_SUMMARY
           echo "| Backend Security | ${{ needs.backend-security.result }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Secret Scanning | ${{ needs.secret-scanning.result }} |" >> $GITHUB_STEP_SUMMARY
           echo "| CodeQL Analysis | ${{ needs.codeql-analysis.result }} |" >> $GITHUB_STEP_SUMMARY
           echo "| Container Scanning | ${{ needs.container-scanning.result }} |" >> $GITHUB_STEP_SUMMARY
           echo "| License Check | ${{ needs.license-check.result }} |" >> $GITHUB_STEP_SUMMARY
